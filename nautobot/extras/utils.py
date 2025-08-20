@@ -6,7 +6,7 @@ import hmac
 import logging
 import re
 import sys
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
 from django.conf import settings
@@ -36,6 +36,9 @@ from nautobot.extras.constants import (
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
+
+if TYPE_CHECKING:
+    from nautobot.extras.models import JobQueue
 
 logger = logging.getLogger(__name__)
 
@@ -272,11 +275,14 @@ def extras_features(*features):
     """
 
     def wrapper(model_class):
-        # Initialize the model_features store if not already defined
+        # Initialize the model_features and feature_models stores if not already defined
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
+        if "feature_models" not in registry:
+            registry["feature_models"] = {f: [] for f in EXTRAS_FEATURES}
         for feature in features:
             if feature in EXTRAS_FEATURES:
+                registry["feature_models"][feature].append(model_class)
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:
@@ -409,10 +415,12 @@ def get_celery_queues():
     return celery_queues
 
 
-def get_worker_count(request=None, queue=None):
+def get_worker_count(request=None, queue: Optional[Union[str, "JobQueue"]] = None) -> int:
     """
-    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
-    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue.
+
+    Args:
+        queue (str, JobQueue, None): queue name or JobQueue to check; if unset, defaults to CELERY_TASK_DEFAULT_QUEUE.
     """
     from nautobot.extras.models import JobQueue
 
@@ -434,7 +442,7 @@ def get_worker_count(request=None, queue=None):
     return celery_queues.get(queue, 0)
 
 
-def get_job_queue_worker_count(request=None, job_queue=None):
+def get_job_queue_worker_count(request=None, job_queue: Optional["JobQueue"] = None) -> int:
     """
     Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
@@ -449,27 +457,24 @@ def get_job_queue_worker_count(request=None, job_queue=None):
     return celery_queues.get(queue, 0)
 
 
-def get_job_queue(job_queue):
+def get_job_queue(job_queue: str) -> Optional["JobQueue"]:
     """
     Search for a JobQueue instance based on the str job_queue.
     If no existing Job Queue not found, return None
     """
     from nautobot.extras.models import JobQueue
 
-    queue = None
     if is_uuid(job_queue):
         try:
             # check if the string passed in is a valid UUID
-            queue = JobQueue.objects.get(pk=job_queue)
+            return JobQueue.objects.get(pk=job_queue)
         except JobQueue.DoesNotExist:
-            queue = None
-    else:
-        try:
-            # check if the string passed in is a valid name
-            queue = JobQueue.objects.get(name=job_queue)
-        except JobQueue.DoesNotExist:
-            queue = None
-    return queue
+            return None
+    try:
+        # check if the string passed in is a valid name
+        return JobQueue.objects.get(name=job_queue)
+    except JobQueue.DoesNotExist:
+        return None
 
 
 def task_queues_as_choices(task_queues):
@@ -487,7 +492,7 @@ def task_queues_as_choices(task_queues):
             worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
         else:
             worker_count = celery_queues.get(queue, 0)
-        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[: worker_count ^ 1]})"
         choices.append((queue, description))
     return choices
 

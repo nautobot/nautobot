@@ -1,10 +1,13 @@
+import contextlib
 import logging
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
+import redis.exceptions
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.forms import (
@@ -178,6 +181,12 @@ class RelationshipBaseTest:
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
             ),
         ]
+
+    def tearDown(self):
+        """Ensure that relationship caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
 
 
 class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -473,10 +482,12 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                 # Assert that the cache is used when calling method a second time
                 with self.assertNumQueries(0):
                     manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
 
                 # Assert that different models are cached separately
                 with self.assertNumQueries(expected_queries):
-                    manager_method(Rack)
+                    manager_method(Rack, get_queryset=False)
                 with self.assertNumQueries(0):
                     manager_method(Rack)
                 with self.assertNumQueries(0):
@@ -498,6 +509,8 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                         manager_method(Location)
                     with self.assertNumQueries(0):
                         manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location, get_queryset=False)
                 finally:
                     # Assert that the cache is invalidated on object delete
                     relationship.delete()
@@ -505,6 +518,8 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     manager_method(Location)
                 with self.assertNumQueries(0):
                     manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
 
     def test_required_related_object_errors(self):
         """
@@ -1655,7 +1670,7 @@ class RequiredRelationshipTestMixin:
                     response = self.send_data(
                         from_model,
                         {
-                            "name": f'{params["create_data"]["name"]} edited',
+                            "name": f"{params['create_data']['name']} edited",
                             "relationships": {},
                         },
                         interact_with,
@@ -1673,13 +1688,13 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
+                        {"name": f"{params['create_data']['name']} edited", **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 200)
-                    self.assertEqual(f'{params["create_data"]["name"]} edited', response.json()["name"])
+                    self.assertEqual(f"{params['create_data']['name']} edited", response.json()["name"])
 
                     """
                     - Object is created with the required relationship data (succeeds)
@@ -1689,7 +1704,7 @@ class RequiredRelationshipTestMixin:
                     """
 
                     # Delete the object that was previously created, so we can test with the same data again
-                    from_model.objects.get(name=f'{params["create_data"]["name"]} edited').delete()
+                    from_model.objects.get(name=f"{params['create_data']['name']} edited").delete()
                     self.assertEqual(from_model.objects.count(), existing_count)
 
                     # Object is created with the required relationship data (succeeds)
@@ -1703,19 +1718,19 @@ class RequiredRelationshipTestMixin:
                     newly_created_object = from_model.objects.get(name=params["create_data"]["name"])
                     response = self.send_data(
                         from_model,
-                        {"name": f'{params["create_data"]["name"]} changed'},
+                        {"name": f"{params['create_data']['name']} changed"},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 200)
-                    self.assertEqual(f'{params["create_data"]["name"]} changed', response.json()["name"])
+                    self.assertEqual(f"{params['create_data']['name']} changed", response.json()["name"])
 
                     # Object is updated to remove the relationship data (fails)
                     response = self.send_data(
                         from_model,
                         {
-                            "name": f'{params["create_data"]["name"]} changed again',
+                            "name": f"{params['create_data']['name']} changed again",
                             "relationships": {},
                         },
                         interact_with,

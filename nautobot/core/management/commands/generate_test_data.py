@@ -213,6 +213,7 @@ class Command(BaseCommand):
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")
+        _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(SoftwareImageFileFactory, 25, description="to be usable by DeviceTypes")
         _create_batch(ManufacturerFactory, 4, description="without Platforms")  # 4 more hard-coded Manufacturers
         _create_batch(DeviceTypeFactory, 30)
@@ -224,7 +225,8 @@ class Command(BaseCommand):
         _create_batch(InterfaceTemplateFactory, 30)
         _create_batch(PowerPortTemplateFactory, 30)
         _create_batch(PowerOutletTemplateFactory, 30)
-        _create_batch(ModuleBayTemplateFactory, 90)
+        _create_batch(ModuleBayTemplateFactory, 60, description="without module families", has_module_family=False)
+        _create_batch(ModuleBayTemplateFactory, 30, description="with module families", has_module_family=True)
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
@@ -312,7 +314,6 @@ class Command(BaseCommand):
             has_pp_info=True,
             has_description=True,
         )
-        _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(ControllerFactory, 10, description="with Devices or DeviceRedundancyGroups")
         _create_batch(ControllerManagedDeviceGroupFactory, 5, description="without any Devices")
         _create_batch(SupportedDataRateFactory, 20)
@@ -374,7 +375,7 @@ class Command(BaseCommand):
                 confirm = input(
                     f"""\
 You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[options['database']].settings_dict['NAME']}" database,
+This will IRREVERSIBLY DESTROY all data in the "{connections[options["database"]].settings_dict["NAME"]}" database,
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 

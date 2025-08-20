@@ -9,7 +9,7 @@ Like other Nautobot features, it is possible to create, read, update, and delete
 
 ## Supported Providers
 
-The feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
+This feature uses the concept of a `provides` field to identify the provided data types and therefore map a repository to a use case. A list of the supported options is provided below.
 
 ### Core Functionality
 
@@ -43,6 +43,9 @@ This table defines repository parameters that are required to establish a reposi
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
 |Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
+
+!!! tip
+    The `slug` cannot be changed without removing and recreating the Git Repository record. Also, because a repository can potentially provide Jobs, Nautobot requires you to provide a `slug` that could be used as a Python module name and will not conflict with any existing Python module or package installed in Nautobot. For example, you can't create a repository with the slug `nautobot`.
 
 ## Token Requirements
 
@@ -171,27 +174,26 @@ Now that the Git repository is linked for export templates it can be controlled 
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md#jobs).
+For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
 Setting up the repository can be done following the same steps from [Export Templates](#export-templates).  The only differences is the `provides` selection changes to `jobs`.
 
-Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/index.md#job-registration) for more information.
+Jobs need to be defined in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/job-structure.md#job-registration) for more information.
 
 An example tree for `/jobs/`.
 
 ```no-highlight
-▶ tree jobs
+▶ tree .
+__init__.py
 jobs
 ├── __init__.py
-└── get-device-connection.py
-
-1 directory, 2 files
+└── get_device_connection.py
 ```
 
 !!! note
-    As shown in the above example, the `/jobs/` directory must contain a file called `__init__.py`.
+    As shown in the above example, the repository root must contain a file called `__init__.py` **and** the `/jobs/` directory must contain a file called `__init__.py`.
 
 Once the repository is created in Nautobot.
 
@@ -305,7 +307,7 @@ As seen in [Fill out Repository Details](#fill-out-repository-details), the stan
 - Intended Configs
 - Jinja Templates
 
-For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-app-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
+For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Docs](https://docs.nautobot.com/projects/golden-config/en/stable/user/app_use_cases/#git-settings).
 
 ## Common Issues and Troubleshooting
 

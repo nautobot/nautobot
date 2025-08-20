@@ -1,7 +1,7 @@
 import contextlib
 import re
 from typing import Optional, Sequence
-from unittest import skipIf
+from unittest import mock, skipIf
 import uuid
 
 from django.apps import apps
@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db.models import ManyToManyField, Model, QuerySet
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
@@ -16,6 +17,7 @@ from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
+from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
@@ -141,6 +143,8 @@ class ViewTestCases:
         Retrieve a single instance.
         """
 
+        custom_action_required_permissions = {}
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
             # Make the request as an unauthenticated user
@@ -246,6 +250,21 @@ class ViewTestCases:
             self.assertBodyContains(response, f"{instance.get_absolute_url()}#advanced")
             self.assertBodyContains(response, "Advanced")
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_custom_actions(self):
+            instance = self._get_queryset().first()
+            for url_name, required_permissions in self.custom_action_required_permissions.items():
+                url = reverse(url_name, kwargs={"pk": instance.pk})
+                self.assertHttpStatus(self.client.get(url), 403)
+                for permission in required_permissions[:-1]:
+                    self.add_permissions(permission)
+                    self.assertHttpStatus(self.client.get(url), 403)
+
+                self.add_permissions(required_permissions[-1])
+                self.assertHttpStatus(self.client.get(url), 200)
+                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
+                self.remove_permissions(*required_permissions)
+
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
         View the changelog for an instance.
@@ -302,6 +321,11 @@ class ViewTestCases:
         slug_source = None
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
 
         def test_create_object_without_permission(self):
             # Try GET without permission
@@ -325,7 +349,14 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+            response = self.client.get(self._get_url("add"))
+            self.assertHttpStatus(response, 200)
+            # The response content should contain the expected form buttons
+            for button in self.expected_create_form_buttons:
+                self.assertBodyContains(response, button)
+            # The response content should not contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             request = {
@@ -439,6 +470,11 @@ class ViewTestCases:
 
         form_data = {}
         update_data = {}
+        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_create_form_buttons = [
+            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+        ]
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -464,7 +500,15 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+            response = self.client.get(self._get_url("edit", instance))
+            self.assertHttpStatus(response, 200)
+            # The response content should contain the expected form buttons
+            for button in self.expected_edit_form_buttons:
+                self.assertBodyContains(response, button)
+
+            # The response content should not contain the unexpected form buttons
+            for button in self.expected_create_form_buttons:
+                self.assertNotContains(response, button)
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
@@ -743,6 +787,17 @@ class ViewTestCases:
             # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
             response_body = response.content.decode(response.charset)
             self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
+
+        def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
+            # Make the request as an unauthenticated user
+            self.client.logout()
+            # Test if AnonymousUser can properly render the whole list view
+            with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
+                response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 200)
+                # There should be some rows
+                self.assertBodyContains(response, '<tr class="even')
+                self.assertBodyContains(response, '<tr class="odd')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
@@ -1024,6 +1079,7 @@ class ViewTestCases:
         def validate_redirect_to_job_result(self, response):
             # Get the last Bulk Edit Objects JobResult created
             job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+            self.assertIsNotNone(job_result, "No JobResult was created - likely the bulk_edit_data is invalid!")
             # Assert redirect to Job Results
             self.assertRedirects(
                 response,
@@ -1057,8 +1113,71 @@ class ViewTestCases:
             # Assign model-level permission
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
-            response = self.client.post(self._get_url("bulk_edit"), data)
-            self.validate_redirect_to_job_result(response)
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
+
+                # Verify that the provided self.bulk_edit_data was passed through correctly to the job.
+                # The below is a bit gross because of multiple layers of data encoding and decoding involved. Sorry!
+                job_form = BulkEditObjects.as_form(BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs))
+                job_form.is_valid()
+                job_kwargs = job_form.cleaned_data
+
+                bulk_edit_form_class = lookup.get_form_for_model(self.model, form_prefix="BulkEdit")
+                bulk_edit_form = bulk_edit_form_class(self.model, job_kwargs["form_data"])
+                bulk_edit_form.is_valid()
+                passed_bulk_edit_data = bulk_edit_form.cleaned_data
+
+                for key, value in self.bulk_edit_data.items():
+                    with self.subTest(key=key):
+                        if isinstance(passed_bulk_edit_data.get(key), Model):
+                            self.assertEqual(passed_bulk_edit_data.get(key).pk, value)
+                        elif isinstance(passed_bulk_edit_data.get(key), QuerySet):
+                            self.assertEqual(
+                                sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
+                            )
+                        else:
+                            self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_edit_objects_nullable_fields(self):
+            """Assert that "set null" fields on the bulk-edit form are correctly passed through to the job."""
+            bulk_edit_form_class = lookup.get_form_for_model(self.model, form_prefix="BulkEdit")
+            bulk_edit_form = bulk_edit_form_class(self.model)
+            if not getattr(bulk_edit_form, "nullable_fields", ()):
+                self.skipTest(f"no nullable fields on {bulk_edit_form_class}")
+
+            for field_name in bulk_edit_form.nullable_fields:
+                with self.subTest(field_name=field_name):
+                    if field_name.startswith("cf_"):
+                        # TODO check whether customfield is nullable
+                        continue
+                    if field_name.startswith("cr_"):
+                        # TODO check whether relationship is required
+                        continue
+                    model_field = self.model._meta.get_field(field_name)
+                    if isinstance(model_field, ManyToManyField):
+                        # always nullable
+                        continue
+                    self.assertTrue(model_field.null or model_field.blank)
+
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+            data = {
+                "pk": pk_list,
+                "_apply": True,  # Form button
+                "_nullify": list(bulk_edit_form.nullable_fields),
+            }
+
+            # Assign model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
+
+                self.assertEqual(mock_enqueue_job.call_args.kwargs["form_data"].get("_nullify"), data["_nullify"])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
@@ -1157,11 +1276,13 @@ class ViewTestCases:
             }
             data.update(utils.post_data(self.bulk_edit_data))
 
-            # Attempt to bulk edit permitted objects into a non-permitted state
-            response = self.client.post(self._get_url("bulk_edit"), data)
-            # NOTE: There is no way of testing constrained failure as bulk edit is a system Job;
-            # and can only be tested by checking JobLogs.
-            self.validate_redirect_to_job_result(response)
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                # Attempt to bulk edit permitted objects into a non-permitted state
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                # NOTE: There is no way of testing constrained failure as bulk edit is a system Job;
+                # and can only be tested by checking JobLogs.
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
         """

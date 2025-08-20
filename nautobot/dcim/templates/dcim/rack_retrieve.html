@@ -1,0 +1,318 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block extra_breadcrumbs %}
+                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.pk }}">{{ object.location }}</a></li>
+                {% if object.rack_group %}
+                    {% for rack_group in object.rack_group.ancestors %}
+                        <li>{{ rack_group|hyperlinked_object }}</li>
+                    {% endfor %}
+                    <li>{{ object.rack_group|hyperlinked_object }}</li>
+                {% endif %}
+{% endblock extra_breadcrumbs %}
+
+{% block extra_buttons %}
+        <a {% if prev_rack %}href="{% url 'dcim:rack' pk=prev_rack.pk %}"{% else %}disabled="disabled"{% endif %} class="btn btn-primary">
+            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
+        </a>
+        <a {% if next_rack %}href="{% url 'dcim:rack' pk=next_rack.pk %}"{% else %}disabled="disabled"{% endif %} class="btn btn-primary">
+            <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
+        </a>
+{% endblock extra_buttons %}
+
+{% block title %}Rack {{ object }}{% endblock title %}
+
+{% block panel_buttons %}
+<button class="btn btn-sm btn-default toggle-fullname" selected="selected">
+    <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
+</button>
+<button class="btn btn-sm btn-default toggle-images" selected="selected">
+    <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
+</button>
+{% endblock panel_buttons %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Rack</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Location</td>
+                    <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                </tr>
+                <tr>
+                    <td>Rack Group</td>
+                    <td>
+                        {% if object.rack_group %}
+                            {% for rack_group in object.rack_group.ancestors %}
+                                {{ rack_group|hyperlinked_object }} /
+                            {% endfor %}
+                        {% endif %}
+                        {{ object.rack_group|hyperlinked_object }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Facility ID</td>
+                    <td>{{ object.facility_id|placeholder }}</td>
+                </tr>
+                {% include 'inc/tenant_table_row.html' %}
+                <tr>
+                    <td>Status</td>
+                    <td>
+                        {{ object.status| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>{{ object.role | hyperlinked_object_with_color }}</td>
+                </tr>
+                <tr>
+                    <td>Serial Number</td>
+                    <td>{{ object.serial|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Asset Tag</td>
+                    <td>{{ object.asset_tag|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Devices</td>
+                    <td>
+                        <a href="{% url 'dcim:device_list' %}?rack={{ object.id }}">{{ device_count }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Space Utilization</td>
+                    <td>{% utilization_graph object.get_utilization %}</td>
+                </tr>
+                <tr>
+                    <td>Power Utilization</td>
+                    <td>{% utilization_graph object.get_power_utilization %}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Dimensions</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Type</td>
+                    <td>
+                        {% if object.type %}
+                            {{ object.get_type_display }}
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Width</td>
+                    <td>{{ object.get_width_display }}</td>
+                </tr>
+                <tr>
+                    <td>Height</td>
+                    <td>{{ object.u_height }}U ({% if object.desc_units %}descending{% else %}ascending{% endif %})</td>
+                </tr>
+                <tr>
+                    <td>Outer Width</td>
+                    <td>
+                        {% if object.outer_width %}
+                            <span>{{ object.outer_width }} {{ object.get_outer_unit_display }}</span>
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Outer Depth</td>
+                    <td>
+                        {% if object.outer_depth %}
+                            <span>{{ object.outer_depth }} {{ object.get_outer_unit_display }}</span>
+                        {% else %}
+                            <span class="text-muted">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Comments</strong>
+            </div>
+            <div class="panel-body rendered-markdown">
+                {% if object.comments %}
+                    {{ object.comments|render_markdown }}
+                {% else %}
+                    <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+        {% if power_feeds %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Power Feeds</strong>
+                </div>
+                <table class="table panel-body">
+                    <tr>
+                        <th>Panel</th>
+                        <th>Feed</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                        <th>Utilization</th>
+                    </tr>
+                    {% for powerfeed in power_feeds %}
+                        <tr>
+                            <td>{{ powerfeed.power_panel|hyperlinked_object }}</td>
+                            <td>{{ powerfeed|hyperlinked_object }}</td>
+                            <td>
+                                <span class="label" style="color: {{ powerfeed.status.color|fgcolor }}; background-color: #{{powerfeed.status.color}}">{{ powerfeed.get_status_display }}</span>
+                            </td>
+                            <td>
+                                <span class="label label-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>
+                            </td>
+                            {% with power_port=powerfeed.connected_endpoint %}
+                                {% if power_port %}
+                                    {% with utilization=power_port.get_power_draw %}
+                                        {% if utilization %}
+                                            {% if powerfeed.available_power > 0 %}
+                                                <td>{% utilization_graph_raw_data utilization.allocated powerfeed.available_power %}</td>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <td class="text-muted">N/A</td>
+                                {% endif %}
+                            {% endwith %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Images</strong>
+            </div>
+            {% include 'inc/image_attachments.html' with images=object.images.all %}
+            {% if perms.extras.add_imageattachment %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                        Attach an image
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Reservations</strong>
+            </div>
+            {% if reservations %}
+                <table class="table table-hover panel-body">
+                    <tr>
+                        <th>Units</th>
+                        <th>Tenant</th>
+                        <th>Description</th>
+                        <th></th>
+                    </tr>
+                    {% for resv in reservations %}
+                        <tr>
+                            <td>
+                                <a href="{{ resv.get_absolute_url }}">{{ resv.unit_list }}</a>
+                            </td>
+                            <td>
+                                {{ resv.tenant|hyperlinked_object }}
+                            </td>
+                            <td>
+                                {{ resv.description }}<br />
+                                <small>{{ resv.user }} &middot; {{ resv.created }}</small>
+                            </td>
+                            <td class="text-right noprint">
+                                {% if perms.dcim.change_rackreservation %}
+                                    <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs" title="Edit reservation">
+                                        <i class="mdi mdi-pencil" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                                {% if perms.dcim.delete_rackreservation %}
+                                    <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-xs" title="Delete reservation">
+                                        <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="panel-body text-muted">None</div>
+            {% endif %}
+            {% if perms.dcim.add_rackreservation %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                        Add a reservation
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="row" style="margin-bottom: 20px">
+            <div class="col-md-6 col-sm-6 col-xs-12 text-center">
+              <div style="margin-left: 30px">
+                <h4>Front</h4>
+                {% include 'dcim/inc/rack_elevation.html' with face='front' %}
+              </div>
+            </div>
+            <div class="col-md-6 col-sm-6 col-xs-12 text-center">
+              <div style="margin-left: 30px">
+                <h4>Rear</h4>
+                {% include 'dcim/inc/rack_elevation.html' with face='rear' %}
+              </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Non-Racked Devices</strong>
+            </div>
+            {% if nonracked_devices %}
+                <table class="table table-hover panel-body">
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Type</th>
+                        <th colspan="2">Parent Device</th>
+                    </tr>
+                    {% for device in nonracked_devices %}
+                        <tr{% if device.device_type.u_height %} class="warning"{% endif %}>
+                            <td>{{ device|hyperlinked_object }}</td>
+                            <td>{{ device.role }}</td>
+                            <td>{{ device.device_type.display }}</td>
+                            {% if device.parent_bay %}
+                                <td>{{ device.parent_bay.device|hyperlinked_object }}</td>
+                                <td>{{ device.parent_bay }}</td>
+                            {% else %}
+                                <td colspan="2" class="text-muted">&mdash;</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="panel-body text-muted">None</div>
+            {% endif %}
+            {% if perms.dcim.add_device %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+                        Add a non-racked device
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+{% endblock content_right_page %}
+
+{% block javascript %}
+    {{block.super}}
+    <script src="{% versioned_static 'js/rack_elevations.js' %}"></script>
+{% endblock javascript %}

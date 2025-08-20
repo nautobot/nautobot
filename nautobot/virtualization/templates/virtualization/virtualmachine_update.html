@@ -1,0 +1,75 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load static %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Virtual Machine</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.role %}
+            {% render_field form.status %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Cluster</strong></div>
+        <div class="panel-body">
+            {% render_field form.cluster_group %}
+            {% render_field form.cluster %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VRF Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.vrfs %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Management</strong></div>
+        <div class="panel-body">
+            {% render_field form.platform %}
+            {% render_field form.primary_ip4 %}
+            {% render_field form.primary_ip6 %}
+            {% render_field form.software_version %}
+            <div class="form-group" id="software_version_image_container" style="display:none">
+                <div class="col-md-3"></div>
+                <div class="col-md-9">
+                    <span class="help-block">
+                        <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
+                        <ul id="software_version_image_list">
+                            <li> Software images for the selected software version will appear here </li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+            {% render_field form.software_image_files %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Resources</strong></div>
+        <div class="panel-body">
+            {% render_field form.vcpus %}
+            {% render_field form.memory %}
+            {% render_field form.disk %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Local Config Context Data</strong></div>
+        <div class="panel-body">
+            {% render_field form.local_config_context_schema %}
+            {% render_field form.local_config_context_data %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {% include 'dcim/inc/edit_form_softwareversion_js.html' %}
+{% endblock %}

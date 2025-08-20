@@ -1487,9 +1487,9 @@ properties:
       }
       ```
 
-      The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `netutils_parser`,
-      `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have
-      an alternative network driver that you want your Nautobot instance to include.
+      The default top-level keys consists of `ansible`, `hier_config`, `napalm`, etc, and comes from netutils, but
+      you can also add additional keys if you have an alternative network driver that you want your Nautobot instance
+      to include.
     is_constance_config: true
     type: "object"
     version_added: "1.6.0"
@@ -1926,34 +1926,6 @@ properties:
     version_added: "1.5.0"
     see_also:
       "`TEST_USE_FACTORIES`": "#test_use_factories"
-  TEST_PERFORMANCE_BASELINE_FILE:
-    default: "nautobot/core/tests/performance_baselines.yml"
-    description: "File path of a YAML file providing baseline times for all performance-related tests."
-    details: |-
-      The YAML file should conform to the following format:
-
-      ```yaml
-      tests:
-          - name: >-
-                test_run_job_with_sensitive_variables_and_requires_approval
-                (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.799533
-          - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.367563
-          - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 4.363194
-          - name: >-
-                test_create_object_with_constrained_permission
-                (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
-            execution_time: 3.474244
-          - name: >-
-                test_run_now_constrained_permissions
-                (nautobot.extras.tests.test_views.JobTestCase)
-            execution_time: 2.727531
-      ```
-    environment_variable: "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE"
-    type: "string"
-    version_added: "1.5.0"
   TEST_USE_FACTORIES:
     default: false
     description: >-

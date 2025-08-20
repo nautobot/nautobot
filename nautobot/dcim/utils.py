@@ -1,23 +1,13 @@
+from copy import deepcopy
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from netutils.lib_mapper import (
-    ANSIBLE_LIB_MAPPER_REVERSE,
-    HIERCONFIG_LIB_MAPPER_REVERSE,
-    NAPALM_LIB_MAPPER_REVERSE,
-    NETMIKO_LIB_MAPPER_REVERSE,
-    NETUTILSPARSER_LIB_MAPPER_REVERSE,
-    NTCTEMPLATES_LIB_MAPPER_REVERSE,
-    PYATS_LIB_MAPPER_REVERSE,
-    PYNTC_LIB_MAPPER_REVERSE,
-    SCRAPLI_LIB_MAPPER_REVERSE,
-)
+from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
 
 
 def compile_path_node(ct_id, object_id):
@@ -71,9 +61,8 @@ def get_network_driver_mapping_tool_names():
 
     Tool names are "ansible", "hier_config", "napalm", "netmiko", etc...
     """
-    network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
+    network_driver_names = set(NAME_TO_LIB_MAPPER_REVERSE.keys())
     network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS", fallback={}).keys())
-
     return sorted(network_driver_names)
 
 
@@ -94,23 +83,7 @@ def get_all_network_driver_mappings():
             etc...
         }
     """
-    network_driver_mappings = {}
-
-    # initialize mapping from netutils library
-    for tool_name, mappings in (
-        ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
-        ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
-        ("napalm", NAPALM_LIB_MAPPER_REVERSE),
-        ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
-        ("netutils_parser", NETUTILSPARSER_LIB_MAPPER_REVERSE),
-        ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
-        ("pyats", PYATS_LIB_MAPPER_REVERSE),
-        ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
-        ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
-    ):
-        for normalized_name, mapped_name in mappings.items():
-            network_driver_mappings.setdefault(normalized_name, {})
-            network_driver_mappings[normalized_name][tool_name] = mapped_name
+    network_driver_mappings = deepcopy(NAME_TO_ALL_LIB_MAPPER)
 
     # add mappings from optional NETWORK_DRIVERS setting
     network_drivers_config = get_settings_or_config("NETWORK_DRIVERS", fallback={})
@@ -159,3 +132,12 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
                 )
             }
         )
+
+
+def convert_watts_to_va(watts, power_factor):
+    """
+    Convert watts to VA using power factor.
+    """
+    if not watts:
+        return 0
+    return int(watts / power_factor)

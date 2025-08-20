@@ -262,6 +262,21 @@ class RIRFilterForm(NautobotFilterForm):
     )
 
 
+class RIRBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RIR.objects.all(), widget=forms.MultipleHiddenInput())
+    is_private = forms.NullBooleanField(
+        required=False,
+        label="Private",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 #
 # Prefixes
 #
@@ -727,6 +742,18 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 # VLAN groups
 #
+
+
+class VLANGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    """Bulk edit form for VLANGroup objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=VLANGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    range = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = VLANGroup
+        nullable_fields = ["location", "description"]
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):

@@ -2,7 +2,8 @@ import datetime
 import json
 import logging
 import re
-from urllib.parse import parse_qs
+from typing import Literal
+from urllib.parse import parse_qs, quote_plus
 
 from django import template
 from django.conf import settings
@@ -12,7 +13,7 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -25,10 +26,9 @@ from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
-HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
-HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -136,7 +136,9 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    return format_html("<pre>{}</pre>", value)
+    if value is not None:
+        return format_html("<pre>{}</pre>", value)
+    return HTML_NONE
 
 
 @library.filter()
@@ -695,20 +697,120 @@ def render_content_types(value):
 @library.filter()
 @register.filter()
 def render_ancestor_hierarchy(value):
-    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object, with an optional location type."""
+
+    if not value or not hasattr(value, "ancestors"):
+        return HTML_NONE
+
     result = format_html('<ul class="tree-hierarchy">')
     append_to_result = format_html("</ul>")
+
     for ancestor in value.ancestors():
         nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
-        result += format_html(
-            "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
-        )
+
+        if getattr(ancestor, "location_type", None):
+            location_type = hyperlinked_object(ancestor.location_type, "name")
+            location_type = format_html("({})", location_type) if location_type else ""
+            result += format_html(
+                "<li>{value} {location_type} {nestable_tag}<ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                location_type=location_type,
+                nestable_tag=nestable_tag,
+            )
+        else:
+            result += format_html(
+                "<li>{value} {nestable_tag} <ul>",
+                value=hyperlinked_object(ancestor, "name"),
+                nestable_tag=nestable_tag,
+            )
         append_to_result += format_html("</ul></li>")
-    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
-    result += format_html("<li><strong>{value} {nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
+
+    nestable_tag = format_html('<span title="nestable">↺</span>') if getattr(value, "nestable", False) else ""
+
+    if getattr(value, "location_type", None):
+        location_type = hyperlinked_object(value.location_type, "name")
+        location_type = format_html("({})", location_type) if location_type else ""
+        result += format_html(
+            "<li><strong>{value} {location_type} {nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            location_type=location_type,
+            nestable_tag=nestable_tag,
+        )
+
+    else:
+        result += format_html(
+            "<li><strong>{value} {nestable_tag}</strong></li>",
+            value=hyperlinked_object(value, "name"),
+            nestable_tag=nestable_tag,
+        )
     result += append_to_result
 
     return result
+
+
+@library.filter()
+@register.filter()
+def render_address(address):
+    if address:
+        map_link = format_html(
+            '<a href="https://maps.google.com/?q={}" target="_blank" class="btn btn-primary btn-xs">'
+            '<i class="mdi mdi-map-marker"></i> Map it</a>',
+            quote_plus(address),
+        )
+        address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
+        return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
+    return HTML_NONE
+
+
+@library.filter()
+@register.filter()
+def render_button_class(value):
+    """
+    Render a string as a styled HTML button using Bootstrap classes.
+
+    Args:
+        value (str): A string representing the button class (e.g., 'primary').
+
+    Returns:
+        str: HTML string for a button with the given class.
+
+    Example:
+        >>> render_button_class("primary")
+        '<button class="btn btn-primary">primary</button>'
+    """
+    if value:
+        base = value.split()[0]
+        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+    return ""
+
+
+def render_job_run_link(value):
+    """
+    Render the job as a hyperlink to its 'run' view using the class_path.
+
+    Args:
+        value (Job): The job object.
+
+    Returns:
+        str: HTML anchor tag linking to the job's run view.
+    """
+    if hasattr(value, "class_path"):
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
+        return format_html('<a href="{}">{}</a>', url, value)
+    return str(value)
+
+
+@library.filter()
+@register.filter()
+def label_list(value, suffix=""):
+    """Render a list of values with optional suffix (like 'MHz') as span labels."""
+    if not value:
+        return HTML_NONE
+    return format_html_join(
+        " ",
+        '<span class="label label-default">{0}{1}</span>',
+        ((item, suffix) for item in value),
+    )
 
 
 #
@@ -1022,7 +1124,7 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
     else:
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
@@ -1153,3 +1255,26 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage: <h1>{{ title }}{% saved_view_title "html" %}</h1>
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return ""
+
+    if new_changes_not_applied:
+        title = format_html(' — <i title="Pending changes not saved">{}</i>', current_saved_view.name)
+    else:
+        title = format_html(" — {}", current_saved_view.name)
+
+    if mode == "plain":
+        return strip_tags(title)
+
+    return title

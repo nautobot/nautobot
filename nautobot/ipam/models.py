@@ -170,6 +170,9 @@ class VRF(PrimaryModel):
             #       where multiple different-RD VRFs with the same name may already exist.
             # ["namespace", "name"],
         ]
+        index_together = [
+            ["namespace", "name", "rd"],
+        ]
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
@@ -200,6 +203,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_device.alters_data = True
+
     def remove_device(self, device):
         """
         Remove a `device` from this VRF.
@@ -212,6 +217,8 @@ class VRF(PrimaryModel):
         """
         instance = self.devices.through.objects.get(vrf=self, device=device)
         return instance.delete()
+
+    remove_device.alters_data = True
 
     def add_virtual_machine(self, virtual_machine, rd="", name=""):
         """
@@ -231,6 +238,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_virtual_machine.alters_data = True
+
     def remove_virtual_machine(self, virtual_machine):
         """
         Remove a `virtual_machine` from this VRF.
@@ -243,6 +252,8 @@ class VRF(PrimaryModel):
         """
         instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
         return instance.delete()
+
+    remove_virtual_machine.alters_data = True
 
     def add_virtual_device_context(self, virtual_device_context, rd="", name=""):
         """
@@ -264,6 +275,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_virtual_device_context.alters_data = True
+
     def remove_virtual_device_context(self, virtual_device_context):
         """
         Remove a `virtual_device_context` from this VRF.
@@ -279,6 +292,8 @@ class VRF(PrimaryModel):
         )
         return instance.delete()
 
+    remove_virtual_device_context.alters_data = True
+
     def add_prefix(self, prefix):
         """
         Add a `prefix` to this VRF. Each object must be in the same Namespace.
@@ -293,6 +308,8 @@ class VRF(PrimaryModel):
         instance.validated_save()
         return instance
 
+    add_prefix.alters_data = True
+
     def remove_prefix(self, prefix):
         """
         Remove a `prefix` from this VRF.
@@ -305,6 +322,8 @@ class VRF(PrimaryModel):
         """
         instance = self.prefixes.through.objects.get(vrf=self, prefix=prefix)
         return instance.delete()
+
+    remove_prefix.alters_data = True
 
 
 @extras_features("graphql")
@@ -374,6 +393,8 @@ class VRFDeviceAssignment(BaseModel):
                 "A VRFDeviceAssignment entry must be associated with a device, a virtual machine, or a virtual device context."
             )
 
+    clean.alters_data = True
+
 
 @extras_features("graphql")
 class VRFPrefixAssignment(BaseModel):
@@ -391,7 +412,12 @@ class VRFPrefixAssignment(BaseModel):
         super().clean()
 
         if self.prefix.namespace != self.vrf.namespace:
-            raise ValidationError({"prefix": "Prefix must be in same namespace as VRF"})
+            raise ValidationError(
+                {
+                    "prefix": f"Prefix (namespace {self.prefix.namespace}) must be in same namespace as "
+                    "VRF (namespace {self.vrf.namespace})"
+                }
+            )
 
 
 @extras_features(
@@ -571,6 +597,7 @@ class Prefix(PrimaryModel):
         index_together = [
             ["network", "broadcast", "prefix_length"],
             ["namespace", "network", "broadcast", "prefix_length"],
+            ["namespace", "ip_version", "network", "prefix_length"],
         ]
         unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
@@ -640,6 +667,8 @@ class Prefix(PrimaryModel):
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
 
+    _deconstruct_prefix.alters_data = True
+
     def delete(self, *args, **kwargs):
         """
         A Prefix with children will be impossible to delete and raise a `ProtectedError`.
@@ -705,6 +734,8 @@ class Prefix(PrimaryModel):
             return parent
         return None
 
+    get_parent.alters_data = True
+
     def clean(self):
         if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
@@ -715,6 +746,8 @@ class Prefix(PrimaryModel):
             self.parent = self.get_parent()
 
         super().clean()
+
+    clean.alters_data = True
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -821,6 +854,8 @@ class Prefix(PrimaryModel):
 
         return query.update(parent=self)
 
+    reparent_subnets.alters_data = True
+
     def reparent_ips(self):
         """Determine the list of child IPAddresses and set the parent to self."""
         query = IPAddress.objects.select_for_update().filter(
@@ -831,6 +866,8 @@ class Prefix(PrimaryModel):
         )
 
         return query.update(parent=self)
+
+    reparent_ips.alters_data = True
 
     def supernets(self, direct=False, include_self=False, for_update=False):
         """
@@ -861,7 +898,7 @@ class Prefix(PrimaryModel):
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
         return supernets
@@ -893,7 +930,7 @@ class Prefix(PrimaryModel):
             ip_version=self.ip_version,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
-            namespace=self.namespace,
+            namespace_id=self.namespace_id,
         )
 
     def is_child_node(self):
@@ -1065,6 +1102,17 @@ class Prefix(PrimaryModel):
         For prefixes containing IP addresses and/or pools, pools are considered fully utilized while
         only IP addresses that are not contained within pools are added to the utilization.
 
+        It is recommended that when using this method you add the following prefetch to the queryset when dealing with
+        multiple prefixes to ensure good performance:
+
+        ```
+        prefetch_related(
+            Prefetch(
+                "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+            )
+        )
+        ```
+
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
@@ -1077,7 +1125,7 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace,
+                parent__namespace_id=self.namespace_id,
                 ip_version=self.ip_version,
                 host__gte=self.network,
                 host__lte=self.broadcast,
@@ -1085,7 +1133,11 @@ class Prefix(PrimaryModel):
             child_ips = netaddr.IPSet(pool_ips)
 
         if self.type != choices.PrefixTypeChoices.TYPE_POOL:
-            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+            # Using self.children.all over self.children.iterator (with chunk_size given or not) consistently shaves
+            # off around 200 extra SQL queries and shows better performance.
+            # Also note that this is meant to be used in conjunction with a Prefetch on an only query. This query is
+            # performed in nautobot.ipam.tables.PrefixDetailTable.
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
 
         numerator_set = child_ips | child_prefixes
 
@@ -1207,6 +1259,9 @@ class IPAddress(PrimaryModel):
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
+        index_together = [
+            ["ip_version", "host", "mask_length"],
+        ]
 
     def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1227,6 +1282,8 @@ class IPAddress(PrimaryModel):
             self.host = str(address.ip)
             self.mask_length = address.prefixlen
             self.ip_version = address.version
+
+    _deconstruct_address.alters_data = True
 
     natural_key_field_names = ["parent__namespace", "host"]
 
@@ -1288,6 +1345,8 @@ class IPAddress(PrimaryModel):
             self.dns_name = self.dns_name.lower()
 
         super().clean()
+
+    clean.alters_data = True
 
     def save(self, *args, **kwargs):
         self.clean()  # MUST do data fixup as above

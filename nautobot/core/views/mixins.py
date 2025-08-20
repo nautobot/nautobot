@@ -41,6 +41,8 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.ui.breadcrumbs import Breadcrumbs
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -239,6 +241,25 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     table_class = None
     notes_form_class = NoteForm
     permission_classes = []
+    # custom view attributes used for permission checks and handling
+    custom_view_base_action = None
+    custom_view_additional_permissions = None
+    view_titles = None
+    breadcrumbs = None
+
+    def get_view_titles(self):
+        return self.instantiate_if_needed(self.view_titles, Titles)
+
+    def get_breadcrumbs(self):
+        return self.instantiate_if_needed(self.breadcrumbs, Breadcrumbs)
+
+    @staticmethod
+    def instantiate_if_needed(attr, default_cls):
+        if attr is None:
+            return default_cls()
+        if isinstance(attr, type):
+            return attr()
+        return attr
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -249,6 +270,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
+            # Append additional object permissions if specified.
+            if self.custom_view_additional_permissions:
+                model_permissions.append(*self.custom_view_additional_permissions)
+            # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
@@ -501,7 +526,13 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_action(self):
         """Helper method for retrieving action and if action not set defaulting to action name."""
-        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
+        if self.custom_view_base_action:
+            return self.custom_view_base_action
+        if self.action in PERMISSIONS_ACTION_MAP:
+            # If the action is in the action_map, return the mapped permission
+            return PERMISSIONS_ACTION_MAP[self.action]
+
+        return self.action
 
     def get_extra_context(self, request, instance=None):
         """
@@ -542,6 +573,18 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     raise TemplateDoesNotExist("")
             except TemplateDoesNotExist:
                 template_name = f"generic/object_{action}.html"
+                try:
+                    select_template([template_name])
+                except TemplateDoesNotExist:
+                    # Most likely a custom action in detail view.
+                    # Fallback to the default detail view template
+                    template_name = f"{app_label}/{model_opts.model_name}_retrieve.html"
+                    try:
+                        select_template([template_name])
+                    except TemplateDoesNotExist:
+                        # Try a different detail view template format
+                        template_name = f"{app_label}/{model_opts.model_name}.html"
+                        select_template([template_name])
         return template_name
 
     def get_form(self, *args, **kwargs):
@@ -843,7 +886,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             if hasattr(form, "save_note") and callable(form.save_note):
                 form.save_note(instance=obj, user=request.user)
 
-            msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
+            msg = f"{'Created' if object_created else 'Modified'} {queryset.model._meta.verbose_name}"
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
                 msg = format_html(
@@ -1020,6 +1063,11 @@ class BulkEditAndBulkDeleteModelMixin:
 
         filter_query_params = new_filter_query_params
 
+        if nullified_fields := request.POST.getlist("_nullify"):
+            form_data["_nullify"] = nullified_fields
+        else:
+            form_data["_nullify"] = []
+
         job_form = BulkEditObjects.as_form(
             data={
                 "form_data": form_data,
@@ -1112,6 +1160,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
                     f"No {queryset.model._meta.verbose_name_plural} were selected for deletion.",
                 )
                 return redirect(self.get_return_url(request))
+            # Hide actions column in the table for bulk destroy view
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         data.update(
             {
@@ -1308,6 +1359,10 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                     f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
                 )
                 return redirect(self.get_return_url(request))
+
+            # Hide actions column in the table for bulk update view
+            if "actions" in table.columns:
+                table.columns.hide("actions")
         data.update(
             {
                 "table": table,

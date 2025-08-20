@@ -393,6 +393,18 @@ class PluginDetailViewTest(TestCase):
         self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
+class MarketplaceViewTest(TestCase):
+    def test_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_authenticated(self):
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        self.assertHttpStatus(response, 200)
+
+
 class AppAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
     bulk_update_data = {
@@ -486,7 +498,7 @@ class TestUserContextCustomValidator(CustomValidator):
         """
         Used to validate that the correct user context is available in the custom validator.
         """
-        self.validation_error(self.context["user"])
+        self.validation_error(f"TestUserContextCustomValidator: user is {self.context['user']}")
 
 
 class AppCustomValidationTest(TestCase):
@@ -527,22 +539,28 @@ class AppCustomValidationTest(TestCase):
 
     def test_custom_validator_non_web_request_uses_anonymous_user(self):
         location_type = LocationType.objects.get(name="Campus")
-        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
 
-        from django.contrib.auth.models import AnonymousUser
-
-        with self.assertRaises(ValidationError) as context:
-            location_type.clean()
-        self.assertEqual(context.exception.message, AnonymousUser())
+            with self.assertRaises(ValidationError) as context:
+                location_type.clean()
+            self.assertEqual(context.exception.message, "TestUserContextCustomValidator: user is AnonymousUser")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
     def test_custom_validator_web_request_uses_real_user(self):
         location_type = LocationType.objects.get(name="Campus")
-        registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
 
-        with self.assertRaises(ValidationError) as context:
-            with web_request_context(user=self.user):
-                location_type.clean()
-        self.assertEqual(context.exception.message, self.user)
+            with self.assertRaises(ValidationError) as context:
+                with web_request_context(user=self.user):
+                    location_type.clean()
+            self.assertEqual(context.exception.message, f"TestUserContextCustomValidator: user is {self.user}")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
 
 class ExampleModelCustomActionViewTest(TestCase):
@@ -561,7 +579,10 @@ class ExampleModelCustomActionViewTest(TestCase):
     def test_custom_action_view_anonymous(self):
         self.client.logout()
         response = self.client.get(self.custom_view_url)
-        self.assertHttpStatus(response, 302)
+        self.assertHttpStatus(response, 200)
+        # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
+        response_body = response.content.decode(response.charset)
+        self.assertIn("/login/?next=", response_body, msg=response_body)
 
     def test_custom_action_view_without_permission(self):
         with disable_warnings("django.request"):
@@ -571,7 +592,7 @@ class ExampleModelCustomActionViewTest(TestCase):
             self.assertNotIn("/login/", response_body, msg=response_body)
 
     def test_custom_action_view_with_permission(self):
-        self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
         response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
@@ -587,7 +608,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
-            actions=["all_names"],
+            actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -879,11 +900,10 @@ class TestAppCoreViewOverrides(TestCase):
         self.assertEqual("Hello world! I'm an overridden view.", response.content.decode(response.charset))
 
         response = self.client.get(
-            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
+            f"{reverse('plugins:plugin_detail', kwargs={'plugin': 'example_app_with_view_override'})}"
         )
         self.assertIn(
-            "plugins:example_app:view_to_be_overridden <code>"
-            "example_app_with_view_override.views.ViewOverride</code>",
+            "plugins:example_app:view_to_be_overridden <code>example_app_with_view_override.views.ViewOverride</code>",
             extract_page_body(response.content.decode(response.charset)),
         )
 

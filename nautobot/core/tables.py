@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -80,14 +80,14 @@ class BaseTable(django_tables2.Table):
                 reverse_lookup="static_group_associations__associated_object_id",
             )
 
-        for cf in models.CustomField.objects.get_for_model(model):
+        for cf in models.CustomField.objects.get_for_model(model, get_queryset=False):
             name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.get_for_model(model):
+        for cpf in models.ComputedField.objects.get_for_model(model, get_queryset=False):
             self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.get_for_model_source(model):
+        for relationship in models.Relationship.objects.get_for_model_source(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
@@ -97,7 +97,7 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.get_for_model_destination(model):
+        for relationship in models.Relationship.objects.get_for_model_destination(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
@@ -333,6 +333,29 @@ class BaseTable(django_tables2.Table):
             # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
 
+    def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
+        """Conditionally prefetch the specified database column if the related table field is visible.
+
+        Args:
+            table_field (str): Name of the field on the table to check for visibility. Also used as the prefetch field
+                               if neither db_column nor prefetch is specified.
+            db_column (str): Optionally specify the db column to prefetch. Mutually exclusive with prefetch.
+            prefetch (Prefetch): Optionally specify a prefetch object. Mutually exclusive with db_column.
+        """
+        if db_column and prefetch:
+            raise ValueError(
+                "BaseTable.add_conditional_prefetch called with both db_column and prefetch, this is not allowed."
+            )
+        if not db_column:
+            db_column = table_field
+        if table_field in self.columns and self.columns[table_field].visible and isinstance(self.data.data, QuerySet):
+            if prefetch:
+                self.data = TableData.from_data(self.data.data.prefetch_related(prefetch))
+            else:
+                self.data = TableData.from_data(self.data.data.prefetch_related(db_column))
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
 
 #
 # Table columns
@@ -353,7 +376,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
 class BooleanColumn(django_tables2.Column):
@@ -493,6 +516,9 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
         distinct (bool, optional): Parameter passed through to `count_related()`.
+        display_field (str, optional): Name of the field to use when displaying an object rather than just a count.
+            This will be passed to hyperlinked_object() as the `field` parameter
+            If not specified, it will use the "display" field.
         **kwargs (dict, optional): As the parent Column class.
 
     Examples:
@@ -536,6 +562,7 @@ class LinkedCountColumn(django_tables2.Column):
         reverse_lookup=None,
         distinct=False,
         default=None,
+        display_field="display",
         **kwargs,
     ):
         self.viewname = viewname
@@ -544,6 +571,7 @@ class LinkedCountColumn(django_tables2.Column):
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
         self.distinct = distinct
+        self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
@@ -565,7 +593,7 @@ class LinkedCountColumn(django_tables2.Column):
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
-            return helpers.hyperlinked_object(related_record)
+            return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         return helpers.placeholder(value)
@@ -699,11 +727,17 @@ class RelationshipColumn(django_tables2.Column):
         if len(value) < 1:
             return "—"
 
+        v = value[0]
+        peer = v.get_peer(record)
+
         # Handle Relationships on the many side.
         if self.relationship.has_many(self.peer_side):
-            v = value[0]
-            meta = type(v.get_peer(record))._meta
-            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            if peer is not None:
+                meta = type(peer)._meta
+                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            else:  # Perhaps a relationship to an uninstalled App's models?
+                peer_type = getattr(self.relationship, f"{self.peer_side}_type")
+                name = f"{peer_type} object(s)"
             return format_html(
                 '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                 reverse("extras:relationshipassociation_list"),
@@ -715,6 +749,7 @@ class RelationshipColumn(django_tables2.Column):
             )
         # Handle Relationships on the one side.
         else:
-            v = value[0]
-            peer = v.get_peer(record)
-            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            if peer is not None:
+                return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
+            else:
+                return format_html("(unknown)")

@@ -291,9 +291,9 @@ def get_table_class_string_from_view_name(view_name):
 
     view_func = resolve(reverse(view_name)).func
     view_class = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-    if hasattr(view_class, "table_class"):
+    if hasattr(view_class, "table_class") and view_class.table_class:
         return view_class.table_class.__name__
-    if hasattr(view_class, "table"):
+    if hasattr(view_class, "table") and view_class.table:
         return view_class.table.__name__
     return None
 
@@ -314,13 +314,15 @@ def get_created_and_last_updated_usernames_for_model(instance):
     created_by = None
     last_updated_by = None
     try:
-        created_by_record = object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).first()
+        created_by_record = (
+            object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).only("user_name").first()
+        )
         if created_by_record is not None:
             created_by = created_by_record.user_name
     except ObjectChange.DoesNotExist:
         pass
 
-    last_updated_by_record = object_change_records.first()
+    last_updated_by_record = object_change_records.only("user_name").first()
     if last_updated_by_record:
         last_updated_by = last_updated_by_record.user_name
 

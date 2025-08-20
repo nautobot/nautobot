@@ -457,6 +457,8 @@ class ExportTemplate(
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
 
+    clean.alters_data = True
+
 
 #
 # External integrations
@@ -919,12 +921,12 @@ class UserSavedViewAssociation(BaseModel):
         super().clean()
         self.view_name = self.saved_view.view
 
+    clean.alters_data = True
+
 
 #
 # Webhooks
 #
-
-
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,

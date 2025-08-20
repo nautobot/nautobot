@@ -1,5 +1,7 @@
 import codecs
+import csv
 from datetime import timedelta
+from io import StringIO
 import json
 from pathlib import Path
 
@@ -10,6 +12,7 @@ from django.utils import timezone
 import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -25,6 +28,7 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
     Role,
+    SavedView,
     Status,
     Tag,
 )
@@ -39,6 +43,32 @@ class ExportObjectListTest(TransactionTestCase):
     """
 
     databases = ("default", "job_logs")
+
+    def _create_saved_view(self, model_class=Status, config=None):
+        """Helper to create a SavedView with optional filter config."""
+        return SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
+            is_global_default=True,
+            config=config or {},
+        )
+
+    def _run_export_job(self, query_string, model_class=Status):
+        """Helper to run export job and return parsed CSV rows."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(model_class).pk,
+            query_string=query_string,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(
+            Path(job_result.files.first().file.name).name, f"nautobot_{model_class._meta.verbose_name_plural}.csv"
+        )
+        csv_data = job_result.files.first().file.read().decode("utf-8").lstrip("\ufeff")
+        return list(csv.DictReader(StringIO(csv_data)))
 
     def test_export_without_permission(self):
         """Job should enforce user permissions on the content-type being asked for export."""
@@ -135,6 +165,89 @@ class ExportObjectListTest(TransactionTestCase):
         yaml_data = job_result.files.first().file.read().decode("utf-8")
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
+
+    def test_get_saved_view_filter_params(self):
+        """Test various cases for the saved view filter parameters."""
+        saved_view = self._create_saved_view(config={"filter_params": {"name": ["Active"]}})
+        test_cases = [
+            # (query_params, expected_output)
+            ({"saved_view": saved_view.pk}, {"name": ["Active"]}),
+            (
+                {
+                    "saved_view": saved_view.pk,
+                    "name": ["Active"],
+                    "content_types": ["dcim.devices"],
+                },  # new filter content_types
+                {"name": ["Active"]},
+            ),
+            (
+                {"saved_view": saved_view.pk, "content_types": ["dcim.devices"]},  # name filter was deleted
+                {},
+            ),
+            ({"saved_view": saved_view.pk, "all_filters_removed": "true"}, {}),
+            (
+                {"name": ["Active"]},  # No saved view provided
+                {},
+            ),
+        ]
+
+        for query_params, expected_output in test_cases:
+            with self.subTest(query_params=query_params, expected_output=expected_output):
+                job = ExportObjectList()
+                filter_params = job._get_saved_view_filter_params(query_params)
+                self.assertEqual(filter_params, expected_output)
+
+    def test_export_saved_view_to_csv_without_filters(self):
+        """Export a SavedView to CSV without any filters applied."""
+        # URL: /?saved_view=<id>
+        sv = self._create_saved_view()
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_export_saved_view_to_csv_with_filters_from_saved_view(self):
+        """Export a SavedView to CSV using filters defined in the SavedView config."""
+        # URL: /?saved_view=<id>
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertGreaterEqual(Status.objects.count(), 1)  # Ensure multiple Statuses exist and filter works
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], filter_name)
+
+    def test_export_saved_view_to_csv_with_combined_filters(self):
+        """Export a SavedView to CSV using combined filters from SavedView config and query params."""
+        # URL: /?saved_view=<id>&name=<filter_name>&name=<filter_name2>
+        filter_name = Status.objects.first().name
+        filter_name2 = Status.objects.last().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], filter_name)
+        self.assertEqual(rows[1]["name"], filter_name2)
+
+    def test_export_saved_view_manufacturer_to_csv_with_replaced_filters(self):
+        """Export a SavedView manufacturer to CSV after replacing filters."""
+        # URL: /?saved_view=<id>&description=<manufacturer2>
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        filter_name = manufacturer.name
+        filter_description = manufacturer2.description
+        sv = self._create_saved_view(model_class=Manufacturer, config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(
+            query_string=f"saved_view={sv.pk}&description={filter_description}", model_class=Manufacturer
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], manufacturer2.name)
+        self.assertEqual(rows[0]["description"], filter_description)
+        self.assertTrue(all(row["name"] != filter_name for row in rows))
+
+    def test_export_saved_view_to_csv_after_removing_all_filters(self):
+        """Export a SavedView to CSV after removing all filters."""
+        # URL: /?saved_view=<id>&all_filters_removed=true
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&all_filters_removed=true")
+        self.assertEqual(len(rows), Status.objects.count())
 
 
 class ImportObjectsTestCase(TransactionTestCase):
@@ -353,6 +466,13 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
 
     def test_csv_import_contact_assignment(self):
+        self.add_permissions(
+            "dcim.view_locationtype",
+            "extras.view_status",
+            "dcim.view_location",
+            "extras.add_role",
+            "extras.add_contact",
+        )
         location_types_csv = "\n".join(["name", "ContactAssignmentImportTestLocationType"])
         locations_csv = "\n".join(
             [
@@ -569,10 +689,10 @@ class LogsCleanupTestCase(TransactionTestCase):
                 cleanup_types=[CleanupTypes.JOB_RESULT],
                 max_age=60,
             )
-        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
-        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists(), cm.output)
+        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists(), cm.output)
+        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists(), cm.output)
 
         started_logs = {
             "job_result_id": str(job_result.id),
@@ -719,6 +839,22 @@ class BulkEditTestCase(TransactionTestCase):
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
+
+    def test_bulk_edit_objects_nullify(self):
+        """
+        Bulk edit Role instances to nullify their weight.
+        """
+        self.add_permissions("extras.change_role", "extras.view_role")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            form_data={"_nullify": ["weight"]},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), weight__isnull=True)
 
     def test_bulk_edit_select_some(self):
         """

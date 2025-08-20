@@ -85,11 +85,25 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 }
 ```
 
+### `feature_models`
+
++++ 2.4.14
+
+A dictionary of particular features (e.g. "graphql") mapped to the set of Nautobot model classes which support each such feature. For example:
+
+```python
+>>> from nautobot.extras.registry import registry
+>>> registry["feature_models"]["graphql"]
+[<class 'nautobot.extras.models.change_logging.ObjectChange'>, <class 'nautobot.extras.models.customfields.ComputedField'>, <class 'nautobot.extras.models.customfields.CustomFieldChoice'>, <class 'nautobot.extras.models.roles.Role'>, ...
+```
+
+Useful as an alternative to `model_features` ([below](#model_features)) for cases where direct access to the Django model classes is desired, such as in generating the GraphQL schema.
+
 ### `jobs`
 
 +++ 2.2.3
 
-A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path). For example:
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths). For example:
 
 ```python
 {
@@ -113,7 +127,7 @@ A dictionary of registered [Job classes](../jobs/index.md), indexed by their [cl
 
 ### `model_features`
 
-A dictionary of particular features (e.g. custom fields) mapped to the Nautobot models which support them, arranged by app. For example:
+A dictionary of particular features (e.g. custom fields) mapped to the names of Nautobot models which support them, arranged by app. For example:
 
 ```python
 {
@@ -130,6 +144,8 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 ```
 
 For more information visit [model-features](model-features.md).
+
+In cases where grouping by app is not important, and direct access to the Django model classes is desired, the `feature_models` registry entry ([above](#feature_models)) may be used as an alternative in recent versions of Nautobot.
 
 ### `nav_menu`
 
@@ -220,7 +236,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md#writing-jobs) which should be called at import time by any App that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md) which should be called at import time by any App that provides jobs.
 
 ### `plugin_template_extensions`
 

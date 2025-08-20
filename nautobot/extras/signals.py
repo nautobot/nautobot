@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import traceback
+import uuid
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -51,6 +52,54 @@ logger = logging.getLogger(__name__)
 #
 # Change logging
 #
+
+
+def _cache_obj_data_in_change_context(action, sender, instance):
+    """
+    If this is an existing object that should have a change log entry,
+    we need to retrieve the existing object from the database and cache its data in the change context.
+    """
+    # We are caching the before object data in the change context so that it can be used later
+    change_context = change_context_state.get()
+
+    # Do nothing if the change_contex is None
+    if change_context is None:
+        return
+
+    # Is this an object without a change log?
+    if not hasattr(instance, "to_objectchange"):
+        return
+
+    # Does this object type not persist in the database?
+    if not hasattr(instance, "present_in_database"):
+        return
+
+    # Is this a new object?
+    if not instance.present_in_database:
+        return
+
+    # Does this object already have changes?
+    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+        return
+
+    # Retrieve the existing object from the database.
+    if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        instance = sender.objects.get(pk=instance.pk)
+
+    change = instance.to_objectchange(
+        action=action,
+    )
+    change.request_id = uuid.uuid4()
+    change.user = change_context.get_user(instance)
+    # cache the previous object data in the change context
+    if change_context.pre_object_data is None:
+        change_context.pre_object_data = {}
+    if change_context.pre_object_data_v2 is None:
+        change_context.pre_object_data_v2 = {}
+
+    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
+    change_context_state.set(change_context)
 
 
 def get_user_if_authenticated(user, instance):
@@ -123,6 +172,32 @@ def invalidate_relationship_models_cache(sender, **kwargs):
         with contextlib.suppress(redis.exceptions.ConnectionError):
             # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
             cache.delete_pattern(f"{method.cache_key_prefix}.*")
+
+
+@receiver(post_save, sender=CustomField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_openapi_schema_cache(sender, **kwargs):
+    """Invalidate the openapi schema cache."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete_pattern("openapi_schema_cache_*")
+
+
+@receiver(pre_save)
+def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
+    """
+    Fires before an object is created or updated.
+    It caches the current object data to capture the current state of the object.
+    This is used to ensure that a previous changelog entry exists for this object when this object is updated.
+    """
+    if raw:
+        return
+
+    # Ensure that a changelog entry exists for this object that is being updated
+    if not kwargs.get("created"):
+        _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
 
 
 @receiver(post_save)
@@ -327,7 +402,9 @@ def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs)
 
 def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
-    Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
+    Handle provisioning/deprovisioning of custom_field_data when there are changes to CustomField.content_types.
+
+    The name of this function is misleading as this signal applies to *added* content-types as well.
     """
 
     change_context = change_context_state.get()
@@ -335,13 +412,39 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
         context = None
     else:
         context = change_context.as_dict(instance=instance)
-    if action == "post_remove":
-        # Existing content types have been removed from the custom field, delete their data
+
+    if action == "pre_remove":
+        # Existing content types may be removed from the custom field, delete their data if so.
+        # CAUTION: pk_set in this _remove case is the content-types that were *requested* to remove,
+        # **not** the content-types that actually *will need to be* removed. In other words, this is not idempotent:
+        # my_cf.content_types.remove(device_ct) --> pk_set = {device_ct.pk}
+        # my_cf.content_types.remove(device_ct) --> pk_set = {device_ct.pk} again even though it was already gone
+        # So we need to check which content types will actually be removed to not create unnecessary tasks:
+        removed_pk_set = pk_set.intersection(instance.content_types.values_list("pk", flat=True))
+        if not removed_pk_set:
+            return
+
         if context:
             context["context_detail"] = "delete custom field data from existing content types"
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set, context))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, removed_pk_set, context))
+
+    elif action == "pre_clear":
+        # In this case, the provided pk_set is always empty, so we need to look at the current values instead:
+        cleared_pk_set = set(instance.content_types.values_list("pk", flat=True))
+        if not cleared_pk_set:
+            return
+
+        if context:
+            context["context_detail"] = "delete custom field data from existing content types"
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, cleared_pk_set, context))
 
     elif action == "post_add":
+        # Unlike the above _remove case, in the _add case pk_set is the *new* content-types only,
+        # and for whatever reason, Django triggers this signal even if there was no actual change.
+        # To avoid creating unnecessary background tasks, we need to check for this case ourselves:
+        if not pk_set:
+            return
+
         # New content types have been added to the custom field, provision them
         if context:
             context["context_detail"] = "provision custom field data for new content types"

@@ -36,6 +36,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import LaxURLField
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -87,11 +88,14 @@ from .choices import (
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
+    PowerPathChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
@@ -132,6 +136,7 @@ from .models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -472,6 +477,13 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
 #
 # Rack groups
 #
+class RackGroupBulkEditForm(LocatableModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=RackGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = RackGroup
+        nullable_fields = ["description"]
 
 
 class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
@@ -614,7 +626,6 @@ class RackBulkEditForm(
     class Meta:
         model = Rack
         nullable_fields = [
-            "location",
             "rack_group",
             "tenant",
             "serial",
@@ -719,6 +730,16 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
             "tags",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        rack = getattr(self.instance, "rack", None)
+        if rack:
+            if not self.initial.get("location"):
+                self.initial["location"] = rack.location
+            if not self.initial.get("rack_group"):
+                self.initial["rack_group"] = rack.rack_group
+
 
 class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
@@ -767,6 +788,16 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 #
 
 
+class ManufacturerBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Manufacturer.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
 class ManufacturerForm(NautobotModelForm):
     class Meta:
         model = Manufacturer
@@ -783,6 +814,25 @@ class ManufacturerFilterForm(NautobotFilterForm):
         queryset=DeviceType.objects.all(), to_field_name="model", required=False
     )
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
+
+
+#
+# Platform
+#
+
+
+class PlatformBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Platform.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+
+    network_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_driver = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    napalm_args = forms.JSONField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
+
+    class Meta:
+        nullable_fields = ["manufacturer", "network_driver", "napalm_driver", "napalm_args"]
 
 
 #
@@ -811,6 +861,39 @@ class DeviceFamilyFilterForm(NautobotFilterForm):
 
 class DeviceFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+class ModuleFamilyForm(NautobotModelForm):
+    """ModuleFamily creation/edit form."""
+
+    class Meta:
+        model = ModuleFamily
+        fields = [
+            "name",
+            "description",
+            "tags",
+        ]
+
+
+class ModuleFamilyFilterForm(NautobotFilterForm):
+    """ModuleFamily filter form."""
+
+    model = ModuleFamily
+    q = forms.CharField(required=False, label="Search")
+    module_types = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(), to_field_name="model", required=False
+    )
+    tags = TagFilterField(model)
+
+
+class ModuleFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ModuleFamily bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=ModuleFamily.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
 
     class Meta:
@@ -950,6 +1033,11 @@ class DeviceTypeFilterForm(NautobotFilterForm):
 
 class ModuleTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+    )
     comments = CommentField(label="Comments")
 
     class Meta:
@@ -957,6 +1045,7 @@ class ModuleTypeForm(NautobotModelForm):
         fields = [
             "manufacturer",
             "model",
+            "module_family",
             "part_number",
             "comments",
             "tags",
@@ -987,11 +1076,12 @@ class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
 class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, label="Family")
     part_number = forms.CharField(required=False)
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = []
+        nullable_fields = ["module_family"]
 
 
 class ModuleTypeFilterForm(NautobotFilterForm):
@@ -999,6 +1089,9 @@ class ModuleTypeFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    module_family = DynamicModelMultipleChoiceField(
+        queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
     has_console_ports = forms.NullBooleanField(
         required=False,
@@ -1046,9 +1139,15 @@ class ModularComponentTemplateForm(ComponentTemplateForm):
         queryset=DeviceType.objects.all(),
         required=False,
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
 
@@ -1088,9 +1187,15 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
         queryset=DeviceType.objects.all(),
         required=False,
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
 
@@ -1099,6 +1204,7 @@ class ConsolePortTemplateForm(ModularComponentTemplateForm):
         model = ConsolePortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1111,6 +1217,7 @@ class ConsolePortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1137,6 +1244,7 @@ class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
         model = ConsoleServerPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1149,6 +1257,7 @@ class ConsoleServerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1179,12 +1288,14 @@ class PowerPortTemplateForm(ModularComponentTemplateForm):
         model = PowerPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
         ]
 
@@ -1193,15 +1304,27 @@ class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerPortTypeChoices), required=False)
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA).",
+    )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
+        "tags",
     )
 
 
@@ -1215,6 +1338,14 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     )
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
     description = forms.CharField(required=False)
 
     class Meta:
@@ -1232,6 +1363,7 @@ class PowerOutletTemplateForm(ModularComponentTemplateForm):
         model = PowerOutletTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1269,6 +1401,7 @@ class PowerOutletTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1320,6 +1453,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
         model = InterfaceTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1337,6 +1471,7 @@ class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1366,6 +1501,7 @@ class FrontPortTemplateForm(ModularComponentTemplateForm):
         model = FrontPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1401,6 +1537,7 @@ class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1487,6 +1624,7 @@ class RearPortTemplateForm(ModularComponentTemplateForm):
         model = RearPortTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "label",
@@ -1512,6 +1650,7 @@ class RearPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
@@ -1569,6 +1708,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         model = ModuleBayTemplate
         fields = [
             "device_type",
+            "module_family",
             "module_type",
             "name",
             "position",
@@ -1576,8 +1716,20 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
             "description",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[
+            "module_family"
+        ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
+
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+        help_text="This bay will only accept module types assigned to this family",
+    )
     name_pattern = ExpandableNameField(label="Name")
     label_pattern = ExpandableNameField(
         label="Label",
@@ -1588,6 +1740,11 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
         required=False,
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
         " Default to the names of the module bays unless manually supplied by the user.",
+    )
+    requires_first_party_modules = forms.BooleanField(
+        required=False,
+        label="Requires first-party modules",
+        help_text="This bay will only accept module types from the same manufacturer as the parent device or module",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -1628,14 +1785,17 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
+        query_params={"module_family": "$module_family"},
     )
 
     field_order = (
         "device_type",
+        "module_family",
         "module_type",
         "name_pattern",
         "label_pattern",
         "position_pattern",
+        "requires_first_party_modules",
         "description",
     )
 
@@ -1645,9 +1805,15 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     position = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+        help_text="Module family that can be installed in this bay",
+    )
 
     class Meta:
-        nullable_fields = ("label", "description")
+        nullable_fields = ("label", "description", "module_family")
 
 
 #
@@ -1755,6 +1921,7 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
         ]
 
 
@@ -2155,14 +2322,12 @@ class DeviceBulkEditForm(
     class Meta:
         model = Device
         nullable_fields = [
-            "location",
             "tenant",
             "platform",
             "serial",
             "rack",
             "position",
             "face",
-            "rack_group",
             "cluster",
             "comments",
             "secrets_group",
@@ -2323,9 +2488,18 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         initial_params={"module_types": "$module_type"},
     )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+    )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
-        query_params={"manufacturer": "$manufacturer"},
+        query_params={
+            "manufacturer": "$manufacturer",
+            "module_family": "$module_family",
+            "compatible_with_module_bay": ["$parent_module_bay_module", "$parent_module_bay_device"],
+        },
     )
     parent_module_bay_device_filter = DynamicModelChoiceField(
         queryset=Device.objects.all(),
@@ -2371,6 +2545,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         model = Module
         fields = [
             "manufacturer",
+            "module_family",
             "module_type",
             "parent_module_bay",
             "location",
@@ -2385,6 +2560,33 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         help_texts = {
             "serial": "Module serial number",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Handle module_family and manufacturer fields based on parent module bay
+        if self.initial.get("parent_module_bay"):
+            try:
+                parent_bay = ModuleBay.objects.get(pk=self.initial["parent_module_bay"])
+                if parent_bay.module_family:
+                    self.fields["module_family"].initial = parent_bay.module_family.id
+                    self.fields["module_family"].disabled = True
+                    self.fields[
+                        "module_family"
+                    ].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
+
+                if parent_bay.requires_first_party_modules:
+                    if parent_bay.parent_device:
+                        mfr = parent_bay.parent_device.device_type.manufacturer
+                    else:
+                        mfr = parent_bay.parent_module.module_type.manufacturer
+                    self.fields["manufacturer"].initial = mfr.id
+                    self.fields["manufacturer"].disabled = True
+                    self.fields[
+                        "manufacturer"
+                    ].help_text = "The selected parent module bay requires first-party modules"
+            except ModuleBay.DoesNotExist:
+                pass
 
     def clean(self):
         cleaned_data = self.cleaned_data
@@ -2404,7 +2606,6 @@ class ModuleBulkEditForm(
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
-    LocalContextModelBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
@@ -2457,6 +2658,9 @@ class ModuleFilterForm(
         required=False,
         label="Model",
         query_params={"manufacturer": "$manufacturer"},
+    )
+    module_family = DynamicModelMultipleChoiceField(
+        queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
     mac_address = forms.CharField(required=False, label="MAC address")
     has_console_ports = forms.NullBooleanField(
@@ -2517,7 +2721,12 @@ class ModularComponentCreateForm(ModularComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family"
+    )
+    module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
+    )
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2543,7 +2752,12 @@ class ModularComponentEditForm(ComponentEditForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(), required=False, help_text="Refine module type by family", label="Family"
+    )
+    module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2599,6 +2813,7 @@ class ConsolePortCreateForm(ModularComponentCreateForm):
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -2643,6 +2858,7 @@ class ConsoleServerPortForm(ModularComponentEditForm):
         model = ConsoleServerPort
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "label",
@@ -2660,6 +2876,7 @@ class ConsoleServerPortCreateForm(ModularComponentCreateForm):
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -2706,12 +2923,14 @@ class PowerPortForm(ModularComponentEditForm):
         model = PowerPort
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "label",
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "tags",
         ]
@@ -2725,21 +2944,32 @@ class PowerPortCreateForm(ModularComponentCreateForm):
     )
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum draw in watts")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated draw in watts")
+    power_factor = forms.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=1.00,
+        required=False,
+        initial=0.95,
+        help_text="Power factor (0.01-1.00) for converting between watts and VA.",
+    )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class PowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     field_order = (
@@ -2748,13 +2978,14 @@ class PowerPortBulkCreateForm(
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class ModulePowerPortBulkCreateForm(
-    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "power_factor", "tags"]),
     ModuleBulkAddComponentForm,
 ):
     field_order = (
@@ -2763,13 +2994,14 @@ class ModulePowerPortBulkCreateForm(
         "type",
         "maximum_draw",
         "allocated_draw",
+        "power_factor",
         "description",
         "tags",
     )
 
 
 class PowerPortBulkEditForm(
-    form_from_model(PowerPort, ["label", "type", "maximum_draw", "allocated_draw", "description"]),
+    form_from_model(PowerPort, ["label", "type", "maximum_draw", "allocated_draw", "power_factor", "description"]),
     TagsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
@@ -2801,6 +3033,7 @@ class PowerOutletForm(ModularComponentEditForm):
         model = PowerOutlet
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "label",
@@ -2826,6 +3059,7 @@ class PowerOutletCreateForm(ModularComponentCreateForm):
     feed_leg = forms.ChoiceField(choices=add_blank_choice(PowerOutletFeedLegChoices), required=False)
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -2969,6 +3203,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         model = Interface
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "role",
@@ -3108,6 +3343,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -3331,6 +3567,7 @@ class FrontPortForm(ModularComponentEditForm):
         model = FrontPort
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "label",
@@ -3358,6 +3595,7 @@ class FrontPortCreateForm(ModularComponentCreateForm):
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -3459,6 +3697,7 @@ class RearPortForm(ModularComponentEditForm):
         model = RearPort
         fields = [
             "device",
+            "module_family",
             "module",
             "name",
             "label",
@@ -3485,6 +3724,7 @@ class RearPortCreateForm(ModularComponentCreateForm):
     )
     field_order = (
         "device",
+        "module_family",
         "module",
         "name_pattern",
         "label_pattern",
@@ -3625,10 +3865,28 @@ class ModuleBayForm(NautobotModelForm):
         required=False,
         label="Parent Device",
     )
+    parent_module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Parent Module Family",
+        help_text="Refine parent module by family",
+    )
     parent_module = DynamicModelChoiceField(
         queryset=Module.objects.all(),
         required=False,
         label="Parent Module",
+        query_params={"module_family": "$parent_module_family"},
+    )
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+        help_text="If selected, this bay will only accept module types assigned to this family",
+    )
+    requires_first_party_modules = forms.BooleanField(
+        required=False,
+        label="Requires first-party modules",
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
     )
     # TODO: Installed module field
 
@@ -3636,11 +3894,14 @@ class ModuleBayForm(NautobotModelForm):
         model = ModuleBay
         fields = [
             "parent_device",
+            "parent_module_family",
             "parent_module",
             "name",
+            "module_family",
             "position",
             "label",
             "description",
+            "requires_first_party_modules",
             "tags",
         ]
 
@@ -3650,12 +3911,16 @@ class ModuleBayForm(NautobotModelForm):
         # Disable the parent_device and parent_module fields if an initial value is provided for either
         if "parent_device" in self.initial or "parent_module" in self.initial:
             self.fields["parent_device"].disabled = True
+            self.fields["parent_module_family"].disabled = True
             self.fields["parent_module"].disabled = True
 
 
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    parent_module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False)
+    parent_module = DynamicModelChoiceField(
+        queryset=Module.objects.all(), required=False, query_params={"module_family": "$parent_module_family"}
+    )
     tags = DynamicModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
@@ -3663,10 +3928,13 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     )
     field_order = (
         "parent_device",
+        "parent_module_family",
         "parent_module",
         "name_pattern",
         "label_pattern",
         "position_pattern",
+        "module_family",
+        "requires_first_party_modules",
         "description",
         "tags",
     )
@@ -3679,8 +3947,7 @@ class ModuleBayBulkCreateForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-
-    field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "tags")
+    field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "module_family", "tags")
 
     class Meta:
         nullable_fields = []
@@ -3699,9 +3966,15 @@ class ModuleBayBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleBay.objects.all(), widget=forms.MultipleHiddenInput())
+    module_family = DynamicModelChoiceField(
+        queryset=ModuleFamily.objects.all(),
+        required=False,
+        label="Family",
+        help_text="If selected, this bay will only accept module types assigned to this family",
+    )
 
     class Meta:
-        nullable_fields = ["label", "description"]
+        nullable_fields = ["label", "description", "module_family"]
 
 
 #
@@ -4117,7 +4390,6 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
     class Meta:
         nullable_fields = [
             "type",
-            "status",
             "label",
             "color",
             "length",
@@ -4403,8 +4675,15 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "location",
             "rack_group",
             "name",
+            "panel_type",
+            "breaker_position_count",
+            "power_path",
             "tags",
         ]
+        widgets = {
+            "panel_type": StaticSelect2(),
+            "power_path": StaticSelect2(),
+        }
 
 
 class PowerPanelBulkEditForm(
@@ -4418,10 +4697,22 @@ class PowerPanelBulkEditForm(
         required=False,
         query_params={"location": "$location"},
     )
+    panel_type = forms.ChoiceField(
+        choices=add_blank_choice(PowerPanelTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerPathChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         model = PowerPanel
-        nullable_fields = ["location", "rack_group"]
+        nullable_fields = ["rack_group"]
 
 
 class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -4433,6 +4724,18 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         label="Rack group",
         null_option="None",
         query_params={"location": "$location"},
+    )
+    panel_type = forms.MultipleChoiceField(
+        choices=add_blank_choice(PowerPanelTypeChoices),
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    breaker_position_count = forms.IntegerField(required=False, min_value=1)
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerPathChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
     )
     tags = TagFilterField(model)
 
@@ -4448,44 +4751,65 @@ class PowerFeedForm(NautobotModelForm):
         required=False,
         initial_params={"power_panels": "$power_panel"},
     )
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), query_params={"location": "$location"})
+    power_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(),
+        query_params={"location": "$location"},
+    )
+    destination_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(),
+        required=False,
+        query_params={"location": "$location"},
+    )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         query_params={"location": "$location"},
     )
-    comments = CommentField()
+    comments = CommentField(label="Comments")
 
     class Meta:
         model = PowerFeed
         fields = [
             "location",
             "power_panel",
+            "destination_panel",
             "rack",
             "name",
             "status",
             "type",
+            "power_path",
             "supply",
             "phase",
             "voltage",
             "amperage",
             "max_utilization",
+            "breaker_position",
+            "breaker_pole_count",
             "comments",
             "tags",
         ]
         widgets = {
             "type": StaticSelect2(),
+            "power_path": StaticSelect2(),
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
+            "breaker_pole_count": StaticSelect2(),
         }
 
 
 class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
     power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
+    destination_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerPathChoices),
         required=False,
         initial="",
         widget=StaticSelect2(),
@@ -4505,6 +4829,12 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
+    breaker_pole_count = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
@@ -4513,14 +4843,20 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
         ]
 
 
-class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, LocatableModelFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Power panel",
+        null_option="None",
+        query_params={"location": "$location"},
+    )
+    destination_panel = DynamicModelMultipleChoiceField(
+        queryset=PowerPanel.objects.all(),
+        required=False,
+        label="Destination panel",
         null_option="None",
         query_params={"location": "$location"},
     )
@@ -4536,6 +4872,12 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         required=False,
         widget=StaticSelect2(),
     )
+    power_path = forms.ChoiceField(
+        choices=add_blank_choice(PowerPathChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
     supply = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedSupplyChoices),
         required=False,
@@ -4549,6 +4891,12 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
+    breaker_position = forms.IntegerField(required=False, min_value=1)
+    breaker_pole_count = forms.ChoiceField(
+        choices=add_blank_choice(PowerFeedBreakerPoleChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     tags = TagFilterField(model)
 
 
@@ -4578,9 +4926,7 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
     tags = TagFilterField(model)
 
 
-class DeviceRedundancyGroupBulkEditForm(
-    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
-):
+class DeviceRedundancyGroupBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput)
     failover_strategy = forms.ChoiceField(
         choices=add_blank_choice(DeviceRedundancyGroupFailoverStrategyChoices),
@@ -4695,7 +5041,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         queryset=InterfaceRedundancyGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices, required=False)
     description = forms.CharField(required=False)
     virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
@@ -4773,7 +5119,11 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
     )
     image_file_size = forms.IntegerField(required=False)
     default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
-    download_url = forms.URLField(required=False)
+    download_url = LaxURLField(required=False)
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = SoftwareImageFile
@@ -4782,6 +5132,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
             "hashing_algorithm",
             "image_file_size",
             "download_url",
+            "external_integration",
         ]
 
 
@@ -4816,6 +5167,10 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         label="Has device types",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
 
     tags = TagFilterField(model)
 
@@ -4829,6 +5184,7 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         "download_url",
         "device_types",
         "has_device_types",
+        "external_integration",
         "status",
         "tags",
     ]
@@ -4841,6 +5197,11 @@ class SoftwareImageFileForm(NautobotModelForm):
         queryset=DeviceType.objects.all(),
         required=False,
         label="Device Types",
+    )
+
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
     )
 
     field_order = [

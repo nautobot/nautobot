@@ -12,10 +12,15 @@ Some text-based content is more conveniently stored in a separate Git repository
 
 ## Repository Configuration
 
-When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `secrets group` that can be used to gain access to the repository.
+When defining a Git repository for Nautobot to consume, the `name`, `slug`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, the slug defines the directory that will be created under `GIT_ROOT` when the repository is retrieved (and also serves as a Python module name if the repository provides Jobs), and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository.
 
 !!! note
     Nautobot currently only supports repositories that can be cloned using the standard git command line, `git clone`. This means App-style integrations like GitHub Apps are not currently supported, as their workflow of managing files leverages a REST API.
+
+!!! tip
+    Because the repository's `slug` serves as a Python module name when a repository is configured to provide Jobs, the slug cannot be set to a value that conflicts with existing Python modules or packages in Nautobot's environment. This means that you cannot, for example, set the slug to `"nautobot"`.
+
+Additionally, if the repository is private you may specify a `secrets group` that can be used to gain access to the repository.
 
 --- 2.0.0
     In Nautobot 1.x it was possible to configure the secrets (`username` and/or `token`) for a private Git Repository directly in Nautobot's database. Due to security concerns and maintainability challenges, this option has been removed. To access a private Git repository you now must use Secrets Groups.
@@ -42,7 +47,7 @@ Whenever a Git repository record is created, updated, or deleted, Nautobot autom
 
 ### Jobs
 
-Jobs can be defined in Python files located in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/index.md#job-registration) for more information.
+Jobs can be defined in Python files located in a `/jobs/` directory or `jobs.py` at the root of a Git repository. Any job classes defined in these files that have been registered during import will be discovered by Nautobot and made available to be run as a job. See the section on [Job registration](../../development/jobs/job-structure.md#job-registration) for more information.
 
 !!! note
     There **must** be an `__init__.py` file in the `/jobs/` directory.

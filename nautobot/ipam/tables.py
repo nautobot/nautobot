@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -35,7 +36,7 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -47,7 +48,9 @@ UTILIZATION_GRAPH = """
 # object: the base ancestor Prefix, in the case of PrefixDetailTable, else None
 PREFIX_COPY_LINK = """
 {% load helpers %}
+{% if not table.hide_hierarchy_ui %}
 {% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
+{% endif %}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -214,7 +217,7 @@ class NamespaceTable(BaseTable):
 class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    # rd = tables.Column(verbose_name="RD")
+    rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -225,7 +228,7 @@ class VRFTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            # "rd",
+            "rd",
             "status",
             "namespace",
             "tenant",
@@ -234,8 +237,7 @@ class VRFTable(StatusTableMixin, BaseTable):
             "export_targets",
             "tags",
         )
-        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "rd", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -355,7 +357,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
     vrf_count = LinkedCountColumn(
-        viewname="ipam:vrf_list", url_params={"prefix": "pk"}, reverse_lookup="prefixes", verbose_name="VRFs"
+        viewname="ipam:vrf_list",
+        url_params={"prefix": "pk"},
+        display_field="name",
+        reverse_lookup="prefixes",
+        verbose_name="VRFs",
     )
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
@@ -364,11 +370,12 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"
     )
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -388,6 +395,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "rir",
             "date_allocated",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -401,6 +409,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vlan",
             "role",
             "description",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not record.present_in_database else "",
@@ -411,6 +420,15 @@ class PrefixDetailTable(PrefixTable):
     utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_conditional_prefetch(
+            "utilization",
+            prefetch=Prefetch(
+                "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+            ),
+        )
 
     class Meta(PrefixTable.Meta):
         fields = (
@@ -705,6 +723,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
+        display_field="name",
         verbose_name="Locations",
     )
     tenant = TenantColumn()

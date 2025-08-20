@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
-from nautobot.dcim.models.devices import Controller, Device, DeviceType
+from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
@@ -17,6 +17,8 @@ from nautobot.users.factory import UserFactory
 
 
 class CSVParsingRelatedTestCase(TestCase):
+    maxDiff = None
+
     def setUp(self):
         location = Location.objects.filter(
             parent__isnull=False,
@@ -249,7 +251,7 @@ class CSVParsingRelatedTestCase(TestCase):
             serializer_data.pop("custom_fields")
             serializer_data.pop("created")
             serializer_data.pop("last_updated")
-            self.assertEqual(expected_data, serializer_data)
+            self.assertDictEqual(expected_data, dict(serializer_data))
 
     @override_settings(ALLOWED_HOSTS=["*"])
     def test_round_trip_export_import(self):
@@ -315,3 +317,94 @@ class CSVParsingRelatedTestCase(TestCase):
             tenant=self.device2.tenant,
         )
         self.assertEqual(device4.tags.count(), 0)
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_m2m_field_import(self):
+        """Test CSV import of M2M field."""
+
+        platform = Platform.objects.first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+
+        software_version = SoftwareVersion.objects.create(
+            platform=platform, version="Test version 1.0.0", status=software_version_status
+        )
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_1.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_2.bin",
+                status=software_image_file_status,
+                default_image=True,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_3.bin",
+                status=software_image_file_status,
+            ),
+        )
+
+        user = UserFactory.create()
+        user.is_superuser = True
+        user.is_active = True
+        user.save()
+        self.client.force_login(user)
+
+        with self.subTest("Import M2M field using list of UUIDs"):
+            import_data = f"""name,device_type,location,role,status,software_image_files
+TestDevice5,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_image_files[0].pk},{software_image_files[1].pk}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(Device.objects.count(), 3)
+
+            # Assert TestDevice5 got created with the right fields
+            device5 = Device.objects.get(
+                name="TestDevice5",
+                location=self.device.location,
+                device_type=self.device.device_type,
+                role=self.device.role,
+                status=self.device.status,
+                tenant=None,
+            )
+            self.assertEqual(device5.software_image_files.count(), 2)
+
+        with self.subTest("Import M2M field using multiple identifying fields"):
+            import_data = f"""name,device_type,location,role,status,software_image_files__software_version,software_image_files__image_file_name
+TestDevice6,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_version.pk},{software_version.pk}","{software_image_files[0].image_file_name},{software_image_files[1].image_file_name}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(Device.objects.count(), 4)
+
+            # Assert TestDevice5 got created with the right fields
+            device6 = Device.objects.get(
+                name="TestDevice6",
+                location=self.device.location,
+                device_type=self.device.device_type,
+                role=self.device.role,
+                status=self.device.status,
+                tenant=None,
+            )
+            self.assertEqual(device6.software_image_files.count(), 2)
+
+        with self.subTest("Import M2M field using incorrect number of values"):
+            import_data = f"""name,device_type,location,role,status,software_image_files__software_version,software_image_files__image_file_name
+TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_version.pk},{software_version.pk}","{software_image_files[0].image_file_name},{software_image_files[1].image_file_name},{software_image_files[2].image_file_name}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Incorrect number of values provided for the software_image_files field")
+            self.assertEqual(Device.objects.count(), 4)

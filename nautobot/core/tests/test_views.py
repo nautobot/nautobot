@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import tempfile
 from unittest import mock, skipIf
 import urllib.parse
 
@@ -96,8 +98,8 @@ class HomeViewTestCase(TestCase):
         difference = [model for model in existing_models if model not in global_searchable_models]
         if difference:
             self.fail(
-                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
-                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
+                f"Existing model/models {','.join(difference)} are not included in the searchable_models attribute of the app config.\n"
+                "If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants."
             )
 
     def make_request(self):
@@ -183,6 +185,77 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class MediaViewTestCase(TestCase):
+    def test_media_unauthenticated(self):
+        """
+        Test that unauthenticated users are redirected to login when accessing media files whether they exist or not.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(
+                MEDIA_ROOT=temp_dir,
+                BRANDING_FILEPATHS={"logo": os.path.join("branding", "logo.txt")},
+            ):
+                file_path = os.path.join(temp_dir, "foo.txt")
+                url = reverse("media", kwargs={"path": "foo.txt"})
+                self.client.logout()
+
+                # Unauthenticated request to nonexistent media file should redirect to login page
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
+                )
+
+                # Unauthenticated request to existent media file should redirect to login page as well
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
+                )
+
+    def test_branding_media(self):
+        """
+        Test that users can access branding files listed in `settings.BRANDING_FILEPATHS` regardless of authentication.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(
+                MEDIA_ROOT=temp_dir,
+                BRANDING_FILEPATHS={"logo": os.path.join("branding", "logo.txt")},
+            ):
+                os.makedirs(os.path.join(temp_dir, "branding"))
+                file_path = os.path.join(temp_dir, "branding", "logo.txt")
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+
+                url = reverse("media", kwargs={"path": "branding/logo.txt"})
+
+                # Authenticated request succeeds
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
+
+                # Unauthenticated request also succeeds
+                self.client.logout()
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
+
+    def test_media_authenticated(self):
+        """
+        Test that authenticated users can access regular media files stored in the `MEDIA_ROOT`.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                file_path = os.path.join(temp_dir, "foo.txt")
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+
+                url = reverse("media", kwargs={"path": "foo.txt"})
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
@@ -691,11 +764,11 @@ class TestObjectDetailView(TestCase):
         url = reverse("circuits:provider", args=(provider.pk,))
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
-        response_data = response.content.decode(response.charset)
+        response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn

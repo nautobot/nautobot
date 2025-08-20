@@ -1,4 +1,5 @@
 from difflib import get_close_matches
+from uuid import UUID
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -481,6 +482,14 @@ class NautobotFilterSet(
 class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
     """Base filter set for Contacts and Teams."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "email": "icontains",
+            "phone": "icontains",
+        },
+    )
+
     similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Similar to location contact data",
@@ -526,6 +535,12 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
 
 
 class ContactFilterSet(ContactTeamFilterSet):
+    teams = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
+    )
+
     class Meta:
         model = Contact
         fields = "__all__"
@@ -998,7 +1013,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1179,7 +1194,7 @@ class NoteFilterSet(BaseFilterSet):
         filter_predicates={
             "user_name": "icontains",
             "note": "icontains",
-            "assigned_object_id": "exact",
+            "assigned_object_id": {"lookup_expr": "exact", "preprocessor": UUID},
         },
     )
     assigned_object_type = ContentTypeFilter()
@@ -1331,6 +1346,11 @@ class SecretsGroupFilterSet(
         filter_predicates={
             "name": "icontains",
         },
+    )
+    secrets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Secret.objects.all(),
+        label="Secret (ID or name)",
+        to_field_name="name",
     )
 
     class Meta:

@@ -35,11 +35,14 @@ from nautobot.dcim.choices import (
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
+    PowerPathChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackElevationDetailRenderChoices,
@@ -79,6 +82,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -970,6 +974,8 @@ class VirtualChassisSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
 
 
 class PowerPanelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    panel_type = ChoiceField(choices=PowerPanelTypeChoices, allow_blank=True, required=False)
+    power_path = ChoiceField(choices=PowerPathChoices, allow_blank=True, required=False)
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -984,8 +990,12 @@ class PowerFeedSerializer(
     NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
+    power_path = ChoiceField(choices=PowerPathChoices, allow_blank=True, required=False)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
+    breaker_pole_count = ChoiceField(
+        choices=PowerFeedBreakerPoleChoices, allow_blank=True, allow_null=True, required=False
+    )
 
     class Meta:
         model = PowerFeed
@@ -1123,4 +1133,16 @@ class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSe
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = InterfaceVDCAssignment
+        fields = "__all__"
+
+
+class ModuleFamilySerializer(NautobotModelSerializer):
+    """API serializer for ModuleFamily objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:modulefamily-detail")
+    module_type_count = serializers.IntegerField(read_only=True)
+    module_bay_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ModuleFamily
         fields = "__all__"

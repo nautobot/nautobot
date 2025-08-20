@@ -1,5 +1,7 @@
 import logging
+from zoneinfo import ZoneInfo
 
+from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
 
 logger = logging.getLogger(__name__)
@@ -26,10 +28,9 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     def default(self, obj):
         # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
         # Core App is not set up yet if we import this at the top of the file.
-        from nautobot.core.models import BaseModel
         from nautobot.core.models.managers import TagsManager
 
-        if isinstance(obj, BaseModel):
+        if isinstance(obj, models.Model):
             cls = obj.__class__
             module = cls.__module__
             qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
@@ -52,5 +53,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             # JobResult.result uses NautobotKombuJSONEncoder as an encoder and expects a JSONSerializable object,
             # although an exception, such as a RuntimeException, can be supplied as the obj.
             return f"{obj.__class__.__name__}: {obj}"
+        elif isinstance(obj, ZoneInfo):
+            return obj.key
         else:
             return super().default(obj)

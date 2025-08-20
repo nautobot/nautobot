@@ -170,6 +170,44 @@ Output:
 !!! note
     This is a built-in Django command. Please see the [official documentation on `collectstatic`](https://docs.djangoproject.com/en/stable/ref/django-admin/#collectstatic) for more information.
 
+### `check_job_approval_status`
+
+`nautobot-server check_job_approval_status`
+
+Checks for scheduled jobs and jobs that require approval.
+
+```no-highlight
+nautobot-server check_job_approval_status
+```
+
+Output (when failed):
+
+```no-highlight
+nautobot.core.management.commands.check_job_approval_status.ApprovalRequiredScheduledJobsError: These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui
+Below is a list of affected scheduled jobs:
+    - ID: 0f8a0670-459b-430f-8c5e-a631888509d4, Name: test2
+```
+
+Output (with warning):
+
+```no-highlight
+Following jobs still have `approval_required=True`.
+These jobs will no longer trigger approval automatically.
+After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
+Affected jobs (Names):
+    - ExampleDryRunJob
+    - Example Job of Everything
+    - Export Object List
+```
+
+Output (when pass):
+
+```no-highlight
+No approval_required jobs or scheduled jobs found.
+```
+
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`
@@ -407,14 +445,17 @@ Wrapping model clean methods for custom validators failed because the ContentTyp
 Operations to perform:
   Apply all migrations: admin, auth, circuits, contenttypes, dcim, extras, ipam, sessions, taggit, tenancy, users, virtualization
 Running migrations:
-  Applying contenttypes.0001_initial... OK
-  Applying auth.0001_initial... OK
-  Applying admin.0001_initial... OK
+  Applying ipam.0050_vlangroup_range...                          OK    (   0.1s)
+    Affected ipam.vlangroup                               20 rows  0.003s/record
+  Applying dcim.0063_interfacevdcassignment_virtualdevicecont... OK    (   0.2s)
+    Affected dcim.interfacevdcassignment                   0 rows
+    Affected dcim.virtualdevicecontext                     0 rows
+  Applying dcim.0064_virtualdevicecontext_status_data_migrati...
 ... (truncated for brevity of documentation) ...
 ```
 
 !!! note
-    This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
+    This is a built-in Django command, although Nautobot has enhanced it to provide additional output when run. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
 
 ### `nbshell`
 
@@ -842,4 +883,4 @@ Example output:
 Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting) for more information.
+Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.

@@ -1,6 +1,5 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
-
 {% block breadcrumbs %}
                 {% if object.parent_device %}
                     <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
@@ -37,6 +36,12 @@
                                 {% endif %}
                             </tr>
                             <tr>
+                                <td>Family</td>
+                                <td>
+                                    {{ object.module_family|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Name</td>
                                 <td>{{ object.name }}</td>
                             </tr>
@@ -51,6 +56,10 @@
                             <tr>
                                 <td>Description</td>
                                 <td>{{ object.description|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Requires first-party modules</td>
+                                <td>{{ object.requires_first_party_modules|render_boolean }}</td>
                             </tr>
                         </table>
                     </div>

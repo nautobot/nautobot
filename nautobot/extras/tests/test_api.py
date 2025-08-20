@@ -292,7 +292,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
-        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.add_configcontext", "extras.view_configcontextschema")
 
         data = {
             "name": "Config Context with schema",
@@ -1529,7 +1529,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         obj_perm = ObjectPermission(
             name="Test permission",
-            constraints={"module_name__in": ["pass", "fail"]},
+            constraints={"module_name__in": ["pass_job", "fail"]},
             actions=["run"],
         )
         obj_perm.save()
@@ -1543,10 +1543,10 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
         # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("pass.TestPassJob")
+        url = self.get_run_url("pass_job.TestPassJob")
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1702,7 +1702,7 @@ class JobTest(
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
-        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_FUTURE)
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 
@@ -1739,7 +1739,7 @@ class JobTest(
         # Ensure the enqueue_job args deserialize to the same as originally inputted
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
-            "task_queue": self.job_model.default_job_queue.name,
+            "job_queue": self.job_model.default_job_queue,
             **self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
@@ -2136,7 +2136,7 @@ class JobTest(
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_job_with_default_queue_with_empty_job_model_job_queues(self, _):
         self.add_permissions("extras.run_job")
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         data = {
             "task_queue": job_model.default_job_queue.name,
         }
@@ -2144,7 +2144,7 @@ class JobTest(
         job_model.job_queues.set([])
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("pass.TestPassJob")
+        url = self.get_run_url("pass_job.TestPassJob")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -2248,7 +2248,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.add_jobhook")
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertContains(
             response,
@@ -2264,7 +2264,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.change_jobhook")
+        self.add_permissions("extras.change_jobhook", "extras.view_job")
         job_hook2 = JobHook.objects.get(name="JobHook2")
         response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
         self.assertContains(
@@ -2553,7 +2553,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
             "saved_view": saved_view.pk,
             "view_name": duplicate_view_name,
         }
-        self.add_permissions("extras.add_usersavedviewassociation")
+        self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
         response = self.client.post(
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )
@@ -2571,10 +2571,10 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2583,7 +2583,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
@@ -2593,7 +2593,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             crontab="34 12 * * *",
@@ -2608,12 +2608,12 @@ class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.additional_user = User.objects.create(username="user1", is_active=True)
-        cls.job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        cls.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test pass",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
@@ -2666,7 +2666,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2689,7 +2689,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2706,7 +2706,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -3240,7 +3240,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             location=existing_location_2,
         )
 
-        self.add_permissions("dcim.view_location", "dcim.add_location", "extras.add_relationshipassociation")
+        self.add_permissions(
+            "dcim.view_location",
+            "dcim.view_locationtype",
+            "dcim.view_device",
+            "dcim.add_location",
+            "extras.view_relationship",
+            "extras.add_relationshipassociation",
+            "extras.view_status",
+        )
         response = self.client.post(
             reverse("dcim-api:location-list"),
             data={
@@ -3564,7 +3572,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             ),
         ]
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "dcim.view_device", "dcim.view_location", "extras.view_relationship"
+        )
 
         for side, field_error_name, data in associations:
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
@@ -3585,7 +3595,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             "destination_id": self.devices[2].pk,
         }
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "extras.view_relationship", "dcim.view_device", "dcim.view_location"
+        )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -3636,8 +3648,11 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         Check that relationship-associations can be updated via the 'relationships' field.
         """
         self.add_permissions(
+            "dcim.view_device",
             "dcim.view_location",
             "dcim.change_location",
+            "extras.view_relationship",
+            "extras.view_relationshipassociation",
             "extras.add_relationshipassociation",
             "extras.delete_relationshipassociation",
         )

@@ -512,12 +512,19 @@ class JobViewSetBase(
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
+    def get_object(self):
+        """Get the Job instance and reload the job class to ensure we have the latest version of the job code."""
+        obj = super().get_object()
+        get_job(obj.class_path, reload=True)
+
+        return obj
+
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
     def variables(self, request, *args, **kwargs):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
-        job_class = get_job(job_model.class_path, reload=True)
+        job_class = job_model.job_class
         if job_class is None:
             raise Http404
         variables_dict = job_class._get_vars()
@@ -599,7 +606,7 @@ class JobViewSetBase(
                     "One of these two flags must be removed before this job can be scheduled or run."
                 )
 
-        job_class = get_job(job_model.class_path, reload=True)
+        job_class = job_model.job_class
         if job_class is None:
             raise MethodNotAllowed(
                 request.method, detail="This job's source code could not be located and cannot be run"
@@ -703,10 +710,8 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        queue = get_job_queue(task_queue)
-        if queue is None:
-            queue = job_model.default_job_queue
-        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
+        job_queue = get_job_queue(task_queue) or job_model.default_job_queue
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
@@ -737,7 +742,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
-                task_queue=task_queue,
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
         else:
@@ -748,7 +753,7 @@ class JobViewSetBase(
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
-                task_queue=task_queue,
+                job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
 

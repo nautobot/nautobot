@@ -1,9 +1,13 @@
 from django.conf import settings
+from django.db.models import QuerySet
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
+from django_tables2.data import TableData
+from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
+from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -19,7 +23,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import MetadataTypeDataTypeChoices
+from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -40,6 +44,7 @@ from .models import (
     JobLogEntry,
     JobQueue,
     JobResult,
+    MetadataChoice,
     MetadataType,
     Note,
     ObjectChange,
@@ -51,6 +56,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -730,7 +736,7 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.created }} by {{ value.user }}
+                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}
@@ -885,12 +891,14 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_started = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_done = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
     summary = tables.Column(
         empty_values=(),
-        verbose_name="Results",
+        verbose_name="Summary",
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
@@ -899,6 +907,40 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only calculate log counts for "summary" column if it's actually visible.
+        if "summary" in self.columns and self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
+            self.data = TableData.from_data(
+                self.data.data.annotate(
+                    debug_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+                    ),
+                    success_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
+                    ),
+                    info_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+                    ),
+                    warning_log_count=count_related(
+                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+                    ),
+                    error_log_count=count_related(
+                        JobLogEntry,
+                        "job_result",
+                        filter_dict={
+                            "log_level__in": [
+                                LogLevelChoices.LOG_FAILURE,
+                                LogLevelChoices.LOG_ERROR,
+                                LogLevelChoices.LOG_CRITICAL,
+                            ],
+                        },
+                    ),
+                )
+            )
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
 
     def render_summary(self, record):
         """
@@ -922,6 +964,8 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "date_created",
+            "date_started",
+            "date_done",
             "name",
             "job_model",
             "scheduled_job",
@@ -939,7 +983,6 @@ class JobResultTable(BaseTable):
             "job_model",
             "user",
             "status",
-            "summary",
             "actions",
         )
 
@@ -1008,6 +1051,15 @@ class MetadataTypeTable(BaseTable):
         )
 
 
+class MetadataChoiceTable(BaseTable):
+    value = tables.Column()
+    weight = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = MetadataChoice
+        fields = ("value", "weight")
+
+
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
     # NOTE: there is no identity column in this table; this is intentional as we have no detail view for ObjectMetadata
@@ -1063,14 +1115,13 @@ class ObjectMetadataTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
-    created = tables.LinkColumn()
-    note = tables.Column(
-        attrs={"td": {"class": "rendered-markdown"}},
-    )
+    created = tables.DateTimeColumn(linkify=True)
+    last_updated = tables.DateTimeColumn()
+    note = tables.Column()
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("created", "note", "user_name")
+        fields = ("created", "last_updated", "note", "user_name")
 
     def render_note(self, value):
         return render_markdown(value)
@@ -1146,6 +1197,11 @@ class ObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
+        self.add_conditional_prefetch("object_repr", "changed_object")
 
 
 #
@@ -1273,6 +1329,17 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
+
+
+class SecretsGroupAssociationTable(BaseTable):
+    secret = tables.Column(linkify=True)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("access_type", "secret_type", "secret")
+        default_columns = ("access_type", "secret_type", "secret")
+        # Avoid extra UI clutter
+        attrs = {"class": "table table-condensed"}
 
 
 #
