@@ -21,8 +21,12 @@
             <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
         </tr>
         <tr>
-            <td>Started at</td>
+            <td>Created at</td>
             <td>{{ result.date_created | placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Started execution at</td>
+            <td>{{ result.date_started | placeholder }}</td>
         </tr>
         <tr>
             <td>User</td>
@@ -31,7 +35,7 @@
         <tr>
             <td>Duration</td>
             <td>
-            {% if result.date_created and not result.date_done %}
+            {% if not result.date_done %}
                 <img src="{% static 'img/ajax-loader.gif' %}">
             {% else %}
                 {{ result.duration | placeholder}}
@@ -41,7 +45,7 @@
         <tr>
             <td>Return Value</td>
             <td>
-            {% if result.date_created and not result.date_done %}
+            {% if not result.date_done %}
                 <img src="{% static 'img/ajax-loader.gif' %}">
             {% else %}
                 {% if result.result %}

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -336,6 +336,29 @@ class BaseTable(django_tables2.Table):
             # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
 
+    def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
+        """Conditionally prefetch the specified database column if the related table field is visible.
+
+        Args:
+            table_field (str): Name of the field on the table to check for visibility. Also used as the prefetch field
+                               if neither db_column nor prefetch is specified.
+            db_column (str): Optionally specify the db column to prefetch. Mutually exclusive with prefetch.
+            prefetch (Prefetch): Optionally specify a prefetch object. Mutually exclusive with db_column.
+        """
+        if db_column and prefetch:
+            raise ValueError(
+                "BaseTable.add_conditional_prefetch called with both db_column and prefetch, this is not allowed."
+            )
+        if not db_column:
+            db_column = table_field
+        if table_field in self.columns and self.columns[table_field].visible and isinstance(self.data.data, QuerySet):
+            if prefetch:
+                self.data = TableData.from_data(self.data.data.prefetch_related(prefetch))
+            else:
+                self.data = TableData.from_data(self.data.data.prefetch_related(db_column))
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
 
 #
 # Table columns
@@ -356,7 +379,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
 class BooleanColumn(django_tables2.Column):
@@ -495,7 +518,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
                 "changelog_route": changelog_route,
                 "approval_route": approval_route,
                 "deny_route": deny_route,
-                "have_permission": f"perms.{app_label}.change_{model._meta.model_name,}",
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name}",
             }
         )
 

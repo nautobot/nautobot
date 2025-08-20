@@ -74,6 +74,6 @@ class DynamicGroupTestCase(SeleniumTestCase):
 
         # Verify dynamic group shows up on device detail tab
         self.browser.visit(
-            f'{self.live_server_url}{reverse("dcim:device_dynamicgroups", kwargs={"pk": devices[0].pk})}'
+            f"{self.live_server_url}{reverse('dcim:device_dynamicgroups', kwargs={'pk': devices[0].pk})}"
         )
         self.assertTrue(self.browser.is_text_present(name))
