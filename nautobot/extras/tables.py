@@ -31,7 +31,6 @@ from .models import (
     Contact,
     ContactAssociation,
     CustomField,
-    CustomFieldChoice,
     CustomLink,
     DynamicGroup,
     DynamicGroupMembership,
@@ -346,16 +345,6 @@ class CustomFieldTable(BaseTable):
         if record.description:
             return render_markdown(record.description)
         return self.default
-
-
-class CustomFieldChoiceTable(BaseTable):
-    value = tables.Column()
-    weight = tables.Column()
-
-    class Meta(BaseTable.Meta):
-        model = CustomFieldChoice
-        fields = ("value", "weight")
-        default_columns = ("value", "weight")
 
 
 class CustomLinkTable(BaseTable):

@@ -606,12 +606,13 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
             ),
-            object_detail.ObjectsTablePanel(
+            object_detail.DataTablePanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                table_class=tables.CustomFieldChoiceTable,
-                table_filter="custom_field",
-                add_button_route=None,
+                label="Custom Field Choices",
+                context_data_key="choices_data",
+                context_columns_key="columns",
+                context_column_headers_key="header",
             ),
             AssignmentObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -641,6 +642,27 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        if self.action == "retrieve" and hasattr(instance, "custom_field_choices"):
+            context.update(
+                {
+                    "columns": [
+                        "value",
+                        "weight",
+                    ],
+                    "header": [
+                        "Value",
+                        "Weight",
+                    ],
+                    "choices_data": [
+                        {
+                            "value": choice.value,
+                            "weight": choice.weight,
+                        }
+                        for choice in instance.custom_field_choices.all()
+                    ],
+                }
+            )
 
         return context
 
