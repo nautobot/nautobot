@@ -15,6 +15,7 @@ from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
@@ -209,6 +210,20 @@ class FilterTestCases:
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
+        def test_automagic_filters(self):
+            """https://github.com/nautobot/nautobot/issues/6656"""
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
+            if getattr(self.queryset.model, "is_contact_associable_model", False):
+                self.assertIsInstance(fs.filters["contacts"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["contacts__n"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["teams"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["teams__n"], NaturalKeyOrPKMultipleChoiceFilter)
+
+            if getattr(self.queryset.model, "is_dynamic_group_associable_model", False):
+                self.assertIsInstance(fs.filters["dynamic_groups"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["dynamic_groups__n"], NaturalKeyOrPKMultipleChoiceFilter)
+
         def test_boolean_filters_generic(self):
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.filters`
             except for the ones with custom filter logic defined in its `method` attribute.
@@ -382,7 +397,8 @@ class FilterTestCases:
                     self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
         def test_content_type_related_fields_uses_content_type_filter(self):
-            filterset = self.filterset()  # pylint: disable=not-callable
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
             for field in self.queryset.model._meta.fields:
                 related_model = getattr(field, "related_model", None)
                 if not related_model or related_model != ContentType:
@@ -390,7 +406,7 @@ class FilterTestCases:
                 with self.subTest(
                     f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"
                 ):
-                    filter_field = filterset.filters.get(field.name)
+                    filter_field = fs.filters.get(field.name)
                     if not filter_field:
                         # This field is not part of the Filterset.
                         continue

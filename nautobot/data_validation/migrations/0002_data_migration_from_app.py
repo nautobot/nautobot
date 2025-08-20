@@ -162,7 +162,7 @@ INSERT INTO data_validation_datacompliance (
     validated_attribute_value,
     valid,
     message
-FROM nautobot_data_validation_engine_datacompliance;"""
+FROM nautobot_data_validation_engine_datacompliance;"""  # noqa: S608
         )
         with contextlib.suppress(ContentType.DoesNotExist):
             old_ct = ContentType.objects.get(app_label="nautobot_data_validation_engine", model="datacompliance")
@@ -300,7 +300,7 @@ INSERT INTO nautobot_data_validation_engine_datacompliance (
     validated_attribute_value,
     valid,
     message
-FROM data_validation_datacompliance;"""
+FROM data_validation_datacompliance;"""  # noqa: S608
         )
         new_ct, _ = ContentType.objects.get_or_create(
             app_label="nautobot_data_validation_engine", model="datacompliance"

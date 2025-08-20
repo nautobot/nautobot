@@ -227,7 +227,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset.get_filters()
+                        filterset_filters = view.filterset_class.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -276,6 +276,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "model": model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -290,7 +291,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "table_config_form": TableConfigForm(table=table) if table else None,
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            "view_action": view.action,
+            "detail": False,
         }
+
+        self._set_context_from_method(view, "get_view_titles", context, "view_titles")
+        self._set_context_from_method(view, "get_breadcrumbs", context, "breadcrumbs")
+
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
@@ -312,7 +319,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
                 {
-                    "model": model,
                     "current_saved_view": self.saved_view,
                     "new_changes_not_applied": new_changes_not_applied,
                     "action_buttons": valid_actions,
@@ -360,3 +366,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         self.template = data.get("template", view.get_template_name())
 
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
+
+    @staticmethod
+    def _set_context_from_method(
+        view,
+        view_function,
+        context,
+        context_key,
+    ):
+        try:
+            context[context_key] = getattr(view, view_function)()
+        except AttributeError:
+            context[context_key] = None

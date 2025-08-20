@@ -4,16 +4,15 @@
 {% load perms %}
 {% load plugins %}
 {% load static %}
+{% load ui_framework %}
+
+{% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
 {% block breadcrumbs %}
-    {% format_title_with_saved_view title as formatted_title %}
-    {% include 'inc/breadcrumbs.html' with title=formatted_title %}
+    {% include 'inc/breadcrumbs.html' %}
 {% endblock breadcrumbs %}
 
-{% block title %}
-    {% format_title_with_saved_view title as formatted_title %}
-    {{ formatted_title }}
-{% endblock %}
+{% block title %}{% render_title %}{% endblock %}{% saved_view_title %}
 
 {% block content %}
 <div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">

@@ -1,4 +1,5 @@
 from difflib import get_close_matches
+from uuid import UUID
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -1189,7 +1190,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1370,7 +1371,7 @@ class NoteFilterSet(BaseFilterSet):
         filter_predicates={
             "user_name": "icontains",
             "note": "icontains",
-            "assigned_object_id": "exact",
+            "assigned_object_id": {"lookup_expr": "exact", "preprocessor": UUID},
         },
     )
     assigned_object_type = ContentTypeFilter()
