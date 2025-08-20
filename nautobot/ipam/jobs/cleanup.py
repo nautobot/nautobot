@@ -44,7 +44,7 @@ class FixIPAMParents(Job):
 
         if CleanupTypes.PREFIX in cleanup_types:
             if not self.user.has_perm("ipam.change_prefix"):
-                self.fail("User %r does not have permission to update Prefix records", self.user)
+                self.fail('User "%s" does not have permission to update Prefix records', self.user.username)
 
             self.logger.info("Inspecting Prefix records...")
 
@@ -55,10 +55,10 @@ class FixIPAMParents(Job):
             #    - parent is set but its network/broadcast range doesn't contain the given subnet
             prefixes_with_invalid_parents = (
                 all_relevant_prefixes.exclude(parent__ip_version=models.F("ip_version"))
-                | Prefix.objects.exclude(parent__namespace_id=models.F("namespace_id"))
-                | Prefix.objects.filter(parent__network__gt=models.F("network"))
-                | Prefix.objects.filter(parent__broadcast__lt=models.F("broadcast"))
-                | Prefix.objects.filter(parent__prefix_length__gte=models.F("prefix_length"))
+                | all_relevant_prefixes.exclude(parent__namespace_id=models.F("namespace_id"))
+                | all_relevant_prefixes.filter(parent__network__gt=models.F("network"))
+                | all_relevant_prefixes.filter(parent__broadcast__lt=models.F("broadcast"))
+                | all_relevant_prefixes.filter(parent__prefix_length__gte=models.F("prefix_length"))
             )
 
             prefixes_with_invalid_parents = prefixes_with_invalid_parents.select_related("parent")
@@ -70,7 +70,7 @@ class FixIPAMParents(Job):
 
                 fixed_prefixes = []
                 for pfx in prefixes_with_invalid_parents:
-                    candidate_parents = all_relevant_prefixes
+                    candidate_parents = Prefix.objects.all()
                     # Preserve namespace
                     candidate_parents = candidate_parents.filter(namespace_id=pfx.namespace_id)
                     try:
@@ -99,7 +99,7 @@ class FixIPAMParents(Job):
             fixed_prefixes = []
             processed_pfx_count = 0
             for pfx in all_relevant_prefixes.filter(parent__isnull=True):
-                candidate_parents = all_relevant_prefixes
+                candidate_parents = Prefix.objects.all()
                 # Preserve namespace
                 candidate_parents = candidate_parents.filter(namespace_id=pfx.namespace_id)
                 try:
@@ -161,7 +161,7 @@ class FixIPAMParents(Job):
 
         if CleanupTypes.IPADDRESS in cleanup_types:
             if not self.user.has_perm("ipam.change_ipaddress"):
-                self.fail("User %r does not have permission to update IP Address records", self.user)
+                self.fail('User "%s" does not have permission to update IP Address records', self.user.username)
 
             self.logger.info("Inspecting IP Address records...")
 
@@ -180,9 +180,9 @@ class FixIPAMParents(Job):
             #    - parent is set but its network/broadcast range doesn't contain the given host IP
             ips_with_invalid_parents = (
                 all_relevant_ips.filter(parent__isnull=True)
-                | IPAddress.objects.exclude(parent__ip_version=models.F("ip_version"))
-                | IPAddress.objects.filter(parent__network__gt=models.F("host"))
-                | IPAddress.objects.filter(parent__broadcast__lt=models.F("host"))
+                | all_relevant_ips.exclude(parent__ip_version=models.F("ip_version"))
+                | all_relevant_ips.filter(parent__network__gt=models.F("host"))
+                | all_relevant_ips.filter(parent__broadcast__lt=models.F("host"))
             )
 
             ips_with_invalid_parents = ips_with_invalid_parents.select_related("parent")
@@ -195,7 +195,7 @@ class FixIPAMParents(Job):
 
                 fixed_ips = []
                 for ip in ips_with_invalid_parents:
-                    candidate_parents = all_relevant_prefixes
+                    candidate_parents = Prefix.objects.all()
                     # Preserve namespace
                     if ip.parent is not None:
                         candidate_parents = candidate_parents.filter(namespace_id=ip.parent.namespace_id)
@@ -230,25 +230,21 @@ class FixIPAMParents(Job):
             self.logger.info("Continuing with a more involved check for more subtly incorrect `parent` values...")
             # 5. More subtly wrong IPAddress parents
             #    - parent is set and contains the IP, but is not the most specific such Prefix
-            prefixes_with_both_prefixes_and_ips = all_relevant_prefixes.exclude(ip_addresses__isnull=True).exclude(
-                children__isnull=True
-            )
             fixed_ips = []
             processed_ip_count = 0
-            for pfx in prefixes_with_both_prefixes_and_ips:
-                for ip in pfx.ip_addresses.all():
-                    candidate_parents = pfx.subnets(include_self=True)
-                    parent = candidate_parents.get_closest_parent(ip.host, include_self=True)
-                    if parent.id != ip.parent_id:
-                        self.logger.debug(
-                            "Parent for %s should be corrected from %s to %s",
-                            ip.host,
-                            ip.parent.prefix,
-                            parent.prefix,
-                        )
-                        ip.parent = parent
-                        fixed_ips.append(ip)
-                    processed_ip_count += 1
+            for ip in all_relevant_ips.exclude(parent__children__isnull=True).select_related("parent"):
+                candidate_parents = ip.parent.subnets(include_self=True)
+                parent = candidate_parents.get_closest_parent(ip.host, include_self=True)
+                if parent.id != ip.parent_id:
+                    self.logger.debug(
+                        "Parent for %s should be corrected from %s to %s",
+                        ip.host,
+                        ip.parent.prefix,
+                        parent.prefix,
+                    )
+                    ip.parent = parent
+                    fixed_ips.append(ip)
+                processed_ip_count += 1
 
             self.logger.info(
                 "Inspected %d IP Addresses to check whether a more specific parent Prefix exists",

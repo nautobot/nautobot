@@ -1,9 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
-from nautobot.extras.models import Status
+from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.models import JobLogEntry, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.ipam.utils.testing import create_prefixes_and_ips
+from nautobot.users.models import ObjectPermission
 
 
 class FixIPAMParentsTestCase(TransactionTestCase):
@@ -12,37 +14,36 @@ class FixIPAMParentsTestCase(TransactionTestCase):
     databases = ("default", "job_logs")
 
     def setUp(self):
+        super().setUp()
+
         self.status, _ = Status.objects.get_or_create(name="Active")
         self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
         self.status.content_types.add(ContentType.objects.get_for_model(Prefix))
 
         # Create the "intended" hierarchy of records to test
         self.root = Prefix.objects.create(prefix="10.0.0.0/8", status=self.status)
-        self.branch1 = Prefix.objects.create(prefix="10.11.0.0/16", status=self.status)
-        self.leaf11 = Prefix.objects.create(prefix="10.11.12.0/24", status=self.status)
-        self.leaf12 = Prefix.objects.create(prefix="10.11.13.0/24", status=self.status)
-        self.leaf13 = Prefix.objects.create(prefix="10.11.14.0/24", status=self.status)
-        self.leaf14 = Prefix.objects.create(prefix="10.11.15.0/24", status=self.status)
-        self.branch2 = Prefix.objects.create(prefix="10.12.0.0/16", status=self.status)
-        self.leaf21 = Prefix.objects.create(prefix="10.12.14.0/24", status=self.status)
+        self.branch1 = Prefix.objects.create(prefix="10.1.0.0/16", status=self.status)
+        self.leaf11 = Prefix.objects.create(prefix="10.1.1.0/24", status=self.status)
+        self.leaf12 = Prefix.objects.create(prefix="10.1.2.0/24", status=self.status)
+        self.leaf13 = Prefix.objects.create(prefix="10.1.3.0/24", status=self.status)
+        self.leaf14 = Prefix.objects.create(prefix="10.1.4.0/24", status=self.status)
+        self.branch2 = Prefix.objects.create(prefix="10.2.0.0/16", status=self.status)
+        self.leaf21 = Prefix.objects.create(prefix="10.2.1.0/24", status=self.status)
 
-        self.ip111 = IPAddress.objects.create(address="10.11.12.1/24", status=self.status)
-        self.ip112 = IPAddress.objects.create(address="10.11.12.2/24", status=self.status)
-        self.ip121 = IPAddress.objects.create(address="10.11.13.1/24", status=self.status)
-        self.ip122 = IPAddress.objects.create(address="10.11.13.2/24", status=self.status)
-        self.ip21 = IPAddress.objects.create(address="10.12.13.1/16", status=self.status)
-        self.ip211 = IPAddress.objects.create(address="10.12.14.1/24", status=self.status)
-        self.ip212 = IPAddress.objects.create(address="10.12.14.2/24", status=self.status)
-        self.ip213 = IPAddress.objects.create(address="10.12.14.3/24", status=self.status)
-        self.ip214 = IPAddress.objects.create(address="10.12.14.4/24", status=self.status)
+        self.ip111 = IPAddress.objects.create(address="10.1.1.1/24", status=self.status)
+        self.ip112 = IPAddress.objects.create(address="10.1.1.2/24", status=self.status)
+        self.ip121 = IPAddress.objects.create(address="10.1.2.1/24", status=self.status)
+        self.ip122 = IPAddress.objects.create(address="10.1.2.2/24", status=self.status)
+        self.ip201 = IPAddress.objects.create(address="10.2.0.1/16", status=self.status)
+        self.ip211 = IPAddress.objects.create(address="10.2.1.1/24", status=self.status)
+        self.ip212 = IPAddress.objects.create(address="10.2.1.2/24", status=self.status)
+        self.ip213 = IPAddress.objects.create(address="10.2.1.3/24", status=self.status)
+        self.ip214 = IPAddress.objects.create(address="10.2.1.4/24", status=self.status)
 
         self.other_namespace = Namespace.objects.create(name="Some other namespace")
         self.other_branch3 = Prefix.objects.create(
-            prefix="10.13.0.0/16", status=self.status, namespace=self.other_namespace
+            prefix="10.3.0.0/16", status=self.status, namespace=self.other_namespace
         )
-
-        # Add a few thousand "correct" records to confirm adequate performance of the Job
-        create_prefixes_and_ips("10.0.0.0/16")
 
     def test_initial_parentage_correct(self):
         for obj, expected_parent in (
@@ -60,8 +61,8 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             self.assertEqual(
                 obj.parent,
                 expected_parent,
-                f"parent of {obj.network} should be {expected_parent.network if expected_parent else None} but "
-                f"is {obj.parent.network if obj.parent else None}",
+                f"parent of {obj.prefix} should be {expected_parent.prefix if expected_parent else None} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
             )
 
         for obj, expected_parent in (
@@ -69,7 +70,7 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             (self.ip112, self.leaf11),
             (self.ip121, self.leaf12),
             (self.ip122, self.leaf12),
-            (self.ip21, self.branch2),
+            (self.ip201, self.branch2),
             (self.ip211, self.leaf21),
             (self.ip212, self.leaf21),
             (self.ip213, self.leaf21),
@@ -79,8 +80,8 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             self.assertEqual(
                 obj.parent,
                 expected_parent,
-                f"parent of {obj.host} should be {expected_parent.network} but "
-                f"is {obj.parent.network if obj.parent else None}",
+                f"parent of {obj.host} should be {expected_parent.prefix} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
             )
 
     def corrupt_the_hierarchy(self):
@@ -89,8 +90,8 @@ class FixIPAMParentsTestCase(TransactionTestCase):
 
         Uses QuerySet.update() because that bypasses clean/save validation.
         """
-        # Change leaf11 to a different subnet, but don't update its ip_addresses accordingly
-        Prefix.objects.filter(id=self.leaf11.id).update(network="10.12.13.0", broadcast="10.12.13.255")
+        # Change leaf11 to a different subnet, but don't update the parent of ip111 and ip112 accordingly
+        Prefix.objects.filter(id=self.leaf11.id).update(network="10.2.0.0", broadcast="10.2.0.255")
         # Change leaf13 to have an incorrect null parent
         Prefix.objects.filter(id=self.leaf13.id).update(parent=None)
         # Change ip213 to have an incorrect/invalid null parent
@@ -102,9 +103,10 @@ class FixIPAMParentsTestCase(TransactionTestCase):
         # Change ip214 to have a valid but not most-specific parent
         IPAddress.objects.filter(id=self.ip214.id).update(parent=self.root)
 
-    # TODO: test with restricted or no permissions
-
     def test_fixup_all(self):
+        # Add a few thousand "correct" records to confirm adequate performance of the Job
+        create_prefixes_and_ips("10.0.0.0/16")
+
         self.corrupt_the_hierarchy()  # 🤘
 
         job_result = create_job_result_and_run_job(
@@ -132,8 +134,8 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             self.assertEqual(
                 obj.parent,
                 expected_parent,
-                f"parent of {obj.network} should be {expected_parent.network if expected_parent else None} but "
-                f"is {obj.parent.network if obj.parent else None}",
+                f"parent of {obj.prefix} should be {expected_parent.prefix if expected_parent else None} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
             )
 
         for obj, expected_parent in (
@@ -141,7 +143,7 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             (self.ip112, self.branch1),  # corrected after change of leaf11
             (self.ip121, self.leaf12),
             (self.ip122, self.leaf12),
-            (self.ip21, self.leaf11),  # corrected after change of leaf11
+            (self.ip201, self.leaf11),  # corrected after change of leaf11
             (self.ip211, self.leaf21),
             (self.ip212, self.leaf21),
             (self.ip213, self.leaf21),  # corrected from null
@@ -151,8 +153,104 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             self.assertEqual(
                 obj.parent,
                 expected_parent,
-                f"parent of {obj.host} should be {expected_parent.network} but "
-                f"is {obj.parent.network if obj.parent else None}",
+                f"parent of {obj.host} should be {expected_parent.prefix} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
+            )
+
+    def test_fixup_without_permissions(self):
+        self.corrupt_the_hierarchy()  # 🤘
+
+        for cleanup_type, modelname in (
+            ("ipam.IPAddress", "IP Address"),
+            ("ipam.Prefix", "Prefix"),
+        ):
+            job_result = create_job_result_and_run_job(
+                "nautobot.ipam.jobs.cleanup",
+                "FixIPAMParents",
+                username=self.user.username,  # otherwise this API defaults to using a superuser account
+                cleanup_types=[cleanup_type],
+                restrict_to_namespace=None,
+                restrict_to_network=None,
+                dryrun=False,
+            )
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            log_failure = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+            self.assertEqual(
+                log_failure.message,
+                f'User "{self.user.username}" does not have permission to update {modelname} records',
+            )
+            # Assert no fixup with a couple of spot checks
+            self.leaf11.refresh_from_db()
+            self.assertEqual(self.leaf11.parent, self.branch1)  # still wrong
+            self.ip111.refresh_from_db()
+            self.assertEqual(self.ip111.parent, self.leaf11)  # still wrong
+
+    def test_fixup_with_constrained_permissions(self):
+        self.corrupt_the_hierarchy()  # 🤘
+
+        prefix_perm = ObjectPermission.objects.create(
+            name="Prefix permission",
+            actions=["view", "change"],
+            constraints={"network__net_contained_or_equal": str(self.branch2.prefix)},
+        )
+        prefix_perm.users.add(self.user)
+        prefix_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+
+        ip_perm = ObjectPermission.objects.create(
+            name="IPAddress permission",
+            actions=["view", "change"],
+            constraints={"host__net_host_contained": str(self.branch2.prefix)},
+        )
+        ip_perm.users.add(self.user)
+        ip_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.ipam.jobs.cleanup",
+            "FixIPAMParents",
+            username=self.user.username,
+            cleanup_types=("ipam.IPAddress", "ipam.Prefix"),
+            restrict_to_namespace=None,
+            restrict_to_network=None,
+            dryrun=False,
+        )
+        self.assertJobResultStatus(job_result)
+
+        for obj, expected_parent in (
+            (self.root, None),
+            (self.branch1, self.root),
+            (self.leaf11, self.branch2),  # corrected after network change
+            (self.leaf12, self.branch1),
+            (self.leaf13, None),  # still wrong, but out of scope due to permissions
+            (self.leaf14, self.root),  # still wrong, but out of scope due to permissions
+            (self.branch2, self.root),
+            (self.leaf21, self.branch2),
+            (self.other_branch3, self.root),  # still wrong, but out of scope due to permissions
+        ):
+            obj.refresh_from_db()
+            self.assertEqual(
+                obj.parent,
+                expected_parent,
+                f"parent of {obj.prefix} should be {expected_parent.prefix if expected_parent else None} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
+            )
+
+        for obj, expected_parent in (
+            (self.ip111, self.leaf11),  # still wrong, but out of scope due to permissions
+            (self.ip112, self.leaf11),  # still wrong, but out of scope due to permissions
+            (self.ip121, self.leaf12),
+            (self.ip122, self.leaf12),
+            (self.ip201, self.leaf11),  # corrected after change of leaf11
+            (self.ip211, self.leaf21),
+            (self.ip212, self.leaf21),
+            (self.ip213, self.leaf21),  # corrected from null
+            (self.ip214, self.leaf21),  # corrected from root
+        ):
+            obj.refresh_from_db()
+            self.assertEqual(
+                obj.parent,
+                expected_parent,
+                f"parent of {obj.host} should be {expected_parent.prefix} but "
+                f"is {obj.parent.prefix if obj.parent else None}",
             )
 
     # TODO: test with single cleanup_types value
