@@ -28,9 +28,7 @@
                     class="nb-sidenav-list-item"
                     type="button"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor" stroke-width="1.5"/>
-                    </svg>
+                    <img alt="star icon" src="{% static 'nautobot-icons/star.svg' %}">
                     <span>Favorites</span>
                 </button>
                 <div class="nb-sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
@@ -49,11 +47,16 @@
                             class="nb-sidenav-list-item"
                             type="button"
                         >
-                            <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor"
-                                        stroke-width="1.5"/>
-                            </svg>
+                            {% if '/' in tab_details.icon %}
+                                {% comment %}If there is a `'/'` in the `icon`, consider it a file URL, not icon name.{% endcomment %}
+                                <img alt="{{ tab_name }} icon" src="{% static tab_details.icon %}">
+                            {% elif tab_details.icon %}
+                                {% comment %}If `icon` is given, treat it as icon name to be fetched from nautobot-icons library.{% endcomment %}
+                                <img alt="{{ tab_details.icon }} icon" src="{% static 'nautobot-icons/'|add:tab_details.icon|add:'.svg' %}">
+                            {% else %}
+                                {% comment %}If `icon` is missing, generate an "icon" depicting the first nav menu tab name letter inside a rounded rectangle.{% endcomment %}
+                                <span class="nb-letter-icon">{{ tab_name|first|upper }}</span>
+                            {% endif %}
                             <span>{{ tab_name }}</span>
                         </button>
 

@@ -8,6 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Circuits",
+        icon="rotate-cw",
         weight=500,
         groups=(
             NavMenuGroup(
