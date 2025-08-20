@@ -334,3 +334,4 @@ On top of the [Material Design Icons](https://pictogrammers.com/library/mdi/) pa
 
 1. Nautobot icons are standard `.svg` static files located in `nautobot/project-static/nautobot-icons` directory.
 2. Use `icon` attribute to set a `NavMenuTab` icon. It can either be a name from Nautobot icon library or SVG static file URL.
+3. If not explicitly defined, nav menu tab icon falls back to the first letter of its name inside a rounded rectangle.

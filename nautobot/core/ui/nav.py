@@ -66,34 +66,12 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
             permissions (list): The permissions required to view this tab.
             groups (list): List of groups to be rendered in this tab.
             weight (int): The weight of this tab.
-            icon (str): The name of the Nautobot icon representing this tab or an SVG static file URL. Randomized if not explicitly specified.
+            icon (str): The name of the Nautobot icon representing this tab or an SVG static file URL.
         """
         super().__init__(permissions)
         self.name = name
         self.weight = weight
-
-        if icon:
-            self.icon = icon
-        else:
-            icons_pool = [
-                "arrows-expand-rec",
-                "arrows-move-rec",
-                "arrows-move-2-rec",
-                "atom",
-                "cloud-check",
-                "cloud-lightning",
-                "compass",
-                "credit-card",
-                "direction",
-                "rocket-2",
-                "server",
-                "server-2",
-                "transform",
-            ]
-            randomized_index = sum([ord(char) for char in name]) % len(
-                icons_pool
-            )  # Randomize index based on sum of ASCII codes of tab name characters.
-            self.icon = icons_pool[randomized_index]
+        self.icon = icon
 
         if groups is not None:
             if not isinstance(groups, (list, tuple)):
