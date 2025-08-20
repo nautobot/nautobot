@@ -111,10 +111,13 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         except Job.DoesNotExist:
             pass
 
+        if "date_started" in kwargs:
+            fields["date_started"] = kwargs["date_started"]
+
         obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
         if not created:
-            # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
+            # Make sure `date_done` is allowed to stay null until the task reaches a ready state.
             #
             # Default behavior in `django-celery-results` has this field as a
             # `DateField(auto_now=True)` which just automatically updates the `date_done` field on every

@@ -166,6 +166,136 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.15 (2025-08-18)
+
+### Added in v2.4.15
+
+- [#7315](https://github.com/nautobot/nautobot/issues/7315) - Added Bulk Update functionality for the CustomField model.
+- [#7364](https://github.com/nautobot/nautobot/issues/7364) - Added new management command `check_job_approval_status` to detect scheduled jobs and jobs that still require approval. This command helps during upgrade to Nautobot 3.x.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `power_factor` field to PowerPort and PowerPortTemplate models to track the power factor ratio for electrical devices.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `panel_type` and `breaker_position_count` fields to PowerPanel model to specify panel type and total number of breaker positions.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `power_path` field to PowerPanel model to track physical power distribution redundancy path.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `destination_panel` field to PowerFeed model to specify destination panel that receives power from the feed.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `power_path` field to PowerFeed model to track physical power distribution redundancy path.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `breaker_position` and `breaker_pole_count` fields to PowerFeed model to specify circuit breaker position and pole count.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `occupied_positions` and `phase_designation` properties to PowerFeed model to display breaker positions and calculate phase designation.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Added `paginate` and `show_table_config_button` bools to ObjectsTablePanel to provide an option to hide the paginator and configure button UI.
+- [#7573](https://github.com/nautobot/nautobot/issues/7573) - Added support for page heading, document title and breadcrumbs in Nautobot UI Framework.
+- [#7609](https://github.com/nautobot/nautobot/issues/7609) - Added `context_object_key` optional parameter to the `Button` class.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Added `JobResult.date_started` field, corresponding to the feature enhancement in `django-celery-results` 2.6.0.
+
+### Changed in v2.4.15
+
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Changed PowerFeed model validation to enforce mutual exclusivity between cable connections and destination panel connections.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Changed PowerFeed model to validate breaker position conflicts and panel capacity constraints.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Changed PowerFeed rack location validation to use location hierarchy instead of exact location match.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Changed PowerFeed `clone_fields` to include `destination_panel`, `breaker_position`, and `breaker_pole_count` fields.
+- [#7613](https://github.com/nautobot/nautobot/issues/7613) - Improved object change list view performance.
+- [#7645](https://github.com/nautobot/nautobot/issues/7645) - Implemented custom TreeQuerySet.count method. Note that this impacts all tree models calling count everywhere, but should be transparent.
+
+### Fixed in v2.4.15
+
+- [#6145](https://github.com/nautobot/nautobot/issues/6145) - Fixed a regression in which the `contacts__n`, `dynamic_groups__n`, `role__n`, `status__n`, and `teams__n` filterset filters would not accept multiple values or names, instead only accepting a single UUID.
+- [#6748](https://github.com/nautobot/nautobot/issues/6748) - Fixed `PowerPort.get_power_draw()` and `Rack.get_power_utilization()` calculations to use power factor for Watts (W) to volt-amps (VA) conversion.
+- [#7084](https://github.com/nautobot/nautobot/issues/7084) - Fixed incorrect labels for negated custom-field filters in object list views.
+- [#7321](https://github.com/nautobot/nautobot/issues/7321) - Fixed missing support for "exclude" filters in `ContentTypeFilter`, `ContentTypeChoiceFilter`, and `ContentTypeMultipleChoiceFilter`. This allows filters like `/extras/roles/?content_types__n=ipam.ipaddress` to work properly.
+- [#7321](https://github.com/nautobot/nautobot/issues/7321) - Fixed incorrect extended filter types presented for `ContentTypeFilter`, `ContentTypeChoiceFilter`, and `ContentTypeMultipleChoiceFilter`. These filters only support the `__n` filter extension at present, not various character-based extensions like `__ic`, `__nic`, etc.
+- [#7511](https://github.com/nautobot/nautobot/issues/7511) - Fixed bug in device detail template where `object.powerports` and `object.poweroutlets` were incorrectly referenced instead of `object.power_ports` and `object.power_outlets`, preventing the Power Utilization panel from being displayed on the device detail page.
+- [#7519](https://github.com/nautobot/nautobot/issues/7519) - Hide the actions column in BulkDelete/BulkEdit views supported by NautobotUIViewSet.
+- [#7594](https://github.com/nautobot/nautobot/issues/7594) - Fixed a bug in `NoteFilterSet` where the `assigned_object_id` filter did not properly convert values to UUIDs, causing failed lookups when filtering by this field. Now applies a `UUID` preprocessor to ensure correct filtering.
+- [#7662](https://github.com/nautobot/nautobot/issues/7662) - Fixed the Children section in `location_retrieve.html` to properly display child locations of the same Location Type (e.g., sites within sites, rooms within rooms).
+- [#7663](https://github.com/nautobot/nautobot/issues/7663) - Fixed namespace issues when using bulk edit form was auto setting a bulk edit field based on a filter param that was carried over.
+
+### Dependencies in v2.4.15
+
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `cryptography` to `~45.0.6`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated optional dependency `django-auth-ldap` to `~5.2.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-celery-beat` to `~2.7.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-celery-results` to `~2.6.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-cors-headers` to `~4.7.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-extensions` to `~4.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-health-check` to `~3.20.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-prometheus` to `~2.4.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-redis` to `~6.0.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-silk` to `~5.4.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-storages` to `~1.14.6`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-structlog` to `~9.1.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-timezone-field` to `~7.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `django-tree-queries` to `~0.20.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Widened range of permitted versions for dependency `djangorestframework` to also permit `3.16.x` versions. Note that depending on your environment this may result in either version 3.15.2 or 3.16.1 being installed after upgrading Nautobot.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `drf-spectacular` to `~0.28.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `emoji` to `~2.14.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `kubernetes` to `~33.1.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `Markdown` to `~3.8.2`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `nh3` to `~0.3.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Widened range of permitted versions for dependency `Pillow` to permit any `11.x.y` versions.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `prometheus-client` to `~0.22.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated dependency `social-auth-core` to `~4.7.0`.
+- [#7672](https://github.com/nautobot/nautobot/issues/7672) - Pinned the Docker image to Debian 12 `bookworm` LTS to prevent unintended upgrades to Debian 13 `trixie`.
+
+### Housekeeping in v2.4.15
+
+- [#7315](https://github.com/nautobot/nautobot/issues/7315) - Refactored CustomField model related UI views to use `NautobotUIViewSet`.
+- [#7324](https://github.com/nautobot/nautobot/issues/7324) - Refactored DeviceType model related UI views to use `UI component framework`.
+- [#7513](https://github.com/nautobot/nautobot/issues/7513) - Refactored VirtualMachine model related UI views to use `NautobotUIViewSet`.
+- [#7519](https://github.com/nautobot/nautobot/issues/7519) - Refactored JobResult model related UI views to use `NautobotUIViewSet`.
+- [#7594](https://github.com/nautobot/nautobot/issues/7594) - Refactored Note model related UI views to use `NautobotUIViewSet`.
+- [#7648](https://github.com/nautobot/nautobot/issues/7648) - Adjusted Renovate configuration for `develop` and `next`.
+- [#7648](https://github.com/nautobot/nautobot/issues/7648) - Added management of `npm` dependencies via Renovate.
+- [#7648](https://github.com/nautobot/nautobot/issues/7648) - Added automatic refresh of `poetry.lock` and `package-lock.json` to Renovate configuration.
+- [#7654](https://github.com/nautobot/nautobot/issues/7654) - Updated `renovate.json` to newer standards and removed some obsolete configuration thereof.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `django-debug-toolbar` to `~5.2.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `faker` to `^37.5.3`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `rich` to `~14.1.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `ruff` to `~0.12.8` and applied its recommendations.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `selenium` to `~4.34.2`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `tblib` to `~3.1.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `time-machine` to `~2.17.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated development dependency `yamllint` to `~1.37.1`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated documentation dependency `mkdocstrings` to `~0.30.0`.
+- [#7655](https://github.com/nautobot/nautobot/issues/7655) - Updated documentation dependency `mkdocstrings-python` to `~1.16.12`.
+
+## v2.4.14 (2025-08-04)
+
+### Added in v2.4.14
+
+- [#7278](https://github.com/nautobot/nautobot/issues/7278) - Added `range_start` and `range_end` parameters for `/api/ipam/prefixes/<id>/available-ips/`. This replaces the use of the `offset` parameter in this particular case.
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Added Bulk Edit functionality for the SecretsGroup model.
+- [#7566](https://github.com/nautobot/nautobot/issues/7566) - Added Eaton and Raritan C39 power outlet type.
+- [#7574](https://github.com/nautobot/nautobot/issues/7574) - Added 4 new choices in the Secret Type category of Secret Groups: "Authentication Key", "Authentication Protocol", "Private Key" and "Private Algorithm".
+- [#7625](https://github.com/nautobot/nautobot/issues/7625) - Added an index to JobLogEntry to improve performance of Job Result logs.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added support for optional `get_queryset` boolean parameter to `CustomField.objects.get_for_model()`, `ComputedField.objects.get_for_model()`, and `Relationship.objects.get_for_model()` APIs. If set to `False` these APIs will return a (potentially cached) list of records instead of a QuerySet.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `populate_list_caches()` method to `CustomField.objects`, `ComputedField.objects`, and `Relationship.objects`, which can be called to efficiently populate the caches used by the `get_for_model()` methods when `get_queryset=False` for all content-types.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added `feature_models` dict to the Nautobot registry for more efficient GraphQL schema generation.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Added caching of generated search parameters for more efficient GraphQL schema generation.
+
+### Changed in v2.4.14
+
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Made network driver mappings dynamically find network driver keys.
+- [#7611](https://github.com/nautobot/nautobot/issues/7611) - Added more verbose default output to `nautobot-server migrate` command.
+
+### Fixed in v2.4.14
+
+- [#3609](https://github.com/nautobot/nautobot/issues/3609) - Fixed `cluster_count` not showing up on the API of `/tenancy/tenants/`.
+- [#7577](https://github.com/nautobot/nautobot/issues/7577) - Fixed incorrect reference to Inventory Items under the Module documentation.
+- [#7616](https://github.com/nautobot/nautobot/issues/7616) - Fixed a data-loss bug in the v1.x-to-v2.0 migration `extras.0062_collect_roles_from_related_apps_roles` in which custom-field data on `dcim.DeviceRole`, `dcim.RackRole`, and `ipam.Role` records was not correctly copied to the corresponding created `extras.Role` records.
+- [#7633](https://github.com/nautobot/nautobot/issues/7633) - Greatly reduced the number of database queries made when generating the GraphQL schema.
+
+### Dependencies in v2.4.14
+
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `GitPython` dependency to `~3.1.45`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `nh3` dependency to `~0.2.22`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated `pyuwsgi` dependency to `2.0.30`.
+- [#7601](https://github.com/nautobot/nautobot/issues/7601) - Updated dependency `netutils` minimum version to support ability for dynamic network driver mappings.
+
+### Housekeeping in v2.4.14
+
+- [#7419](https://github.com/nautobot/nautobot/issues/7419) - Refactored GraphQLQuery model related UI views to use `NautobotUIViewSet`.
+- [#7479](https://github.com/nautobot/nautobot/issues/7479) - Refactored SecretsGroup model related UI views to use `NautobotUIViewSet`.
+- [#7500](https://github.com/nautobot/nautobot/issues/7500) - Refactored Rack model related UI views to use `NautobotUIViewSet`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated development dependency `pymarkdownlnt` to `~0.9.31`.
+- [#7584](https://github.com/nautobot/nautobot/issues/7584) - Updated documentation dependency `mkdocs-material` to `~9.6.16`.
+
 ## v2.4.13 (2025-07-21)
 
 ### Added in v2.4.13

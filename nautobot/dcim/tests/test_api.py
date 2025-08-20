@@ -16,8 +16,10 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedTypeChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
@@ -3064,7 +3066,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                     # Interface name starts with parent device's position in VC; e.g. 1/1, 1/2, 1/3...
                     Interface.objects.create(
                         device=device,
-                        name=f"{i%3+1}/{j}",
+                        name=f"{i % 3 + 1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
                         role=interface_role,
@@ -3166,6 +3168,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
+    choices_fields = ["panel_type", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3204,7 +3207,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    choices_fields = ["phase", "supply", "type"]
+    choices_fields = ["phase", "supply", "type", "breaker_pole_count", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3229,8 +3232,20 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         )
 
         power_panels = (
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 1"),
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 2"),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 1",
+                panel_type=PowerPanelTypeChoices.TYPE_UTILITY,
+                breaker_position_count=42,
+            ),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 2",
+                panel_type=PowerPanelTypeChoices.TYPE_RPP,
+                breaker_position_count=24,
+            ),
         )
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
@@ -3285,6 +3300,9 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
+                "destination_panel": power_panels[1].pk,
+                "breaker_position": 5,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_1,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": PRIMARY,
@@ -3292,6 +3310,8 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
+                "breaker_position": 10,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_2,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": REDUNDANT,

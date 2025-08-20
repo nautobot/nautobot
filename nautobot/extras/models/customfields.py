@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 from datetime import date, datetime
 import json
 import logging
@@ -48,20 +48,41 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    def get_for_model(self, model, get_queryset=True):
         """
         Return all ComputedFields assigned to the given model.
+
+        Returns a queryset by default, or a list if `get_queryset` param is False.
         """
         concrete_model = model._meta.concrete_model
         cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_type=content_type)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
 
     get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
+
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` lookups."""
+        queryset = self.all().select_related("content_type")
+        listings = defaultdict(list)
+        for cf in queryset:
+            listings[f"{cf.content_type.app_label}.{cf.content_type.model}"].append(cf)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.list", listings[label])
 
 
 @extras_features("graphql")
@@ -370,18 +391,24 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, exclude_filter_disabled=False):
+    def get_for_model(self, model, exclude_filter_disabled=False, get_queryset=True):
         """
         Return (and cache) all CustomFields assigned to the given model.
 
         Args:
             model (Model): The django model to which custom fields are registered
             exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
+            get_queryset (bool): Whether to return a QuerySet or a list.
         """
         concrete_model = model._meta.concrete_model
         cache_key = (
             f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}.{exclude_filter_disabled}"
         )
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -389,6 +416,10 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
 
     get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
@@ -404,6 +435,24 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         return keys
 
     keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` and `keys_for_model` lookups."""
+        queryset = self.all().prefetch_related("content_types")
+        cf_listings = defaultdict(lambda: defaultdict(list))
+        key_listings = defaultdict(list)
+        for cf in queryset:
+            for ct in cf.content_types.all():
+                label = f"{ct.app_label}.{ct.model}"
+                cf_listings[label][False].append(cf)
+                if cf.filter_logic != CustomFieldFilterLogicChoices.FILTER_DISABLED:
+                    cf_listings[label][True].append(cf)
+                key_listings[label].append(cf.key)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.True.list", cf_listings[label][True])
+            cache.set(f"{self.get_for_model.cache_key_prefix}.{label}.False.list", cf_listings[label][False])
+            cache.set(f"{self.keys_for_model.cache_key_prefix}.{label}", key_listings[label])
 
 
 @extras_features("webhooks")
@@ -465,8 +514,7 @@ class CustomField(
         blank=True,
         null=True,
         help_text=(
-            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
-            '"Foo").'
+            'Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "Foo").'
         ),
     )
     weight = models.PositiveSmallIntegerField(
