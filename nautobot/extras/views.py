@@ -1108,6 +1108,12 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
 
+    def get_table_class(self):
+        """Use different tables depending on the current action."""
+        if self.action in ("bulk_update", "bulk_destroy"):
+            return tables.GitRepositoryBulkTable
+        return super().get_table_class()
+
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
         context["datasource_contents"] = get_datasource_contents("extras.gitrepository")
