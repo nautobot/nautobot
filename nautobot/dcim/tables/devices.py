@@ -155,7 +155,7 @@ class PlatformTable(BaseTable):
 
 
 class MembersTable(BaseTable):
-    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
+    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK, verbose_name="Device")
     vc_position = tables.TemplateColumn(
         verbose_name="Position", template_code='<span class="badge badge-default">{{ record.vc_position }}</span>'
     )
