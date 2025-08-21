@@ -125,7 +125,6 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
-    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -566,132 +565,45 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
 #
 
 
-class CustomFieldListView(generic.ObjectListView):
+class CustomFieldUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CustomFieldBulkEditForm
     queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    filterset_form = forms.CustomFieldFilterForm
+    serializer_class = serializers.CustomFieldSerializer
+    filterset_class = filters.CustomFieldFilterSet
+    filterset_form_class = forms.CustomFieldFilterForm
+    form_class = forms.CustomFieldForm
+    table_class = tables.CustomFieldTable
+    template_name = "extras/customfield_update.html"
     action_buttons = ("add",)
 
-
-class CustomFieldView(generic.ObjectView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldEditView(generic.ObjectEditView):
-    queryset = CustomField.objects.all()
-    model_form = forms.CustomFieldForm
-    template_name = "extras/customfield_edit.html"
-
     def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
+        context = super().get_extra_context(request, instance)
 
-        if request.POST:
-            ctx["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+        if self.action in ("create", "update"):
+            if request.POST:
+                context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+            else:
+                context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        # Process the formset for choices
+        ctx = self.get_extra_context(self.request, obj)
+        choices = ctx["choices"]
+        if choices.is_valid():
+            choices.save()
         else:
-            ctx["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+            raise ValidationError(choices.errors)
 
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # ---> BEGIN difference from ObjectEditView.post()
-                    # Process the formsets for choices
-                    ctx = self.get_extra_context(request, obj)
-                    choices = ctx["choices"]
-                    if choices.is_valid():
-                        choices.save()
-                    else:
-                        raise RuntimeError(choices.errors)
-                    # <--- END difference from ObjectEditView.post()
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-            # ---> BEGIN difference from ObjectEditView.post()
-            except RuntimeError:
-                msg = "Errors encountered when saving custom field choices. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a choice that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            # <--- END difference from ObjectEditView.post()
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class CustomFieldDeleteView(generic.ObjectDeleteView):
-    queryset = CustomField.objects.all()
-
-
-class CustomFieldBulkDeleteView(generic.BulkDeleteView):
-    queryset = CustomField.objects.all()
-    table = tables.CustomFieldTable
-    filterset = filters.CustomFieldFilterSet
-    form = forms.CustomFieldBulkDeleteForm
+        return obj
 
 
 #
 # Custom Links
 #
-
-
 class CustomLinkUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CustomLinkBulkEditForm
     filterset_class = filters.CustomLinkFilterSet
@@ -2140,59 +2052,57 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
-class JobResultListView(generic.ObjectListView):
-    """
-    List JobResults
-    """
-
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    filterset = filters.JobResultFilterSet
-    filterset_form = forms.JobResultFilterForm
-    table = tables.JobResultTable
+class JobResultUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+):
+    filterset_class = filters.JobResultFilterSet
+    filterset_form_class = forms.JobResultFilterForm
+    serializer_class = serializers.JobResultSerializer
+    table_class = tables.JobResultTable
+    queryset = JobResult.objects.all()
     action_buttons = ()
 
-
-class JobResultDeleteView(generic.ObjectDeleteView):
-    queryset = JobResult.objects.all()
-
-
-class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user")
-    table = tables.JobResultTable
-    filterset = filters.JobResultFilterSet
-
-
-class JobResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
-    queryset = JobResult.objects.prefetch_related("job_model", "user")
-    template_name = "extras/jobresult.html"
-
     def get_extra_context(self, request, instance):
-        associated_record = None
-        job_class = None
-        if instance.job_model is not None:
-            job_class = instance.job_model.job_class
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            job_class = None
+            if instance and instance.job_model:
+                job_class = instance.job_model.job_class
 
-        return {
-            "job": job_class,
-            "associated_record": associated_record,
-            "result": instance,
-            **super().get_extra_context(request, instance),
-        }
+            context.update(
+                {
+                    "job": job_class,
+                    "associated_record": None,
+                    "result": instance,
+                }
+            )
 
+        return context
 
-class JobLogEntryTableView(generic.GenericView):
-    """
-    Display a table of `JobLogEntry` objects for a given `JobResult` instance.
-    """
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("job_model", "user")
 
-    queryset = JobResult.objects.all()
+        if not self.detail:
+            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
 
-    def get(self, request, pk=None):
+        return queryset
+
+    @action(
+        detail=True,
+        url_path="log-table",
+        url_name="log-table",
+        custom_view_base_action="view",
+    )
+    def log_table(self, request, pk=None):
+        """
+        Custom action to return a rendered JobLogEntry table for a JobResult.
+        """
+
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -2200,14 +2110,15 @@ class JobLogEntryTableView(generic.GenericView):
             )
         else:
             queryset = instance.job_log_entries.all()
+
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(log_table)
-        table = log_table.as_html(request)
-        return HttpResponse(table)
+
+        return HttpResponse(log_table.as_html(request))
 
 
 #
@@ -2748,13 +2659,29 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
     form_class = forms.SecretsGroupForm
     serializer_class = serializers.SecretsGroupSerializer
     table_class = tables.SecretsGroupTable
-    template_name = "extras/secretsgroup_update.html"
     queryset = SecretsGroup.objects.all()
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Secrets Group Details",
+                fields=["description"],
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+            ),
+            object_detail.ObjectsTablePanel(
+                table_class=tables.SecretsGroupAssociationTable,
+                table_filter="secrets_group",
+                related_field_name="secrets_group",
+                table_title="Secrets",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve" and instance:
-            context["secrets_group_associations"] = SecretsGroupAssociation.objects.filter(secrets_group=instance)
         if self.action in ("create", "update"):
             if request.method == "POST":
                 context["secrets"] = forms.SecretsGroupAssociationFormSet(data=request.POST, instance=instance)
