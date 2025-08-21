@@ -592,12 +592,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                     return helpers.placeholder(value)
             return super().render_value(key, value, context)
 
-    class AssignmentObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def render_key(self, key, value, context):
-            if key == "content_types":
-                return "Content Types"
-            return super().render_key(key, value, context)
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             CustomFieldObjectFieldsPanel(
@@ -614,13 +608,14 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context_columns_key="columns",
                 context_column_headers_key="header",
             ),
-            AssignmentObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 label="Assignment",
                 fields=[
                     "content_types",
                 ],
+                key_transforms={"content_types": "Content Types"},
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
