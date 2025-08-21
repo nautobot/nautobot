@@ -418,6 +418,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 fields=["physical_address", "shipping_address"],
                 value_transforms={
                     "physical_address": [helpers.render_address],
+                    "shipping_address": [helpers.render_address],
                 },
             ),
             object_detail.ObjectFieldsPanel(
