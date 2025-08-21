@@ -94,13 +94,7 @@ def merge_dicts_without_collision(d1, d2):
 
 def validate_jinja2(template_code):
     """
-    Parse a Jinja2 template to validate its syntax.
-
-    Args:
-        template_code (str): The Jinja2 template code to parse.
-
-    Returns:
-        bool: True if the template is valid. An exception will be raised if the template fails to parse.
+    Parse a Jinja2 template to validate its syntax. Returns True if the template is valid.
 
     Raises:
         jinja2.TemplateSyntaxError: If the template is syntactically invalid.
