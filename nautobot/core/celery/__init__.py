@@ -54,7 +54,8 @@ def import_jobs(sender=None, **kwargs):
 
     Note that app-provided jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs  # noqa: F401
+    import nautobot.core.jobs
+    import nautobot.ipam.jobs  # noqa: F401
 
     _import_jobs_from_jobs_root()
     _import_dynamic_jobs_from_apps()
