@@ -55,7 +55,7 @@ from .utils import (
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
-
+import netaddr
 logger = logging.getLogger(__name__)
 
 #
@@ -690,6 +690,78 @@ class IPAddressUIViewSet(NautobotUIViewSet):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def successful_post(self, request, obj, created, _logger):
+        """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
+        # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
+        if obj.parent.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
+            warning_msg = format_html(
+                '<p>This <a href="{}#ipaddress-parenting-concrete-relationship">will be considered invalid data</a> '
+                "in a future release.</p>",
+                static("docs/models/ipam/ipaddress.html"),
+            )
+            parent_link = format_html('<a href="{}">{}</a>', obj.parent.get_absolute_url(), obj.parent)
+            if obj.parent.prefix_length < obj.mask_length:
+                create_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode(
+                        {
+                            "namespace": obj.parent.namespace.pk,
+                            "prefix": str(netaddr.IPNetwork(f"{obj.host}/{obj.mask_length}")),
+                            "type": choices.PrefixTypeChoices.TYPE_NETWORK,
+                        }
+                    )
+                )
+                messages.warning(
+                    request,
+                    format_html(
+                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
+                        'Consider <a href="{}">creating an intermediate /{} prefix of type Network</a> '
+                        "to resolve this issue.",
+                        obj,
+                        parent_link,
+                        warning_msg,
+                        create_url,
+                        obj.mask_length,
+                    ),
+                )
+            else:
+                messages.warning(
+                    request,
+                    format_html(
+                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
+                        'Consider <a href="{}">changing the prefix</a> to type Network or Pool to resolve this issue.',
+                        obj,
+                        parent_link,
+                        warning_msg,
+                        reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk}),
+                    ),
+                )
+
+        # Add IpAddress to interface if interface is in query_params
+        if "interface" in request.GET or "vminterface" in request.GET:
+            interface, _ = retrieve_interface_or_vminterface_from_request(request)
+            interface.ip_addresses.add(obj)
+
+        super().successful_post(request, obj, created, _logger)
+
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        # TODO: update to work with interface M2M
+        if "interface" in request.GET:
+            try:
+                obj.assigned_object = Interface.objects.get(pk=request.GET["interface"])
+            except (ValueError, Interface.DoesNotExist):
+                pass
+
+        elif "vminterface" in request.GET:
+            try:
+                obj.assigned_object = VMInterface.objects.get(pk=request.GET["vminterface"])
+            except (ValueError, VMInterface.DoesNotExist):
+                pass
+
+        return obj
+
+
     @action(
         detail=False,
         methods=["get", "post"],
@@ -884,6 +956,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                         logger.info(logger_msg)
                         messages.success(request, msg)
             return self.find_duplicate_ips(request, merged_attributes=request.POST)
+        return redirect(self.get_return_url(request))
 
     def find_duplicate_ips(self, request, merged_attributes=None):
         """
