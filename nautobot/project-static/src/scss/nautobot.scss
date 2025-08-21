@@ -1342,11 +1342,12 @@ body {
   @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
-    "sidenav header       drawer"
-    "sidenav main-content drawer"
-    "sidenav footer       drawer";
+    "sidenav header             drawer"
+    "sidenav main-content       drawer"
+    "sidenav banner-bottom-area drawer"
+    "sidenav footer             drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
-  grid-template-rows: fit-content(0) 1fr fit-content(0);
+  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
   overflow-y: scroll;
 
   #sidenav {
@@ -2038,7 +2039,7 @@ ul.nb-tree-hierarchy {
 
 /* Banners */
 .nb-banner-bottom {
-  margin-bottom: 3.125rem; /* 50px */
+  grid-area: banner-bottom-area;
 }
 
 /* Reports */
