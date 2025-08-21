@@ -2446,7 +2446,7 @@ class NoteUIViewSet(
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 object_field="note",
-                render_as=object_detail.ObjectTextPanel.RenderOptions.PLAINTEXT,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.MARKDOWN,
             ),
         ),
     )
