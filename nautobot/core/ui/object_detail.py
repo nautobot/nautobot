@@ -1192,7 +1192,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 exist on the provided object; otherwise an exception will be raised at render time.
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
-            key_transform (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
                 For example: {'content_types': 'Content Type'}.
         """
         self.fields = fields
