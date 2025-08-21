@@ -211,7 +211,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device.cf[custom_field.key] = "This is some testing text"
         device.validated_save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the custom field appears in the primary information tab
         self.assertTrue(self.browser.is_text_present("Device Custom Field"))
         self.assertTrue(self.browser.is_text_present("This is some testing text"))
@@ -223,7 +223,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field.advanced_ui = True
         custom_field.save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the custom field does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("Device Custom Field"))
         self.assertFalse(self.browser.is_text_present("This is some testing text"))
@@ -248,7 +248,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": self.device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': self.device.pk})}")
         self.browser.find_by_id("id_cf_test_valid_json_field").first.type("test")
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
@@ -274,7 +274,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": self.device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': self.device.pk})}")
         self.browser.find_by_id("id_cf_test_invalid_json_field").first.type("test")
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
@@ -306,7 +306,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': device.pk})}")
         # Get the first item selected on the custom field
         self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
         active_web_element = self.browser.driver.switch_to.active_element
@@ -328,7 +328,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
 
         # Visit the device edit page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device_edit", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': device.pk})}")
         # Click update button
         self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
         # Check successful redirect to device object page

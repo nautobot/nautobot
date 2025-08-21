@@ -712,42 +712,42 @@ def common_test_data(cls):
     # Create 3 of each component template on the first two module types
     for i in range(6):
         ConsolePortTemplate.objects.create(
-            name=f"Test Filters Module Console Port {i+1}",
+            name=f"Test Filters Module Console Port {i + 1}",
             module_type=module_types[i % 2],
         )
         ConsoleServerPortTemplate.objects.create(
-            name=f"Test Filters Module Console Server Port {i+1}",
+            name=f"Test Filters Module Console Server Port {i + 1}",
             module_type=module_types[i % 2],
         )
         ppt = PowerPortTemplate.objects.create(
-            name=f"Test Filters Module Power Port {i+1}",
+            name=f"Test Filters Module Power Port {i + 1}",
             module_type=module_types[i % 2],
         )
         PowerOutletTemplate.objects.create(
-            name=f"Test Filters Module Power Outlet {i+1}",
+            name=f"Test Filters Module Power Outlet {i + 1}",
             power_port_template=ppt,
             module_type=module_types[i % 2],
         )
         InterfaceTemplate.objects.create(
-            name=f"Test Filters Module Interface {i+1}",
+            name=f"Test Filters Module Interface {i + 1}",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             module_type=module_types[i % 2],
         )
         rpt = RearPortTemplate.objects.create(
-            name=f"Test Filters Module Rear Port {i+1}",
+            name=f"Test Filters Module Rear Port {i + 1}",
             module_type=module_types[i % 2],
             type=PortTypeChoices.TYPE_8P8C,
             positions=10,
         )
         FrontPortTemplate.objects.create(
-            name=f"Test Filters Module Front Port {i+1}",
+            name=f"Test Filters Module Front Port {i + 1}",
             module_type=module_types[i % 2],
             rear_port_template=rpt,
             rear_port_position=i + 1,
             type=PortTypeChoices.TYPE_8P8C,
         )
         ModuleBayTemplate.objects.create(
-            name=f"Test Filters Module Module Bay {i+1}",
+            name=f"Test Filters Module Module Bay {i + 1}",
             position=i + 1,
             module_type=module_types[i % 2],
             requires_first_party_modules=(i % 2 == 0),  # True for even indices, False for odd

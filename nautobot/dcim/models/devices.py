@@ -829,7 +829,7 @@ class Device(PrimaryModel, ConfigContextModel):
             if existing_virtual_chassis and existing_virtual_chassis.master == self:
                 raise ValidationError(
                     {
-                        "virtual_chassis": f"The master device for the virtual chassis ({ existing_virtual_chassis}) may not be removed"
+                        "virtual_chassis": f"The master device for the virtual chassis ({existing_virtual_chassis}) may not be removed"
                     }
                 )
 
