@@ -81,8 +81,6 @@ Constraints define when a workflow definition should apply to a particular model
 - If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
 
-**Planned in 3.1 (not yet supported):**
-- Migration to a **FilterSet-based implementation**, which will support more complex logic
 
 #### Priority
 
@@ -284,6 +282,7 @@ If the parameter is omitted, all stages are returned regardless of approval stat
 Responsible for creating, updating, or running objects, which may trigger an approval workflow. Cannot approve workflows.
 
 **Required permissions:**
+
 - `extras.view_approvalworkflow` - to view created approval workflows after creating, updating, or running an object.
 - `extras.view_approvalworkflowstage` - to view the **My Requests** tab on the Dashboard.
 - `extras.view_approvalworkflowstageresponse` - to view responses for each stage.
@@ -293,6 +292,7 @@ Responsible for creating, updating, or running objects, which may trigger an app
 Responsible for reviewing and making decisions on approval workflow stages assigned to them. Must be a member of one or more approver groups (see [Approval Groups](#approver-groups)).
 
 **Required permissions:**
+
 - All permissions required by the **Object Operator** role.
 - Additional permissions:
     - `extras.view_approvalworkflowstage`
@@ -303,6 +303,7 @@ Responsible for reviewing and making decisions on approval workflow stages assig
 Responsible for designing, managing, and configuring approval workflow definitions and their stages.
 
 **Required permissions:**
+
 - All permissions required by the **Object Operator** role.
 - Additional permissions:
     - `extras.view/add/change/delete_approvalworkflowdefinition`
@@ -342,4 +343,3 @@ Affected jobs (Names):
 
 - User can create an `ApprovalWorkflowDefinition` using constraints such as `{"job_model__name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`. See [Create an Approval Workflow Definition with stages](#create-an-approval-workflow-definition-with-stages)
 - However, constraints today are limited to what can be expressed as a single dictionary of field lookups. More complex logic (e.g., `name=A OR (name=B AND status=active)`) is not possible yet.
-- Support for combining multiple conditions with **Q objects** and richer filtering logic is planned for **Nautobot 3.1**.

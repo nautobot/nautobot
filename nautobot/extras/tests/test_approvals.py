@@ -284,7 +284,7 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
         )
         self.assertEqual(self.approval_workflow_defs[0].priority, 0)
 
-    def test_find_for_model_with_filter_match_contrains(self):
+    def test_find_for_model_with_filter_match_constraints(self):
         """Test that a workflow definition with filter matching constraints is correctly returned."""
         self.approval_workflow_defs[0].model_constraints = {
             "job_model__name__in": ["Bulk Delete Objects", "Export Object List"]
@@ -311,7 +311,7 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
         )
         self.assertEqual(self.approval_workflow_defs[0].priority, 0)
 
-    def test_find_for_model_with_exact_match_contrains(self):
+    def test_find_for_model_with_exact_match_constraints(self):
         """Test that a workflow definition with exact matching constraints is correctly returned."""
         self.approval_workflow_defs[0].model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
         self.approval_workflow_defs[0].save()
