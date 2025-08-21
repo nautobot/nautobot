@@ -1176,7 +1176,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         context_object_key=None,
         ignore_nonexistent_fields=False,
         label=None,
-        key_transforms={},
+        key_transforms=None,
         **kwargs,
     ):
         """
@@ -1199,7 +1199,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
-        self.key_transforms = key_transforms
+        self.key_transforms = key_transforms or {}
         super().__init__(data=None, label=label, **kwargs)
 
     def render_label(self, context: Context):
