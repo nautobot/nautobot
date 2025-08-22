@@ -60,7 +60,7 @@ from nautobot.extras.registry import registry
 logger = logging.getLogger(__name__)
 METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
 always_generated_metrics = [
-    "nautobot_app_metrics_processing_ms" # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
+    "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
 ]
 
 
@@ -441,7 +441,6 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-
         if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED and cache.get(METRICS_CACHE_KEY) is None:
             # If caching is disabled or no cache is found, generate metrics
             for metric_generator in registry["app_metrics"]:
@@ -467,23 +466,28 @@ class PlainTextRenderer(BaseRenderer):
     def render(self, data, accepted_media_type=None, renderer_context=None):
         """Render the data."""
         return smart_str(data, encoding=self.charset)
-    
-def generate_latest_with_cache(registry = REGISTRY):
+
+
+def generate_latest_with_cache(registry=REGISTRY):
     """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics for 5 minutes."""
 
     def sample_line(line):
         if line.labels:
-            labelstr = '{{{0}}}'.format(','.join(
-                ['{}="{}"'.format(
-                    k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
-                    for k, v in sorted(line.labels.items())]))
+            labelstr = "{{{0}}}".format(
+                ",".join(
+                    [
+                        '{}="{}"'.format(k, v.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\""))
+                        for k, v in sorted(line.labels.items())
+                    ]
+                )
+            )
         else:
-            labelstr = ''
-        timestamp = ''
+            labelstr = ""
+        timestamp = ""
         if line.timestamp is not None:
             # Convert to milliseconds.
-            timestamp = f' {int(float(line.timestamp) * 1000):d}'
-        return f'{line.name}{labelstr} {floatToGoString(line.value)}{timestamp}\n'
+            timestamp = f" {int(float(line.timestamp) * 1000):d}"
+        return f"{line.name}{labelstr} {floatToGoString(line.value)}{timestamp}\n"
 
     cached_lines = []
     output = []
@@ -493,27 +497,28 @@ def generate_latest_with_cache(registry = REGISTRY):
             mname = metric.name
             mtype = metric.type
             # Munging from OpenMetrics into Prometheus format.
-            if mtype == 'counter':
-                mname = mname + '_total'
-            elif mtype == 'info':
-                mname = mname + '_info'
-                mtype = 'gauge'
-            elif mtype == 'stateset':
-                mtype = 'gauge'
-            elif mtype == 'gaugehistogram':
+            if mtype == "counter":
+                mname = mname + "_total"
+            elif mtype == "info":
+                mname = mname + "_info"
+                mtype = "gauge"
+            elif mtype == "stateset":
+                mtype = "gauge"
+            elif mtype == "gaugehistogram":
                 # A gauge histogram is really a gauge,
                 # but this captures the structure better.
-                mtype = 'histogram'
-            elif mtype == 'unknown':
-                mtype = 'untyped'
+                mtype = "histogram"
+            elif mtype == "unknown":
+                mtype = "untyped"
 
-            this_metric_output.append('# HELP {} {}\n'.format(
-                mname, metric.documentation.replace('\\', r'\\').replace('\n', r'\n')))
-            this_metric_output.append(f'# TYPE {mname} {mtype}\n')
+            this_metric_output.append(
+                "# HELP {} {}\n".format(mname, metric.documentation.replace("\\", r"\\").replace("\n", r"\n"))
+            )
+            this_metric_output.append(f"# TYPE {mname} {mtype}\n")
 
             om_samples = {}
             for s in metric.samples:
-                for suffix in ['_created', '_gsum', '_gcount']:
+                for suffix in ["_created", "_gsum", "_gcount"]:
                     if s.name == metric.name + suffix:
                         # OpenMetrics specific sample, put in a gauge at the end.
                         om_samples.setdefault(suffix, []).append(sample_line(s))
@@ -521,18 +526,21 @@ def generate_latest_with_cache(registry = REGISTRY):
                 else:
                     this_metric_output.append(sample_line(s))
         except Exception as exception:
-            exception.args = (exception.args or ('',)) + (metric,)
+            exception.args = (exception.args or ("",)) + (metric,)
             raise
 
         for suffix, lines in sorted(om_samples.items()):
-            this_metric_output.append('# HELP {}{} {}\n'.format(metric.name, suffix,
-                                                    metric.documentation.replace('\\', r'\\').replace('\n', r'\n')))
-            this_metric_output.append(f'# TYPE {metric.name}{suffix} gauge\n')
+            this_metric_output.append(
+                "# HELP {}{} {}\n".format(
+                    metric.name, suffix, metric.documentation.replace("\\", r"\\").replace("\n", r"\n")
+                )
+            )
+            this_metric_output.append(f"# TYPE {metric.name}{suffix} gauge\n")
             this_metric_output.extend(lines)
-        
-        if (metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics):
+
+        if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
             # If the metric name starts with nautobot_, we cache the lines
-            cached_lines.append(''.join(this_metric_output))
+            cached_lines.append("".join(this_metric_output))
 
         # Always add the metric output to the final output
         output.extend(this_metric_output)
@@ -545,7 +553,8 @@ def generate_latest_with_cache(registry = REGISTRY):
         cached_lines = cache.get(METRICS_CACHE_KEY)
         output.extend(cached_lines)
 
-    return ''.join(output).encode('utf-8')
+    return "".join(output).encode("utf-8")
+
 
 class NautobotMetricsView(APIView):
     renderer_classes = [PlainTextRenderer]
@@ -572,7 +581,7 @@ class NautobotMetricsView(APIView):
         except ValueError:
             # Collector already registered, we are running without multiprocessing
             pass
-        
+
         if settings.METRICS_EXPERIMENTAL_CACHING_ENABLED:
             # Use the vendored version of generate_latest with Caching support
             metrics_page = generate_latest_with_cache(prometheus_registry)
