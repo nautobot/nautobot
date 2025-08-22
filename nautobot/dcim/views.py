@@ -17,7 +17,7 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -72,7 +72,7 @@ from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -546,6 +546,78 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+
+    class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            if request.user.has_perms(self.add_permissions or []):
+                try:
+                    return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
+                except NoReverseMatch:
+                    return None
+            return None
+
+    class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "space_utilization" or key == "power_utilization":
+                return self.get_utilization_graph(value)
+            return super().render_value(key, value, context)
+
+        def get_utilization_graph(self, value):
+            data = helpers.utilization_graph(value)
+            return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            RackObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                fields=[
+                    "location",
+                    "rack_group",
+                    "facility_id",
+                    "tenant",
+                    "status",
+                    "role",
+                    "serial",
+                    "asset_tag",
+                    "space_utilization",
+                    "power_utilization",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Dimensions",
+                fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                table_class=tables.PowerFeedTable,
+                table_filter="rack",
+            ),
+            ImageAttachmentObjectsTablePanel(
+                table_title="Images",
+                section=SectionChoices.LEFT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="image_attachments",
+                related_field_name="object_id",
+                weight=400,
+                add_permissions=[
+                    "extras.add_imageattachment",
+                ],
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
