@@ -1,0 +1,2 @@
+Added `django_querystring`, copied from `querystring` templatetag in Django 5.1 and above.
+Added `legacy_querystring`, copied from `querystring` templatetag in Nautobot 2.4 and below.

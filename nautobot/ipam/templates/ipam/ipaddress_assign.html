@@ -46,7 +46,7 @@
     </form>
     {% if table %}
         <div class="row">
-            <form action="{% querystring request %}" method="post" class="form form-horizontal">
+            <form action="{% legacy_querystring request %}" method="post" class="form form-horizontal">
                 {% csrf_token %}
                 <div class="col-md-12" style="margin-top: 20px">
                     <h3>Search Results</h3>
