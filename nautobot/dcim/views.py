@@ -270,23 +270,16 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 
 
 class LocationFieldsPanel(object_detail.ObjectFieldsPanel):
-    def get_data(self, context):
-        data = super().get_data(context)
-        obj = get_obj_from_context(context, self.context_object_key)
-
-        if obj and obj.latitude and obj.longitude:
-            data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
-        else:
-            data["GPS Coordinates"] = "Not available"
-
-        return data
+    """
+    Panel for Location geographical info.
+    GPS coordinates are derived from the model property.
+    """
 
     def render_value(self, key, value, context):
-        if key == "GPS Coordinates":
+        if key == "gps_coordinates":
             if value != "Not available":
                 return helpers.render_address(value)
             return helpers.HTML_NONE
-
         return super().render_value(key, value, context)
 
 
@@ -415,7 +408,11 @@ class LocationUIViewSet(NautobotUIViewSet):
                 weight=110,
                 section=SectionChoices.LEFT_HALF,
                 label="Geographical Info",
-                fields=["physical_address", "shipping_address"],
+                fields=[
+                    "physical_address",
+                    "shipping_address",
+                    "gps_coordinates",
+                ],
                 value_transforms={
                     "physical_address": [helpers.render_address],
                     "shipping_address": [helpers.render_address],

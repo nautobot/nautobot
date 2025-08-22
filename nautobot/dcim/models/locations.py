@@ -347,3 +347,12 @@ class Location(TreeModel, PrimaryModel):
         """
         # Use the images GenericRelation to fetch related image attachments
         return self.images.all()
+
+    @property
+    def gps_coordinates(self):
+        """
+        Return GPS coordinates as a string, or 'Not available' if missing.
+        """
+        if self.latitude is not None and self.longitude is not None:
+            return f"{self.latitude}, {self.longitude}"
+        return "Not available"
