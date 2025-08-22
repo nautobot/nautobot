@@ -69,11 +69,12 @@ def is_truthy(arg):
     else:
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
+
 ORIGINAL_COMPOSE_FILES = [
-                "docker-compose.yml",
-                "docker-compose.postgres.yml",
-                "docker-compose.dev.yml",
-            ]
+    "docker-compose.yml",
+    "docker-compose.postgres.yml",
+    "docker-compose.dev.yml",
+]
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
@@ -187,7 +188,7 @@ def docker_compose(context, command, **kwargs):
     # Determine which ports mapping strategy to use
     if context.nautobot.ephemeral_ports and context.nautobot.compose_files == ORIGINAL_COMPOSE_FILES:
         compose_command_tokens.append(
-            f'-f "{os.path.join(context.nautobot.compose_dir, f"docker-compose.ephemeral-ports.yml")}"'
+            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
         )
 
     compose_command_tokens.append(command)
