@@ -355,4 +355,4 @@ class Location(TreeModel, PrimaryModel):
         """
         if self.latitude is not None and self.longitude is not None:
             return f"{self.latitude}, {self.longitude}"
-        return "Not available"
+        return None
