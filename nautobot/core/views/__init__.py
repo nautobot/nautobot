@@ -445,9 +445,17 @@ class NautobotAppMetricsCollector(Collector):
         # multi-process setups (e.g. when using gunicorn with multiple workers)
         cache_key = f"nautobot_app_metrics_last_generated_{os.getpid()}"
         if cache.get(cache_key) is None:
+            generated_metrics = []
             for metric_generator in registry["app_metrics"]:
-                yield from metric_generator()
-            cache.set(cache_key, time.time(), timeout=300)
+                generated_metric = metric_generator()
+                yield from generated_metric
+                generated_metrics.append(generated_metric)
+            cache.set(cache_key, generated_metrics, timeout=300)
+        else:
+            generated_metrics = cache.get(cache_key)
+            # Yield the cached metrics
+            for generated_metric in generated_metrics:
+                yield from generated_metric
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
