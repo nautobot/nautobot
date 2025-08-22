@@ -87,38 +87,27 @@ function initializeCheckboxes(context){
 
     // Enhanced checkbox click handler with shift-click range selection
     this_context.find('input:checkbox[name=pk]').click(function (event) {
-        const $checkbox = $(this);
-        const $table = $checkbox.closest('table');
+        const $table = $(this).closest('table');
         const $allCheckboxes = $table.find('input:checkbox[name=pk]:visible');
-        const currentIndex = $allCheckboxes.index($checkbox);
+        const currentIndex = $allCheckboxes.index(this);
 
         // Handle shift-click for range selection/deselection
         if (event.shiftKey && lastSelectedIndex !== null) {
-            if (lastSelectedIndex === currentIndex) {
-                // Shift+clicking the anchor point - no-op to prevent accidental anchor loss
-                event.preventDefault();
-                return;
-            }
-
-            // Different checkbox - proceed with range selection
+            // Create range from previous click to current click
             const startIndex = Math.min(lastSelectedIndex, currentIndex);
             const endIndex = Math.max(lastSelectedIndex, currentIndex);
 
-            // Base the operation on the anchor point's current state
-            // If anchor is selected, we'll select the range. If anchor is unselected, we'll deselect the range.
-            const anchorCheckbox = $allCheckboxes.eq(lastSelectedIndex);
-            const shouldSelect = anchorCheckbox.prop('checked');
+            // Use the clicked item's new state for entire range
+            const shouldSelect = this.checked;
 
-            // Apply selection/deselection to the entire range based on anchor state
+            // Apply to entire range
             for (let i = startIndex; i <= endIndex; i++) {
                 $allCheckboxes.eq(i).prop('checked', shouldSelect);
             }
-
-            // Don't update lastSelectedIndex on range selection - keep the anchor point
-        } else {
-            // Normal click - update last selected index
-            lastSelectedIndex = currentIndex;
         }
+
+        // Always update anchor to current click (normal click or shift+click)
+        lastSelectedIndex = currentIndex;
 
         // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
         const hasUnchecked = $allCheckboxes.filter(':not(:checked)').length > 0;
