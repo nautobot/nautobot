@@ -38,6 +38,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.echarts import EChartsBase
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -1155,6 +1156,82 @@ class KeyValueTablePanel(Panel):
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
         return result
+
+
+class EChartsPanel(Panel):
+    """A panel that renders ECharts charts using the EChartsBase class."""
+
+    def __init__(
+        self,
+        *,
+        chart=None,
+        chart_kwargs=None,
+        width="100%",
+        height="32rem",
+        body_wrapper_template_path="echarts/echarts.html",
+        **kwargs,
+    ):
+        """
+        Initialize an ECharts panel.
+
+        Args:
+            chart (EChartsBase): Pre-configured EChartsBase instance to render.
+            chart_class (class): EChartsBase subclass to instantiate.
+            chart_kwargs (dict): Kwargs to pass to chart_class constructor.
+            width (str): CSS width for the chart container (default: "100%").
+            height (str): CSS height for the chart container (default: "400px").
+            container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
+            body_content_template_path (str): Template path for rendering the chart content.
+        """
+        self.chart = chart
+        self.chart_kwargs = chart_kwargs or {}
+        self.width = width
+        self.height = height
+
+        super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
+
+    def _get_chart_instance(self):
+        """Get or create the chart instance."""
+        if self.chart:
+            return self.chart
+
+        if self.chart_kwargs:
+            return EChartsBase(**self.chart_kwargs)
+
+        return None
+
+    def should_render(self, context):
+        """Determine if the panel should be rendered."""
+        if not super().should_render(context):
+            return False
+
+        chart = self._get_chart_instance()
+        if not chart:
+            return False
+
+        # Check permissions if specified
+        if chart.permission:
+            request = context.get("request")
+            if request and hasattr(request, "user"):
+                return request.user.has_perm(chart.permission)
+
+        return True
+
+    def get_extra_context(self, context):
+        """Add chart-specific context variables."""
+        chart = self._get_chart_instance()
+        if not chart:
+            return {}
+
+        chart_config = chart.get_config()
+
+        return {
+            "chart": chart,
+            "chart_config": chart_config,
+            "chart_width": self.width,
+            "chart_height": self.height,
+            "chart_container_id": slugify(f"echart-{chart.header}"),
+        }
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):

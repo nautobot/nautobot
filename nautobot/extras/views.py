@@ -34,7 +34,7 @@ from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.choices import EChartTypeChoices, SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
@@ -2149,6 +2149,28 @@ class JobView(generic.ObjectView):
                     "job_queues",
                     "default_job_queue",
                 ],
+            ),
+            object_detail.EChartsPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="EChart - Traffic",
+                chart_kwargs={
+                    "chart_type": EChartTypeChoices.LINE,
+                    "header": "Traffic per Interface",
+                    "description": "Example bar chart from EChartBase",
+                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                },
+            ),
+            object_detail.EChartsPanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                label="EChart - Traffic- PIE",
+                chart_kwargs={
+                    "chart_type": EChartTypeChoices.PIE,
+                    "header": "test2",
+                    "description": "Example bar chart from EChartBase",
+                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                },
             ),
         ],
         extra_buttons=[

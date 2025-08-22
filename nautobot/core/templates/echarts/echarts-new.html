@@ -1,0 +1,24 @@
+{% block content_full_width_page %}
+  <h2>{{ chart.header }}</h2>
+  <p>{{ chart.description }}</p>
+
+  <div id="echart-container" style="width: 600px; height: 400px;"></div>
+
+  <!-- Safe JSON export from Django -->
+  {{ chart_config|json_script:"echarts-config" }}
+{% endblock content_full_width_page %}
+
+{% block javascript %}
+    <script type="text/javascript">
+        // Initialize the echarts instance based on the prepared dom
+        var myChart = window.echarts.init(document.getElementById('echart-container'), null, { renderer: "{{ chart.renderer }}" });
+
+        // Get config from JSON script
+        var option = JSON.parse(
+        document.getElementById("echarts-config").textContent
+        );
+
+        // Display the chart using the configuration items and data just specified.
+        myChart.setOption(option);
+    </script>
+{% endblock javascript %}
