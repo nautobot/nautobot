@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
@@ -435,8 +436,18 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        for metric_generator in registry["app_metrics"]:
-            yield from metric_generator()
+
+        # Cache the last generation time of the app metrics to a prometheus metric
+        # We need to do this because prometheus itself does not provide a way to
+        # know when the metrics were last generated
+
+        # We use the process id as a cache key to avoid collisions in
+        # multi-process setups (e.g. when using gunicorn with multiple workers)
+        cache_key = f"nautobot_app_metrics_last_generated_{os.getpid()}"
+        if cache.get(cache_key) is None:
+            for metric_generator in registry["app_metrics"]:
+                yield from metric_generator()
+            cache.set(cache_key, time.time(), timeout=300)
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
