@@ -1,0 +1,1 @@
+Fixed a Django REST Framework warning related to the `power_factor` attribute on a `DecimalField`.
