@@ -2065,16 +2065,6 @@ class JobResultUIViewSet(
     queryset = JobResult.objects.all()
     action_buttons = ()
 
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=(
-            object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-            ),
-        ),
-    )
-
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
