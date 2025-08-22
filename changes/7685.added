@@ -1,0 +1,1 @@
+Added Jinja2 validation to `ComputedField` model to catch template syntax errors at save time.
