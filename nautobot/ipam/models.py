@@ -1674,6 +1674,14 @@ class VLAN(PrimaryModel):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
 
+    @property
+    def interfaces(self):
+        return self.get_interfaces()
+
+    @property
+    def vminterfaces(self):
+        return self.get_vminterfaces()
+
     def clean(self):
         super().clean()
 
