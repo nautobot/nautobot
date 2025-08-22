@@ -941,6 +941,10 @@ class Device(PrimaryModel, ConfigContextModel):
         return self.virtual_chassis.master if self.virtual_chassis else None
 
     @property
+    def is_vc_master(self):
+        return self == self.get_vc_master()
+
+    @property
     def vc_interfaces(self):
         """
         Return a QuerySet matching all Interfaces assigned to this Device or, if this Device is a VC master, to another
