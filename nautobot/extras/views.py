@@ -639,25 +639,14 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
 
         if self.action == "retrieve" and hasattr(instance, "custom_field_choices"):
-            context.update(
-                {
-                    "columns": [
-                        "value",
-                        "weight",
-                    ],
-                    "header": [
-                        "Value",
-                        "Weight",
-                    ],
-                    "choices_data": [
-                        {
-                            "value": choice.value,
-                            "weight": choice.weight,
-                        }
-                        for choice in instance.custom_field_choices.all()
-                    ],
-                }
-            )
+             choices_data = []
+
+             for choice in instance.custom_field_choices.all():
+                 choices_data.append({"value": choice.value,"weight": choice.weight})
+
+             context["columns"] = ["value", "weight"]
+             context["header"] = ["Value", "Weight"]
+             context["choices_data"] = choices_data
 
         return context
 
