@@ -558,19 +558,33 @@ class RackUIViewSet(NautobotUIViewSet):
                     return None
             return None
 
+    class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "space_utilization" or key == "power_utilization":
+                return self.get_utilization_graph(value)
+            return super().render_value(key, value, context)
+
+        def get_utilization_graph(self, value):
+            data = helpers.utilization_graph(value)
+            return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            RackObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 label="Rack",
-                fields="__all__",
-                exclude_fields=[
-                    "type",
-                    "width",
-                    "u_height",
-                    "outer_width",
-                    "outer_depth",
+                fields=[
+                    "location",
+                    "rack_group",
+                    "facility_id",
+                    "tenant",
+                    "status",
+                    "role",
+                    "serial",
+                    "asset_tag",
+                    "space_utilization",
+                    "power_utilization",
                 ],
             ),
             object_detail.ObjectFieldsPanel(

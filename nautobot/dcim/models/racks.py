@@ -260,6 +260,14 @@ class Rack(PrimaryModel):
         # Use the images GenericRelation to fetch related image attachments
         return self.images.all()
 
+    @property
+    def space_utilization(self):
+        return self.get_utilization()
+
+    @property
+    def power_utilization(self):
+        return self.get_power_utilization()
+
     def get_rack_units(
         self,
         user=None,
