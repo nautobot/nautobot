@@ -762,6 +762,23 @@ def render_address(address):
     return HTML_NONE
 
 
+@register.filter()
+def render_m2m(queryset, full_listing_link, verbose_name_plural, max_visible=5):
+    total_count = queryset.count()
+    display_count = min(total_count, max_visible)
+    if not display_count:
+        return HTML_NONE
+
+    items = [hyperlinked_object(record) for record in queryset[:display_count]]
+
+    remaining = total_count - display_count
+    if remaining > 0:
+        link = format_html('<a href="{}">... View {} more {}</a>', full_listing_link, remaining, verbose_name_plural)
+        items.append(link)
+
+    return format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else HTML_NONE
+
+
 @library.filter()
 @register.filter()
 def render_button_class(value):
