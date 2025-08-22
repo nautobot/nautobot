@@ -276,6 +276,14 @@ def render_yaml(value, syntax_highlight=True):
 
 @library.filter()
 @register.filter()
+def render_code(value):
+    if not value:
+        return HTML_NONE
+    return format_html("<code>{}</code>", value)
+
+
+@library.filter()
+@register.filter()
 def meta(obj, attr):
     """
     Return the specified Meta attribute of a model. This is needed because Django does not permit templates
