@@ -441,10 +441,12 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED and cache.get(METRICS_CACHE_KEY) is None:
+        if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED or not cache.get(METRICS_CACHE_KEY):
             # If caching is disabled or no cache is found, generate metrics
             for metric_generator in registry["app_metrics"]:
                 yield from metric_generator()
+        else:
+            self.local_cache = cache.get(METRICS_CACHE_KEY)
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
@@ -540,18 +542,20 @@ def generate_latest_with_cache(registry=REGISTRY):
 
         if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
             # If the metric name starts with nautobot_, we cache the lines
-            cached_lines.append("".join(this_metric_output))
+            cached_lines.extend(this_metric_output)
 
         # Always add the metric output to the final output
         output.extend(this_metric_output)
 
-    if cache.get(METRICS_CACHE_KEY) is None:
+    for collector in registry._collector_to_names:
+        # This is to avoid a race condition where between the time to collect the metrics and
+        # the time to generate the output, the cache is expired and we miss some metrics.
+        if hasattr(collector, "local_cache") and collector.local_cache:
+            output.extend(collector.local_cache)
+
+    if not cache.get(METRICS_CACHE_KEY):
         # No cache found, generate metrics
         cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
-    else:
-        # Cache found, fetch metrics
-        cached_lines = cache.get(METRICS_CACHE_KEY)
-        output.extend(cached_lines)
 
     return "".join(output).encode("utf-8")
 
