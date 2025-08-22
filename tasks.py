@@ -69,6 +69,11 @@ def is_truthy(arg):
     else:
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
+ORIGINAL_COMPOSE_FILES = [
+                "docker-compose.yml",
+                "docker-compose.postgres.yml",
+                "docker-compose.dev.yml",
+            ]
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
@@ -81,11 +86,7 @@ namespace.configure(
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
-            "compose_files": [
-                "docker-compose.yml",
-                "docker-compose.postgres.yml",
-                "docker-compose.dev.yml",
-            ],
+            "compose_files": ORIGINAL_COMPOSE_FILES.copy(),
             # Image names to use when building from "main" branch
             "docker_image_names_main": [
                 # Production containers - not containing development tools
@@ -184,20 +185,10 @@ def docker_compose(context, command, **kwargs):
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
     # Determine which ports mapping strategy to use
-    if context.nautobot.ephemeral_ports:
-        compose_ephemeral_cmd = (
-            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
+    if context.nautobot.ephemeral_ports and context.nautobot.compose_files == ORIGINAL_COMPOSE_FILES:
+        compose_command_tokens.append(
+            f'-f "{os.path.join(context.nautobot.compose_dir, f"docker-compose.ephemeral-ports.yml")}"'
         )
-        override_found = False
-        # We have to grapple with the override.yml file if it exists.
-        for index, token in enumerate(compose_command_tokens):
-            print(index, token)
-            if re.search(r"docker-compose\.override\.yml", token):
-                compose_command_tokens.insert(index, compose_ephemeral_cmd)
-                override_found = True
-                break
-        if not override_found:
-            compose_command_tokens.append(compose_ephemeral_cmd)
 
     compose_command_tokens.append(command)
 
