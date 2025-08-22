@@ -75,6 +75,7 @@ function initializeCheckboxes(context){
             $('#select_all_box').removeClass('hidden');
         } else {
             $('#select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
     });
 
@@ -82,6 +83,7 @@ function initializeCheckboxes(context){
     this_context.find('input:checkbox[name=pk]').click(function (event) {
         if (!$(this).attr('checked')) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
     });
 }

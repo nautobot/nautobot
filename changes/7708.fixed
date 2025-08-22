@@ -1,0 +1,1 @@
+Hide the 'select all matching query' UI element when the 'select all' checkbox in an object list view is unchecked.
