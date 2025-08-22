@@ -12,6 +12,8 @@ services:
     healthcheck:
       start_period: 10m
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    ports:
+      - "8080:8080"
     volumes:
       - media_root:/opt/nautobot/media
     depends_on:
@@ -27,6 +29,8 @@ services:
     tty: true
   celery_worker:
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    ports:
+      - "8081:8080"
     volumes:
       - media_root:/opt/nautobot/media
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
@@ -77,6 +81,9 @@ services:
       - ./dev.env
   selenium:
     image: selenium/standalone-firefox:4.27
+    ports:
+        - "4444:4444"
+        - "15900:5900"
     shm_size: 2g
   mkdocs:
     profiles:
@@ -86,3 +93,5 @@ services:
     healthcheck:
       disable: true
     tty: true
+    ports:
+      - "8001:8001"
