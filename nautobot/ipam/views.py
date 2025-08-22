@@ -23,13 +23,14 @@ from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import handle_protectederror
+from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
@@ -1211,71 +1212,115 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     filterset_form_class = forms.VLANFilterForm
     form_class = forms.VLANForm
     serializer_class = serializers.VLANSerializer
-    table_class = tables.VLANTable
+    table_class = tables.VLANDetailTable
     queryset = VLAN.objects.all()
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            prefixes = (
-                Prefix.objects.restrict(request.user, "view")
-                .filter(vlan=instance)
-                .select_related(
-                    "status",
-                    "role",
-                    "namespace",
-                )
-            )
-            prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
+    class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def get_data(self, context):
+            instance = get_obj_from_context(context, self.context_object_key)
+            data = super().get_data(context)
+            data["locations"] = instance.locations.all()
+            return data
 
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(prefix_table)
+        def render_value(self, key, value, context):
+            instance = get_obj_from_context(context)
+            if key == "locations":
+                return helpers.render_m2m(value, f"/dcim/locations/?vlans={instance.pk}", key)
+            return super().render_value(key, value, context)
 
-            context["prefix_table"] = prefix_table
-        return context
+    class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
 
+            if request.user.has_perms(self.add_permissions or []):
+                params = []
+                if obj.tenant:
+                    params.append(("tenant", obj.tenant.pk))
+                if obj.pk:
+                    params.append(("vlan", obj.pk))
+                if hasattr(obj, "locations"):
+                    params += [("locations", loc.pk) for loc in obj.locations.all()]
+                params.append(("return_url", return_url))
+                return reverse("ipam:prefix_add") + "?" + urlencode(params)
+            return None
 
-class VLANInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_interfaces.html"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            VLANObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            PrefixObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.PrefixTable,
+                table_filter="vlan_id",
+                exclude_columns=["vlan"],
+                hide_hierarchy_ui=True,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                label="Device Interfaces",
+                url_name="ipam:vlan_device_interfaces",
+                tab_id="device_interfaces",
+                related_object_attribute="interfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Device Interfaces",
+                        table_class=tables.VLANDevicesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        related_field_name="vlan_id",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=200,
+                label="VM Interfaces",
+                url_name="ipam:vlan_vm_interfaces",
+                tab_id="vm_interfaces",
+                related_object_attribute="vminterfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Virtual Machine Interfaces",
+                        table_class=tables.VLANVirtualMachinesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        related_field_name="vlan_id",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
+    )
 
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_interfaces().select_related("device")
-        members_table = tables.VLANDevicesTable(interfaces)
+    @action(
+        detail=True,
+        url_path="device-interfaces",
+        url_name="device_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
+    def device_interfaces(self, request, *args, **kwargs):
+        return Response({})
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "interfaces",
-        }
-
-
-class VLANVMInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_vminterfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_vminterfaces().select_related("virtual_machine")
-        members_table = tables.VLANVirtualMachinesTable(interfaces)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "vminterfaces",
-        }
+    @action(
+        detail=True,
+        url_path="vm-interfaces",
+        url_name="vm_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["virtualization.view_vminterface"],
+    )
+    def vm_interfaces(self, request, *args, **kwargs):
+        return Response({})
 
 
 #
