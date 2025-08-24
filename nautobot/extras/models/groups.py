@@ -76,6 +76,7 @@ class DynamicGroup(PrimaryModel):
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
+    is_data_compliance_model = False
 
     clone_fields = ["content_type", "group_type", "filter", "tenant"]
 
@@ -1209,6 +1210,7 @@ class StaticGroupAssociation(OrganizationalModel):
     is_contact_associable_model = False
     is_dynamic_group_associable_model = False
     is_saved_view_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["dynamic_group", "associated_object_type", "associated_object_id"]]

@@ -5,11 +5,11 @@ import contextlib
 from django.core.cache import cache
 import redis.exceptions
 
-from nautobot.data_validation.models import ValidationRule
+from nautobot.data_validation.models import ValidationRuleMixin
 
 
 class ValidationRuleTestCaseMixin:
-    model: type(ValidationRule)
+    model: type(ValidationRuleMixin)
 
     def tearDown(self):
         """Ensure that validation rule caches are cleared to avoid leakage into other tests."""

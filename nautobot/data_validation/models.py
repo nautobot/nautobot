@@ -62,7 +62,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
     get_enabled_for_model.cache_key_prefix = "nautobot.data_validation.get_enabled_for_model"
 
 
-class ValidationRule(PrimaryModel):
+class ValidationRuleMixin(models.Model):
     """Base model for all validation engine rule models."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -83,6 +83,8 @@ class ValidationRule(PrimaryModel):
     objects = ValidationRuleManager()
     documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
+    is_data_compliance_model = False
+
     class Meta:
         """Model metadata for all validation engine rule models."""
 
@@ -101,7 +103,7 @@ class ValidationRule(PrimaryModel):
     "relationships",
     "webhooks",
 )
-class RegularExpressionValidationRule(ValidationRule):
+class RegularExpressionValidationRule(ValidationRuleMixin, PrimaryModel):
     """A type of validation rule that applies a regular expression to a given model field."""
 
     regular_expression = models.TextField()
@@ -111,6 +113,8 @@ class RegularExpressionValidationRule(ValidationRule):
     )
 
     clone_fields = ["enabled", "content_type", "regular_expression", "error_message"]
+
+    is_data_compliance_model = False
 
     class Meta:
         """Model metadata for the RegularExpressionValidationRule model."""
@@ -165,7 +169,7 @@ class RegularExpressionValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class MinMaxValidationRule(ValidationRule):
+class MinMaxValidationRule(ValidationRuleMixin, PrimaryModel):
     """A type of validation rule that applies min/max constraints to a given numeric model field."""
 
     min = models.FloatField(
@@ -176,6 +180,8 @@ class MinMaxValidationRule(ValidationRule):
     )
 
     clone_fields = ["enabled", "content_type", "min", "max", "error_message"]
+
+    is_data_compliance_model = False
 
     class Meta:
         """Model metadata for the MinMaxValidationRule model."""
@@ -231,7 +237,7 @@ class MinMaxValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class RequiredValidationRule(ValidationRule):
+class RequiredValidationRule(ValidationRuleMixin, PrimaryModel):
     """A type of validation rule that applies a required constraint to a given model field."""
 
     clone_fields = ["enabled", "content_type", "error_message"]
@@ -279,7 +285,7 @@ class RequiredValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class UniqueValidationRule(ValidationRule):
+class UniqueValidationRule(ValidationRuleMixin, PrimaryModel):
     """
     A type of validation rule that applies a unique constraint to a given model field.
 
