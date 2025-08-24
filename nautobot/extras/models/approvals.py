@@ -80,6 +80,7 @@ class ApprovalWorkflowDefinition(PrimaryModel):
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_dynamic_group_associable = False
+    is_data_compliance_model = False
     objects = ApprovalWorkflowDefinitionManager()
 
     class Meta:
@@ -129,6 +130,8 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         on_delete=models.PROTECT,
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStage."""
@@ -190,6 +193,8 @@ class ApprovalWorkflow(OrganizationalModel):
     )
     user_name = models.CharField(max_length=150, editable=False, db_index=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflow."""
@@ -302,6 +307,8 @@ class ApprovalWorkflowStage(OrganizationalModel):
         help_text="Date and time when the decision of approval/denial was made.",
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStage."""
@@ -473,6 +480,8 @@ class ApprovalWorkflowStageResponse(BaseModel):
         help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Approved, Denied.",
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStageResponse."""

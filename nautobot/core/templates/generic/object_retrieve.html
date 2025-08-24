@@ -97,6 +97,20 @@
                 </li>
             {% endif %}
         {% endif %}
+        {% if perms.data_validation.view_datacompliance %}
+                {% if active_tab != 'data_compliance' and object.get_data_compliance_url or active_tab == 'data_compliance' %}
+
+                <li class="nav-item" role="presentation">
+                    <a
+                        class="nav-link {% if active_tab == 'data_compliance' %}active{% endif %}"
+                        {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
+                        href="{{ object.get_absolute_url }}data_compliance/"
+                    >
+                        Data Compliance
+                    </a>
+                </li>
+            {% endif %}
+        {% endif %}
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}

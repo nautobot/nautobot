@@ -1,15 +1,10 @@
 """Views for data_validation."""
 
-from django.apps import apps as global_apps
-from django.contrib.contenttypes.models import ContentType
-from django_tables2 import RequestConfig
-
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
-from nautobot.core.views.generic import ObjectView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
@@ -18,7 +13,6 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
 )
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.data_validation import filters, forms, tables
 from nautobot.data_validation.api import serializers
@@ -29,7 +23,6 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
-from nautobot.extras.utils import get_base_template
 
 #
 # RegularExpressionValidationRules
@@ -166,29 +159,3 @@ class DataComplianceUIViewSet(  # pylint: disable=W0223
             ),
         )
     )
-
-
-class DataComplianceObjectView(ObjectView):
-    """View for the Audit Results tab dynamically generated on specific object detail views."""
-
-    template_name = "data_validation/datacompliance_tab.html"
-    queryset = None
-
-    def dispatch(self, request, *args, **kwargs):
-        """Set the queryset for the given object and call the inherited dispatch method."""
-        model = kwargs.pop("model")
-        if not self.queryset:
-            self.queryset = global_apps.get_model(model).objects.all()
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_extra_context(self, request, instance):
-        """Generate extra context for rendering the DataComplianceObjectView template."""
-        compliance_objects = DataCompliance.objects.filter(
-            content_type=ContentType.objects.get_for_model(instance), object_id=instance.id
-        )
-        compliance_table = tables.DataComplianceTableTab(compliance_objects)
-        base_template = get_base_template(None, instance)
-
-        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        RequestConfig(request, paginate).configure(compliance_table)
-        return {"active_tab": request.GET["tab"], "table": compliance_table, "base_template": base_template}
