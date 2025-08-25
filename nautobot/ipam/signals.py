@@ -80,12 +80,16 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
         )
 
     # Only nullify the primary_ip field if no other interfaces/vm_interfaces have the ip_address
+    host_needs_save = False
     if not other_assignments_exist and instance.ip_address == host.primary_ip4:
         host.primary_ip4 = None
+        host_needs_save = True
     elif not other_assignments_exist and instance.ip_address == host.primary_ip6:
         host.primary_ip6 = None
-    host.save()
+        host_needs_save = True
 
+    if host_needs_save:
+        host.save()
 
 @receiver(pre_save, sender=IPAddressToInterface)
 def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kwargs):
