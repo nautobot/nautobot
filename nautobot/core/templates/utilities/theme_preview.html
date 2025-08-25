@@ -23,53 +23,41 @@
 </style>
 {% endblock %}
 
-{% block header %}
-<div class="row d-print-none">
-    <div class="col-md-12">
-        <ol class="breadcrumb">
-            <li><a href="{% url 'home' %}">Nautobot</a></li>
-            <li><a href="{% url 'theme_preview' %}">Theme Preview</a></li>
-        </ol>
-    </div>
-</div>
+{% block breadcrumbs %}
+    {% include 'inc/breadcrumbs.html' %}
+{% endblock %}
 
-<h1>{% block title %}Nautobot Theme Preview{% endblock %}</h1>
-<hr>
+{% block title %}
+    Nautobot Theme Preview
 {% endblock %}
 
 {% block content %}
 <!-- Begin example of "object_list.html" -->
-<div class="row d-print-none">
-    <div class="col-sm-8 col-md-9">
-        <ol class="breadcrumb">
-            <li><a>Statuses</a></li>
-        </ol>
-    </div>
-    <div class="col-sm-4 col-md-3">
-        <form>
-            <div class="input-group">
-                <input type="text" name="q" class="form-control" placeholder="Search Statuses">
-                <span class="input-group-btn">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="mdi mdi-magnify"></span>
-                    </button>
-                </span>
-            </div>
-        </form>
-    </div>
+<div>
+    <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
+        <img
+            alt="Nautobot chevron"
+            class="flex-grow-0 flex-shrink-0 my-n6"
+            role="presentation"
+            src="{% static 'img/nautobot_chevron.svg' %}"
+            style="width: 1.5rem;"
+        />
+        Object Listing
+    </h1>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a>Statuses</a></li>
+    </ol>
 </div>
-
-<div class="pull-right d-print-none">
-    <button type="button" class="btn btn-default"><i class="mdi mdi-cog"></i> Configure</button>
-    <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
+<div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">
     <div class="btn-group">
         {% add_button content_type.model_class|validated_viewname:"add" %}
         <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="visually-hidden">Toggle Dropdown</span>
+            <span class="mdi mdi-chevron-down"></span>
         </button>
-        <ul class="dropdown-menu pull-right" role="menu">
+        <ul class="dropdown-menu dropdown-menu-end" role="menu">
             {% job_import_button content_type list_element=True%}
-            <li class="dropdown-divider"></li>
+            <li><hr class="dropdown-divider"></li>
             {% export_button content_type list_element=True %}
         </ul>
     </div>
@@ -77,96 +65,95 @@
         <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
             Actions
         </button>
-        <ul class="dropdown-menu pull-right" role="menu">
+        <ul class="dropdown-menu dropdown-menu-end" role="menu">
             {% job_import_button content_type list_element=True%}
-            <li class="dropdown-divider"></li>
+            <li><hr class="dropdown-divider"></li>
             {% export_button content_type list_element=True %}
         </ul>
     </div>
+    <div class="align-items-center d-flex gap-4">
+        <button type="button" class="btn position-relative text-secondary" title="Saved Views" aria-expanded="false">
+            <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+            <span class="visually-hidden">Saved Views</span>
+        </button>
+        <button type="button" class="btn position-relative text-secondary" title="Add Filters">
+            <span class="mdi mdi-filter" aria-hidden="true"></span>
+            <span class="visually-hidden">Add Filters</span>
+        </button>
+    </div>
 </div>
-<h1>Object Listing</h1>
 <div class="row">
     <div class="col-md-12">
         <form>
             {% include "panel_table.html" %}
-            <div class="pull-left d-print-none">
+            <div class="d-print-none mt-16 float-lg-start mt-lg-20">
                 <button type="submit" name="_edit" class="btn btn-warning btn-sm">
-                    <span class="mdi mdi-pencil"></span> Edit Selected
+                    <span class="mdi mdi-pencil me-4"></span>Edit Selected
                 </button>
                 <button type="submit" name="_delete" class="btn btn-danger btn-sm">
-                    <span class="mdi mdi-trash-can-outline"></span> Delete Selected
+                    <span class="mdi mdi-trash-can-outline me-4"></span>Delete Selected
                 </button>
             </div>
         </form>
         <!-- Begin nested example of "inc/paginator.html" -->
-        <div class="paginator text-right">
-            <nav>
-                <ul class="pagination pull-right">
-                    <li><a><i class="mdi mdi-chevron-double-left"></i></a></li>
-                    <li><a>1</a></li>
-                    <li><a>2</a></li>
-                    <li class="active"><a>3</a></li>
-                    <li><a>4</a></li>
-                    <li><a>5</a></li>
-                    <li class="disabled"><span>&hellip;</span></li>
-                    <li><a>10</a></li>
-                    <li><a><i class="mdi mdi-chevron-double-right"></i></a></li>
-                </ul>
-            </nav>
-            <form class="form-inline">
-                <select name="per_page" id="per_page" class="form-control">
+        <div class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
+            <div>
+                Showing 50-75 of 250
+            </div>
+            <div class="vr border-start my-8"></div>
+            <form class="align-items-center d-flex gap-4" method="get">
+                <select name="per_page" id="per_page" class="form-select">
                     <option value="25" selected="selected">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
-                </select> per page
+                </select>
+                per page
             </form>
-            <div class="text-right text-muted">
-                Showing 50-75 of 250
-            </div>
+            <div class="vr border-start my-8"></div>
+            <nav>
+                <ul class="pagination mb-0">
+                    <li class="page-item"><a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a></li>
+                    <li class="page-item"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item active"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link" href="#">4</a></li>
+                    <li class="page-item"><a class="page-link" href="#">5</a></li>
+                    <li class="page-item disabled"><a class="page-link" tabindex="-1">&hellip;</a></li>
+                    <li class="page-item"><a class="page-link" href="#">10</a></li>
+                    <li class="page-item"><a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a></li>
+                </ul>
+            </nav>
         </div>
         <!-- End nested example of "inc/paginator.html" -->
-        <div class="clearfix"></div>
     </div>
 </div>
 <!-- End example of "object_list.html" -->
-<hr>
+<hr class="border-top">
 
 <!-- Begin example of "object_retrieve.html" -->
-<div class="row">
-    <div class="col-sm-8 col-md-9">
-        <ol class="breadcrumb">
-            <li><a>Statuses</a></li>
-            <li>{{ object|hyperlinked_object }}</li>
-        </ol>
-    </div>
-    <div class="col-sm-4 col-md-3">
-        <form>
-            <div class="input-group">
-                <input type="text" name="q" class="form-control" placeholder="Search Statuses">
-                <span class="input-group-btn">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="mdi mdi-magnify"></span>
-                    </button>
-                </span>
-            </div>
-        </form>
-    </div>
+<div>
+    <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
+        <img
+            alt="Nautobot chevron"
+            class="flex-grow-0 flex-shrink-0 my-n6"
+            role="presentation"
+            src="{% static 'img/nautobot_chevron.svg' %}"
+            style="width: 1.5rem;"
+        />
+        <span class="d-flex gap-4">
+            <span>Object Detail</span>
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="Object Detail">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
+            </button>
+        </span>
+    </h1>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="#">Statuses</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ object|hyperlinked_object }}</li>
+    </ol>
 </div>
-
-<div class="pull-right d-print-none">
-    {% consolidate_detail_view_action_buttons %}
-</div>
-<h1>
-    <span>
-        Object Detail
-        <button type="button" class="btn btn-secondary nb-btn-inline-hover">
-            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-            <span class="visually-hidden">Copy</span>
-        </button>
-    </span>
-</h1>
-{% include 'inc/created_updated.html' %}
-<ul class="nav nav-tabs">
+<ul class="nav nav-tabs mb-16 mt-12">
     <li role="presentation" class="nav-item"><a class="nav-link active">Object</a></li>
     <li role="presentation" class="nav-item"><a class="nav-link">Advanced</a></li>
     <li role="presentation" class="nav-item"><a class="nav-link">Notes</a></li>
@@ -174,11 +161,22 @@
 </ul>
 <div class="tab-content">
     <div role="tabpanel" class="tab-pane active">
+        <div class="align-items-center d-flex flex-wrap mb-16">
+            {% include 'inc/created_updated.html' %}
+            <div class="flex-grow-0 flex-shrink-0 d-print-none">
+                {% consolidate_detail_view_action_buttons %}
+            </div>
+        </div>
         <div class="row">
             <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Status</strong></div>
-                    <table class="table table-hover panel-body attr-table">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Status</strong>
+                        <a class="btn stretched-link nb-collapse-toggle" role="button" aria-expanded="true">
+                            <span class="mdi mdi-chevron-down"></span>
+                        </a>
+                    </div>
+                    <table class="table table-hover attr-table">
                         <tr>
                             <td>Name</td>
                             <td>{{ object.name }}</td>
@@ -187,9 +185,14 @@
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Right Side</strong></div>
-                    <table class="table table-hover panel-body attr-table">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Right Side</strong>
+                        <a class="btn stretched-link nb-collapse-toggle" role="button" aria-expanded="true">
+                            <span class="mdi mdi-chevron-down"></span>
+                        </a>
+                    </div>
+                    <table class="table table-hover attr-table">
                         <tr>
                             <td>Property</td>
                             <td>Value</td>
@@ -201,19 +204,30 @@
     </div>
 </div>
 <!-- End example of "object_retrieve.html" -->
-<hr>
+<hr class="border-top">
 
 <!-- Begin example of "object_create.html" -->
-<form class="form form-horizontal">
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
+<div>
+    <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
+        <img
+            alt="Nautobot chevron"
+            class="flex-grow-0 flex-shrink-0 my-n6"
+            role="presentation"
+            src="{% static 'img/nautobot_chevron.svg' %}"
+            style="width: 1.5rem;"
+        />
+        Add a new object
+    </h1>
+</div>
+<form class="vstack">
+    <div class="row align-content-start flex-fill">
+        <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
             <h3>
-                <div class="float-end">
-                    <a class="btn btn-link btn-xs"><i class="mdi mdi-help-circle"></i></a>
-                </div>
-                Add a new object
+                <a class="btn btn-link btn-sm float-end" title="Help">
+                    <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                </a>
             </h3>
-            <div class="card">
+            <div class="card mb-16">
                 <div class="card-header"><strong>Object</strong></div>
                 <div class="card-body">
                     <div class="mb-10 d-flex justify-content-center">
@@ -236,16 +250,14 @@
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3 text-right">
-            <button type="submit" class="btn btn-primary">Create</button>
-            <button type="submit" class="btn btn-primary">Create and Add Another</button>
-            <a class="btn btn-default">Cancel</a>
-        </div>
+    <div class="nb-form-sticky-footer">
+        <button type="submit" class="btn btn-primary">Create</button>
+        <button type="submit" class="btn btn-primary">Create and Add Another</button>
+        <a class="btn btn-secondary">Cancel</a>
     </div>
 </form>
 <!-- End example of "object_create.html" -->
-<hr>
+<hr class="border-top">
 
 <!-- Begin example of form controls -->
 <h1>Forms</h1>
@@ -394,185 +406,160 @@
         </div>
     </form>
 <!-- End example of form controls -->
-<hr>
+<hr class="border-top">
 
-<div class="row">
-    <div class="col-md-12">
-        <!-- Begin example of home page panel -->
-        <div class="homepage_column" style="columns: 4 360px">
-            <div class="panel panel-default" style="break-inside: avoid">
-                <div class="panel-heading">
-                    <strong>Home Page Panel</strong>
-                </div>
-                <div class="list-group">
-                    <div class="list-group-item">
-                        <span class="badge pull-right">123</span>
-                        <h4 class="list-group-item-heading">
-                            <a>Locations</a>
-                        </h4>
-                        <p class="list-group-item-text text-muted">Hierarchical geographic locations</p>
-                    </div>
-                    <div class="list-group-item">
-                        <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
-                        <h4 class="list-group-item-heading">Tenants</h4>
-                        <p class="list-group-item-text text-muted">Customers or departments</p>
-                    </div>
-                </div>
-            </div>
+<!-- Begin example of home page panel -->
+<div class="nb-draggable-container nb-transition-fade">
+    <div class="card nb-draggable">
+        <div class="card-header nb-draggable-handle">
+            <strong class="text-body nb-text-none">Home Page Panel</strong>
+            <span class="btn stretched-link nb-collapse-toggle nb-cursor-unset" role="button" tabindex="0" aria-expanded="false">
+                <span class="mdi mdi-chevron-down"></span>
+            </span>
         </div>
-        <!-- End example of home page panel -->
+        <ul class="list-group collapse overflow-y-auto show">
+            <li class="list-group-item">
+                <span class="badge bg-primary float-end my-1">123</span>
+                <h4 class="fw-normal lh-base"><a>Locations</a></h4>
+                <p class="fs-5 mb-0 mt-4 text-secondary">Hierarchical geographic locations</p>
+            </li>
+            <li class="list-group-item">
+                <span class="badge bg-primary float-end my-1"><span class="mdi mdi-lock" aria-hidden="true"></span></span>
+                <h4 class="fw-normal lh-base">Tenants</h4>
+                <p class="fs-5 mb-0 mt-4 text-secondary">Customers or departments</p>
+            </li>
+        </ul>
     </div>
 </div>
-<hr>
+<!-- End example of home page panel -->
+<hr class="border-top">
 
 <div class="row">
     <div class="col-md-6">
         <h1>Buttons</h1>
-        <div class="panel panel-default">
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td><code>btn-lg</code></td>
-                    <td>
-                        <button type="button" class="btn btn-lg btn-default">Default</button>
-                        <button type="button" class="btn btn-lg btn-primary">Primary</button>
-                        <button type="button" class="btn btn-lg btn-success">Success</button>
-                        <button type="button" class="btn btn-lg btn-info">Info</button>
-                        <button type="button" class="btn btn-lg btn-warning">Warning</button>
-                        <button type="button" class="btn btn-lg btn-danger">Danger</button>
-                        <button type="button" class="btn btn-lg btn-link">Link</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>btn</code></td>
-                    <td>
-                        <button type="button" class="btn btn-default">Default</button>
-                        <button type="button" class="btn btn-primary">Primary</button>
-                        <button type="button" class="btn btn-success">Success</button>
-                        <button type="button" class="btn btn-info">Info</button>
-                        <button type="button" class="btn btn-warning">Warning</button>
-                        <button type="button" class="btn btn-danger">Danger</button>
-                        <button type="button" class="btn btn-link">Link</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>btn-sm</code></td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-default">Default</button>
-                        <button type="button" class="btn btn-sm btn-primary">Primary</button>
-                        <button type="button" class="btn btn-sm btn-success">Success</button>
-                        <button type="button" class="btn btn-sm btn-info">Info</button>
-                        <button type="button" class="btn btn-sm btn-warning">Warning</button>
-                        <button type="button" class="btn btn-sm btn-danger">Danger</button>
-                        <button type="button" class="btn btn-sm btn-link">Link</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>btn-xs</code></td>
-                    <td>
-                        <button type="button" class="btn btn-xs btn-default">Default</button>
-                        <button type="button" class="btn btn-xs btn-primary">Primary</button>
-                        <button type="button" class="btn btn-xs btn-success">Success</button>
-                        <button type="button" class="btn btn-xs btn-info">Info</button>
-                        <button type="button" class="btn btn-xs btn-warning">Warning</button>
-                        <button type="button" class="btn btn-xs btn-danger">Danger</button>
-                        <button type="button" class="btn btn-xs btn-link">Link</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><code>btn disabled</code></td>
-                    <td>
-                        <button type="button" class="btn btn-default disabled">Default</button>
-                        <button type="button" class="btn btn-primary disabled">Primary</button>
-                        <button type="button" class="btn btn-success disabled">Success</button>
-                        <button type="button" class="btn btn-info disabled">Info</button>
-                        <button type="button" class="btn btn-warning disabled">Warning</button>
-                        <button type="button" class="btn btn-danger disabled">Danger</button>
-                        <button type="button" class="btn btn-link disabled">Link</button>
-                    </td>
-                </tr>
-            </table>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table">
+                    <tr>
+                        <td><code>btn</code></td>
+                        <td>
+                            <button type="button" class="btn btn-secondary">Secondary</button>
+                            <button type="button" class="btn btn-primary">Primary</button>
+                            <button type="button" class="btn btn-success">Success</button>
+                            <button type="button" class="btn btn-info">Info</button>
+                            <button type="button" class="btn btn-warning">Warning</button>
+                            <button type="button" class="btn btn-danger">Danger</button>
+                            <button type="button" class="btn btn-link">Link</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>btn-sm</code></td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-secondary">Secondary</button>
+                            <button type="button" class="btn btn-sm btn-primary">Primary</button>
+                            <button type="button" class="btn btn-sm btn-success">Success</button>
+                            <button type="button" class="btn btn-sm btn-info">Info</button>
+                            <button type="button" class="btn btn-sm btn-warning">Warning</button>
+                            <button type="button" class="btn btn-sm btn-danger">Danger</button>
+                            <button type="button" class="btn btn-sm btn-link">Link</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>btn disabled</code></td>
+                        <td>
+                            <button type="button" class="btn btn-secondary disabled">Secondary</button>
+                            <button type="button" class="btn btn-primary disabled">Primary</button>
+                            <button type="button" class="btn btn-success disabled">Success</button>
+                            <button type="button" class="btn btn-info disabled">Info</button>
+                            <button type="button" class="btn btn-warning disabled">Warning</button>
+                            <button type="button" class="btn btn-danger disabled">Danger</button>
+                            <button type="button" class="btn btn-link disabled">Link</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
     <div class="col-md-6">
         <h1>Headings and Labels</h1>
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card">
+            <div class="card-body">
                 <h1>
                     h1. Heading 1
                     <small>title for most object views</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h1>
                 <h2>
                     h2. Heading 2
                     <small>used for special purposes such as Location detail "badges"</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h2>
                 <h3>
                     h3. Heading 3
                     <small>title for object create/edit forms</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h3>
                 <h4>
                     h4. Heading 4
                     <small>used in modal titles and a few others</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h4>
                 <h5>
                     h5. Heading 5
                     <small>used in user profiles and cable traces</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h5>
                 <h6>
                     h6. Heading 6
                     <small>Unused in core</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </h6>
                 <p>
                     p. Paragraph
                     <small>Small text</small>
-                    <span class="label label-default">Default</span>
-                    <span class="label label-primary">Primary</span>
-                    <span class="label label-transparent">Transparent</span>
-                    <span class="label label-success">Success</span>
-                    <span class="label label-info">Info</span>
-                    <span class="label label-warning">Warning</span>
-                    <span class="label label-danger">Danger</span>
+                    <span class="badge border">Secondary</span>
+                    <span class="badge bg-primary">Primary</span>
+                    <span class="badge border border-primary text-primary">Transparent</span>
+                    <span class="badge bg-success">Success</span>
+                    <span class="badge bg-info">Info</span>
+                    <span class="badge bg-warning">Warning</span>
+                    <span class="badge bg-danger">Danger</span>
                 </p>
             </div>
         </div>
@@ -583,82 +570,55 @@
 <h1>Tables</h1>
 <div class="row">
     <div class="col-md-6">
-        <h2>Panel Table With Heading</h2>
-        <div class="panel panel-default">
-            <div class="panel-heading">Heading Text</div>
-            <table class="table table-hover nb-table-headings">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Username</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@mdo</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
-                        <td>@fat</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Larry</td>
-                        <td>the Bird</td>
-                        <td>@twitter</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <h2>Condensed Table (use with caution)</h2>
-        <div class="panel panel-default">
-            <table class="table table-condensed table-hover nb-table-headings">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Username</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@mdo</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
-                        <td>@fat</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td colspan="2">Larry the Bird</td>
-                        <td>@twitter</td>
-                    </tr>
-                </tbody>
-            </table>
+        <h2>Card Table With Header</h2>
+        <div class="card mb-16">
+            <div class="card-header"><strong>Header Text</strong></div>
+            <div class="table-responsive">
+                <table class="table table-hover nb-table-headings">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Mark</td>
+                            <td>Otto</td>
+                            <td>@mdo</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Jacob</td>
+                            <td>Thornton</td>
+                            <td>@fat</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Larry</td>
+                            <td>the Bird</td>
+                            <td>@twitter</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 <div class="row">
     <div class="col-md-6">
         <h2>Attribute Table for Object Detail View</h2>
-        <div class="panel panel-default">
-            <div class="panel-heading">Object Attributes</div>
-            <table class="table table-hover panel-body attr-table">
+        <div class="card mb-16">
+            <div class="card-header">
+                <strong>Object Attributes</strong>
+                <a class="btn stretched-link nb-collapse-toggle" role="button" aria-expanded="true">
+                    <span class="mdi mdi-chevron-down"></span>
+                </a>
+            </div>
+            <table class="table table-hover attr-table">
                 <tr>
                     <td>Attribute</td>
                     <td>Value</td>
@@ -676,101 +636,107 @@
     </div>
     <div class="col-md-6">
         <h2>Table with colored rows</h2>
-        <div class="panel panel-default">
-            <table class="table table-hover panel-body nb-table-headings">
-                <thead>
-                    <tr>
-                        <th>Class</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="active"><td>Active</td></tr>
-                    <tr class="success"><td>Success</td></tr>
-                    <tr class="info"><td>Info</td></tr>
-                    <tr class="warning"><td>Warning</td></tr>
-                    <tr class="danger"><td>Danger</td></tr>
-                </tbody>
-            </table>
+        <div class="card mb-16">
+            <div class="table-responsive">
+                <table class="table table-hover nb-table-headings">
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-secondary"><td>Secondary</td></tr>
+                        <tr class="table-success"><td>Success</td></tr>
+                        <tr class="table-info"><td>Info</td></tr>
+                        <tr class="table-warning"><td>Warning</td></tr>
+                        <tr class="table-danger"><td>Danger</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 <div class="row">
     <div class="col-md-6">
         <h2>Striped Table (not generally recommended)</h2>
-        <div class="panel panel-default">
-            <table class="table table-striped table-hover nb-table-headings">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Username</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@mdo</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
-                        <td>@fat</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Larry</td>
-                        <td>the Bird</td>
-                        <td>@twitter</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="card mb-16">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped nb-table-headings">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Mark</td>
+                            <td>Otto</td>
+                            <td>@mdo</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Jacob</td>
+                            <td>Thornton</td>
+                            <td>@fat</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Larry</td>
+                            <td>the Bird</td>
+                            <td>@twitter</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     <div class="col-md-6">
         <h2>Bordered Table (not generally recommended)</h2>
-        <div class="panel panel-default">
-            <table class="table table-bordered table-hover nb-table-headings">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Username</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td rowspan="2">1</td>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@mdo</td>
-                    </tr>
-                    <tr>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@TwBootstrap</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
-                        <td>@fat</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td colspan="2">Larry the Bird</td>
-                        <td>@twitter</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="card mb-16">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered nb-table-headings">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="2">1</td>
+                            <td>Mark</td>
+                            <td>Otto</td>
+                            <td>@mdo</td>
+                        </tr>
+                        <tr>
+                            <td>Mark</td>
+                            <td>Otto</td>
+                            <td>@TwBootstrap</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Jacob</td>
+                            <td>Thornton</td>
+                            <td>@fat</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td colspan="2">Larry the Bird</td>
+                            <td>@twitter</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
-<hr>
+<hr class="border-top">
 
 <div class="row">
     <div class="col-sm-6">
@@ -791,9 +757,9 @@
 
     <div class="col-sm-6">
         <h1>Text Markup</h1>
-        <pre>def hello():
+        <pre><code>def hello():
     print("Hello World!")
-    raise SystemExit()</pre>
+    raise SystemExit()</code></pre>
         <div class="row">
             <div class="col-sm-6">
                 <pre><code class="language-json">{
@@ -818,7 +784,7 @@ This:
         </div>
         <div>
             This is some ordinary text.
-            <span class="text-muted">This is some muted text.</span>
+            <span class="text-secondary">This is some secondary text.</span>
             <span class="text-primary">This is primary text.</span>
             <span class="text-success">This is success text.</span>
             <span class="text-info">This is info text.</span>
@@ -826,77 +792,77 @@ This:
             <span class="text-danger">This is danger text.</span>
             <code>This is code text.</code>
             <kbd>This is kbd text.</kbd>
-            <span class="bg-primary">This is text with a primary background.</span>
-            <span class="bg-success">This is text with a success background.</span>
-            <span class="bg-info">This is text with a info background.</span>
-            <span class="bg-warning">This is text with a warning background.</span>
-            <span class="bg-danger">This is text with a danger background.</span>
+            <span class="text-bg-primary">This is text with a primary background.</span>
+            <span class="text-bg-success">This is text with a success background.</span>
+            <span class="text-bg-info">This is text with an info background.</span>
+            <span class="text-bg-warning">This is text with a warning background.</span>
+            <span class="text-bg-danger">This is text with a danger background.</span>
         </div>
     </div>
 </div>
-<hr>
+<hr class="border-top">
 
-<h1>Panels</h1>
+<h1>Cards (former Panels)</h1>
 <div class="row">
     <div class="col-sm-4">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title">Default</h3>
+        <div class="card mb-16">
+            <div class="card-header">
+                <h4>Default</h4>
             </div>
-            <div class="panel-body">
-                Panel content
+            <div class="card-body">
+                Card content
             </div>
         </div>
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Primary</h3>
+        <div class="card border-primary mb-16">
+            <div class="card-header bg-primary-subtle border-primary text-body">
+                <h4>Primary</h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 Panel content
             </div>
-            <div class="panel-footer">
+            <div class="card-footer bg-primary-subtle border-primary text-body">
                 Panel footer
             </div>
         </div>
     </div><!-- /.col-sm-4 -->
     <div class="col-sm-4">
-        <div class="panel panel-success">
-            <div class="panel-heading">
-                <h3 class="panel-title">Success</h3>
+        <div class="card border-success mb-16">
+            <div class="card-header bg-success-subtle border-success text-body">
+                <h4>Success</h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 Panel content
             </div>
         </div>
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <h3 class="panel-title">Info</h3>
+        <div class="card border-info mb-16">
+            <div class="card-header bg-info-subtle border-info text-body">
+                <h4>Info</h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 Panel content
             </div>
-            <div class="panel-footer">
+            <div class="card-footer bg-info-subtle border-info text-body">
                 Panel footer
             </div>
         </div>
     </div><!-- /.col-sm-4 -->
     <div class="col-sm-4">
-        <div class="panel panel-warning">
-            <div class="panel-heading">
-                <h3 class="panel-title">Warning</h3>
+        <div class="card border-warning mb-16">
+            <div class="card-header bg-warning-subtle border-warning text-body">
+                <h4>Warning</h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 Panel content
             </div>
         </div>
-        <div class="panel panel-danger">
-            <div class="panel-heading">
-                <h3 class="panel-title">Danger</h3>
+        <div class="card border-danger mb-16">
+            <div class="card-header bg-danger-subtle border-danger text-body">
+                <h4>Danger</h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 Panel content
             </div>
-            <div class="panel-footer">
+            <div class="card-footer bg-danger-subtle border-danger text-body">
                 Panel footer
             </div>
         </div>
@@ -986,27 +952,21 @@ This:
     <div class="col-sm-4">
         <div class="list-group">
             <a href="#" class="list-group-item active">
-                <h4 class="list-group-item-heading">List group item heading</h4>
-                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                <h4>List group item heading</h4>
+                <p>Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
             </a>
             <a href="#" class="list-group-item">
-                <h4 class="list-group-item-heading">List group item heading</h4>
-                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                <h4>List group item heading</h4>
+                <p>Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
             </a>
             <a href="#" class="list-group-item">
-                <h4 class="list-group-item-heading">List group item heading</h4>
-                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                <h4>List group item heading</h4>
+                <p>Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
             </a>
         </div>
     </div><!-- /.col-sm-4 -->
 </div>
-</hr>
-
-<h1>Wells</h1>
-<div class="well">
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas sed diam eget risus varius blandit sit amet non magna. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Cras mattis consectetur purus sit amet fermentum. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Aenean lacinia bibendum nulla sed consectetur.</p>
-</div>
-<hr>
+<hr class="border-top">
 
 <div class="row">
     <div class="col-md-3">
@@ -1014,13 +974,11 @@ This:
         <p>
             <a href="#">Inbox <span class="badge bg-primary">42</span></a>
         </p>
-        <p>
-            <ul class="nav nav-pills" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home <span class="badge bg-primary">42</span></a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages <span class="badge bg-primary">3</span></a></li>
-            </ul>
-        </p>
+        <ul class="nav nav-tabs mb-16" role="tablist">
+            <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home <span class="badge bg-primary">42</span></a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages <span class="badge bg-primary">3</span></a></li>
+        </ul>
         <p>
             <span class="badge nb-multi-badge">
                 Multi-badge:
@@ -1058,105 +1016,76 @@ This:
     </div>
     <div class="col-md-3">
         <h1>Dropdown menus</h1>
-        <div class="dropdown open theme-dropdown clearfix">
-            <a id="dropdownMenu1" href="#" class="sr-only dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                <li class="active"><a href="#">Action</a></li>
-                <li><a href="#">Another action</a></li>
-                <li><a href="#">Something else here</a></li>
-                <li role="separator" class="divider"></li>
-                <li><a href="#">Separated link</a></li>
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" type="button" aria-haspopup="true" aria-expanded="false">
+                Dropdown<span class="mdi mdi-chevron-down ms-4" aria-hidden="true"></span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item active" href="#">Action</a></li>
+                <li><a class="dropdown-item" href="#">Another action</a></li>
+                <li><a class="dropdown-item" href="#">Something else here</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item active" href="#">Separated link</a></li>
             </ul>
         </div>
     </div>
     <div class="col-md-6">
         <h1>Navs</h1>
-        <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="active"><a href="#">Home</a></li>
-            <li role="presentation"><a href="#">Profile</a></li>
-            <li role="presentation"><a href="#">Messages</a></li>
+        <ul class="nav nav-tabs mb-16" role="tablist">
+            <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages</a></li>
         </ul>
         <ul class="nav nav-pills" role="tablist">
-            <li role="presentation" class="active"><a href="#">Home</a></li>
-            <li role="presentation"><a href="#">Profile</a></li>
-            <li role="presentation"><a href="#">Messages</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link active" href="#">Home</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Profile</a></li>
+            <li class="nav-item" role="presentation"><a class="nav-link" href="#">Messages</a></li>
         </ul>
     </div>
 </div>
-<hr>
+<hr class="border-top">
 
 <h1>Navbars</h1>
 <div class="row">
     <div class="col-md-6">
-        <nav class="navbar navbar-default">
-            <div class="container">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="#">Project name</a>
-                </div>
-                <div class="navbar-collapse collapse">
-                    <ul class="nav navbar-nav">
-                        <li class="active"><a href="#">Home</a></li>
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+        <nav class="navbar bg-body-tertiary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">Project name</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-example-1" aria-controls="navbar-example-1" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbar-example-1">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="#">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">About</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Contact</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Dropdown<span class="mdi mdi-chevron-down align-top ms-4" aria-hidden="true"></span>
+                            </a>
                             <ul class="dropdown-menu">
-                                <li><a href="#">Action</a></li>
-                                <li><a href="#">Another action</a></li>
-                                <li><a href="#">Something else here</a></li>
-                                <li role="separator" class="divider"></li>
-                                <li class="dropdown-header">Nav header</li>
-                                <li><a href="#">Separated link</a></li>
-                                <li><a href="#">One more separated link</a></li>
+                                <li><a class="dropdown-item" href="#">Action</a></li>
+                                <li><a class="dropdown-item" href="#">Another action</a></li>
+                                <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Nav header</h6></li>
+                                <li><a class="dropdown-item" href="#">Separated link</a></li>
+                                <li><a class="dropdown-item" href="#">One more separated link</a></li>
                             </ul>
                         </li>
                     </ul>
-                </div><!--/.nav-collapse -->
-            </div>
-        </nav>
-    </div>
-    <div class="col-md-6">
-        <nav class="navbar navbar-inverse">
-            <div class="container">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="#">Project name</a>
                 </div>
-                <div class="navbar-collapse collapse">
-                    <ul class="nav navbar-nav">
-                        <li class="active"><a href="#">Home</a></li>
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="#">Action</a></li>
-                                <li><a href="#">Another action</a></li>
-                                <li><a href="#">Something else here</a></li>
-                                <li role="separator" class="divider"></li>
-                                <li class="dropdown-header">Nav header</li>
-                                <li><a href="#">Separated link</a></li>
-                                <li><a href="#">One more separated link</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div><!--/.nav-collapse -->
             </div>
         </nav>
     </div>
 </div>
-<hr>
+<hr class="border-top">
 
 <h1>Nautobot Icons</h1>
 <div class="row">
