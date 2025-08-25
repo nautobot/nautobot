@@ -137,8 +137,8 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Create an Approval Workflow Definition with stages
 
+<!-- pyml disable-num-lines 6 no-inline-html -->
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
-    <!-- pyml disable-num-lines 5 no-inline-html -->
     <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
         <img src="../../media/development/approval-workflows/nav-approval-workflow-definition.png" width="45%" />
         <img src="../../media/development/approval-workflows/approval-workflow-definition.png" width="45%" />
@@ -158,8 +158,8 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Approve or Deny a Stage
 
+<!-- pyml disable-num-lines 6 no-inline-html -->
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
-    <!-- pyml disable-num-lines 5 no-inline-html -->
     <p align="center">
         <img src="../../media/development/approval-workflows/nav-approval-dashboard1.png" width="30%" />
         <img src="../../media/development/approval-workflows/nav-approval-dashboard2.png" width="30%" />
@@ -173,8 +173,8 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **State** - Current workflow state.
 3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
 4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
+<!-- pyml disable-num-lines 5 no-inline-html -->
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
-    <!-- pyml disable-num-lines 4 no-inline-html -->
     <p align="center">
         <img src="../../media/development/approval-workflows/approve-window.png" width="45%" />
         <img src="../../media/development/approval-workflows/deny-window.png" width="45%" />
