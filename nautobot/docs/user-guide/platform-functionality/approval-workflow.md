@@ -76,11 +76,10 @@ The template for a workflow, specifying which model(s) it applies to, any constr
 
 Constraints define when a workflow definition should apply to a particular model instance.
 
-- Constraints are stored as a dictionary of **field lookups → values** (e.g. `{"status": "active"}`).
-- Any valid Django ORM lookup can be used (e.g. `{"name__in": ["A", "B"]}`, `{"status__icontains": "active"}`, `{"priority__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
+- Constraints are stored as a dictionary of **field lookups → values** (e.g. `{"approval_required": True}`).
+- Any valid Django ORM lookup can be used (e.g. `{"name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`, `{"job_model__name__icontains": "Export"}`, `{"total_run_count__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
 - If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
-
 
 #### Priority
 
@@ -91,7 +90,7 @@ The workflow with the **lowest priority value** (i.e., highest priority) that ma
 
 - Workflow Definition A:
     - Model: `Scheduled Job`
-    - Constraints: `{"name": "Bulk Delete Objects Scheduled Job"}`
+    - Constraints: `{"job_model__name": "Bulk Delete Objects"}`
     - Priority: **10**
 - Workflow Definition B:
     - Model: `Scheduled Job`
@@ -139,12 +138,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 #### Create an Approval Workflow Definition with stages
 
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
-    |   |   |
-    |---|---|
-    | ![Navigation](../../media/development/approval-workflows/nav-approval-workflow-definition.png) | ![Workflow Definition](../../media/development/approval-workflows/approval-workflow-definition.png) |
-
-    ![Add Approval Workflow Definition](../../media/development/approval-workflows/add-approval-workflow-definition.png)
-
+    <!-- pyml disable-num-lines 5 no-inline-html -->
+    <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+        <img src="../../media/development/approval-workflows/nav-approval-workflow-definition.png" width="45%" />
+        <img src="../../media/development/approval-workflows/approval-workflow-definition.png" width="45%" />
+    </div>
+    <img src="../../media/development/approval-workflows/add-approval-workflow-definition.png" width="90%" />
 2. Enter:
     - **Name** (e.g., "Scheduled Job Run Workflow").
     - **Model** (e.g., `extras|scheduled job`).
@@ -160,11 +159,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 #### Approve or Deny a Stage
 
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
-    |   |   |
-    |---|---|
-    | ![Navigation1 Dashboard](../../media/development/approval-workflows/nav-approval-dashboard1.png) | ![Navigation2 Dashboard](../../media/development/approval-workflows/nav-approval-dashboard2.png) |
-
-    ![Approval Dashboard](../../media/development/approval-workflows/approval-dashboard-approvals.png)
+    <!-- pyml disable-num-lines 5 no-inline-html -->
+    <p align="center">
+        <img src="../../media/development/approval-workflows/nav-approval-dashboard1.png" width="30%" />
+        <img src="../../media/development/approval-workflows/nav-approval-dashboard2.png" width="30%" />
+    </p>
+    <img src="../../media/development/approval-workflows/approval-dashboard-approvals.png" width="90%" />
 2. Locate the relevant object under review in the table. The table displays:
     - **Object under review** - Linked to the object’s detail view.
     - **Workflow** - Name of the workflow definition (linked to the workflow detail view).
@@ -174,9 +174,11 @@ Workflows are automatically attached after creating, running, or updating an obj
 3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
 4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
-    |   |   |
-    |---|---|
-    | ![Approve Window](../../media/development/approval-workflows/approve-window.png) | ![Deny Window](../../media/development/approval-workflows/deny-window.png) |
+    <!-- pyml disable-num-lines 4 no-inline-html -->
+    <p align="center">
+        <img src="../../media/development/approval-workflows/approve-window.png" width="45%" />
+        <img src="../../media/development/approval-workflows/deny-window.png" width="45%" />
+    </p>
 
 #### View My Requests
 
@@ -326,9 +328,9 @@ Approval actions are controlled not only by permissions but also by **approver g
 If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
 
 - Running the command doesn't approve/run/deny jobs, it just identifies the ones that need such action to be performed as a separate step.
-- Before upgrading, approval workflows aren't a thing, defining those needs to be done after the upgrade.
+- After running this command to identify the impacted Jobs, and completing the upgrade to Nautobot 3.x, you'll want to define appropriate approval workflows to apply to those jobs.
 
-**Example**: User running command `check_job_approval_status` get output like
+**Example**: Running the command `check_job_approval_status` will provide similar output to:
 
 ```no-highlight
 Following jobs still have `approval_required=True`.
