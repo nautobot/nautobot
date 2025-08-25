@@ -1320,6 +1320,29 @@ class ModuleTypeUIViewSet(
         )
 
 
+
+class ModuleBayCommonViewSetMixin:
+    """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
+
+    def _disconnect(self, request, *args, **kwargs):
+        if request.method == "POST":
+            return self.perform_create(request, *args, **kwargs)
+
+        form = self.create_form_class(initial=request.GET)
+        model_form = self.model_form_class(request.GET)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "model_form": model_form,
+                "form": form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
+
 #
 # Console port templates
 #
@@ -3003,52 +3026,35 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 #
 
 
-class ConsolePortListView(generic.ObjectListView):
+class ConsolePortUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ConsolePortBulkEditForm
+    filterset_class = filters.ConsolePortFilterSet
+    filterset_form_class = forms.ConsolePortFilterForm
+    update_form_class = forms.ConsolePortForm
+    create_form_class = forms.ConsolePortCreateForm
+    serializer_class = serializers.ConsolePortSerializer
+    table_class = tables.ConsolePortTable
     queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    filterset_form = forms.ConsolePortFilterForm
-    table = tables.ConsolePortTable
     action_buttons = ("import", "export")
 
-
-class ConsolePortView(generic.ObjectView):
-    queryset = ConsolePort.objects.all()
-
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": "dcim:device_consoleports",
-            "module_breadcrumb_url": "dcim:module_consoleports",
-            **super().get_extra_context(request, instance),
-        }
+        context = super().get_extra_context(request, instance)
 
+        if self.action == "retrieve":
+            context["device_breadcrumb_url"] = "dcim:device_consoleports"
+            context["module_breadcrumb_url"] = "dcim:module_consoleports"
+        return context
 
-class ConsolePortCreateView(generic.ComponentCreateView):
-    queryset = ConsolePort.objects.all()
-    form = forms.ConsolePortCreateForm
-    model_form = forms.ConsolePortForm
-
-
-class ConsolePortEditView(generic.ObjectEditView):
-    queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsolePortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsolePort.objects.all()
-    table = tables.ConsolePortTable
-
-
-class ConsolePortBulkEditView(generic.BulkEditView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
-    form = forms.ConsolePortBulkEditForm
-
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="disconnect",
+        url_name="bulk_disconnect",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_consoleporttemplate"],
+    )
+    def bulk_disconnect(self, request, *args, **kwargs):
+        return self._bulk_disconnect(request, *args, **kwargs)
 
 class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = ConsolePort.objects.all()
@@ -3056,12 +3062,6 @@ class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
 
 class ConsolePortBulkDisconnectView(BulkDisconnectView):
     queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
 
 
 #
