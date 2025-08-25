@@ -19,7 +19,8 @@ class TagFilterTestCase(SeleniumTestCase):
         # Dynamic model dropdowns like TagFilter default to 50 items at a time from the API
         provider_ct = ContentType.objects.get_for_model(Provider)
         for i in range(1, 52):
-            self.tag = Tag.objects.create(name=f"A Provider Tag {i:02d}")
+            # Tags starting with numbers are before "Amber" tag.
+            self.tag = Tag.objects.create(name=f"{i:02d} Provider Tag")
             self.tag.content_types.add(provider_ct)
 
     def test_tag_matching_content_type(self):
@@ -37,8 +38,8 @@ class TagFilterTestCase(SeleniumTestCase):
         time.sleep(0.5)
         # Each of first 50 tags should appear in the dropdown
         for i in range(1, 51):
-            self.assertTrue(self.browser.is_text_present(f"A Provider Tag {i:02d}"))
-        self.assertFalse(self.browser.is_text_present("A Provider Tag 51"))
+            self.assertTrue(self.browser.is_text_present(f"{i:02d} Provider Tag"), msg=f"missing tag: {i:02d}")
+        self.assertFalse(self.browser.is_text_present("51 Provider Tag"))
 
     def test_tag_not_matching_content_type(self):
         # Navigate to the Location list view
@@ -54,4 +55,4 @@ class TagFilterTestCase(SeleniumTestCase):
         # Wait for choices to load
         time.sleep(0.5)
         # Tags should not appear in the dropdown since they don't apply to Locations
-        self.assertFalse(self.browser.is_text_present("A Provider Tag"))
+        self.assertFalse(self.browser.is_text_present("Provider Tag"))
