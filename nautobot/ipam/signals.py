@@ -91,6 +91,7 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
     if host_needs_save:
         host.save()
 
+
 @receiver(pre_save, sender=IPAddressToInterface)
 def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kwargs):
     """
