@@ -255,7 +255,8 @@ class ApprovalWorkflowDefinitionForm(
     model_constraints = JSONField(
         required=False,
         label="Model Constraints",
-        help_text="Filterset filter matching the selected model content type.<br>"
+        help_text="Constraints for filtering selected model content type.<br>"
+        "Supports simple Django field lookups.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 

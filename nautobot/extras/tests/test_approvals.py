@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import now
 
-from nautobot.core.jobs import BulkDeleteObjects
+from nautobot.core.jobs import BulkDeleteObjects, ExportObjectList
 from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
 from nautobot.extras import choices, models
 from nautobot.users.models import User
@@ -284,8 +284,35 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
         )
         self.assertEqual(self.approval_workflow_defs[0].priority, 0)
 
-    def test_find_for_model_with_match_contrains(self):
-        """Test that a workflow definition with matching constraints is correctly returned."""
+    def test_find_for_model_with_filter_match_constraints(self):
+        """Test that a workflow definition with filter matching constraints is correctly returned."""
+        self.approval_workflow_defs[0].model_constraints = {
+            "job_model__name__in": ["Bulk Delete Objects", "Export Object List"]
+        }
+        self.approval_workflow_defs[0].save()
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+
+        export_job_model = models.Job.objects.get_for_class_path(ExportObjectList.class_path)
+        export_scheduled_job = models.ScheduledJob.objects.create(
+            name="Export Scheduled Job",
+            task=ExportObjectList.class_path,
+            job_model=export_job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=now(),
+        )
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(export_scheduled_job),
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+
+    def test_find_for_model_with_exact_match_constraints(self):
+        """Test that a workflow definition with exact matching constraints is correctly returned."""
         self.approval_workflow_defs[0].model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
         self.approval_workflow_defs[0].save()
         self.assertEqual(

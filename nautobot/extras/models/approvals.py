@@ -39,8 +39,11 @@ class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuer
             model_class = model_instance.__class__
             try:
                 # Try to get the specific instance using the constraints
-                # TODO: we want this to support various filtering options besides exact-match. This implementation should be filterset based.
-                # should work very similarly to Relationship.source_filter and Relationship.destination_filter
+                # NOTE: Any valid Django ORM lookup (e.g. __in, __icontains, __gte) will technically work here,
+                # since constraints are passed directly into .filter(). However, the current UI only supports
+                # simple key=value style constraints and does not provide validation for advanced lookups.
+                # Maybe in 3.1 replace with a FilterSet-based implementation (similar to Relationship.source_filter
+                # and Relationship.destination_filter) to provide full support
                 model_class.objects.filter(**workflow_definition.model_constraints).get(pk=model_instance.pk)
                 return workflow_definition
             except model_class.DoesNotExist:
