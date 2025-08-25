@@ -1158,13 +1158,12 @@ class KeyValueTablePanel(Panel):
         return result
 
 
-class EChartsPanel(Panel):
+class EChartsPanel(Panel, EChartsBase):
     """A panel that renders ECharts charts using the EChartsBase class."""
 
     def __init__(
         self,
         *,
-        chart=None,
         chart_kwargs=None,
         width="100%",
         height="32rem",
@@ -1183,55 +1182,39 @@ class EChartsPanel(Panel):
             container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
             body_content_template_path (str): Template path for rendering the chart content.
         """
-        self.chart = chart
-        self.chart_kwargs = chart_kwargs or {}
         self.width = width
         self.height = height
 
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
-
-    def _get_chart_instance(self):
-        """Get or create the chart instance."""
-        if self.chart:
-            return self.chart
-
-        if self.chart_kwargs:
-            return EChartsBase(**self.chart_kwargs)
-
-        return None
+        EChartsBase.__init__(self, **chart_kwargs)
 
     def should_render(self, context):
         """Determine if the panel should be rendered."""
         if not super().should_render(context):
             return False
 
-        chart = self._get_chart_instance()
-        if not chart:
-            return False
-
         # Check permissions if specified
-        if chart.permission:
+        if self.permission:
             request = context.get("request")
             if request and hasattr(request, "user"):
-                return request.user.has_perm(chart.permission)
+                return request.user.has_perm(self.permission)
 
         return True
 
     def get_extra_context(self, context):
         """Add chart-specific context variables."""
-        chart = self._get_chart_instance()
-        if not chart:
-            return {}
-
-        chart_config = chart.get_config()
-
+        chart_config = self.get_config()
         return {
-            "chart": chart,
+            "chart": self,
             "chart_config": chart_config,
             "chart_width": self.width,
             "chart_height": self.height,
-            "chart_container_id": slugify(f"echart-{chart.header}"),
+            "chart_container_id": slugify(f"echart-{self.header}"),
         }
+
+
+class EChartsComponent(Component, EChartsBase):
+    pass
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):
