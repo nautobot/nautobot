@@ -401,6 +401,18 @@ class PluginDetailViewTest(TestCase):
         self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
+class MarketplaceViewTest(TestCase):
+    def test_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_authenticated(self):
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        self.assertHttpStatus(response, 200)
+
+
 class AppAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
     bulk_update_data = {
@@ -896,11 +908,10 @@ class TestAppCoreViewOverrides(TestCase):
         self.assertEqual("Hello world! I'm an overridden view.", response.content.decode(response.charset))
 
         response = self.client.get(
-            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
+            f"{reverse('plugins:plugin_detail', kwargs={'plugin': 'example_app_with_view_override'})}"
         )
         self.assertIn(
-            "plugins:example_app:view_to_be_overridden <code>"
-            "example_app_with_view_override.views.ViewOverride</code>",
+            "plugins:example_app:view_to_be_overridden <code>example_app_with_view_override.views.ViewOverride</code>",
             extract_page_body(response.content.decode(response.charset)),
         )
 

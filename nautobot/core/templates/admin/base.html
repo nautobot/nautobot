@@ -103,13 +103,12 @@
             {% block content %}{{ content }}{% endblock %}
         </div>
     </div>
-    <div class="push"></div>
-    {% if "BANNER_BOTTOM"|settings_or_config %}
-        <div class="alert alert-info text-center nb-banner-bottom" role="alert">
-                {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
-        </div>
-    {% endif %}
 </div>
+{% if "BANNER_BOTTOM"|settings_or_config %}
+    <div class="alert alert-info text-center nb-banner-bottom" role="alert">
+        {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
+    </div>
+{% endif %}
 {% if not is_popup %}
     {% include 'inc/footer.html' %}
 {% endif %}

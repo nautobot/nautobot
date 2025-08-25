@@ -49,7 +49,7 @@ def nav_menu(request):
     nav_menu_object = {"tabs": {}}
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
         if not tab_details["permissions"] or has_one_or_more_perms(request.user, tab_details["permissions"]):
-            nav_menu_object["tabs"][tab_name] = {"groups": {}}
+            nav_menu_object["tabs"][tab_name] = {"groups": {}, "icon": tab_details["icon"]}
             for group_name, group_details in tab_details["groups"].items():
                 if not group_details["permissions"] or has_one_or_more_perms(
                     request.user, group_details["permissions"]

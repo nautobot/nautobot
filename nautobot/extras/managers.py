@@ -115,6 +115,9 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         except Job.DoesNotExist:
             pass
 
+        if "date_started" in kwargs:
+            fields["date_started"] = kwargs["date_started"]
+
         with BranchContext(
             branch_name=celery_kwargs.get("nautobot_job_branch_name", None),
             user=User.objects.get(id=user_id) if user_id else None,

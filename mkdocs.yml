@@ -657,6 +657,7 @@ nav:
                   - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
+                  - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:

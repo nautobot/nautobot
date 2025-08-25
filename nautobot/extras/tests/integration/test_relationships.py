@@ -47,7 +47,7 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
             destination=power_panel,
         )
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the relationship appears in the primary information tab
         self.assertTrue(self.browser.is_text_present("power panel"))
         self.assertTrue(self.browser.is_text_present("Power Panel"))
@@ -60,7 +60,7 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         relationship.advanced_ui = True
         relationship.save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the relationship does NOT appear in the primary information tab
         self.assertFalse(self.browser.is_text_present("power panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))

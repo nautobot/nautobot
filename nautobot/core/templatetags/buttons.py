@@ -176,8 +176,6 @@ def consolidate_bulk_action_buttons(context):
             "bulk_action_buttons": bulk_action_buttons,
         }
 
-    params = ("?" + context["request"].GET.urlencode()) if context["request"].GET else ""
-
     primary_button_fragment = child_button_fragment = """
         <button {attrs}>
             <span class="{icon}" aria-hidden="true"></span> {label}
@@ -203,7 +201,7 @@ def consolidate_bulk_action_buttons(context):
                 attrs=render_tag_attrs(
                     {
                         "class": edit_button_classes,
-                        "formaction": reverse(context["bulk_edit_url"]) + params,
+                        "formaction": reverse(context["bulk_edit_url"]),
                         "type": "submit",
                     }
                 ),
@@ -243,7 +241,7 @@ def consolidate_bulk_action_buttons(context):
                         "class": delete_button_classes,
                         "type": "submit",
                         "name": "_delete",
-                        "formaction": reverse(context["bulk_delete_url"]) + params,
+                        "formaction": reverse(context["bulk_delete_url"]),
                     }
                 ),
                 icon="mdi mdi-trash-can-outline",
