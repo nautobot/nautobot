@@ -792,6 +792,64 @@ button {
   }
 }
 
+$table-variant-primary: (
+  "active": var(--#{$prefix}primary-border-subtle),
+  "bg":     var(--#{$prefix}primary-bg-subtle),
+  "border": var(--#{$prefix}primary-text-emphasis),
+  "text":   var(--#{$prefix}primary-text-emphasis),
+);
+$table-variant-secondary: (
+  "active": var(--#{$prefix}secondary-border-subtle),
+  "bg":     var(--#{$prefix}secondary-bg-subtle),
+  "border": var(--#{$prefix}border-color),
+  "text":   var(--#{$prefix}emphasis-color),
+);
+$table-variant-success: (
+  "active": var(--#{$prefix}success-border-subtle),
+  "bg":     var(--#{$prefix}success-bg-subtle),
+  "border": var(--#{$prefix}success-text-emphasis),
+  "text":   var(--#{$prefix}success-text-emphasis),
+);
+$table-variant-danger: (
+  "active": var(--#{$prefix}danger-border-subtle),
+  "bg":     var(--#{$prefix}danger-bg-subtle),
+  "border": var(--#{$prefix}danger-text-emphasis),
+  "text":   var(--#{$prefix}danger-text-emphasis),
+);
+$table-variant-warning: (
+  "active": var(--#{$prefix}warning-border-subtle),
+  "bg":     var(--#{$prefix}warning-bg-subtle),
+  "border": var(--#{$prefix}warning-text-emphasis),
+  "text":   var(--#{$prefix}warning-text-emphasis),
+);
+$table-variants: (
+  "primary":   $table-variant-primary,
+  "secondary": $table-variant-secondary,
+  "success":   $table-variant-success,
+  "danger":    $table-variant-danger,
+  "warning":   $table-variant-warning,
+  "info":      $table-variant-primary,
+  "light":     $table-variant-secondary,
+  "dark":      $table-variant-secondary,
+  "default":   $table-variant-secondary
+);
+@each $color, $variant-colors in $table-variants {
+  .table-#{$color} {
+    --#{$prefix}table-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}table-striped-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-striped-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-active-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-active-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-hover-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-hover-color: #{map.get($variant-colors, "text")};
+
+    color: var(--#{$prefix}table-color);
+    border-color: var(--#{$prefix}table-border-color);
+  }
+}
+
 .nb-table-headings th {
   background-color: var(--#{$prefix}tertiary-bg);
   white-space: nowrap;
@@ -1150,10 +1208,12 @@ textarea {
   color: var(--#{$prefix}badge-color);
 
   &.bg-danger,
+  &.bg-info,
   &.bg-primary,
   &.bg-success,
   &.bg-warning,
   &.text-bg-danger,
+  &.text-bg-info,
   &.text-bg-primary,
   &.text-bg-success,
   &.text-bg-warning {
