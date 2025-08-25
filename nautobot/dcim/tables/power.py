@@ -11,8 +11,10 @@ from nautobot.dcim.models import PowerFeed, PowerPanel
 from nautobot.extras.tables import StatusTableMixin
 
 from .devices import CableTerminationTable
+from .template_code import UTILIZATION_GRAPH
 
 __all__ = (
+    "PowerFeedDetailTable",
     "PowerFeedTable",
     "PowerPanelTable",
 )
@@ -119,3 +121,17 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "cable",
             "cable_peer",
         )
+
+
+class PowerFeedDetailTable(StatusTableMixin, BaseTable):
+    name = tables.LinkColumn(verbose_name="Feed")
+    power_panel = tables.Column(linkify=True)
+    type = ChoiceFieldColumn()
+    get_utilization = tables.TemplateColumn(
+        template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization"
+    )
+
+    class Meta(BaseTable.Meta):
+        model = PowerFeed
+        fields = ("power_panel", "name", "status", "type", "get_utilization")
+        default_columns = ("power_panel", "name", "status", "type", "get_utilization")

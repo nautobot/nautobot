@@ -602,8 +602,9 @@ class RackUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=300,
-                table_class=tables.PowerFeedTable,
+                table_class=tables.PowerFeedDetailTable,
                 table_filter="rack",
+                add_button_route=None,
             ),
             ImageAttachmentObjectsTablePanel(
                 table_title="Images",
@@ -615,6 +616,24 @@ class RackUIViewSet(NautobotUIViewSet):
                 add_permissions=[
                     "extras.add_imageattachment",
                 ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=500,
+                table_class=tables.RackReservationTable,
+                table_filter="rack",
+                include_columns=["tenant"],
+                exclude_columns=[
+                    "reservation",
+                    "location",
+                    "rack",
+                    "user",
+                ],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                template_path="dcim/rack_layout.html",
             ),
         )
     )
@@ -638,10 +657,6 @@ class RackUIViewSet(NautobotUIViewSet):
             context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
             context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
 
-            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-            context["power_feeds"] = (
-                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-            )
             context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
 
         return context

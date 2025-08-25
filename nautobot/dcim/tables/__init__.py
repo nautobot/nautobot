@@ -58,7 +58,7 @@ from .devicetypes import (
     RearPortTemplateTable,
 )
 from .locations import LocationTable, LocationTypeTable
-from .power import PowerFeedTable, PowerPanelTable
+from .power import PowerFeedDetailTable, PowerFeedTable, PowerPanelTable
 from .racks import (
     RackDetailTable,
     RackGroupTable,
@@ -111,6 +111,7 @@ __all__ = (
     "ModuleTypeTable",
     "PlatformTable",
     "PowerConnectionTable",
+    "PowerFeedDetailTable",
     "PowerFeedTable",
     "PowerOutletTable",
     "PowerOutletTemplateTable",
