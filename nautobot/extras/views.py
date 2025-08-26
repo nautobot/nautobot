@@ -26,7 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices,ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -2052,6 +2052,7 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+
 class JobResultUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -2064,6 +2065,69 @@ class JobResultUIViewSet(
     table_class = tables.JobResultTable
     queryset = JobResult.objects.all()
     action_buttons = ()
+
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                fields=[
+                    "job_model",     
+                    "status",       
+                    "date_created",
+                    "date_started",
+                    "user",
+                    "duration",
+                    "result",        
+                    "files",      
+                ],
+                context_object_key="object",  
+                label="Summary of Results",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobLogEntryTable,  
+                table_title="Logs",
+                table_filter=["job_result"],     
+            ),
+        ],
+        extra_buttons = [
+
+            # Re-Run button
+            object_detail.Button(
+                weight=100,
+                label="Re-Run",
+                icon="mdi-repeat",
+                color=ButtonColorChoices.GREEN,
+                link_name="extras:job_run",
+                required_permissions=["extras.job_run"],
+            ),
+
+            # Run button (when no task_kwargs)
+            object_detail.Button(
+                weight=110,
+                label="Run",
+                icon="mdi-play",
+                color=ButtonColorChoices.BLUE,
+                link_name="extras:job_run",
+                required_permissions=["extras.job_run"],
+            ),
+
+            # Export button
+            object_detail.Button(
+                weight=120,
+                label="Export",
+                icon="mdi-database-export",
+                color=ButtonActionColorChoices.EXPORT,
+                link_name="extras-api:joblogentry-list",
+                link_includes_pk=False,
+            ),
+        ]
+        
+
+    )
+
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2090,35 +2154,6 @@ class JobResultUIViewSet(
 
         return queryset
 
-    @action(
-        detail=True,
-        url_path="log-table",
-        url_name="log-table",
-        custom_view_base_action="view",
-    )
-    def log_table(self, request, pk=None):
-        """
-        Custom action to return a rendered JobLogEntry table for a JobResult.
-        """
-
-        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
-
-        filter_q = request.GET.get("q")
-        if filter_q:
-            queryset = instance.job_log_entries.filter(
-                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
-            )
-        else:
-            queryset = instance.job_log_entries.all()
-
-        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(log_table)
-
-        return HttpResponse(log_table.as_html(request))
 
 
 #
