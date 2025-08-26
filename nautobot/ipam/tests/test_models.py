@@ -1601,7 +1601,8 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as err:
             IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)
         self.assertEqual(
-            err.exception.message_dict["namespace"][0], "No suitable parent Prefix exists in this Namespace"
+            err.exception.message_dict["namespace"][0],
+            "No suitable parent Prefix for 13.0.0.1 exists in Namespace test_parenting_constraints",
         )
 
         with self.subTest("Test that IP address can be assigned to a valid parent"):
@@ -1641,7 +1642,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertIn("namespace", err.exception.message_dict)
         self.assertEqual(
             err.exception.message_dict["namespace"][0],
-            "No suitable parent Prefix exists in this Namespace",
+            "No suitable parent Prefix for 1976:2023::1 exists in Namespace Global",
         )
 
         # Appropriate parent exists in the default namespace --> no error
