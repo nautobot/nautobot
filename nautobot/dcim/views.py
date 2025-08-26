@@ -635,6 +635,23 @@ class RackUIViewSet(NautobotUIViewSet):
                 weight=100,
                 template_path="dcim/rack_layout.html",
             ),
+            object_detail.ObjectsTablePanel(
+                weight=600,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="nonracked_devices_table",
+                related_field_name="rack",
+                table_title="Non-Racked Devices",
+                exclude_columns=[
+                    "status",
+                    "tenant",
+                    "location",
+                    "rack",
+                    "manufacturer",
+                    "primary_ip",
+                    "actions",
+                ],
+                include_columns=["parent_device"],
+            ),
         )
     )
 
@@ -642,11 +659,16 @@ class RackUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
-            # Get 0U and child devices located within the rack
-            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
                 "device_type__manufacturer"
             )
-
+            nonracked_devices_table = tables.NonRackedDevicesTable(nonracked_devices)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(nonracked_devices_table)
+            context["nonracked_devices_table"] = nonracked_devices_table
             peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
             if instance.rack_group:

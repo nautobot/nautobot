@@ -90,6 +90,7 @@ __all__ = (
     "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
+    "NonRackedDevicesTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -236,6 +237,34 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         if not value:
             return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+
+
+class NonRackedDevicesTable(RoleTableMixin, BaseTable):
+    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
+    device_type = tables.LinkColumn(
+        viewname="dcim:devicetype",
+        args=[Accessor("device_type__pk")],
+        verbose_name="Type",
+        text=lambda record: record.device_type.display,
+    )
+    parent_device = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = Device
+        fields = ("pk", "name", "role", "device_type", "parent_device")
+        default_columns = ("name", "role", "device_type", "parent_device")
+
+    def render_parent_device(self, record, value, **kwargs):
+        print(
+            value, "&&&&&", record, "*****", kwargs, "---------------------------------------------------------------"
+        )
+        if not value:
+            return format_html("&mdash;")
+
+        if record.parent_bay:
+            return format_html("{} | {}", record.parent_bay.device, record.parent_bay)
+
+        return format_html('<span class="text-muted">&mdash;</span>')
 
 
 class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
