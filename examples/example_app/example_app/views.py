@@ -134,6 +134,42 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 context_field="text_panel_code_content",
                 render_as=TextPanel.RenderOptions.CODE,
             ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                weight=400,
+                label="EChart - LINE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.LINE,
+                    "header": "Traffic per Interface Line",
+                    "description": "Example line chart from EChartsBase",
+                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                weight=400,
+                label="EChart - PIE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.PIE,
+                    "header": "Traffic per Interface Pie",
+                    "description": "Example pie chart from EChartsBase",
+                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=200,
+                label="EChart - BAR",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "header": "Traffic per Interface Bar",
+                    "description": "Example bar chart from EChartsBase",
+                    "data": {
+                        "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                        "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+                    },
+                },
+            ),
         ),
     )
 

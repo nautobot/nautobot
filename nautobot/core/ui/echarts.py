@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from nautobot.core.ui.choices import EChartTypeChoices, EChartTypeThema
+from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeThema
 
 
 # Strategy Interface
@@ -33,7 +33,7 @@ class EChartsStrategy(ABC):
         return toolbox_config
 
 
-class BarEChartStrategy(EChartsStrategy):
+class BarEChartsStrategy(EChartsStrategy):
     def get_series_config(self, data):
         series_data = data.get("series", [])
         return [
@@ -53,7 +53,7 @@ class BarEChartStrategy(EChartsStrategy):
         }
 
 
-class PieEChartStrategy(EChartsStrategy):
+class PieEChartsStrategy(EChartsStrategy):
     def get_series_config(self, data):
         series_data = data.get("series", [])
         return [
@@ -75,7 +75,7 @@ class PieEChartStrategy(EChartsStrategy):
         return {"trigger": "item", "formatter": "{a} <br/>{b}: {c} ({d}%)"}
 
 
-class LineEChartStrategy(EChartsStrategy):
+class LineEChartsStrategy(EChartsStrategy):
     def get_series_config(self, data):
         series_data = data.get("series", [])
         return [
@@ -98,13 +98,13 @@ class LineEChartStrategy(EChartsStrategy):
 
 class EChartsStrategyFactory:
     _strategies = {
-        EChartTypeChoices.BAR: BarEChartStrategy,
-        EChartTypeChoices.LINE: LineEChartStrategy,
-        EChartTypeChoices.PIE: PieEChartStrategy,
+        EChartsTypeChoices.BAR: BarEChartsStrategy,
+        EChartsTypeChoices.LINE: LineEChartsStrategy,
+        EChartsTypeChoices.PIE: PieEChartsStrategy,
     }
 
     @classmethod
-    def get_strategy(cls, chart_type: EChartTypeChoices) -> EChartsStrategy:
+    def get_strategy(cls, chart_type: EChartsTypeChoices) -> EChartsStrategy:
         strategy_class = cls._strategies.get(chart_type)
         if not strategy_class:
             raise ValueError(f"Unsupported chart type: {chart_type}")
@@ -117,14 +117,14 @@ class EChartsBase:
     def __init__(
         self,
         *,
-        chart_type=EChartTypeChoices.BAR,
+        chart_type=EChartsTypeChoices.BAR,
         data={},
         header="",
         description="",
         x_label="X",
         y_label="Y",
         legend={},
-        theme=EChartTypeThema.DEFAULT,
+        theme=EChartsTypeThema.DEFAULT,
         renderer="canvas",
         toolbox_enable=True,
         save_image_options=None,
@@ -135,7 +135,7 @@ class EChartsBase:
     ):
         """
         Args:
-            chart_type (str): One of `EChartTypeChoices`.
+            chart_type (str): One of `EChartsTypeChoices`.
             data (dict|QuerySet): The dataset to render.
             header (str): Title/header of the chart.
             description (str): More detailed explanation.
@@ -216,7 +216,7 @@ class EChartsBase:
 
     def _get_theme_colors(self):
         """Map SCSS palette to echarts theme colors (manual sync)."""
-        if self.theme == EChartTypeThema.DARK:
+        if self.theme == EChartsTypeThema.DARK:
             return [
                 "#045ab4",  # blue-0-dark
                 "#e07807",  # orange-0-dark
@@ -262,7 +262,7 @@ class EChartsBase:
 
         return config
 
-    def change_chart_type(self, new_chart_type: EChartTypeChoices):
+    def change_chart_type(self, new_chart_type: EChartsTypeChoices):
         """Dynamically change the chart type strategy."""
         self.chart_type = new_chart_type
         self.strategy = EChartsStrategyFactory.get_strategy(new_chart_type)

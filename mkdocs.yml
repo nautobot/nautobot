@@ -520,6 +520,7 @@ nav:
           - Dynamic Groups:
               - "user-guide/platform-functionality/dynamicgroup.md"
               - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
+          - Echarts: "user-guide/platform-functionality/echarts.md"
           - Event Notifications: "user-guide/platform-functionality/events.md"
           - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
           - External Integrations: "user-guide/platform-functionality/externalintegration.md"

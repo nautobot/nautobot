@@ -1213,10 +1213,6 @@ class EChartsPanel(Panel, EChartsBase):
         }
 
 
-class EChartsComponent(Component, EChartsBase):
-    pass
-
-
 class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes and their values."""
 

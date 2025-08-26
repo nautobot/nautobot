@@ -44,7 +44,7 @@ class SectionChoices(ChoiceSet):
     )
 
 
-class EChartTypeChoices(ChoiceSet):
+class EChartsTypeChoices(ChoiceSet):
     """Available chart types for ECharts.
 
     Attributes:
@@ -121,7 +121,7 @@ class EChartTypeChoices(ChoiceSet):
     )
 
 
-class EChartTypeThema(ChoiceSet):
+class EChartsTypeThema(ChoiceSet):
     """Available chart thema for ECharts.
 
     Attributes:

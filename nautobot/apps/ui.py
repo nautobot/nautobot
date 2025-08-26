@@ -2,7 +2,7 @@
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
-from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.choices import EChartsTypeChoices, LayoutChoices, SectionChoices
 from nautobot.core.ui.homepage import (
     HomePageBase,
     HomePageGroup,
@@ -25,6 +25,7 @@ from nautobot.core.ui.object_detail import (
     DataTablePanel,
     DistinctViewTab,
     DropdownButton,
+    EChartsPanel,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -50,6 +51,8 @@ __all__ = (
     "DataTablePanel",
     "DistinctViewTab",
     "DropdownButton",
+    "EChartsPanel",
+    "EChartsTypeChoices",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
