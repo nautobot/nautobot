@@ -139,17 +139,6 @@ urlpatterns = [
         views.IPAddressDeleteView.as_view(),
         name="ipaddress_delete",
     ),
-    # VLANs
-    path(
-        "vlans/<uuid:pk>/interfaces/",
-        views.VLANInterfacesView.as_view(),
-        name="vlan_interfaces",
-    ),
-    path(
-        "vlans/<uuid:pk>/vm-interfaces/",
-        views.VLANVMInterfacesView.as_view(),
-        name="vlan_vminterfaces",
-    ),
 ]
 
 urlpatterns += router.urls
