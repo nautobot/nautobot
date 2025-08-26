@@ -2051,6 +2051,49 @@ class JobHookUIViewSet(NautobotUIViewSet):
 # JobResult
 #
 
+class ReRunButton(object_detail.Button):
+    """Custom button for re-running a JobResult."""
+
+    def should_render(self, context):
+        result = context.get("object")
+        user = context["request"].user
+        return (
+            user.has_perm("extras.run_job")
+            and result.job_model is not None
+            and bool(result.task_kwargs)
+        )
+
+    def get_link(self, context):
+        result = context["object"]
+        return reverse(
+            "extras:job_run",
+            kwargs={"pk": result.job_model.pk},
+        ) + f"?kwargs_from_job_result={result.pk}"
+
+
+class RunButton(object_detail.Button):
+    """Custom button for running a JobResult (no kwargs)."""
+
+    def should_render(self, context):
+        result = context.get("object")
+        user = context["request"].user
+        return (
+            user.has_perm("extras.run_job")
+            and result.job_model is not None
+            and not result.task_kwargs
+        )
+
+    def get_link(self, context):
+        result = context["object"]
+        return reverse("extras:job_run", kwargs={"pk": result.job_model.pk})
+
+
+class ExportButton(object_detail.Button):
+    """Custom button for exporting Job logs to CSV."""
+
+    def get_link(self, context):
+        result = context["object"]
+        return reverse("extras-api:joblogentry-list") + f"?job_result={result.pk}&format=csv"
 
 
 class JobResultUIViewSet(
@@ -2059,74 +2102,104 @@ class JobResultUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
+    queryset = JobResult.objects.all()
+    serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
     filterset_form_class = forms.JobResultFilterForm
-    serializer_class = serializers.JobResultSerializer
     table_class = tables.JobResultTable
-    queryset = JobResult.objects.all()
-    action_buttons = ()
+    action_buttons = ("export",)
 
-
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
+                label="Summary of Results",
                 weight=100,
                 fields=[
-                    "job_model",     
-                    "status",       
+                    "job_model",
+                    "status",
                     "date_created",
                     "date_started",
                     "user",
                     "duration",
-                    "result",        
-                    "files",      
+                    "result",
+                    "files",
                 ],
-                context_object_key="object",  
-                label="Summary of Results",
             ),
             object_detail.ObjectsTablePanel(
-                weight=100,
-                section=SectionChoices.FULL_WIDTH,
-                table_class=tables.JobLogEntryTable,  
                 table_title="Logs",
-                table_filter=["job_result"],     
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobLogEntryTable,
+                table_filter=["job_result"],
             ),
         ],
-        extra_buttons = [
-
-            # Re-Run button
-            object_detail.Button(
+        extra_buttons=[
+            ReRunButton(
                 weight=100,
                 label="Re-Run",
                 icon="mdi-repeat",
                 color=ButtonColorChoices.GREEN,
-                link_name="extras:job_run",
-                required_permissions=["extras.job_run"],
             ),
-
-            # Run button (when no task_kwargs)
-            object_detail.Button(
+            RunButton(
                 weight=110,
                 label="Run",
                 icon="mdi-play",
                 color=ButtonColorChoices.BLUE,
-                link_name="extras:job_run",
-                required_permissions=["extras.job_run"],
             ),
-
-            # Export button
-            object_detail.Button(
+            ExportButton(
                 weight=120,
                 label="Export",
                 icon="mdi-database-export",
                 color=ButtonActionColorChoices.EXPORT,
-                link_name="extras-api:joblogentry-list",
-                link_includes_pk=False,
             ),
-        ]
+        ],
         
-
     )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(
+        tab
+        for tab in object_detail_content.tabs
+        if tab.label == "Advanced"
+    )
+    advanced_tab.panels = advanced_tab.panels + (
+        object_detail.ObjectTextPanel(
+                label="Job Keyword Arguments",
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                object_field="task_kwargs",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        object_detail.ObjectTextPanel(
+                label="Job Positional Arguments",
+                section=SectionChoices.LEFT_HALF,
+                weight=400,
+                object_field="task_args",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        object_detail.ObjectTextPanel(
+                label="Job Celery Keyword Arguments",
+                section=SectionChoices.LEFT_HALF,
+                weight=500,
+                object_field="celery_kwargs",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        object_detail.ObjectFieldsPanel(
+                label="Worker",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["worker", "queue","task_name", "meta", ],
+            ),
+        object_detail.ObjectTextPanel(
+                label="Traceback",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                object_field="traceback",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+    )
+
+
 
 
     def get_extra_context(self, request, instance):
@@ -2145,14 +2218,6 @@ class JobResultUIViewSet(
             )
 
         return context
-
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related("job_model", "user")
-
-        if not self.detail:
-            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
-
-        return queryset
 
 
 

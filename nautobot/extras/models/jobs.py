@@ -742,6 +742,12 @@ class JobResult(BaseModel, CustomFieldModel):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
+    
+    @property
+    def queue(self):
+        if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
+            return self.celery_kwargs.get("queue")
+        return None
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
