@@ -32,11 +32,17 @@ class FixIPAMParents(Job):
         description = "Check for and/or fix incorrect 'parent' values on IP Address and/or Prefix records."
         has_sensitive_variables = False
 
-    def run(self, *, cleanup_types, restrict_to_namespace=None, restrict_to_network=None, dryrun=False):
+    def run(  # pylint: disable=arguments-differ
+        self, *, cleanup_types, restrict_to_namespace=None, restrict_to_network=None, dryrun=False
+    ):
         all_relevant_prefixes = Prefix.objects.restrict(self.user, "change")
 
         if restrict_to_namespace is not None:
-            self.logger.info("Inspecting only records in namespace %s", restrict_to_namespace.name)
+            self.logger.info(
+                "Inspecting only records in namespace %s",
+                restrict_to_namespace.name,
+                extra={"object": restrict_to_namespace},
+            )
             all_relevant_prefixes = all_relevant_prefixes.filter(namespace=restrict_to_namespace)
         if restrict_to_network is not None:
             self.logger.info("Inspecting only records that fall within %s", restrict_to_network)
@@ -59,7 +65,7 @@ class FixIPAMParents(Job):
                 | all_relevant_prefixes.filter(parent__network__gt=models.F("network"))
                 | all_relevant_prefixes.filter(parent__broadcast__lt=models.F("broadcast"))
                 | all_relevant_prefixes.filter(parent__prefix_length__gte=models.F("prefix_length"))
-            )
+            ).exclude(parent__isnull=True)
 
             prefixes_with_invalid_parents = prefixes_with_invalid_parents.select_related("parent")
 
@@ -82,6 +88,7 @@ class FixIPAMParents(Job):
                         pfx.prefix,
                         pfx.parent.display if pfx.parent is not None else None,
                         parent.display if parent is not None else None,
+                        extra={"object": pfx},
                     )
                     pfx.parent = parent
                     fixed_prefixes.append(pfx)
@@ -94,7 +101,7 @@ class FixIPAMParents(Job):
             else:
                 self.logger.success("No Prefix records had clearly invalid `parent` values")
 
-            self.logger.info("Continuing by checking Prefixes with NULL `parent` to make sure that's correct...")
+            self.logger.info("Continuing by checking Prefixes with null `parent` to make sure that's correct...")
             # 2. parent is null but should not be
             fixed_prefixes = []
             processed_pfx_count = 0
@@ -109,16 +116,17 @@ class FixIPAMParents(Job):
 
                 if parent is not None:
                     self.logger.debug(
-                        "Parent for %s should be set to %s instead of NULL",
+                        "Parent for %s should be set to %s instead of None",
                         pfx.display,
                         parent.prefix,
+                        extra={"object": pfx},
                     )
                     pfx.parent = parent
                     fixed_prefixes.append(pfx)
                 processed_pfx_count += 1
 
             self.logger.info(
-                "Inspected %d Prefixes with NULL `parent` to see if an appropriate parent exists",
+                "Inspected %d Prefixes with null `parent` to see if an appropriate parent exists",
                 processed_pfx_count,
             )
 
@@ -136,13 +144,17 @@ class FixIPAMParents(Job):
             for pfx in all_relevant_prefixes.filter(
                 parent__prefix_length__lt=models.F("prefix_length") - 1
             ).select_related("parent"):
-                parent = pfx.parent.subnets(include_self=True).get_closest_parent(pfx.prefix, include_self=False)
+                try:
+                    parent = pfx.parent.subnets(include_self=True).get_closest_parent(pfx.prefix, include_self=False)
+                except Prefix.DoesNotExist:
+                    parent = None
                 if parent != pfx.parent:
                     self.logger.debug(
                         "Parent for %s should be corrected from %s to %s",
                         pfx.display,
-                        pfx.parent.prefix,
-                        parent.prefix,
+                        pfx.parent.prefix if pfx.parent else None,
+                        parent.prefix if parent else None,
+                        extra={"object": pfx},
                     )
                     pfx.parent = parent
                     fixed_prefixes.append(pfx)
@@ -208,6 +220,7 @@ class FixIPAMParents(Job):
                             ip.host,
                             ip.parent.prefix if ip.parent is not None else None,
                             parent.prefix,
+                            extra={"object": ip},
                         )
                         ip.parent = parent
                         fixed_ips.append(ip)
@@ -217,6 +230,7 @@ class FixIPAMParents(Job):
                             "You should create a %s Prefix or similar to contain this IP Address.",
                             ip.host,
                             ip.address.network,
+                            extra={"object": ip},
                         )
 
                 if dryrun:
@@ -241,6 +255,7 @@ class FixIPAMParents(Job):
                         ip.host,
                         ip.parent.prefix,
                         parent.prefix,
+                        extra={"object": ip},
                     )
                     ip.parent = parent
                     fixed_ips.append(ip)
