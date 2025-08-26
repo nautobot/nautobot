@@ -360,3 +360,15 @@ Bootstrap v5.x:
     <div class="card-footer">Panel Footer</div>
 </div>
 ```
+
+## Horizontal rules
+
+By default, [Horizontal rules](https://getbootstrap.com/docs/5.3/content/reboot/#horizontal-rules) inherit their color from text. To draw a line with standard Nautobot border color, use `border-top` CSS class on the `<hr>` element.
+
+```html
+<!-- Inherit color from text. -->
+<hr>
+
+<!-- Set color to standard Nautobot border color. -->
+<hr class="border-top">
+```
