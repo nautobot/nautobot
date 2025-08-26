@@ -1407,7 +1407,9 @@ class IPAddress(PrimaryModel):
             )
             return closest_parent
         except Prefix.DoesNotExist as e:
-            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
+            raise ValidationError(
+                {"namespace": f"No suitable parent Prefix for {self.host} exists in Namespace {self._namespace}"}
+            ) from e
 
     def clean(self):
         self._deconstruct_address(self.address)
@@ -1473,6 +1475,8 @@ class IPAddress(PrimaryModel):
         Args:
             ascending (bool): If set, reverses the return order.
         """
+        if self.parent is None:  # invalid, but possible currently
+            return Prefix.objects.none()
         return self.parent.ancestors(include_self=True, ascending=ascending)
 
     @cached_property

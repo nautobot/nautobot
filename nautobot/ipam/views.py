@@ -4,15 +4,17 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
+from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
+import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -353,6 +355,20 @@ class PrefixView(generic.ObjectView):
         RequestConfig(request, paginate).configure(vrf_table)
         RequestConfig(request, paginate).configure(cloud_network_table)
 
+        if instance.parent != instance.get_parent():
+            messages.warning(
+                request,
+                format_html(
+                    "The <code>parent</code> field on this record appears to be set incorrectly. "
+                    'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                    reverse(
+                        "extras:job_run_by_class_path",
+                        kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                    ),
+                    "Check/Fix IPAM Parents",
+                ),
+            )
+
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
@@ -548,6 +564,49 @@ class IPAddressView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(parent_prefixes_table)
         RequestConfig(request, paginate).configure(related_ips_table)
+
+        try:
+            parent = instance._get_closest_parent()
+            if instance.parent != parent:
+                messages.warning(
+                    request,
+                    format_html(
+                        "The <code>parent</code> field on this record appears to be set incorrectly. "
+                        'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                        reverse(
+                            "extras:job_run_by_class_path",
+                            kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                        ),
+                        "Check/Fix IPAM Parents",
+                    ),
+                )
+        except ValidationError:  # No valid parent found
+            if instance.parent is None:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode({"prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}"))})
+                )
+            else:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode(
+                        {
+                            "prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}")),
+                            "namespace": instance.parent.namespace.pk,
+                        }
+                    )
+                )
+            messages.warning(
+                request,
+                format_html(
+                    "The <code>parent</code> field on this record appears to be set incorrectly, and furthermore "
+                    "there appears to be no valid Prefix to contain this record at present. "
+                    'Consider <a href="{}">creating an appropriate Prefix</a> to resolve this issue.',
+                    add_url,
+                ),
+            )
 
         return {
             "parent_prefixes_table": parent_prefixes_table,

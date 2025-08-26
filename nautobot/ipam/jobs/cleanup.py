@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.db import models
 
 from nautobot.core.choices import ChoiceSet
@@ -18,7 +19,9 @@ class CleanupTypes(ChoiceSet):
 
 
 class FixIPAMParents(Job):
-    cleanup_types = MultiChoiceVar(choices=CleanupTypes.CHOICES, required=True)
+    cleanup_types = MultiChoiceVar(
+        choices=CleanupTypes.CHOICES, required=True, default=[CleanupTypes.IPADDRESS, CleanupTypes.PREFIX]
+    )
 
     restrict_to_namespace = ObjectVar(
         model=Namespace, required=False, description="Check only records within this namespace"
@@ -51,10 +54,11 @@ class FixIPAMParents(Job):
         if CleanupTypes.PREFIX in cleanup_types:
             if not self.user.has_perm("ipam.change_prefix"):
                 self.fail('User "%s" does not have permission to update Prefix records', self.user.username)
+                raise PermissionDenied("User does not have update permission for Prefix records")
 
             self.logger.info("Inspecting Prefix records...")
 
-            self.logger.info("Beginning with a quick check for obviously wrong `parent` values...")
+            self.logger.debug("Beginning with a quick check for obviously wrong `parent` values...")
             # 1. Obviously wrong Prefix parents
             #    - parent is set but has wrong IP version
             #    - parent is set but has wrong namespace
@@ -69,11 +73,7 @@ class FixIPAMParents(Job):
 
             prefixes_with_invalid_parents = prefixes_with_invalid_parents.select_related("parent")
 
-            if invalid_prefix_count := prefixes_with_invalid_parents.count():
-                self.logger.warning(
-                    "Identified %d Prefix records with clearly invalid `parent` values", invalid_prefix_count
-                )
-
+            if prefixes_with_invalid_parents.exists():
                 fixed_prefixes = []
                 for pfx in prefixes_with_invalid_parents:
                     candidate_parents = Prefix.objects.all()
@@ -83,7 +83,7 @@ class FixIPAMParents(Job):
                         parent = candidate_parents.get_closest_parent(pfx.prefix, include_self=False)
                     except Prefix.DoesNotExist:
                         parent = None
-                    self.logger.debug(
+                    self.logger.warning(
                         "Parent for %s should be corrected from %s to %s",
                         pfx.prefix,
                         pfx.parent.display if pfx.parent is not None else None,
@@ -94,14 +94,16 @@ class FixIPAMParents(Job):
                     fixed_prefixes.append(pfx)
 
                 if dryrun:
-                    self.logger.info("Would correct invalid `parent` for %d Prefixes", len(fixed_prefixes))
+                    self.logger.warning(
+                        "Would correct invalid `parent` for %d Prefixes if this were not a dry-run", len(fixed_prefixes)
+                    )
                 else:
                     update_count = Prefix.objects.bulk_update(fixed_prefixes, ["parent"], batch_size=1000)
                     self.logger.success("Corrected invalid `parent` for %d Prefixes", update_count)
             else:
                 self.logger.success("No Prefix records had clearly invalid `parent` values")
 
-            self.logger.info("Continuing by checking Prefixes with null `parent` to make sure that's correct...")
+            self.logger.debug("Continuing by checking Prefixes with null `parent` to make sure that's correct...")
             # 2. parent is null but should not be
             fixed_prefixes = []
             processed_pfx_count = 0
@@ -115,7 +117,7 @@ class FixIPAMParents(Job):
                     parent = None
 
                 if parent is not None:
-                    self.logger.debug(
+                    self.logger.warning(
                         "Parent for %s should be set to %s instead of None",
                         pfx.display,
                         parent.prefix,
@@ -125,18 +127,22 @@ class FixIPAMParents(Job):
                     fixed_prefixes.append(pfx)
                 processed_pfx_count += 1
 
-            self.logger.info(
+            self.logger.debug(
                 "Inspected %d Prefixes with null `parent` to see if an appropriate parent exists",
                 processed_pfx_count,
             )
 
-            if dryrun:
-                self.logger.info("Would set a more precise `parent` for %d Prefixes", len(fixed_prefixes))
-            else:
-                update_count = Prefix.objects.bulk_update(fixed_prefixes, ["parent"], batch_size=1000)
-                self.logger.success("Corrected imprecise `parent` for %d Prefixes", update_count)
+            if fixed_prefixes:
+                if dryrun:
+                    self.logger.warning(
+                        "Would set a more precise `parent` for %d Prefixes if this were not a dry-run",
+                        len(fixed_prefixes),
+                    )
+                else:
+                    update_count = Prefix.objects.bulk_update(fixed_prefixes, ["parent"], batch_size=1000)
+                    self.logger.success("Corrected imprecise `parent` for %d Prefixes", update_count)
 
-            self.logger.info("Continuing with a more involved check for more subtly incorrect `parent` values...")
+            self.logger.debug("Continuing with a more involved check for more subtly incorrect `parent` values...")
             # 3. More subtly wrong Prefix parents
             #    - parent is set but a more specific parent Prefix also exists
             fixed_prefixes = []
@@ -149,7 +155,7 @@ class FixIPAMParents(Job):
                 except Prefix.DoesNotExist:
                     parent = None
                 if parent != pfx.parent:
-                    self.logger.debug(
+                    self.logger.warning(
                         "Parent for %s should be corrected from %s to %s",
                         pfx.display,
                         pfx.parent.prefix if pfx.parent else None,
@@ -160,20 +166,25 @@ class FixIPAMParents(Job):
                     fixed_prefixes.append(pfx)
                 processed_pfx_count += 1
 
-            self.logger.info(
-                "Inspected %d Prefixes to check whether a more specific parent Prefix exists",
+            self.logger.debug(
+                "Inspected %d Prefixes for more subtly incorrect `parent` values",
                 processed_pfx_count,
             )
 
-            if dryrun:
-                self.logger.info("Would set a more precise `parent` for %d Prefixes", len(fixed_prefixes))
-            else:
-                update_count = Prefix.objects.bulk_update(fixed_prefixes, ["parent"], batch_size=1000)
-                self.logger.success("Corrected imprecise `parent` for %d Prefixes", update_count)
+            if fixed_prefixes:
+                if dryrun:
+                    self.logger.warning(
+                        "Would set a more precise `parent` for %d Prefixes if this were not a dry-run",
+                        len(fixed_prefixes),
+                    )
+                else:
+                    update_count = Prefix.objects.bulk_update(fixed_prefixes, ["parent"], batch_size=1000)
+                    self.logger.success("Corrected imprecise `parent` for %d Prefixes", update_count)
 
         if CleanupTypes.IPADDRESS in cleanup_types:
             if not self.user.has_perm("ipam.change_ipaddress"):
                 self.fail('User "%s" does not have permission to update IP Address records', self.user.username)
+                raise PermissionDenied("User does not have update permission for IP Address records")
 
             self.logger.info("Inspecting IP Address records...")
 
@@ -185,7 +196,7 @@ class FixIPAMParents(Job):
                 self.logger.info("Inspecting only records that fall within %s", restrict_to_network)
                 all_relevant_ips = all_relevant_ips.net_host_contained(restrict_to_network)
 
-            self.logger.info("Beginning with a quick check for obviously wrong `parent` values...")
+            self.logger.debug("Beginning with a quick check for obviously wrong `parent` values...")
             # 4. Obviously wrong IPAddress parents
             #    - parent is unset entirely
             #    - parent is set but has wrong IP version
@@ -199,12 +210,7 @@ class FixIPAMParents(Job):
 
             ips_with_invalid_parents = ips_with_invalid_parents.select_related("parent")
 
-            if invalid_ip_count := ips_with_invalid_parents.count():
-                self.logger.warning(
-                    "Identified %d IP Address records with null or otherwise clearly invalid `parent` values",
-                    invalid_ip_count,
-                )
-
+            if ips_with_invalid_parents.exists():
                 fixed_ips = []
                 for ip in ips_with_invalid_parents:
                     candidate_parents = Prefix.objects.all()
@@ -215,7 +221,7 @@ class FixIPAMParents(Job):
                         candidate_parents = candidate_parents.filter(namespace_id=get_default_namespace_pk())
                     try:
                         parent = candidate_parents.get_closest_parent(ip.host, include_self=True)
-                        self.logger.debug(
+                        self.logger.warning(
                             "Parent for %s should be corrected from %s to %s",
                             ip.host,
                             ip.parent.prefix if ip.parent is not None else None,
@@ -225,49 +231,66 @@ class FixIPAMParents(Job):
                         ip.parent = parent
                         fixed_ips.append(ip)
                     except Prefix.DoesNotExist:
-                        self.logger.failure(
+                        self.logger.warning(
                             "No valid parent Prefix could be identified for %s. "
-                            "You should create a %s Prefix or similar to contain this IP Address.",
+                            "You should create a %s/%d Prefix or similar to contain this IP Address.",
                             ip.host,
                             ip.address.network,
+                            ip.mask_length,
                             extra={"object": ip},
                         )
 
                 if dryrun:
-                    self.logger.info("Would correct invalid `parent` for %d IP Addresses", len(fixed_ips))
+                    self.logger.warning(
+                        "Would correct invalid `parent` for %d IP Addresses if this were not a dry-run", len(fixed_ips)
+                    )
                 else:
                     update_count = IPAddress.objects.bulk_update(fixed_ips, ["parent"], batch_size=1000)
                     self.logger.success("Corrected invalid `parent` for %d IP Addresses", update_count)
             else:
                 self.logger.success("No IP Address records had null or clearly invalid `parent` values")
 
-            self.logger.info("Continuing with a more involved check for more subtly incorrect `parent` values...")
+            self.logger.debug("Continuing with a more involved check for more subtly incorrect `parent` values...")
             # 5. More subtly wrong IPAddress parents
             #    - parent is set and contains the IP, but is not the most specific such Prefix
             fixed_ips = []
             processed_ip_count = 0
             for ip in all_relevant_ips.exclude(parent__children__isnull=True).select_related("parent"):
                 candidate_parents = ip.parent.subnets(include_self=True)
-                parent = candidate_parents.get_closest_parent(ip.host, include_self=True)
-                if parent.id != ip.parent_id:
-                    self.logger.debug(
-                        "Parent for %s should be corrected from %s to %s",
+                try:
+                    parent = candidate_parents.get_closest_parent(ip.host, include_self=True)
+                    if parent.id != ip.parent_id:
+                        self.logger.warning(
+                            "Parent for %s should be corrected from %s to %s",
+                            ip.host,
+                            ip.parent.prefix,
+                            parent.prefix,
+                            extra={"object": ip},
+                        )
+                        ip.parent = parent
+                        fixed_ips.append(ip)
+                except Prefix.DoesNotExist:
+                    self.logger.warning(
+                        "No valid parent Prefix could be identified for %s. "
+                        "You should create a %s/%d Prefix or similar to contain this IP Address.",
                         ip.host,
-                        ip.parent.prefix,
-                        parent.prefix,
+                        ip.address.network,
+                        ip.mask_length,
                         extra={"object": ip},
                     )
-                    ip.parent = parent
-                    fixed_ips.append(ip)
                 processed_ip_count += 1
 
-            self.logger.info(
-                "Inspected %d IP Addresses to check whether a more specific parent Prefix exists",
+            self.logger.debug(
+                "Inspected %d IP Addresses for more subtly incorrect `parent` values",
                 processed_ip_count,
             )
 
-            if dryrun:
-                self.logger.info("Would set a more precise `parent` for %d IP Addresses", len(fixed_ips))
-            else:
-                update_count = IPAddress.objects.bulk_update(fixed_ips, ["parent"], batch_size=1000)
-                self.logger.success("Corrected imprecise `parent` for %d IP Addresses", update_count)
+            if fixed_ips:
+                if dryrun:
+                    self.logger.warning(
+                        "Would set a more precise `parent` for %d IP Addresses if this were not a dry-run",
+                        len(fixed_ips),
+                    )
+                else:
+                    update_count = IPAddress.objects.bulk_update(fixed_ips, ["parent"], batch_size=1000)
+                    self.logger.success("Corrected imprecise `parent` for %d IP Addresses", update_count)
