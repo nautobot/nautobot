@@ -9,6 +9,13 @@ Approval Workflows allows for a multi-stage review and approval of processes bef
 - Ensuring multiple stakeholders approve large-scale bulk edits.
 - Mandating peer review for scheduled jobs that affect multiple systems.
 
+### Involving Scheduled Job Approval
+
+1. The [Workflow Architect](#workflow-architect) defines the [workflow definition](#create-an-approval-workflow-definition-with-stages).
+2. An [Object Operator](#object-operator) submits a job for approval. See [Running Jobs Via the Web UI](jobs/index.md#via-the-web-ui) or [Scheduling via the UI](jobs/job-scheduling-and-approvals.md#scheduling-via-the-ui). If an approval workflow definition exists, the approval workflow is created automatically.
+3. The [Approver(s)](#approver) review and [approve the job](#approve-or-deny-a-stage).
+4. Once all required approvals are obtained, the job is automatically placed in the execution queue.
+
 ## Model Reference
 
 ```mermaid
