@@ -180,9 +180,14 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.virtualmachine.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
         self.virtualmachine.save()
 
-        vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
+        count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
+        self.assertEqual(count, 1)
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip4, None)
-        vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
+        # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
+        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: class.
+        count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
+        self.assertEqual(count, 0)
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip6, None)

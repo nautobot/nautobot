@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
@@ -597,6 +597,81 @@ class BaseInterface(RelationshipModel):
 
         return super().save(*args, **kwargs)
 
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        through_defaults = {
+            "is_source": is_source,
+            "is_destination": is_destination,
+            "is_default": is_default,
+            "is_preferred": is_preferred,
+            "is_primary": is_primary,
+            "is_secondary": is_secondary,
+            "is_standby": is_standby,
+        }
+
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        self.ip_addresses.add(*ip_addresses, through_defaults=through_defaults)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ip_addresses)
+
+    add_ip_addresses.alters_data = True
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        #
+        # The delete() call used previously (ref: https://github.com/nautobot/nautobot/issues/3236)
+        # meant that if None was passed in, it was silently ignored. Rather that raise an exception, this
+        # comprehension maintains backwards compatibility.
+        ip_addresses = [ip for ip in ip_addresses if ip is not None]
+
+        # Single query to get all existing relationships.
+        ip_pks = {ip.pk for ip in ip_addresses}
+        existing_ip_pks = set(self.ip_addresses.filter(pk__in=ip_pks).values_list("pk", flat=True))
+        existing_ips = [ip for ip in ip_addresses if ip.pk in existing_ip_pks]
+
+        if existing_ips:
+            self.ip_addresses.remove(*existing_ips)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(existing_ips)
+
+    remove_ip_addresses.alters_data = True
+
 
 @extras_features(
     "cable_terminations",
@@ -798,73 +873,6 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                             )
                         }
                     )
-
-    def add_ip_addresses(
-        self,
-        ip_addresses,
-        is_source=False,
-        is_destination=False,
-        is_default=False,
-        is_preferred=False,
-        is_primary=False,
-        is_secondary=False,
-        is_standby=False,
-    ):
-        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-            is_source (bool, optional): Is source address. Defaults to False.
-            is_destination (bool, optional): Is destination address. Defaults to False.
-            is_default (bool, optional): Is default address. Defaults to False.
-            is_preferred (bool, optional): Is preferred address. Defaults to False.
-            is_primary (bool, optional): Is primary address. Defaults to False.
-            is_secondary (bool, optional): Is secondary address. Defaults to False.
-            is_standby (bool, optional): Is standby address. Defaults to False.
-
-        Returns:
-            Number of instances added.
-        """
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                instance = self.ip_addresses.through(
-                    ip_address=ip,
-                    interface=self,
-                    is_source=is_source,
-                    is_destination=is_destination,
-                    is_default=is_default,
-                    is_preferred=is_preferred,
-                    is_primary=is_primary,
-                    is_secondary=is_secondary,
-                    is_standby=is_standby,
-                )
-                instance.validated_save()
-        return len(ip_addresses)
-
-    add_ip_addresses.alters_data = True
-
-    def remove_ip_addresses(self, ip_addresses):
-        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-
-        Returns:
-            Number of instances removed.
-        """
-        count = 0
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
-                deleted_count, _ = qs.delete()
-                count += deleted_count
-        return count
-
-    remove_ip_addresses.alters_data = True
 
     @property
     def is_connectable(self):

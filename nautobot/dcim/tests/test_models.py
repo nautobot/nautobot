@@ -2877,10 +2877,16 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
         self.device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         self.device.save()
-        interface.remove_ip_addresses(self.device.primary_ip4)
+
+        count = interface.remove_ip_addresses(self.device.primary_ip4)
+        self.assertEqual(count, 1)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip4, None)
-        interface.remove_ip_addresses(self.device.primary_ip6)
+        # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
+        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: class.
+        count = interface.remove_ip_addresses(self.device.primary_ip6)
+        self.assertEqual(count, 0)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
 
