@@ -910,6 +910,7 @@ class Prefix(PrimaryModel):
 
         if self._networking_values_changed:
             # Former children that we are no longer the closest parent can be reparented to one of our new descendants.
+            children_to_reparent = []
             for child in self.children.filter(prefix_length__gt=self.prefix_length + 1):
                 try:
                     closest_parent = self.children.get_closest_parent(child.prefix)  # pylint: disable=no-member
@@ -917,7 +918,9 @@ class Prefix(PrimaryModel):
                     closest_parent = self
                 if closest_parent != self:
                     child.parent = closest_parent
-                    child.save()
+                    children_to_reparent.append(child)
+
+            Prefix.objects.bulk_update(children_to_reparent, ["parent"], batch_size=1000)
 
     reparent_subnets.alters_data = True
 
@@ -931,8 +934,8 @@ class Prefix(PrimaryModel):
 
         Called automatically by save(); generally not intended for use outside of that context.
         """
-        # Former child IPs of ours that are no longer our descendants can be reparented to our former parent.
         if self._networking_values_changed:
+            # Former child IPs of ours that are no longer our descendants can be reparented to our former parent.
             reparentable_ips = self.ip_addresses.exclude(
                 ip_version=self.ip_version,
                 host__gte=self.network,
@@ -948,6 +951,7 @@ class Prefix(PrimaryModel):
             reparentable_ips.update(parent_id=self._parent_id)
 
             # Former child IPs that we are no longer closest parent of can be reparented to one of our new descendants.
+            ips_to_reparent = []
             for ip in self.ip_addresses.all():
                 try:
                     closest_parent = self.children.get_closest_parent(ip.host, include_self=True)  # pylint: disable=no-member
@@ -955,7 +959,9 @@ class Prefix(PrimaryModel):
                     closest_parent = self
                 if closest_parent != self:
                     ip.parent = closest_parent
-                    ip.save()
+                    ips_to_reparent.append(ip)
+
+            IPAddress.objects.bulk_update(ips_to_reparent, ["parent"], batch_size=1000)
 
         # IPs that we are now the closest parent of can be reparented to us.
         self.get_all_ips().select_for_update().filter(parent__prefix_length__lt=self.prefix_length).update(parent=self)

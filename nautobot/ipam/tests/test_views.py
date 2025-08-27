@@ -222,6 +222,22 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+        instance = self._get_queryset().first()
+        instance.parent = self._get_queryset().last()
+        self._get_queryset().bulk_update([instance], ["parent"], batch_size=1)
+
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_permission(self):
         """Test rendering of LinkedCountColumn for related fields with display_field override."""
         response = super().test_list_objects_with_permission()
@@ -309,7 +325,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        Prefix.objects.get_or_create(
+        cls.prefix, _ = Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
             defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
@@ -335,6 +351,22 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "dns_name": "example",
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+        instance = self._get_queryset().first()
+        instance.parent = self.prefix
+        self._get_queryset().bulk_update([instance], ["parent"], batch_size=1)
+
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
 
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
@@ -393,7 +425,9 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
-        self.assertBodyContains(response, "No suitable parent Prefix exists in this Namespace")
+        self.assertBodyContains(
+            response, f"No suitable parent Prefix for {instance.host} exists in Namespace {new_namespace}"
+        )
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
         new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,
