@@ -2,14 +2,18 @@
 
 from unittest.mock import patch
 
+from django.db.models import Sum
 from django.template import Context
 from django.test import RequestFactory
 
+from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
+from nautobot.core.ui.echarts import queryset_to_nested_dict_keys_as_series, queryset_to_nested_dict_records_as_series
 from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
-from nautobot.dcim.models import DeviceRedundancyGroup
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables.devices import DeviceTable
+from nautobot.ipam.models import Prefix
 
 
 class DataTablePanelTest(TestCase):
@@ -200,3 +204,76 @@ class ObjectsTablePanelTest(TestCase):
             panel.get_extra_context(context_data)
 
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
+
+
+class QuerysetToNestedDictTests(TestCase):
+    def setUp(self):
+        self.qs = Location.objects.annotate(
+            device_count=count_related(Device, "location"), prefix_count=count_related(Prefix, "locations")
+        )
+
+    def test_records_as_series_basic_grouping(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data[location_name]["device_count"], location_name_device_count)
+        self.assertEqual(data[location_name]["prefix_count"], location_name_prefix_count)
+
+    def test_keys_as_series_basic_series(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data["device_count"][location_name], location_name_device_count)
+        self.assertEqual(data["prefix_count"][location_name], location_name_prefix_count)
+
+    def test_records_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_records_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data[location_status]["device_count"], device_count_total)
+
+    def test_keys_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_keys_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data["device_count"][location_status], device_count_total)
+
+    def test_records_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # "Nestable" and No/Non Nestable instead of True and False
+        self.assertIn("Nestable", data)
+        self.assertIn("No/Non Nestable", data)
+
+    def test_keys_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # In this case "Nestable" and No/Non Nestable instead of True and False
+        self.assertIn("Nestable", data["device_count"])
+        self.assertIn("No/Non Nestable", data["device_count"])
+
+    def test_records_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_records_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {})
+
+    def test_keys_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {"device_count": {}})

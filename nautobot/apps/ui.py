@@ -3,6 +3,7 @@
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
 from nautobot.core.ui.choices import EChartsTypeChoices, LayoutChoices, SectionChoices
+from nautobot.core.ui.echarts import queryset_to_nested_dict_keys_as_series, queryset_to_nested_dict_records_as_series
 from nautobot.core.ui.homepage import (
     HomePageBase,
     HomePageGroup,
@@ -78,5 +79,7 @@ __all__ = (
     "Tab",
     "TemplateExtension",
     "TextPanel",
+    "queryset_to_nested_dict_keys_as_series",
+    "queryset_to_nested_dict_records_as_series",
     "render_component_template",
 )

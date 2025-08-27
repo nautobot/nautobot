@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeThema
 
 
@@ -266,3 +268,82 @@ class EChartsBase:
         """Dynamically change the chart type strategy."""
         self.chart_type = new_chart_type
         self.strategy = EChartsStrategyFactory.get_strategy(new_chart_type)
+
+
+def resolve_attr(obj, dotted_field):
+    """
+    Resolve nested attributes like 'location_type__nestable' on a Django model instance.
+    """
+    attrs = dotted_field.split("__")
+    val = obj
+    try:
+        for attr in attrs:
+            val = getattr(val, attr)
+            if val is None:
+                return None
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+    # handle booleans specially
+    if isinstance(val, bool):
+        # take last part of dotted_field ("nestable" in "location_type__nestable")
+        field_label = attrs[-1].replace("_", " ").title()
+        return field_label if val else f"No/Non {field_label}"
+
+    return val
+
+
+def queryset_to_nested_dict_records_as_series(queryset, record_key, value_keys):
+    """
+    Transform data with one series per record.
+    Format: {"<record1>": {"key1": val1, "key2": val2}, "<record2>": {"key1": val3, "key2": val4}}
+
+    Args:
+        queryset: Django queryset with annotated fields
+        record_key: Field name to identify each record (becomes outer keys)
+        value_keys: List of field names to extract as values (becomes inner keys)
+
+    Returns:
+        dict: Nested dictionary with records as series
+    Examples:
+        # Records as series - locations as outer keys
+        queryset_to_nested_dict_records_as_series(qs, record_key='name', value_keys=['prefix_count', 'device_count'])
+        # Returns: {"Location1": {"prefix_count": 10, "device_count": 5}, ...}
+    """
+    result = {}
+
+    for obj in queryset:
+        record_name = str(resolve_attr(obj, record_key))
+        result.setdefault(record_name, {})
+
+        for value_key in value_keys:
+            result[record_name][value_key] = result[record_name].get(value_key, 0) + getattr(obj, value_key)
+    return result
+
+
+def queryset_to_nested_dict_keys_as_series(queryset, record_key, value_keys):
+    """
+    Transform data with one series per key/field.
+    Format: {"key1": {"<record1>": val1, "<record2>": val3}, "key2": {"<record1>": val2, "<record2>": val4}}
+
+    Args:
+        queryset: Django queryset with annotated fields
+        record_key: Field name to identify each record (becomes inner keys)
+        value_keys: List of field names to extract as series (becomes outer keys)
+
+    Returns:
+        dict: Nested dictionary with keys as series
+    Examples:
+        # Keys as series - metrics as outer keys
+        queryset_to_nested_dict_keys_as_series(qs, record_key='name', value_keys=['prefix_count', 'device_count'])
+        # Returns: {"prefix_count": {"Location1": 10, ...}, "device_count": {"Location1": 5, ...}}
+    """
+    result = {}
+
+    for value_key in value_keys:
+        result.setdefault(value_key, {})
+
+        for obj in queryset:
+            record_name = str(resolve_attr(obj, record_key))
+            result[value_key][record_name] = result[value_key].get(record_name, 0) + getattr(obj, value_key)
+    return result

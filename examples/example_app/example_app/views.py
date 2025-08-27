@@ -7,8 +7,10 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.models.querysets import count_related
 from nautobot.core.ui.object_detail import TextPanel
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, Location
+from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
