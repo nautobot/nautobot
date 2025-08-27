@@ -244,7 +244,7 @@ jobs:
         id: "coverage_comment"
         uses: "py-cov-action/python-coverage-comment-action@d1ff8fbb5ff80feedb3faa0f6d7b424f417ad0e1"  # v3.30
         with:
-          GITHUB_TOKEN: "{% raw %}{{ secrets.GITHUB_TOKEN }}{% endraw %}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MINIMUM_GREEN: 90
           MINIMUM_ORANGE: 80
           ANNOTATE_MISSING_LINES: true
