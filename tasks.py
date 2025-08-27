@@ -983,8 +983,8 @@ def tests(
 
     if coverage:
         run_command(context, "coverage combine")
-
-        run_command(context, "coverage report --skip-covered --include 'nautobot/*'")
+        run_command(context, "coverage report --skip-covered")
+        run_command(context, "coverage lcov -o lcov.info")
 
 
 @task(
