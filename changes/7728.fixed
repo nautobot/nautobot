@@ -1,1 +1,1 @@
-Fixed bug in which m2m_changed signals were not being sent when adding ips to interfaces.
+Fixed bug in which m2m_changed signals were not being sent when adding IPs to interfaces.
