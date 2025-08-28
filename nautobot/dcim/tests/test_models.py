@@ -2834,11 +2834,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
 
+        # add a single instance which is already there
+        count = interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
+
         # add multiple instances
         count = interface.add_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
         for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+        # add multiple instances all of which are already there
+        count = interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+        # add multiple IPs some of which are there
+        count = interface.add_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 8)
+        for ip in ips[3:7]:
             self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
 
     def test_remove_ip_addresses(self):
@@ -2863,13 +2882,28 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
 
+        # remove a single instance which has already been removed
+        count = interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
+
         # remove multiple instances
         count = interface.remove_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
 
+        # remove multiple instances all which have already been removed
+        count = interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
+
+        # remove multiple instances some of which have already been removed
+        count = interface.remove_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 2)
+
         count = interface.remove_ip_addresses(ips)
-        self.assertEqual(count, 4)
+        self.assertEqual(count, 2)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 0)
 
         # Test the pre_delete signal for IPAddressToInterface instances

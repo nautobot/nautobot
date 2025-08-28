@@ -636,9 +636,14 @@ class BaseInterface(RelationshipModel):
         if not isinstance(ip_addresses, (tuple, list)):
             ip_addresses = [ip_addresses]
 
-        self.ip_addresses.add(*ip_addresses, through_defaults=through_defaults)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+        # This ensures that ips_to_add only contains IPs which need to be added to the interface. This ensures
+        # that len(ips_to_add) accurately represents the results of the action.
+        ips_to_add = set(ip_addresses) - set(self.ip_addresses.all())
 
-        return len(ip_addresses)
+        if ips_to_add:
+            self.ip_addresses.add(*ips_to_add, through_defaults=through_defaults)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ips_to_add)
 
     add_ip_addresses.alters_data = True
 
@@ -657,20 +662,18 @@ class BaseInterface(RelationshipModel):
         # The delete() call used previously (ref: https://github.com/nautobot/nautobot/issues/3236)
         # meant that if None was passed in, it was silently ignored. Rather that raise an exception,
         # this comprehension maintains backwards compatibility.
-        ip_addresses = [ip for ip in ip_addresses if ip is not None]
+        ip_addresses = {ip for ip in ip_addresses if ip is not None}
 
-        # This checks the IPs passed in to the IPs actually on the interface. By populating
-        # existing_ips correctly, we ensure that the only IPs passed to remove() are IPs known
-        # to be on the interface. This ensures that len(existing_ips) accurately represents
+        # This checks that the IPs passed in are actually on the interface. By populating
+        # ips_to_remove correctly, we ensure that the only IPs passed to remove() are IPs known
+        # to be on the interface. This ensures that len(ips_to_remove) accurately represents
         # the results of the action.
-        ip_pks = {ip.pk for ip in ip_addresses}
-        existing_ip_pks = set(self.ip_addresses.filter(pk__in=ip_pks).values_list("pk", flat=True))
-        existing_ips = [ip for ip in ip_addresses if ip.pk in existing_ip_pks]
+        ips_to_remove = ip_addresses & set(self.ip_addresses.all())
 
-        if existing_ips:
-            self.ip_addresses.remove(*existing_ips)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+        if ips_to_remove:
+            self.ip_addresses.remove(*ips_to_remove)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
 
-        return len(existing_ips)
+        return len(ips_to_remove)
 
     remove_ip_addresses.alters_data = True
 
