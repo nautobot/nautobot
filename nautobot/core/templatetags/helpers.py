@@ -24,7 +24,7 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
-from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
+from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
@@ -842,17 +842,19 @@ def get_attr(obj, attr, default=None):
 
 
 # TODO: Remove this tag in Nautobot 3.0.
-@register.simple_tag()
+
+
+@register.simple_tag
+@deprecation.method_deprecated(
+    "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
+    "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
+    "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
+    "and is a replica of Django 5.2's `querystring` templatetag."
+)
 def querystring(request, **kwargs):
     """
     Append or update the page number in a querystring.
     """
-    logger.warning(
-        "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
-        "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
-        "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
-        "and is a replica of Django 5.2's `querystring` templatetag."
-    )
     querydict = request.GET.copy()
     for k, v in kwargs.items():
         if v is not None:
