@@ -45,6 +45,7 @@ def settings(request):
 def nav_menu(request):
     """
     Expose nav menu data for navigation and global search.
+    Also, indicate whether `"nautobot_version_control"` app is installed in order to render branch picker in nav menu.
     """
     nav_menu_object = {"tabs": {}}
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
@@ -64,8 +65,14 @@ def nav_menu(request):
                                 "weight": item_details["weight"],
                             }
 
+    nav_menu_version_control = None
+    if "nautobot_version_control" in getattr(django_settings, "PLUGINS", []):
+        from nautobot_version_control.utils import active_branch
+        nav_menu_version_control = { "active_branch": active_branch() }
+
     return {
         "nav_menu": nav_menu_object,
+        "nav_menu_version_control": nav_menu_version_control
     }
 
 

@@ -3,6 +3,7 @@
 @use "sass:list";
 @use "sass:map";
 @use "sass:meta";
+@use "sass:string";
 
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
@@ -1488,6 +1489,14 @@ body {
     filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
   }
 
+  @mixin filter-nav-gray-3 {
+    /*
+     * CSS workaround to change element color (including its `background-image`) from white to `$nav-gray-3`.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     */
+    filter: invert(39%) sepia(6%) saturate(1228%) hue-rotate(166deg) brightness(54%) contrast(86%);
+  }
+
   @include box-shadow($box-shadow);
   @include transition($transition-collapse-width);
   align-items: center;
@@ -1524,6 +1533,16 @@ body {
 
     .nb-sidenav-toggler::before { /* Sidenav toggler chevron icon */
       transform: rotate(180deg);
+    }
+
+    #sidenav-branch-picker {
+      .select2-selection__rendered { /* Sidenav branch picker select branch name */
+        @include fade-out;
+      }
+
+      .select2-container--bootstrap-5 .select2-selection--single { /* Sidenav branch picker select chevron icon */
+        background-image: none;
+      }
     }
   }
 
@@ -1691,6 +1710,7 @@ body {
     font-weight: $font-weight-medium;
     padding-block: 0.3125rem; /* 5px */
     padding-inline: #{map.get($spacers, 20)}  #{map.get($spacers, 10)};
+    text-decoration: none;
     text-transform: uppercase;
     width: 100%;
 
@@ -1707,8 +1727,8 @@ body {
       }
     }
 
-    &:focus-visible,
-    &:hover {
+    &:not(:disabled):focus-visible,
+    &:not(:disabled):hover {
       background-color: $navy-1;
     }
 
@@ -1724,6 +1744,16 @@ body {
       z-index: -1;
     }
 
+    &:disabled { /* When list item is disabled */
+      color: $nav-gray-3;
+
+      > :first-child, /* Nav menu tab icon */
+      > :last-child::after { /* Chevron icon */
+        @include filter-nav-gray-3;
+      }
+    }
+
+    &.nb-sidenav-list-item-active,
     &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
@@ -1746,12 +1776,12 @@ body {
       display: inline-flex;
       flex: auto 1 0;
       margin-inline-start: map.get($spacers, 10);
+    }
 
-      &::after { /* Chevron icon */
-        @include chevron(1.5rem); /* 24px */
-        margin-inline-start: auto;
-        transform: rotate(180deg);
-      }
+    &:not(.nb-sidenav-list-item-flat) > :last-child::after { /* Chevron icon, not rendered when `nb-sidenav-list-item` has `nb-sidenav-list-item-flat` class. */
+      @include chevron(1.5rem); /* 24px */
+      margin-inline-start: auto;
+      transform: rotate(180deg);
     }
   }
 
@@ -1769,6 +1799,62 @@ body {
   &:has(> ul .nb-sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
     .nb-sidenav-toggler {
       @include fade-out;
+    }
+  }
+
+  #sidenav-branch-picker {
+    position: relative;
+    width: $sidenav-width-expanded;
+
+    > :first-child { /* Branch icon */
+      height: 1.5rem; /* 24px */
+      left: map.get($spacers, 20);
+      pointer-events: none;
+      position: absolute;
+      top: map.get($spacers, 4);
+      width: 1.5rem; /* 24px */
+      z-index: 2;
+    }
+
+    select,
+    .select2-selection {
+      background-color: $navy-1;
+      border-radius: 0;
+      color: inherit;
+      padding-inline-start: calc(map.get($spacers, 20) + 1.5rem + map.get($spacers, 10)); /* 20px + 24px + 10px = 54px */
+    }
+
+    select,
+    .select2-selection__rendered {
+      font-weight: $font-weight-medium;
+      color: inherit;
+      text-transform: uppercase;
+    }
+
+    .select2-selection__rendered {
+      @include fade-in;
+      @include transition($transition-base);
+    }
+
+    select,
+    .select2-container:not(.select2-container--focus):not(.select2-container--open) .select2-selection:not(:focus-visible):not(:hover) {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    select,
+    .select2-container--bootstrap-5 .select2-selection--single {
+      /*
+       * Change select chevron icon color from `#343a40` (`$gray-800`, default) to `#ffffff` (`$nav-white-0`) and right
+       * offset from `11px` (default) to `13px` to keep it consistent and aligned with with other sidenav chevrons.
+       */
+      $chevron-svg: $s2bs5-indicator;
+      $stroke-color: #{$form-select-indicator-color};
+      $stroke-index: string.index($chevron-svg, $stroke-color);
+      $stroke-length: string.length($stroke-color);
+      $next-chevron-svg: #{string.slice($chevron-svg, 1, $stroke-index - 1)}#{$nav-white-0}#{string.slice($chevron-svg, $stroke-index + $stroke-length, -1)};
+      background-image: escape-svg($next-chevron-svg);
+      background-position: right 0.8125rem center;
     }
   }
 }
