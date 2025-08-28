@@ -841,10 +841,24 @@ def get_attr(obj, attr, default=None):
     return getattr(obj, attr, default)
 
 
+def _base_querystring(request, **kwargs):
+    querydict = request.GET.copy()
+    for k, v in kwargs.items():
+        if v is not None:
+            querydict[k] = str(v)
+        elif k in querydict:
+            querydict.pop(k)
+    query_string = querydict.urlencode(safe="/")
+    if query_string:
+        return "?" + query_string
+    else:
+        return ""
+
+
 # TODO: Remove this tag in Nautobot 3.0.
 
 
-@register.simple_tag
+@register.simple_tag()
 @deprecation.method_deprecated(
     "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
     "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
@@ -852,38 +866,12 @@ def get_attr(obj, attr, default=None):
     "and is a replica of Django 5.2's `querystring` templatetag."
 )
 def querystring(request, **kwargs):
-    """
-    Append or update the page number in a querystring.
-    """
-    querydict = request.GET.copy()
-    for k, v in kwargs.items():
-        if v is not None:
-            querydict[k] = str(v)
-        elif k in querydict:
-            querydict.pop(k)
-    query_string = querydict.urlencode(safe="/")
-    if query_string:
-        return "?" + query_string
-    else:
-        return ""
+    return _base_querystring(request, **kwargs)
 
 
 @register.simple_tag()
 def legacy_querystring(request, **kwargs):
-    """
-    Append or update the page number in a querystring.
-    """
-    querydict = request.GET.copy()
-    for k, v in kwargs.items():
-        if v is not None:
-            querydict[k] = str(v)
-        elif k in querydict:
-            querydict.pop(k)
-    query_string = querydict.urlencode(safe="/")
-    if query_string:
-        return "?" + query_string
-    else:
-        return ""
+    return _base_querystring(request, **kwargs)
 
 
 # Note: This is vendored from Django 5.2
