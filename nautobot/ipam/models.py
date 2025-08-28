@@ -1117,9 +1117,9 @@ class Prefix(PrimaryModel):
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
             [
-                self.ip_version == 6,
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_6,
                 self.type == choices.PrefixTypeChoices.TYPE_POOL,
-                self.ip_version == 4 and self.prefix_length >= 31,
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_4 and self.prefix_length >= 31,
             ]
         ):
             return available_ips
@@ -1244,7 +1244,7 @@ class Prefix(PrimaryModel):
             [
                 denominator > 2,
                 self.type == choices.PrefixTypeChoices.TYPE_NETWORK,
-                self.ip_version == 4,
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_4,
             ]
         ):
             if not any([self.network in numerator_set, self.broadcast in numerator_set]):
@@ -1424,7 +1424,10 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"__all__": "Host address cannot be changed once created"})
 
         # Validate IP status selection
-        if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
+        if (
+            self.type == choices.IPAddressTypeChoices.TYPE_SLAAC
+            and self.ip_version != choices.IPAddressVersionChoices.VERSION_6
+        ):
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
         closest_parent = self._get_closest_parent()
