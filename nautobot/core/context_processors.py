@@ -68,12 +68,10 @@ def nav_menu(request):
     nav_menu_version_control = None
     if "nautobot_version_control" in getattr(django_settings, "PLUGINS", []):
         from nautobot_version_control.utils import active_branch
-        nav_menu_version_control = { "active_branch": active_branch() }
 
-    return {
-        "nav_menu": nav_menu_object,
-        "nav_menu_version_control": nav_menu_version_control
-    }
+        nav_menu_version_control = {"active_branch": active_branch()}
+
+    return {"nav_menu": nav_menu_object, "nav_menu_version_control": nav_menu_version_control}
 
 
 def sso_auth(request):
