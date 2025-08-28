@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.16b1"
+version = "2.4.17b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.3.0"
+django-constance = "~4.3.2"
 # Permit cross-domain API requests
 django-cors-headers = "~4.7.0"
 # Store files in the database for background tasks
@@ -131,12 +131,12 @@ packaging = ">=23.1"
 # Image processing library
 Pillow = "^11.0"
 # Custom prometheus metrics
-prometheus-client = "~0.22.0"
+prometheus-client = "~0.22.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.10"
 # A Python slugify application that handles unicode.
-python-slugify = "~8.0.3"
+python-slugify = "~8.0.4"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
@@ -148,7 +148,7 @@ social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
-svgwrite = "~1.4.2"
+svgwrite = "~1.4.3"
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
@@ -198,9 +198,9 @@ mkdocs-glightbox = "^0.4.0"
 # 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
 mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.3.7"
+mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.16"
+mkdocs-material = "~9.6.17"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -212,13 +212,13 @@ mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.3.7"
+pylint = "~3.3.8"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.31"
+pymarkdownlnt = "~0.9.32"
 # Combination linter and code formatter
-ruff = "~0.12.8"
+ruff = "~0.12.9"
 # YAML linting
 yamllint = "~1.37.1"
 
@@ -249,12 +249,17 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 concurrency = ["multiprocessing", "thread"]
+disable_warnings = ["already-imported"]
+include = [
+    "nautobot/*",
+]
 omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
+relative_files = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"

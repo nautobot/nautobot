@@ -1,6 +1,6 @@
 Jinja2==3.1.6
-mkdocs==1.6.0
-mkdocs-material==9.6.16
+mkdocs==1.6.1
+mkdocs-material==9.6.17
 mkdocstrings==0.30.0
 mkdocstrings-python==1.16.12
 zipp==3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
