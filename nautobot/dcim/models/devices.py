@@ -18,6 +18,7 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
@@ -897,7 +898,7 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
-        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache_key = construct_cache_key(self, method_name="has_module_bays")
         cache.delete(cache_key)
         return instantiated_components
 
@@ -996,7 +997,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
         """
-        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache_key = construct_cache_key(self, method_name="has_module_bays")
         module_bays_exists = cache.get(cache_key)
         if module_bays_exists is None:
             module_bays_exists = self.module_bays.exists()

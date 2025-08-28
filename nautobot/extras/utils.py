@@ -25,6 +25,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
@@ -138,7 +139,7 @@ def change_logged_models_queryset():
     Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
     queryset = None
-    cache_key = "nautobot.extras.utils.change_logged_models_queryset"
+    cache_key = construct_cache_key(change_logged_models_queryset)
     with contextlib.suppress(redis.exceptions.ConnectionError):
         queryset = cache.get(cache_key)
     if queryset is None:
@@ -207,7 +208,7 @@ class FeatureQuery:
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
         choices = None
-        cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
+        cache_key = construct_cache_key(self, method_name="choices", feature=self.feature)
         with contextlib.suppress(redis.exceptions.ConnectionError):
             choices = cache.get(cache_key)
         if choices is None:
@@ -223,7 +224,7 @@ class FeatureQuery:
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
         subclasses = None
-        cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
+        cache_key = construct_cache_key(self, method_name="subclasses", feature=self.feature)
         with contextlib.suppress(redis.exceptions.ConnectionError):
             subclasses = cache.get(cache_key)
         if subclasses is None:

@@ -38,6 +38,7 @@ from nautobot.core.graphql.schema import (
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import create_test_user, NautobotTestClient, TestCase
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -403,8 +404,10 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def tearDown(self):
         """Ensure that relationship caches are cleared to avoid leakage into other tests."""
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
+            cache.delete_pattern(f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source')}(*)")
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination')}(*)"
+            )
 
     def test_extend_relationship_default_prefix(self):
         """Verify that relationships are correctly added to the schema."""
