@@ -51,13 +51,13 @@
                     </form>
                 </li>
                 <li>
-                    {% if nav_menu_version_control.active_branch == 'default' or nav_menu_version_control.active_branch == 'main' %}
+                    {% if nav_menu_version_control.active_branch == 'main' %}
                         <button class="nb-sidenav-list-item nb-sidenav-list-item-flat" disabled type="button">
                             <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
                             <span>View diffs</span>
                         </button>
                     {% else %}
-                    {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
+                        {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
                         <a class="nb-sidenav-list-item nb-sidenav-list-item-flat{% if request.path == branch_diffs_url %} nb-sidenav-list-item-active{% endif %}" href="{{ branch_diffs_url }}">
                             <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
                             <span>View diffs</span>
