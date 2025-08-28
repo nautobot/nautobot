@@ -19,7 +19,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Dynamic Groups](../../../../user-guide/platform-functionality/dynamicgroup.md) | ❌ | ❌ | ✅ | ✅ |
 | [Notes](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../../../../user-guide/platform-functionality/relationship.md) | ❌ | ❌ | ✅ | ✅ |
-| [Saved Views](../../../../user-guide/platform-functionality/savedview.md) | ❌ | ❌ | ✅ | ✅ |
+| [Saved Views](../../../../user-guide/platform-functionality/user-interface/savedview.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../../../../user-guide/platform-functionality/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
 +++ 2.2.0 "Support for Contact and Team assignment on all models"
