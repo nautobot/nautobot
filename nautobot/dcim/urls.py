@@ -27,6 +27,7 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
+router.register("console-ports", views.ConsolePortUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -497,11 +498,11 @@ urlpatterns = [
     #     views.ConsolePortBulkRenameView.as_view(),
     #     name="consoleport_bulk_rename",
     # ),
-    path(
-        "console-ports/disconnect/",
-        views.ConsolePortBulkDisconnectView.as_view(),
-        name="consoleport_bulk_disconnect",
-    ),
+    # path(
+    #     "console-ports/disconnect/",
+    #     views.ConsolePortBulkDisconnectView.as_view(),
+    #     name="consoleport_bulk_disconnect",
+    # ),
     # path(
     #     "console-ports/delete/",
     #     views.ConsolePortBulkDeleteView.as_view(),
@@ -530,23 +531,23 @@ urlpatterns = [
     #     name="consoleport_notes",
     #     kwargs={"model": ConsolePort},
     # ),
-    path(
-        "console-ports/<uuid:pk>/trace/",
-        views.PathTraceView.as_view(),
-        name="consoleport_trace",
-        kwargs={"model": ConsolePort},
-    ),
+    # path(
+    #     "console-ports/<uuid:pk>/trace/",
+    #     views.PathTraceView.as_view(),
+    #     name="consoleport_trace",
+    #     kwargs={"model": ConsolePort},
+    # ),
     path(
         "console-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
         views.CableCreateView.as_view(),
         name="consoleport_connect",
         kwargs={"termination_a_type": ConsolePort},
     ),
-    path(
-        "devices/console-ports/add/",
-        views.DeviceBulkAddConsolePortView.as_view(),
-        name="device_bulk_add_consoleport",
-    ),
+    # path(
+    #     "devices/console-ports/add/",
+    #     views.DeviceBulkAddConsolePortView.as_view(),
+    #     name="device_bulk_add_consoleport",
+    # ),
     # Console server ports
     path(
         "console-server-ports/",

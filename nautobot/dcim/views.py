@@ -207,6 +207,15 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
         )
 
 
+class BaseDeviceComponentsBulkRenameMixin:
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device:
+            return selected_object.device.display
+        if selected_object and selected_object.module:
+            return selected_object.module.display
+        return ""
+
 class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -1320,27 +1329,98 @@ class ModuleTypeUIViewSet(
         )
 
 
+class PathTraceMixin:
+    """
+    Trace a cable path beginning from the given path endpoint (origin).
+    """
 
-class ModuleBayCommonViewSetMixin:
+    # template_name = "dcim/cable_trace.html"
+
+    # def dispatch(self, request, *args, **kwargs):
+    #     model = kwargs.pop("model")
+    #     self.queryset = model.objects.all()
+
+    #     return super().dispatch(request, *args, **kwargs)
+
+    def get_trace_context(self, request, *args, **kwargs):
+        instance = self.get_object()
+        related_paths = []
+        # model = self.queryset.model
+
+        # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin
+        if isinstance(instance, PathEndpoint):
+            path = instance._path
+
+        # Otherwise, find all CablePaths which traverse the specified object
+        else:
+            related_paths = CablePath.objects.filter(path__contains=instance).prefetch_related("origin")
+            # Check for specification of a particular path (when tracing pass-through ports)
+
+            cablepath_id = request.GET.get("cablepath_id")
+            if cablepath_id is not None:
+                try:
+                    path_id = uuid.UUID(cablepath_id)
+                except (AttributeError, TypeError, ValueError):
+                    path_id = None
+                try:
+                    path = related_paths.get(pk=path_id)
+                except CablePath.DoesNotExist:
+                    path = related_paths.first()
+            else:
+                path = related_paths.first()
+
+        return {
+            "path": path,
+            "related_paths": related_paths,
+            "total_length": path.get_total_length() if path else None,
+        }
+
+
+class BulkDisconnectViewSetMixin:
     """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
 
-    def _disconnect(self, request, *args, **kwargs):
-        if request.method == "POST":
-            return self.perform_create(request, *args, **kwargs)
+    def _bulk_disconnect(self, request, *args, **kwargs):
+        selected_objects = []
+        return_url = self.get_return_url(request)
 
-        form = self.create_form_class(initial=request.GET)
-        model_form = self.model_form_class(request.GET)
+        # Create a new Form class from ConfirmationForm
+        class _Form(ConfirmationForm):
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput())
 
-        return Response(
+        if "_confirm" in request.POST:
+            form = _Form(request.POST)
+
+            if form.is_valid():
+                with transaction.atomic():
+                    count = 0
+                    for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
+                        if obj.cable is None:
+                            continue
+                        obj.cable.delete()
+                        count += 1
+
+                messages.success(
+                    request,
+                    f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
+                )
+
+                return redirect(return_url)
+
+        else:
+            form = _Form(initial={"pk": request.POST.getlist("pk")})
+            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
+        template_name = "dcim/bulk_disconnect.html"
+
+        return render(
+            request,
+            template_name,
             {
-                "template": self.create_template_name,
-                "component_type": self.queryset.model._meta.verbose_name,
-                "model_form": model_form,
                 "form": form,
-                "return_url": self.get_return_url(request),
+                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": return_url,
             },
         )
-
 
 
 #
@@ -3026,13 +3106,36 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 #
 
 
-class ConsolePortUIViewSet(NautobotUIViewSet):
+
+class ConsolePortUIViewSet(
+    PathTraceMixin,
+    BulkDisconnectViewSetMixin,
+    ModuleBayCommonViewSetMixin,
+    BaseDeviceComponentsBulkRenameMixin,
+    NautobotUIViewSet,
+
+
+    # ObjectDetailViewMixin,
+    # ObjectListViewMixin,
+    # ObjectEditViewMixin,
+    # ObjectDestroyViewMixin,
+    # ObjectBulkDestroyViewMixin,
+    # # ObjectBulkCreateViewMixin,
+    # ObjectBulkUpdateViewMixin,
+    # ObjectChangeLogViewMixin,
+    # ObjectNotesViewMixin,
+
+
+    # BaseDeviceComponentsBulkRenameView,
+):
     bulk_update_form_class = forms.ConsolePortBulkEditForm
     filterset_class = filters.ConsolePortFilterSet
     filterset_form_class = forms.ConsolePortFilterForm
     update_form_class = forms.ConsolePortForm
     create_form_class = forms.ConsolePortCreateForm
     serializer_class = serializers.ConsolePortSerializer
+    model_form_class = forms.ModuleBayForm
+    create_template_name = "dcim/device_component_add.html"
     table_class = tables.ConsolePortTable
     queryset = ConsolePort.objects.all()
     action_buttons = ("import", "export")
@@ -3043,7 +3146,22 @@ class ConsolePortUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             context["device_breadcrumb_url"] = "dcim:device_consoleports"
             context["module_breadcrumb_url"] = "dcim:module_consoleports"
+        # elif self.action == "trace":
+        #     context.update(self.get_trace_context(request, instance))
+        # print(instance)
         return context
+
+
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_consoleport"], # Confirm
+    )
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
 
     @action(
         detail=False,
@@ -3051,17 +3169,22 @@ class ConsolePortUIViewSet(NautobotUIViewSet):
         url_path="disconnect",
         url_name="bulk_disconnect",
         custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_consoleporttemplate"],
+        custom_view_additional_permissions=["dcim.change_consoleport"],
     )
     def bulk_disconnect(self, request, *args, **kwargs):
+        self.form = forms.ConsolePortForm
         return self._bulk_disconnect(request, *args, **kwargs)
 
-class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = ConsolePort.objects.all()
+    @action(detail=True, name="trace", methods=["get"], url_path="trace", url_name="trace")
+    def trace(self, request, *args, **kwargs):
+        return Response(self.get_trace_context(request, *args, **kwargs))
+
+# class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
+#     queryset = ConsolePort.objects.all()
 
 
-class ConsolePortBulkDisconnectView(BulkDisconnectView):
-    queryset = ConsolePort.objects.all()
+# class ConsolePortBulkDisconnectView(BulkDisconnectView):
+#     queryset = ConsolePort.objects.all()
 
 
 #
