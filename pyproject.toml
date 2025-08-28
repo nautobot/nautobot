@@ -249,12 +249,17 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 concurrency = ["multiprocessing", "thread"]
+disable_warnings = ["already-imported"]
+include = [
+    "nautobot/*",
+]
 omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
+relative_files = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
