@@ -67,7 +67,7 @@ def nav_menu(request):
 
     nav_menu_version_control = None
     if "nautobot_version_control" in getattr(django_settings, "PLUGINS", []):
-        from nautobot_version_control.utils import active_branch
+        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
 
         nav_menu_version_control = {"active_branch": active_branch()}
 
