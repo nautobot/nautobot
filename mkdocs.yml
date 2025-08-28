@@ -308,7 +308,7 @@ plugins:
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
-        "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
+        "models/extras/savedview.md": "user-guide/platform-functionality/user-interface/savedview.md"
         "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
         "models/wireless/supporteddatarate.md": "user-guide/core-data-model/wireless/supporteddatarate.md"
         "models/wireless/radioprofile.md": "user-guide/core-data-model/wireless/radioprofile.md"
@@ -323,6 +323,7 @@ plugins:
         "user-guide/administration/installation-extras/docker.md": "user-guide/administration/guides/docker.md"
         "user-guide/administration/installation-extras/health-checks.md": "user-guide/administration/guides/health-checks.md"
         "user-guide/administration/installation-extras/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
+        "user-guide/platform-functionality/savedview.md": "user-guide/platform-functionality/user-interface/savedview.md"
 
 nav:
   - Overview:
@@ -514,7 +515,6 @@ nav:
           - Approval Workflows: "user-guide/platform-functionality/approval-workflow.md"
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
-          - Configurable Columns: "user-guide/platform-functionality/configurablecolumns.md"
           - Custom Fields: "user-guide/platform-functionality/customfield.md"
           - Custom Links: "user-guide/platform-functionality/customlink.md"
           - Data Validation: "user-guide/platform-functionality/data-validation.md"
@@ -549,11 +549,13 @@ nav:
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
-          - Saved Views: "user-guide/platform-functionality/savedview.md"
           - Secrets: "user-guide/platform-functionality/secret.md"
           - Statuses: "user-guide/platform-functionality/status.md"
           - Tags: "user-guide/platform-functionality/tag.md"
           - Template Filters: "user-guide/platform-functionality/template-filters.md"
+          - User Interface:
+              - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
+              - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
