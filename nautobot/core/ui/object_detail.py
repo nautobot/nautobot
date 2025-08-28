@@ -182,6 +182,7 @@ class Button(Component):
         attributes=None,
         size=None,
         link_includes_pk=True,
+        context_object_key=None,
         **kwargs,
     ):
         """
@@ -194,6 +195,7 @@ class Button(Component):
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
                 `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
                 and override the `get_link()` method.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -213,6 +215,7 @@ class Button(Component):
         self.attributes = attributes
         self.size = size
         self.link_includes_pk = link_includes_pk
+        self.context_object_key = context_object_key
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
@@ -227,7 +230,7 @@ class Button(Component):
         more advanced link construction.
         """
         if self.link_name and self.link_includes_pk:
-            obj = get_obj_from_context(context)
+            obj = get_obj_from_context(context, self.context_object_key)
             return reverse(self.link_name, kwargs={"pk": obj.pk})
         elif self.link_name:
             return reverse(self.link_name)
@@ -456,7 +459,7 @@ class DistinctViewTab(Tab):
             return format_html(
                 "{} {}",
                 self.label,
-                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count)),
+                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count, True)),
             )
         except AttributeError:
             logger.warning(
@@ -685,6 +688,8 @@ class ObjectsTablePanel(Panel):
         order_by_fields=None,
         table_title=None,
         max_display_count=None,
+        paginate=True,
+        show_table_config_button=True,
         include_columns=None,
         exclude_columns=None,
         add_button_route="default",
@@ -725,6 +730,10 @@ class ObjectsTablePanel(Panel):
             order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
                 If None, defaults to the `get_paginate_count()` (which is user's preference or a global setting).
+            paginate (bool, optional): If False, do not attach a paginator to the table and render all rows
+                (or up to `max_display_count` if provided). Defaults to True.
+            show_table_config_button (bool, optional): If False, hide the small "Configure" button rendered in the
+                panel header for this table. Defaults to True.
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
@@ -775,6 +784,8 @@ class ObjectsTablePanel(Panel):
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
+        self.paginate = paginate
+        self.show_table_config_button = show_table_config_button
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
@@ -893,13 +904,24 @@ class ObjectsTablePanel(Panel):
         ):
             body_content_table.columns.show("pk")
 
-        per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
-        paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
-        RequestConfig(request, paginate).configure(body_content_table)
-        try:
-            more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
-        except TypeError:
-            more_queryset_count = max(len(body_content_table.data.data) - per_page, 0)
+        more_queryset_count = 0
+        if self.paginate:
+            per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
+            RequestConfig(request, paginate).configure(body_content_table)
+            try:
+                more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+            except TypeError:
+                more_queryset_count = max(len(body_content_table.data.data) - per_page, 0)
+        elif self.max_display_count is not None:
+            # If not paginating but a cap is desired, slice the table's data source.
+            try:
+                more_queryset_count = max(body_content_table.data.data.count() - self.max_display_count, 0)
+                body_content_table.data.data = body_content_table.data.data[: self.max_display_count]
+            except TypeError:
+                # Non-queryset iterable; fall back to list slicing
+                more_queryset_count = max(len(body_content_table.data.data) - self.max_display_count, 0)
+                body_content_table.data.data = list(body_content_table.data.data)[: self.max_display_count]
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
@@ -931,6 +953,7 @@ class ObjectsTablePanel(Panel):
             "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
+            "show_table_config_button": self.show_table_config_button,
         }
 
 
@@ -1889,7 +1912,8 @@ class _ObjectDetailContactsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).associated_contacts.count())
+                "utilities/templatetags/badge.html",
+                badge(get_obj_from_context(context).associated_contacts.count(), True),
             ),
         )
 
@@ -1933,7 +1957,7 @@ class _ObjectDetailGroupsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count())
+                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count(), True)
             ),
         )
 
@@ -1980,6 +2004,6 @@ class _ObjectDetailMetadataTab(Tab):
             self.label,
             render_to_string(
                 "utilities/templatetags/badge.html",
-                badge(get_obj_from_context(context).associated_object_metadata.count()),
+                badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )
