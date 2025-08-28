@@ -1167,7 +1167,7 @@ class EChartsPanel(Panel, EChartsBase):
         chart_kwargs=None,
         width="100%",
         height="32rem",
-        body_wrapper_template_path="echarts/echarts.html",
+        body_wrapper_template_path="components/echarts.html",
         **kwargs,
     ):
         """
@@ -1178,7 +1178,7 @@ class EChartsPanel(Panel, EChartsBase):
             chart_class (class): EChartsBase subclass to instantiate.
             chart_kwargs (dict): Kwargs to pass to chart_class constructor.
             width (str): CSS width for the chart container (default: "100%").
-            height (str): CSS height for the chart container (default: "400px").
+            height (str): CSS height for the chart container (default: "32rem").
             container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
             body_content_template_path (str): Template path for rendering the chart content.
         """

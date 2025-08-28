@@ -2,13 +2,47 @@
 
 This module is based on [Apache ECharts](https://echarts.apache.org/en/index.html). To create and configure charts in Nautobot, the `EChartsBase` class is used. It handles transforming input data, applying themes, and generating a valid ECharts option config JSON.
 
-## EChartsBase
+## [EChartsBase](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.EChartsBase)
 
 Base definition for an ECharts chart (no rendering logic). This class transforms input data, applies theme colors, and generates a valid ECharts option config. Currently, ECharts supports three types:
 
 - [bar](#bar-type)
 - [pie](#pie-type)
 - [line](#line-type)
+
+### Data Handling
+
+The `data` argument can be provided in **two formats**:
+
+1. Raw nested format (more user-friendly):
+    ```no-highlight
+    {
+        "Series1": {"x1": val1, "x2": val2},
+        "Series2": {"x1": val3, "x2": val4},
+    }
+    ```
+    - Keys represent series names.
+    - Each series maps x-axis categories (e.g. "x1", "x2") to numeric values.
+    - Internally, this is transformed into the normalized format described below.
+
+2. Normalized internal format (directly compatible with [ECharts](https://echarts.apache.org/en/option.html)):
+    ``` no-highlight
+    {
+        "x": ["x1", "x2"],
+        "series": [
+            {"name": "Series1", "data": [val1, val2]},
+            {"name": "Series2", "data": [val3, val4]},
+        ]
+    }
+    ```
+    - `x` defines the list of x-axis labels (categories).
+    - `series` is a list of objects, each containing:
+        - "name": Series name (legend entry).
+        - "data": Numeric values aligned with the order of x.
+
+3. From a QuerySet via helper functions:
+    - [Keys as series](#keys-as-series-value_keys-as-outer-keys)
+    - [Records as series](#records-as-series-record_key-as-outer-keys)
 
 ### Additional Options
 
@@ -32,7 +66,7 @@ template_name = "detail.html"
 def get_extra_context(self, request, instance):
     chart = EChartsBase(
         chart_type=EChartsTypeChoices.BAR,
-        header="Traffic per Interface",
+        "header": "Compliance per Feature",
         description="Example chart",
         data={
             "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
@@ -55,7 +89,7 @@ Corresponding Template (`detail.html`)
 
 ```no-highlight
 {% load helpers %}
-{% render_echart chart chart_config chart_widht chart_height chart_container_id %}
+{% render_echart chart chart_config chart_width chart_height chart_container_id %}
 ```
 
 ## Example Usage as a Nautobot UI Component
@@ -74,7 +108,7 @@ object_detail_content = object_detail.ObjectDetailContent(
             label="EChart - BAR",
             chart_kwargs={
                 "chart_type": EChartsTypeChoices.BAR,
-                "header": "Traffic per Interface Bar",
+                "header": "Compliance per Feature",
                 "description": "Example bar chart from EChartsBase",
                 "data": {"Compliant": {"aaa": 5, "dns": 12, "ntp": 8}, "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15}},
             },
@@ -99,9 +133,9 @@ object_detail_content = object_detail.ObjectDetailContent(
             label="EChart - PIE",
             chart_kwargs={
                 "chart_type": EChartsTypeChoices.PIE,
-                "header": "Traffic per Interface Pie",
+                "header": "Number of device - group by device type (Pie)",
                 "description": "Example pie chart from EChartsBase",
-                "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                "data": {"Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}},
             },
         ),
     ]
@@ -127,9 +161,9 @@ object_detail_content = object_detail.ObjectDetailContent(
             label="EChart - LINE",
             chart_kwargs={
                 "chart_type": EChartsTypeChoices.LINE,
-                "header": "Traffic per Interface Line",
+                "header": "Number of device - group by device type (Line)",
                 "description": "Example line chart from EChartsBase",
-                "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                "data": {"Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}},
             },
         ),
     ]

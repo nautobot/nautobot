@@ -7,10 +7,8 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
-from nautobot.core.models.querysets import count_related
 from nautobot.core.ui.object_detail import TextPanel
-from nautobot.dcim.models import Device, Location
-from nautobot.ipam.models import Prefix
+from nautobot.dcim.models import Device
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -142,9 +140,11 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - LINE",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.LINE,
-                    "header": "Traffic per Interface Line",
+                    "header": "Number of device - group by device type (Line)",
                     "description": "Example line chart from EChartsBase",
-                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
                 },
             ),
             ui.EChartsPanel(
@@ -153,9 +153,11 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - PIE",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.PIE,
-                    "header": "Traffic per Interface Pie",
+                    "header": "Number of device - group by device type (Pie)",
                     "description": "Example pie chart from EChartsBase",
-                    "data": {"Traffic Sources": {"Direct": 335, "Email": 310, "Union Ads": 234, "Video Ads": 135}},
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
                 },
             ),
             ui.EChartsPanel(
@@ -164,7 +166,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - BAR",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.BAR,
-                    "header": "Traffic per Interface Bar",
+                    "header": "Compliance per Feature",
                     "description": "Example bar chart from EChartsBase",
                     "data": {
                         "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},

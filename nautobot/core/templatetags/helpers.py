@@ -1328,7 +1328,7 @@ def get_breadcrumbs(context):
     return crumbs
 
 
-@register.inclusion_tag("echarts/templatetags/echarts.html")
+@register.inclusion_tag("echarts/echarts.html")
 def render_echart(chart, chart_config, chart_width, chart_height, chart_container_id):
     """
     Render ECharts chart with provided chart object and config.

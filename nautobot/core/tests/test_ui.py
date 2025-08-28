@@ -253,18 +253,18 @@ class QuerysetToNestedDictTests(TestCase):
             self.qs, record_key="location_type__nestable", value_keys=["device_count"]
         )
         # should map boolean to friendly labels
-        # "Nestable" and No/Non Nestable instead of True and False
+        # "Nestable" and Not Nestable instead of True and False
         self.assertIn("Nestable", data)
-        self.assertIn("No/Non Nestable", data)
+        self.assertIn("Not Nestable", data)
 
     def test_keys_as_series_nested_record_key(self):
         data = queryset_to_nested_dict_keys_as_series(
             self.qs, record_key="location_type__nestable", value_keys=["device_count"]
         )
         # should map boolean to friendly labels
-        # In this case "Nestable" and No/Non Nestable instead of True and False
+        # In this case "Nestable" and Not Nestable instead of True and False
         self.assertIn("Nestable", data["device_count"])
-        self.assertIn("No/Non Nestable", data["device_count"])
+        self.assertIn("Not Nestable", data["device_count"])
 
     def test_records_as_series_empty_queryset(self):
         data = queryset_to_nested_dict_records_as_series(

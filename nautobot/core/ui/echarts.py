@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeThema
+from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeTheme
 
 
 # Strategy Interface
@@ -23,10 +23,10 @@ class EChartsStrategy(ABC):
         """Additional chart-specific configuration."""
         return {}
 
-    def get_toolbox_config(self, toolbox_enable, save_image_options={}, data_view_options={}):
+    def get_toolbox_config(self, show_toolbox, save_image_options={}, data_view_options={}):
         """Default toolbox config, can be overridden."""
         toolbox_config = {
-            "show": toolbox_enable,
+            "show": show_toolbox,
             "feature": {
                 "dataView": data_view_options,
                 "saveAsImage": save_image_options,
@@ -36,19 +36,41 @@ class EChartsStrategy(ABC):
 
 
 class BarEChartsStrategy(EChartsStrategy):
+    """Strategy for rendering bar charts using ECharts.
+
+    This strategy transforms the internal data format into the
+    configuration dictionary required by ECharts for bar charts.
+    """
+
     def get_series_config(self, data):
+        """Build the series configuration for a bar chart.
+
+        Args:
+            data (dict): Internal chart data in the form
+            Each series item supports the base keys:
+                - "name": str   - Legend label.
+                - "data": list  - Values aligned with data["x"].
+        Returns:
+            list[dict]: ECharts-compatible `series` config for bar.
+
+        """
         series_data = data.get("series", [])
         return [
             {
                 "name": s["name"],
-                "type": "bar",
+                "type": EChartsTypeChoices.BAR,
                 "data": s["data"],
-                "itemStyle": s.get("itemStyle", {}),
             }
             for s in series_data
         ]
 
     def get_axis_config(self, data, x_label, y_label):
+        """Build the axis configuration for a bar chart.
+
+        For more information check:
+        - https://echarts.apache.org/en/option.html#xAxis
+        - https://echarts.apache.org/en/option.html#yAxis
+        """
         return {
             "xAxis": {"name": x_label, "data": data.get("x", []), "type": "category"},
             "yAxis": {"name": y_label, "type": "value"},
@@ -56,12 +78,34 @@ class BarEChartsStrategy(EChartsStrategy):
 
 
 class PieEChartsStrategy(EChartsStrategy):
+    """Strategy for rendering pie charts using ECharts.
+
+    This strategy transforms the internal data format into the
+    configuration dictionary required by ECharts for pie charts.
+    """
+
     def get_series_config(self, data):
+        """Build the series configuration for a pie chart.
+
+        Args:
+            data (dict): Internal chart data in the form
+
+            Each series item supports the base keys:
+                - "name": str   - Legend label.
+                - "data": list  - Values aligned with data["x"], used to form pie slices.
+
+            Pie-specific optional keys:
+                - "radius": str|list - Size of pie (default "50%"). Pie radius, e.g. "50%" or ["40%", "70%"]. See: https://echarts.apache.org/en/option.html#series-pie.radius
+                - "center": list     - Position of pie center (default ["50%", "50%"]). Center positionvof Pie chart, e.g. ["50%", "50%"]. The first of which is the horizontal position, and the second is the vertical position. See: https://echarts.apache.org/en/option.html#series-pie.center
+        Returns:
+            list[dict]: ECharts-compatible `series` config for pie.
+
+        """
         series_data = data.get("series", [])
         return [
             {
                 "name": s["name"],
-                "type": "pie",
+                "type": EChartsTypeChoices.PIE,
                 "data": [{"name": name, "value": value} for name, value in zip(data.get("x", []), s["data"])],
                 "radius": s.get("radius", "50%"),
                 "center": s.get("center", ["50%", "50%"]),
@@ -74,16 +118,45 @@ class PieEChartsStrategy(EChartsStrategy):
         return {}
 
     def get_tooltip_config(self):
+        """Override tooltip configuration for pie charts.
+
+        Returns:
+            dict: Custom tooltip config with percentage formatting.
+        """
         return {"trigger": "item", "formatter": "{a} <br/>{b}: {c} ({d}%)"}
 
 
 class LineEChartsStrategy(EChartsStrategy):
+    """Strategy for rendering line charts using ECharts.
+
+    This strategy transforms the internal data format into the
+    configuration dictionary required by ECharts for line charts.
+    """
+
     def get_series_config(self, data):
+        """Build the series configuration for a line chart.
+
+        Args:
+            data (dict): Internal chart data in the form
+
+            Each series item supports the base keys:
+                - "name": str   - Legend label.
+                - "data": list  - Values aligned with data["x"]
+
+            Line-specific optional keys:
+            - "smooth": bool     - Whether to show as smooth curve (default False).
+            - "lineStyle": dict  - Styling options for the line (e.g., {"type": "dashed"}).
+
+        Returns:
+            list[dict]: ECharts-compatible `series` config for line.
+
+
+        """
         series_data = data.get("series", [])
         return [
             {
                 "name": s["name"],
-                "type": "line",
+                "type": EChartsTypeChoices.LINE,
                 "data": s["data"],
                 "smooth": s.get("smooth", False),
                 "lineStyle": s.get("lineStyle", {}),
@@ -92,6 +165,12 @@ class LineEChartsStrategy(EChartsStrategy):
         ]
 
     def get_axis_config(self, data, x_label, y_label):
+        """Build the axis configuration for a bar chart.
+
+        For more information check:
+        - https://echarts.apache.org/en/option.html#xAxis
+        - https://echarts.apache.org/en/option.html#yAxis
+        """
         return {
             "xAxis": {"name": x_label, "data": data.get("x", []), "type": "category"},
             "yAxis": {"name": y_label, "type": "value"},
@@ -126,9 +205,9 @@ class EChartsBase:
         x_label="X",
         y_label="Y",
         legend={},
-        theme=EChartsTypeThema.DEFAULT,
+        theme=EChartsTypeTheme.DEFAULT,
         renderer="canvas",
-        toolbox_enable=True,
+        show_toolbox=True,
         save_image_options=None,
         data_view_options=None,
         additional_config=None,
@@ -141,21 +220,32 @@ class EChartsBase:
             data (dict|QuerySet): The dataset to render.
             header (str): Title/header of the chart.
             description (str): More detailed explanation.
-            x_label (str): X-axis label (default: sane fallback).
-            y_label (str): Y-axis label (default: sane fallback).
-            legend (dict): Position of legend. It is always placed at the upper right corner of the chart. If you want to change it use template like
-            {
-                orient: 'vertical',
-                right: 10,
-                top: 'center'
-            } more details here: https://echarts.apache.org/handbook/en/concepts/legend
-            theme (str): Theme for chart, default "NTC".
-            renderer (str): If the renderer is set to be 'canvas' when chart initialized (default), then 'png' (default) and 'jpg' are supported.
-            If the renderer is set to be 'svg' when chart initialized, then only 'svg' is supported for type ('svg' type is supported since v4.8.0). See more details: https://echarts.apache.org/en/option.html#toolbox.feature.saveAsImage.type
-            toolbox_enable (boolean): Show or not show toolbox, default True (show). See: https://echarts.apache.org/en/option.html#toolbox
-            save_image_options (dict): Option how echarts should be saved, more details here: https://echarts.apache.org/en/option.html#toolbox.feature.saveAsImage
-            data_view_options (dict): Option how data view toolbox will work, more details here: https://echarts.apache.org/en/option.html#toolbox.feature.dataView
-            additional_config (dict): Not everything is implemented from echarts, so it's a way to check some additional config be carefull it can override your all data which you already set using separated filed. To be sure that this field is applied override method `additional_config` in your ECharts. Check: https://echarts.apache.org/en/option.html
+            x_label (str): X-axis label (default: "X").
+            y_label (str): Y-axis label (default: "Y").
+            legend (dict): Legend configuration. By default, it is placed at the upper right corner of the chart.
+            You can customize its position using a dict like:
+                {
+                    "orient": "vertical",
+                    "right": 10,
+                    "top": "center"
+                }
+            You can also hide the legend entirely by setting `"show": False`.
+            More details here: https://echarts.apache.org/handbook/en/concepts/legend.
+            theme (str): Theme for chart (default: EChartsTypeTheme.DEFAULT).
+            renderer (str): If the renderer is set to 'canvas' when chart initialized (default), then
+                'png' (default) and 'jpg' are supported. If the renderer is set to 'svg' when chart
+                initialized, then only 'svg' is supported for type. See more details:
+                https://echarts.apache.org/en/option.html#toolbox.feature.saveAsImage.type
+            show_toolbox (boolean): Show or not show toolbox, default True (show). See:
+                https://echarts.apache.org/en/option.html#toolbox
+            save_image_options (dict): Options for saving the chart image. See:
+                https://echarts.apache.org/en/option.html#toolbox.feature.saveAsImage
+            data_view_options (dict): Option how data view toolbox will work. See:
+                https://echarts.apache.org/en/option.html#toolbox.feature.dataView
+            additional_config (dict): Not all ECharts options are implemented; this allows passing
+                additional configuration. Be careful as it can override existing settings. For safety,
+                override `additional_config` in your subclass. See:
+                https://echarts.apache.org/en/option.html
             permission (str): Optional permission required to view.
             combined_with (EChartsBase): Another chart to merge with. Have to be the same type as `chart_type`.
         """
@@ -168,7 +258,7 @@ class EChartsBase:
         self.legend = legend
         self.theme = theme
         self.renderer = renderer
-        self.toolbox_enable = toolbox_enable
+        self.show_toolbox = show_toolbox
         self.save_image_options = {"name": self.header or "echart", "show": True, **(save_image_options or {})}
         self.data_view_options = {"readOnly": True, "show": True, **(data_view_options or {})}
         self.additional_config = additional_config
@@ -204,7 +294,7 @@ class EChartsBase:
             if list(series_data.keys()) != x_labels:
                 # Handle mismatched keys - use union and fill missing with 0
                 all_labels = set()
-                for s in data.values():
+                for s in series_data:
                     all_labels.update(s.keys())
                 x_labels = sorted(list(all_labels))
                 break
@@ -218,7 +308,7 @@ class EChartsBase:
 
     def _get_theme_colors(self):
         """Map SCSS palette to echarts theme colors (manual sync)."""
-        if self.theme == EChartsTypeThema.DARK:
+        if self.theme == EChartsTypeTheme.DARK:
             return [
                 "#045ab4",  # blue-0-dark
                 "#e07807",  # orange-0-dark
@@ -242,7 +332,7 @@ class EChartsBase:
             "title": {"text": self.header, "subtext": self.description},
             "tooltip": self.strategy.get_tooltip_config(),
             "toolbox": self.strategy.get_toolbox_config(
-                self.toolbox_enable, self.save_image_options, self.data_view_options
+                self.show_toolbox, self.save_image_options, self.data_view_options
             ),
             "color": self._get_theme_colors(),
             "legend": self.legend,
@@ -288,7 +378,7 @@ def resolve_attr(obj, dotted_field):
     if isinstance(val, bool):
         # take last part of dotted_field ("nestable" in "location_type__nestable")
         field_label = attrs[-1].replace("_", " ").title()
-        return field_label if val else f"No/Non {field_label}"
+        return field_label if val else f"Not {field_label}"
 
     return val
 
