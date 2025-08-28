@@ -803,10 +803,11 @@ def pylint(context, target=None, recursive=False):
         "fix": "Automatically apply formatting and linting recommendations. May not be able to fix all linting issues.",
         "target": "File or directory to inspect, repeatable (default: all files in the project will be inspected)",
         "output_format": "For CI purposes, can be ignored otherwise.",
+        "diff": "Display any problems ruff finds",
     },
     iterable=["target"],
 )
-def ruff(context, fix=False, target=None, output_format="concise"):
+def ruff(context, fix=False, diff=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
         target = ["development", "examples", "nautobot", "tasks.py"]
@@ -814,12 +815,16 @@ def ruff(context, fix=False, target=None, output_format="concise"):
     command = "ruff format "
     if not fix:
         command += "--check "
+        if diff:
+            command += "--diff "
     command += " ".join(target)
     format_result = run_command(context, command, warn=True)
 
     command = "ruff check "
     if fix:
         command += "--fix "
+    elif diff:
+        command += "--diff "
     command += f"--output-format {output_format} "
     command += " ".join(target)
     lint_result = run_command(context, command, warn=True)
