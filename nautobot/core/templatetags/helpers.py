@@ -1329,7 +1329,7 @@ def get_breadcrumbs(context):
 
 
 @register.inclusion_tag("echarts/echarts.html")
-def render_echart(chart, chart_config, chart_width, chart_height, chart_container_id):
+def render_echart(chart, chart_config, chart_container_id, chart_width="100%", chart_height="32rem"):
     """
     Render ECharts chart with provided chart object and config.
     """

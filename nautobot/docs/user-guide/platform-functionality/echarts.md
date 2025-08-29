@@ -15,17 +15,20 @@ Base definition for an ECharts chart (no rendering logic). This class transforms
 The `data` argument can be provided in **two formats**:
 
 1. Raw nested format (more user-friendly):
+
     ```no-highlight
     {
         "Series1": {"x1": val1, "x2": val2},
         "Series2": {"x1": val3, "x2": val4},
     }
     ```
+
     - Keys represent series names.
     - Each series maps x-axis categories (e.g. "x1", "x2") to numeric values.
     - Internally, this is transformed into the normalized format described below.
 
 2. Normalized internal format (directly compatible with [ECharts](https://echarts.apache.org/en/option.html)):
+
     ``` no-highlight
     {
         "x": ["x1", "x2"],
@@ -35,6 +38,7 @@ The `data` argument can be provided in **two formats**:
         ]
     }
     ```
+
     - `x` defines the list of x-axis labels (categories).
     - `series` is a list of objects, each containing:
         - "name": Series name (legend entry).
@@ -43,6 +47,25 @@ The `data` argument can be provided in **two formats**:
 3. From a QuerySet via helper functions:
     - [Keys as series](#keys-as-series-value_keys-as-outer-keys)
     - [Records as series](#records-as-series-record_key-as-outer-keys)
+
+4. Using a callable (lambda/function):
+    - Instead of passing data directly, you can pass a `callable` that returns data in any of the above formats.
+    - This is useful in UI components (`EChartsPanel`) where the database may not be ready at declaration time.
+
+    ```no-highlight
+    chart = EChartsBase(
+        chart_type=EChartsTypeChoices.BAR,
+        header="EChart",
+        description="Example chart",
+        data=lambda: queryset_to_nested_dict_keys_as_series(
+            Location.objects.annotate(
+                device_count=count_related(Device, "location"),
+            ),
+            record_key="status",
+            value_keys=["device_count"],
+        )
+    )
+    ```
 
 ### Additional Options
 
@@ -56,17 +79,72 @@ Each chart comes with two default toolbox icons:
     <img src="../../media/development/echarts/toolbox.png"/>
 </p>
 
+### Combined Charts (`combined_with`)
+
+`combined_with` allows merging another chart of a different type into the same ECharts instance. The header, description, x-axis, and y-axis are inherited from the parent `EChartsBase` instance. In the `combined_with` chart, can specify type and provide data as series names and corresponding values.
+
+Can accept either:
+
+1. An `EChartsBase` instance
+
+    ```no-highlight
+    chart = EChartsBase(
+        chart_type=EChartsTypeChoices.BAR,
+        "header": "Compliance per Feature",
+        description="Example bar chart with line",
+        data={
+            "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+            "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+        },
+        combined_with=EChartsBase(
+            chart_type=EChartsTypeChoices.LINE,
+            data={
+                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+            },
+        ),
+    )
+    ```
+
+2. A `callable` returning an `EChartsBase` instance (required for UI components)
+
+    ```no-highlight
+    EChartsPanel(
+        section=ui.SectionChoices.FULL_WIDTH,
+        weight=200,
+        label="EChart - Combined",
+        chart_kwargs={
+            "chart_type": EChartsTypeChoices.BAR,
+            "header": "Compliance per Feature",
+            "description": "Example bar chart with line",
+            data={
+                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+            },
+            "combined_with": lambda: EChartsBase(
+                chart_type=EChartsTypeChoices.LINE,
+                data={
+                    "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                    "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+                },
+            ),
+        },
+    )
+    ```
+
+![Bar echart with line](../../media/development/echarts/combined_with-line-bar.png)
+
 ## Example Usage in a Django View
 
 ```no-highlight
-from nautobot.core.ui.echarts import EChartsBase, queryset_to_nested_dict_records_as_series, queryset_to_nested_dict_keys_as_series
+from nautobot.core.ui.echarts import EChartsBase
 from nautobot.core.ui.choices import EChartsTypeChoices
 
 template_name = "detail.html"
 def get_extra_context(self, request, instance):
     chart = EChartsBase(
         chart_type=EChartsTypeChoices.BAR,
-        "header": "Compliance per Feature",
+        header="Compliance per Feature",
         description="Example chart",
         data={
             "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
@@ -74,14 +152,19 @@ def get_extra_context(self, request, instance):
         },
     )
 
-    chart_config = chart.get_config()
-
     return {
+        # Chart object
         "chart": chart,
+
+        # JSON configuration for ECharts (consumed by JS)
         "chart_config": chart.get_config(),
-        "chart_width": self.width,
-        "chart_height": self.height,
-        "chart_container_id": slugify(f"echart-{self.header}"),
+
+        # Unique HTML <div id="..."> where the chart will be rendered
+        "chart_container_id": slugify(f"echart-{chart.header}"),
+
+        # Optional dimensions (defaults are: width="100%", height="32rem")
+        "chart_width": "100%",
+        "chart_height": "32rem",
     }
 ```
 
@@ -89,10 +172,10 @@ Corresponding Template (`detail.html`)
 
 ```no-highlight
 {% load helpers %}
-{% render_echart chart chart_config chart_width chart_height chart_container_id %}
+{% render_echart chart chart_config chart_container_id chart_width chart_height %}
 ```
 
-## Example Usage as a Nautobot UI Component
+## Example Usage as a Nautobot UI Component ([EChartsPanel](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.EChartsPanel))
 
 ### Bar Type
 

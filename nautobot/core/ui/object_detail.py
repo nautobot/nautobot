@@ -1201,10 +1201,11 @@ class EChartsPanel(Panel, EChartsBase):
 
         return True
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
         chart_config = self.get_config()
         return {
+            **super().get_extra_context(context),
             "chart": self,
             "chart_config": chart_config,
             "chart_width": self.width,

@@ -217,7 +217,10 @@ class EChartsBase:
         """
         Args:
             chart_type (str): One of `EChartsTypeChoices`.
-            data (dict|QuerySet): The dataset to render.
+            data (dict|callable): The dataset to render. Can be:
+                1. A dict in internal format: {"x": [...], "series": [{"name": str, "data": [...]}]}
+                2. A nested dict: {"Series1": {"x1": val1, "x2": val2}, ...}
+                3. A callable (e.g., lambda or function) returning any of the above.
             header (str): Title/header of the chart.
             description (str): More detailed explanation.
             x_label (str): X-axis label (default: "X").
@@ -247,10 +250,12 @@ class EChartsBase:
                 override `additional_config` in your subclass. See:
                 https://echarts.apache.org/en/option.html
             permission (str): Optional permission required to view.
-            combined_with (EChartsBase): Another chart to merge with. Have to be the same type as `chart_type`.
+            combined_with (EChartsBase|callable): Another chart to merge with. Can be either:
+                1. An EChartsBase instance
+                2. A callable returning an EChartsBase instance (evaluated at render time)
         """
         self.chart_type = chart_type
-        self.data = self._transform_data(data)
+        self.data = self._transform_data(data() if callable(data) else data)
         self.header = header
         self.description = description
         self.x_label = x_label
@@ -348,8 +353,9 @@ class EChartsBase:
         config.update(additional_config)
 
         # Handle combined charts
-        if self.combined_with and self.combined_with.chart_type == self.chart_type:
-            combined_series = self.combined_with.strategy.get_series_config(self.combined_with.data)
+        if self.combined_with:
+            combined = self.combined_with() if callable(self.combined_with) else self.combined_with
+            combined_series = combined.strategy.get_series_config(combined.data)
             config["series"].extend(combined_series)
 
         return config
