@@ -252,9 +252,7 @@ class EChartsBase:
                 override `additional_config` in your subclass. See:
                 https://echarts.apache.org/en/option.html
             permission (str): Optional permission required to view.
-            combined_with (EChartsBase|callable): Another chart to merge with. Can be either:
-                1. An EChartsBase instance
-                2. A callable returning an EChartsBase instance (evaluated at render time)
+            combined_with (EChartsBase): Another chart to merge with.
         """
         self.additional_config = additional_config
         self.chart_type = chart_type
@@ -366,8 +364,7 @@ class EChartsBase:
 
         # Handle combined charts
         if self.combined_with:
-            combined = self.combined_with() if callable(self.combined_with) else self.combined_with
-            combined_series = combined.strategy.get_series_config(combined.data)
+            combined_series = self.combined_with.strategy.get_series_config(self.combined_with.data)
             config["series"].extend(combined_series)
 
         return config

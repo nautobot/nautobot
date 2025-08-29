@@ -83,54 +83,24 @@ Each chart comes with two default toolbox icons:
 
 `combined_with` allows merging another chart of a different type into the same ECharts instance. The header, description, x-axis, and y-axis are inherited from the parent `EChartsBase` instance. In the `combined_with` chart, can specify type and provide data as series names and corresponding values.
 
-Can accept either:
-
-1. An `EChartsBase` instance
-
-    ```no-highlight
-    chart = EChartsBase(
-        chart_type=EChartsTypeChoices.BAR,
-        "header": "Compliance per Feature",
-        description="Example bar chart with line",
+```no-highlight
+chart = EChartsBase(
+    chart_type=EChartsTypeChoices.BAR,
+    "header": "Compliance per Feature",
+    description="Example bar chart with line",
+    data={
+        "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+        "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+    },
+    combined_with=EChartsBase(
+        chart_type=EChartsTypeChoices.LINE,
         data={
             "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
             "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
         },
-        combined_with=EChartsBase(
-            chart_type=EChartsTypeChoices.LINE,
-            data={
-                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
-                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
-            },
-        ),
-    )
-    ```
-
-2. A `callable` returning an `EChartsBase` instance (required for UI components)
-
-    ```no-highlight
-    EChartsPanel(
-        section=ui.SectionChoices.FULL_WIDTH,
-        weight=200,
-        label="EChart - Combined",
-        chart_kwargs={
-            "chart_type": EChartsTypeChoices.BAR,
-            "header": "Compliance per Feature",
-            "description": "Example bar chart with line",
-            data={
-                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
-                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
-            },
-            "combined_with": lambda: EChartsBase(
-                chart_type=EChartsTypeChoices.LINE,
-                data={
-                    "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
-                    "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
-                },
-            ),
-        },
-    )
-    ```
+    ),
+)
+```
 
 ![Bar echart with line](../../media/development/echarts/combined_with-line-bar.png)
 
