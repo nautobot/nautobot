@@ -617,6 +617,8 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRedocView):
     """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
 
+    template_name = "redoc_ui.html"
+
 
 @method_decorator(gzip_page, name="dispatch")
 class NautobotSpectacularAPIView(SpectacularAPIView):

@@ -1,7 +1,7 @@
 <ol class="breadcrumb">
     {% block breadcrumbs %}
         {% for url, title in breadcrumbs_items %}
-            <li>
+            <li class="breadcrumb-item">
             {% if url %}
                 <a href="{{ url }}">{{ title }}</a>
             {% else %}
