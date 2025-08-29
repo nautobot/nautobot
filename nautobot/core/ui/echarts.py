@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 
-from django.core.exceptions import ObjectDoesNotExist
-
 from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeTheme
+from nautobot.core.utils.lookup import resolve_attr
 
 
 # Strategy Interface
 class EChartsStrategy(ABC):
+    def __init__(self, additional_config=None):
+        self.additional_config = additional_config or {}
+
     @abstractmethod
     def get_series_config(self, data):
         """Generate series configuration specific to chart type."""
@@ -21,7 +23,7 @@ class EChartsStrategy(ABC):
 
     def get_additional_config(self):
         """Additional chart-specific configuration."""
-        return {}
+        return self.additional_config
 
     def get_toolbox_config(self, show_toolbox, save_image_options={}, data_view_options={}):
         """Default toolbox config, can be overridden."""
@@ -185,11 +187,11 @@ class EChartsStrategyFactory:
     }
 
     @classmethod
-    def get_strategy(cls, chart_type: EChartsTypeChoices) -> EChartsStrategy:
+    def get_strategy(cls, chart_type: EChartsTypeChoices, additional_config=None) -> EChartsStrategy:
         strategy_class = cls._strategies.get(chart_type)
         if not strategy_class:
             raise ValueError(f"Unsupported chart type: {chart_type}")
-        return strategy_class()
+        return strategy_class(additional_config=additional_config)
 
 
 class EChartsBase:
@@ -254,6 +256,7 @@ class EChartsBase:
                 1. An EChartsBase instance
                 2. A callable returning an EChartsBase instance (evaluated at render time)
         """
+        self.additional_config = additional_config
         self.chart_type = chart_type
         self.data = self._transform_data(data() if callable(data) else data)
         self.header = header
@@ -266,10 +269,19 @@ class EChartsBase:
         self.show_toolbox = show_toolbox
         self.save_image_options = {"name": self.header or "echart", "show": True, **(save_image_options or {})}
         self.data_view_options = {"readOnly": True, "show": True, **(data_view_options or {})}
-        self.additional_config = additional_config
         self.permission = permission
         self.combined_with = combined_with
-        self.strategy = EChartsStrategyFactory.get_strategy(chart_type)
+
+    @property
+    def chart_type(self):
+        """Get the current chart type."""
+        return self._chart_type
+
+    @chart_type.setter
+    def chart_type(self, new_chart_type: EChartsTypeChoices):
+        """Set the chart type and update the strategy accordingly."""
+        self._chart_type = new_chart_type
+        self.strategy = EChartsStrategyFactory.get_strategy(new_chart_type, self.additional_config)
 
     def _transform_data(self, data):
         """
@@ -359,34 +371,6 @@ class EChartsBase:
             config["series"].extend(combined_series)
 
         return config
-
-    def change_chart_type(self, new_chart_type: EChartsTypeChoices):
-        """Dynamically change the chart type strategy."""
-        self.chart_type = new_chart_type
-        self.strategy = EChartsStrategyFactory.get_strategy(new_chart_type)
-
-
-def resolve_attr(obj, dotted_field):
-    """
-    Resolve nested attributes like 'location_type__nestable' on a Django model instance.
-    """
-    attrs = dotted_field.split("__")
-    val = obj
-    try:
-        for attr in attrs:
-            val = getattr(val, attr)
-            if val is None:
-                return None
-    except (AttributeError, ObjectDoesNotExist):
-        return None
-
-    # handle booleans specially
-    if isinstance(val, bool):
-        # take last part of dotted_field ("nestable" in "location_type__nestable")
-        field_label = attrs[-1].replace("_", " ").title()
-        return field_label if val else f"Not {field_label}"
-
-    return val
 
 
 def queryset_to_nested_dict_records_as_series(queryset, record_key, value_keys):

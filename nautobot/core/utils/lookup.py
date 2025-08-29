@@ -1,16 +1,60 @@
 """Utilities for looking up related classes and information."""
 
 import inspect
+from operator import attrgetter
 import re
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
 from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
+
+
+def resolve_attr(obj, dotted_field):
+    """
+    Resolve nested attributes on a Django model instance using a Django-style
+    double-underscore path (e.g. 'location_type__nestable').
+
+    Args:
+        obj: A Django model instance.
+        dotted_field (str): Dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None:
+            - The string representation of the resolved attribute value.
+            - If the attribute is boolean, returns the field label in title case
+              if True, or 'Not <Field Label>' if False.
+            - Returns None if any attribute in the path does not exist or is None.
+
+    Example:
+        >>> resolve_attr(location, "name")
+        'Aisle'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Nestable'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Not Nestable'
+    """
+    try:
+        val = str(attrgetter(dotted_field.replace("__", "."))(obj))
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+    # handle booleans specially
+    if isinstance(val, bool):
+        attrs = dotted_field.split("__")
+        # take last part of dotted_field ("nestable" in "location_type__nestable")
+        field_label = attrs[-1].replace("_", " ").title()
+        return field_label if val else f"Not {field_label}"
+
+    return val
 
 
 def get_changes_for_model(model):
