@@ -70,6 +70,12 @@ def is_truthy(arg):
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
+ORIGINAL_COMPOSE_FILES = [
+    "docker-compose.yml",
+    "docker-compose.postgres.yml",
+    "docker-compose.dev.yml",
+]
+
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
@@ -81,11 +87,7 @@ namespace.configure(
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
-            "compose_files": [
-                "docker-compose.yml",
-                "docker-compose.postgres.yml",
-                "docker-compose.dev.yml",
-            ],
+            "compose_files": ORIGINAL_COMPOSE_FILES.copy(),
             # Image names to use when building from "main" branch
             "docker_image_names_main": [
                 # Production containers - not containing development tools
@@ -184,13 +186,10 @@ def docker_compose(context, command, **kwargs):
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
     # Determine which ports mapping strategy to use
-    if context.nautobot.ephemeral_ports:
-        ports_type = "ephemeral"
-    else:
-        ports_type = "static"
-    compose_command_tokens.append(
-        f'-f "{os.path.join(context.nautobot.compose_dir, f"docker-compose.{ports_type}-ports.yml")}"'
-    )
+    if context.nautobot.ephemeral_ports and context.nautobot.compose_files == ORIGINAL_COMPOSE_FILES:
+        compose_command_tokens.append(
+            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
+        )
 
     compose_command_tokens.append(command)
 
@@ -983,8 +982,8 @@ def tests(
 
     if coverage:
         run_command(context, "coverage combine")
-
-        run_command(context, "coverage report --skip-covered --include 'nautobot/*'")
+        run_command(context, "coverage report --skip-covered")
+        run_command(context, "coverage lcov -o lcov.info")
 
 
 @task(
