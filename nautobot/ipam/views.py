@@ -4,12 +4,11 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import Prefetch, ProtectedError, Q
+from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
-from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
@@ -34,7 +33,6 @@ from nautobot.core.views.utils import get_obj_from_context, handle_protectederro
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
-from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -358,6 +356,20 @@ class PrefixView(generic.ObjectView):
         RequestConfig(request, paginate).configure(vrf_table)
         RequestConfig(request, paginate).configure(cloud_network_table)
 
+        if instance.parent != instance.get_parent():
+            messages.warning(
+                request,
+                format_html(
+                    "The <code>parent</code> field on this record appears to be set incorrectly. "
+                    'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                    reverse(
+                        "extras:job_run_by_class_path",
+                        kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                    ),
+                    "Check/Fix IPAM Parents",
+                ),
+            )
+
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
@@ -462,129 +474,6 @@ class PrefixEditView(generic.ObjectEditView):
     model_form = forms.PrefixForm
     template_name = "ipam/prefix_edit.html"
 
-    def successful_post(self, request, obj, created, _logger):
-        """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
-        # 3.0 TODO: remove these checks after enabling strict enforcement of the equivalent logic in Prefix.save()
-        edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.pk})
-        warning_msg = format_html(
-            '<p>This <a href="{}#prefix-hierarchy">will be considered invalid data</a> in a future release.</p>',
-            static("docs/models/ipam/prefix.html"),
-        )
-        if obj.parent and obj.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[obj.type]:
-            parent_edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk})
-            messages.warning(
-                request,
-                format_html(
-                    '{} is a {} prefix but its parent <a href="{}">{}</a> is a {}. {} Consider '
-                    '<a href="{}">changing the type of {}</a> and/or <a href="{}">{}</a> to resolve this issue.',
-                    obj,
-                    obj.type.title(),
-                    obj.parent.get_absolute_url(),
-                    obj.parent,
-                    obj.parent.type.title(),
-                    warning_msg,
-                    edit_url,
-                    obj,
-                    parent_edit_url,
-                    obj.parent,
-                ),
-            )
-
-        invalid_children = obj.children.filter(
-            ~Q(type__in=constants.PREFIX_ALLOWED_CHILD_TYPES[obj.type]),  # exclude valid children
-        )
-
-        if invalid_children.exists():
-            children_link = format_html('<a href="{}?parent={}">its children</a>', reverse("ipam:prefix_list"), obj.pk)
-            if obj.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not contain child prefixes of type Pool. {} "
-                        "Consider creating an intermediary Network prefix, or changing the type of {} to Network, "
-                        "to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        children_link,
-                    ),
-                )
-            elif obj.type == choices.PrefixTypeChoices.TYPE_NETWORK:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Network prefix and should not contain child prefixes of types Container or Network. "
-                        '{} Consider <a href="{}">changing the type of {}</a> to Container, '
-                        "or changing the type of {} to Pool, to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        edit_url,
-                        obj,
-                        children_link,
-                    ),
-                )
-            else:  # TYPE_POOL
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Pool prefix and should not contain other prefixes. {} "
-                        'Consider either <a href="{}">changing the type of {}</a> to Container or Network, '
-                        "or deleting {}, to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        edit_url,
-                        obj,
-                        children_link,
-                    ),
-                )
-
-        if obj.ip_addresses.exists() and obj.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            ip_warning_msg = format_html(
-                '<p>This <a href="{}#ipaddress-parenting-concrete-relationship">will be considered invalid data</a> '
-                "in a future release.</p>",
-                static("docs/models/ipam/ipaddress.html"),
-            )
-            shortest_child_mask_length = min([ip.mask_length for ip in obj.ip_addresses.all()])
-            if shortest_child_mask_length > obj.prefix_length:
-                ip_link = format_html(
-                    '<a href="{}?parent={}">these IP addresses</a>', reverse("ipam:ipaddress_list"), obj.pk
-                )
-                create_url = reverse("ipam:prefix_add") + urlencode(
-                    {
-                        "namespace": obj.namespace.pk,
-                        "type": choices.PrefixTypeChoices.TYPE_NETWORK,
-                        "prefix": obj.prefix,
-                    }
-                )
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not directly contain IP addresses. {} "
-                        'Consider either <a href="{}">changing the type of {}</a> to Network, '
-                        'or <a href="{}">creating one or more child prefix(es) of type Network</a> to contain {}, '
-                        "to resolve this issue.",
-                        obj,
-                        ip_warning_msg,
-                        edit_url,
-                        obj,
-                        create_url,
-                        ip_link,
-                    ),
-                )
-            else:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not directly contain IP addresses. {} "
-                        'Consider <a href="{}">changing the type of {}</a> to Network to resolve this issue.',
-                        obj,
-                        ip_warning_msg,
-                        edit_url,
-                        obj,
-                    ),
-                )
-
-        super().successful_post(request, obj, created, _logger)
-
 
 class PrefixDeleteView(generic.ObjectDeleteView):
     queryset = Prefix.objects.all()
@@ -677,6 +566,49 @@ class IPAddressView(generic.ObjectView):
         RequestConfig(request, paginate).configure(parent_prefixes_table)
         RequestConfig(request, paginate).configure(related_ips_table)
 
+        try:
+            parent = instance._get_closest_parent()
+            if instance.parent != parent:
+                messages.warning(
+                    request,
+                    format_html(
+                        "The <code>parent</code> field on this record appears to be set incorrectly. "
+                        'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                        reverse(
+                            "extras:job_run_by_class_path",
+                            kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                        ),
+                        "Check/Fix IPAM Parents",
+                    ),
+                )
+        except ValidationError:  # No valid parent found
+            if instance.parent is None:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode({"prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}"))})
+                )
+            else:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode(
+                        {
+                            "prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}")),
+                            "namespace": instance.parent.namespace.pk,
+                        }
+                    )
+                )
+            messages.warning(
+                request,
+                format_html(
+                    "The <code>parent</code> field on this record appears to be set incorrectly, and furthermore "
+                    "there appears to be no valid Prefix to contain this record at present. "
+                    'Consider <a href="{}">creating an appropriate Prefix</a> to resolve this issue.',
+                    add_url,
+                ),
+            )
+
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
@@ -700,53 +632,7 @@ class IPAddressEditView(generic.ObjectEditView):
 
     def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
-        # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
-        if obj.parent.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            warning_msg = format_html(
-                '<p>This <a href="{}#ipaddress-parenting-concrete-relationship">will be considered invalid data</a> '
-                "in a future release.</p>",
-                static("docs/models/ipam/ipaddress.html"),
-            )
-            parent_link = format_html('<a href="{}">{}</a>', obj.parent.get_absolute_url(), obj.parent)
-            if obj.parent.prefix_length < obj.mask_length:
-                create_url = (
-                    reverse("ipam:prefix_add")
-                    + "?"
-                    + urlencode(
-                        {
-                            "namespace": obj.parent.namespace.pk,
-                            "prefix": str(netaddr.IPNetwork(f"{obj.host}/{obj.mask_length}")),
-                            "type": choices.PrefixTypeChoices.TYPE_NETWORK,
-                        }
-                    )
-                )
-                messages.warning(
-                    request,
-                    format_html(
-                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
-                        'Consider <a href="{}">creating an intermediate /{} prefix of type Network</a> '
-                        "to resolve this issue.",
-                        obj,
-                        parent_link,
-                        warning_msg,
-                        create_url,
-                        obj.mask_length,
-                    ),
-                )
-            else:
-                messages.warning(
-                    request,
-                    format_html(
-                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
-                        'Consider <a href="{}">changing the prefix</a> to type Network or Pool to resolve this issue.',
-                        obj,
-                        parent_link,
-                        warning_msg,
-                        reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk}),
-                    ),
-                )
-
-        # Add IpAddress to interface if interface is in query_params
+        # Add IPAddress to interface if interface is in query_params
         if "interface" in request.GET or "vminterface" in request.GET:
             interface, _ = retrieve_interface_or_vminterface_from_request(request)
             interface.ip_addresses.add(obj)
