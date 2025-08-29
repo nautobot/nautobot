@@ -1,3 +1,4 @@
+import sys
 from unittest import mock
 import uuid
 
@@ -8,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
+from django.test import override_settings
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -16,8 +18,10 @@ from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
@@ -27,6 +31,100 @@ from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
 
 from example_app.models import ExampleModel
+
+
+class ConstructCacheKeyTest(TestCase):
+    """
+    Validate the operation of construct_cache_key().
+    """
+
+    def test_construct_cache_key_basics(self):
+        # We don't in general care much about the specific structure of the key, but we do care that it's successful.
+
+        # Key for a model instance
+        instance = dcim_models.Location.objects.first()
+        self.assertIsNotNone(instance)
+        ck = construct_cache_key(instance, method_name="display")
+        self.assertIsInstance(ck, str)
+        # Model instance cache keys should use the content-type and the PK as part of the key
+        self.assertIn("dcim.location", ck)
+        self.assertIn(str(instance.pk), ck)
+        self.assertIn("display", ck)
+        # In the absence of the version-control App, branch_aware should be a no-op
+        self.assertEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
+        self.assertEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=False))
+
+        # Key for a model manager instance
+        self.assertIsInstance(construct_cache_key(dcim_models.Location.objects, method_name="max_depth"), str)
+        ck = construct_cache_key(extras_models.CustomField.objects, method_name="get_for_model")
+        self.assertIsInstance(ck, str)
+        self.assertIn("get_for_model", ck)
+        # Additional arbitrary params should modify the key
+        ck2 = construct_cache_key(extras_models.CustomField.objects, method_name="get_for_model", label="dcim.location")
+        self.assertIsInstance(ck2, str)
+        # The base (no extra params) key should be a prefix for the extended key.
+        # This is needed for cases where we are using cache.clear_pattern() in signals and the like.
+        self.assertTrue(ck2.startswith(ck))
+        # Both the param name and the param value should be present in the extended key
+        self.assertIn("label", ck2)
+        self.assertIn("dcim.location", ck2)
+
+        # Key for a model class
+        ck = construct_cache_key(data_validation_models.MinMaxValidationRule, method_name="get_for_model")
+        self.assertIsInstance(ck, str)
+        # Model class cache keys should use the content-type as part of the key
+        self.assertIn("data_validation.minmaxvalidationrule", ck)
+        self.assertIn("get_for_model", ck)
+
+        # Key for a non-model class
+        ck = construct_cache_key(extras_utils.FeatureQuery, method_name="list_subclasses")
+        self.assertIsInstance(ck, str)
+        # Non-model classes should use the module as part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("FeatureQuery", ck)
+        self.assertIn("list_subclasses", ck)
+
+        # Key for a non-model class instance
+        ck = construct_cache_key(extras_utils.FeatureQuery("graphql"), method_name="list_subclasses")
+        self.assertIsInstance(ck, str)
+        # Non-model classes should use the module as part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("FeatureQuery", ck)
+        self.assertIn("list_subclasses", ck)
+
+        # Key for a function
+        ck = construct_cache_key(extras_utils.change_logged_models_queryset)
+        self.assertIsInstance(ck, str)
+        # Functions should use the module as a part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("change_logged_models_queryset", ck)
+
+    @override_settings(PLUGINS=["nautobot_version_control"])
+    def test_branch_aware_and_unaware(self):
+        instance = dcim_models.Location.objects.first()
+        self.assertIsNotNone(instance)
+
+        mock_active_branch = mock.MagicMock(return_value="some_branch_name")
+        mock_vc_utils = mock.Mock(active_branch=mock_active_branch)
+        with mock.patch.dict(sys.modules, {"nautobot_version_control.utils": mock_vc_utils}):
+            ck = construct_cache_key(instance, method_name="display", branch_aware=True)
+            self.assertIsInstance(ck, str)
+            self.assertIn("dcim.location", ck)
+            self.assertIn(str(instance.pk), ck)
+            self.assertIn("display", ck)
+            self.assertIn("some_branch_name", ck)
+
+            ck_unaware = construct_cache_key(instance, method_name="display", branch_aware=False)
+            self.assertIsInstance(ck_unaware, str)
+            self.assertIn("dcim.location", ck_unaware)
+            self.assertIn(str(instance.pk), ck_unaware)
+            self.assertIn("display", ck_unaware)
+            self.assertNotIn("some_branch_name", ck_unaware)
+
+            mock_active_branch.return_value = "another_branch"
+
+            self.assertNotEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
+            self.assertEqual(ck_unaware, construct_cache_key(instance, method_name="display", branch_aware=False))
 
 
 class DictToFilterParamsTest(TestCase):
