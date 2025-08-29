@@ -4,9 +4,9 @@
 
 {% block breadcrumbs %}
   <ol class="breadcrumb">
-    <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
-    <li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_settings.verbose_name }}</a>
-    <li>{{ opts.verbose_name_plural|capfirst }}</li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_settings.verbose_name }}</a>
+    <li class="breadcrumb-item active">{{ opts.verbose_name_plural|capfirst }}</li>
   </ol>
 {% endblock %}
 

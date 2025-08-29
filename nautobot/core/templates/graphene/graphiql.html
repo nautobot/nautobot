@@ -5,6 +5,7 @@ exploring GraphQL.
 If you wish to receive JSON, provide the header "Accept: application/json" or
 add "&raw" to the end of the URL within a browser.
 -->
+{% load plugins %}
 {% load static %}
 {% load helpers %}
 <!DOCTYPE html>
@@ -17,35 +18,62 @@ add "&raw" to the end of the URL within a browser.
 
   <!-- GraphiQL template requirements -->
   <style>
-    .graphiql-container {
-      --color-primary: 211, 100%, 50% !important;  /* #007dff blue */
-      --color-secondary: 208, 13%, 36% !important; /* #505d68 gray */
-      --color-tertiary: 0, 0%, 10% !important; /* #1a1a1a near black */
+    .graphiql-container,
+    .graphiql-dialog,
+    .graphiql-dialog-overlay,
+    .graphiql-tooltip,
+    [data-radix-popper-content-wrapper] {
+      --color-primary: 211, 100%, 50% !important; /* $blue-0: #007dff; */
+      --color-secondary: 208, 13%, 36% !important; /* $gray-3: #505d68; */
+      --color-tertiary: 0, 0%, 10% !important; /* $black-0: #1a1a1a; */
       --color-info: var(--color-primary) !important;
-      --color-success: 126, 72%, 39% !important; /* #1ca92a green */
-      --color-warning: 31, 94%, 45% !important; /* #e07807 orange */
-      --color-error: 0, 76%, 50% !important; /* #e01f1f red */
+      --color-success: 126, 72%, 39% !important; /* $green-0: #1ca92a; */
+      --color-warning: 31, 94%, 45% !important; /* $orange-0: #e07807; */
+      --color-error: 0, 76%, 50% !important; /* $red-0: #e01f1f; */
       --color-neutral: var(--color-secondary) !important;
-      --color-base: 0, 0%, 96% !important; /* #f4f4f4 near white */
+      --color-base: 0, 0%, 96% !important; /* $gray-0: #f4f4f4; */
 
       --font-family: "Ubuntu", sans-serif !important;
       --font-family-mono: "Ubuntu Mono", monospace !important;
-      --font-size-body: 14px !important;
+      --font-size-body: 0.875rem; !important; /* 14px */
     }
+
+    /*
+     * Original selector is `body.graphiql-dark`, not `[data-bs-theme="dark"]` - this is to force inheriting theme from
+     * Nautobot rather than GraphiQL maintaining its own theme. `graphene-django` does not provie an option to override
+     * its theme.
+     */
+    [data-bs-theme="dark"] .graphiql-container,
+    [data-bs-theme="dark"] .graphiql-dialog,
+    [data-bs-theme="dark"] .graphiql-dialog-overlay,
+    [data-bs-theme="dark"] .graphiql-tooltip,
+    [data-bs-theme="dark"] [data-radix-popper-content-wrapper] {
+      --color-primary: 211, 96%, 36% !important; /* $blue-0-dark: #045ab4; */
+      --color-secondary: 218, 14%, 36% !important; /* $gray-3-dark: #4f5868; */
+      --color-tertiary: 0, 0%, 80% !important; /* $black-0-dark: #cbcbcb; */
+      --color-success: 126, 100%, 18% !important; /* $green-0-dark: #005c09; */
+      --color-warning: 31, 94%, 45% !important; /* $orange-0-dark: #e07807; */
+      --color-error: 0, 92%, 31% !important; /* $red-0-dark: #960606; */
+      --color-base: 222, 20%, 10% !important; /* $gray-0-dark: #14171e; */
+    }
+
+    #main-content {
+      padding: 0;
+    }
+
     #editor {
       margin: 0;
       width: 100%;
-      height: calc(100vh - 56px - 3rem);
+      height: 100%;
     }
-    .graphiql-toolbar .dropdown-menu > li > a {
-        clear: left;
-        margin-right: 140px;  /* leave room for the "Save Changes" button if present */
+
+    .graphiql-toolbar .dropdown-menu {
+      width: max-content;
     }
 
     /* Save Changes button */
     .graphiql-toolbar .dropdown-menu a.btn {
-      color: #ffffff !important;
-      margin-right: 20px;
+      color: #e07807 !important;
     }
 
   </style>
@@ -61,12 +89,28 @@ add "&raw" to the end of the URL within a browser.
 <body>
   <!-- Nautobot page contents -->
   {% include 'inc/nav_menu.html' %}
+  <header id="header">
+      <div class="banner-alert-area">
+        {% include 'inc/header_banners.html' %}
+      </div>
+      <div class="container-fluid mb-12 mt-16">
+          <div class="row row-cols-3">
+              <div class="col">
+                  {% block breadcrumbs %}
+                      {% include 'inc/breadcrumbs.html' with title='GraphiQL' %}
+                  {% endblock breadcrumbs %}
+              </div>
+              {% include 'inc/header.html' %}
+          </div>
+      </div>
+      {% block header %}{% endblock header %}
+  </header>
   {% include 'modals/modal_theme.html' with name='theme'%}
   {% include 'inc/javascript.html' %}
-  <div class="container-fluid wrapper" id="main-content">
+  <main class="container-fluid wrapper" id="main-content" tabindex="-1">
     <!-- GraphiQL page contents -->
     <div id="editor"></div>
-  </div>
+  </main>
   {% include 'inc/footer.html' %}
   {% csrf_token %}
   <script type="application/javascript">
@@ -84,29 +128,27 @@ add "&raw" to the end of the URL within a browser.
   {% if perms.extras.view_graphqlquery %}
     document.addEventListener('DOMContentLoaded', function() {
       queries_tab = `
-        <div class="btn-group" role="button">
+        <div>
           <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-              <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height:24px">
+            <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
           </button>
           <ul class="dropdown-menu" id="graphql-queries-menu">
             <li class="dropdown-header">Saved Queries</li>
               {% for query in saved_graphiql_queries %}
-                <li>
-                    {% if request.GET.id|slugify == query.id|slugify %}
-                        <div class="buttons pull-right">
-                            <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
-                        </div>
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
-                            <strong>{{ query.name }}</strong>
-                        </a>
-                    {% else %}
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
-                    {% endif %}
+                <li class="hstack gap-4">
+                  {% if request.GET.id|slugify == query.id|slugify %}
+                    <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
+                      <strong>{{ query.name }}</strong>
+                    </a>
+                    <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
+                  {% else %}
+                    <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
+                  {% endif %}
                 </li>
               {% endfor %}
-              <li class="divider" role="separator"></li>
+                <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
+                    <button class="dropdown-item" onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</button>
                 </li>
             </ul>
         </div>

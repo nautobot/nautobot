@@ -3,6 +3,10 @@
 
 {% block title %}{{ title | default:"Swagger" }}{% endblock title %}
 
+{% block breadcrumbs %}
+    {% include "inc/breadcrumbs.html" %}
+{% endblock %}
+
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui.css' %}">
     <style>
