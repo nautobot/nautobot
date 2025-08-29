@@ -112,8 +112,9 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
         permission.
 
-        :param user: User instance
-        :param action: The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
+        Args:
+            user (User): User instance
+            action (str): The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
         """
         # Resolve the full name of the required permission
         app_label = self.model._meta.app_label

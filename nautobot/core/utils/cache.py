@@ -13,10 +13,10 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
     Construct a consistently-structured Django/Redis cache key for the given obj and/or method name.
 
     Args:
-        obj: A model class, model instance, model manager, class, or function that will make use of the cache.
+        obj (Any): A model class, model instance, model manager, class, or function that will make use of the cache.
         method_name (str): Name of a specific method on `obj`. May be omitted only if `obj` is itself a function.
         branch_aware (bool): Whether this cache key needs to vary by branch when Version Control is enabled.
-        **params: Parameters that should further narrow the scope of the cache key.
+        **params (dict): Parameters that should further narrow the scope of the cache key.
 
     Examples:
         >>> construct_cache_key(Location.objects, method_name="max_depth")
