@@ -66,6 +66,10 @@ function initializeStaticChoiceSelection(context, dropdownParent=null){
 // Static choice selection
 function initializeCheckboxes(context){
     this_context = $(context);
+
+    // Track last selected checkbox for range selection
+    let lastSelectedIndex = null;
+
     // "Toggle" checkbox for object lists (PK column)
     this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
@@ -77,11 +81,38 @@ function initializeCheckboxes(context){
             $('#select_all').prop('checked', false);
             $('#select_all_box').addClass('hidden');
         }
+
+        // Reset last selected index when using toggle all
+        lastSelectedIndex = null;
     });
 
-    // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
+    // Enhanced checkbox click handler with shift-click range selection
     this_context.find('input:checkbox[name=pk]').click(function (event) {
-        if (!$(this).attr('checked')) {
+        const $table = $(this).closest('table');
+        const $allCheckboxes = $table.find('input:checkbox[name=pk]:visible');
+        const currentIndex = $allCheckboxes.index(this);
+
+        // Handle shift-click for range selection/deselection
+        if (event.shiftKey && lastSelectedIndex !== null) {
+            // Create range from previous click to current click
+            const startIndex = Math.min(lastSelectedIndex, currentIndex);
+            const endIndex = Math.max(lastSelectedIndex, currentIndex);
+
+            // Use the clicked item's new state for entire range
+            const shouldSelect = this.checked;
+
+            // Apply to entire range
+            for (let i = startIndex; i <= endIndex; i++) {
+                $allCheckboxes.eq(i).prop('checked', shouldSelect);
+            }
+        }
+
+        // Always update anchor to current click (normal click or shift+click)
+        lastSelectedIndex = currentIndex;
+
+        // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
+        const hasUnchecked = $allCheckboxes.filter(':not(:checked)').length > 0;
+        if (hasUnchecked) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
             $('#select_all_box').addClass('hidden');
         }
