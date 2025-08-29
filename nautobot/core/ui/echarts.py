@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
+from django.db.models import QuerySet
 
 from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeTheme
 from nautobot.core.utils.lookup import resolve_attr
@@ -25,13 +28,13 @@ class EChartsStrategy(ABC):
         """Additional chart-specific configuration."""
         return self.additional_config
 
-    def get_toolbox_config(self, show_toolbox, save_image_options={}, data_view_options={}):
+    def get_toolbox_config(self, show_toolbox, save_image_options=None, data_view_options=None):
         """Default toolbox config, can be overridden."""
         toolbox_config = {
             "show": show_toolbox,
             "feature": {
-                "dataView": data_view_options,
-                "saveAsImage": save_image_options,
+                "dataView": data_view_options or {},
+                "saveAsImage": save_image_options or {},
             },
         }
         return toolbox_config
@@ -201,12 +204,12 @@ class EChartsBase:
         self,
         *,
         chart_type=EChartsTypeChoices.BAR,
-        data={},
+        data=None,
         header="",
         description="",
         x_label="X",
         y_label="Y",
-        legend={},
+        legend=None,
         theme=EChartsTypeTheme.DEFAULT,
         renderer="canvas",
         show_toolbox=True,
@@ -228,14 +231,14 @@ class EChartsBase:
             x_label (str): X-axis label (default: "X").
             y_label (str): Y-axis label (default: "Y").
             legend (dict): Legend configuration. By default, it is placed at the upper right corner of the chart.
-            You can customize its position using a dict like:
-                {
-                    "orient": "vertical",
-                    "right": 10,
-                    "top": "center"
-                }
-            You can also hide the legend entirely by setting `"show": False`.
-            More details here: https://echarts.apache.org/handbook/en/concepts/legend.
+                You can customize its position using a dict like:
+                    {
+                        "orient": "vertical",
+                        "right": 10,
+                        "top": "center"
+                    }
+                You can also hide the legend entirely by setting `"show": False`.
+                More details here: https://echarts.apache.org/handbook/en/concepts/legend.
             theme (str): Theme for chart (default: EChartsTypeTheme.DEFAULT).
             renderer (str): If the renderer is set to 'canvas' when chart initialized (default), then
                 'png' (default) and 'jpg' are supported. If the renderer is set to 'svg' when chart
@@ -256,12 +259,13 @@ class EChartsBase:
         """
         self.additional_config = additional_config
         self.chart_type = chart_type
-        self.data = self._transform_data(data() if callable(data) else data)
+        resolved_data = data() if callable(data) else data
+        self.data = self._transform_data(resolved_data or {})
         self.header = header
         self.description = description
         self.x_label = x_label
         self.y_label = y_label
-        self.legend = legend
+        self.legend = legend or {}
         self.theme = theme
         self.renderer = renderer
         self.show_toolbox = show_toolbox
@@ -370,7 +374,9 @@ class EChartsBase:
         return config
 
 
-def queryset_to_nested_dict_records_as_series(queryset, record_key, value_keys):
+def queryset_to_nested_dict_records_as_series(
+    queryset: QuerySet, record_key: str, value_keys: List[str]
+) -> Dict[str, Dict[str, Any]]:
     """
     Transform data with one series per record.
     Format: {"<record1>": {"key1": val1, "key2": val2}, "<record2>": {"key1": val3, "key2": val4}}
@@ -398,7 +404,9 @@ def queryset_to_nested_dict_records_as_series(queryset, record_key, value_keys):
     return result
 
 
-def queryset_to_nested_dict_keys_as_series(queryset, record_key, value_keys):
+def queryset_to_nested_dict_keys_as_series(
+    queryset: QuerySet, record_key: str, value_keys: List[str]
+) -> Dict[str, Dict[str, Any]]:
     """
     Transform data with one series per key/field.
     Format: {"key1": {"<record1>": val1, "<record2>": val3}, "key2": {"<record1>": val2, "<record2>": val4}}

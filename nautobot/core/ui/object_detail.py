@@ -1193,6 +1193,7 @@ class EChartsPanel(Panel, EChartsBase):
         chart_kwargs=None,
         width="100%",
         height="32rem",
+        chart_container_id=None,
         body_wrapper_template_path="components/echarts.html",
         **kwargs,
     ):
@@ -1200,16 +1201,14 @@ class EChartsPanel(Panel, EChartsBase):
         Initialize an ECharts panel.
 
         Args:
-            chart (EChartsBase): Pre-configured EChartsBase instance to render.
-            chart_class (class): EChartsBase subclass to instantiate.
-            chart_kwargs (dict): Kwargs to pass to chart_class constructor.
+            chart_kwargs (dict): Kwargs to pass to EChartsBase constructor.
             width (str): CSS width for the chart container (default: "100%").
             height (str): CSS height for the chart container (default: "32rem").
-            container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
-            body_content_template_path (str): Template path for rendering the chart content.
+            chart_container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
         """
         self.width = width
         self.height = height
+        self.chart_container_id = chart_container_id
 
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
         EChartsBase.__init__(self, **chart_kwargs)
@@ -1236,7 +1235,7 @@ class EChartsPanel(Panel, EChartsBase):
             "chart_config": chart_config,
             "chart_width": self.width,
             "chart_height": self.height,
-            "chart_container_id": slugify(f"echart-{self.header}"),
+            "chart_container_id": self.chart_container_id or slugify(f"echart-{self.header}"),
         }
 
 
