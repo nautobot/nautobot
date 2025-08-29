@@ -160,7 +160,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
     def test_input_field_gets_updated(self):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:location_list')}")
 
         text_field_name = self.custom_fields[0].add_prefix_to_cf_key()
         integer_field_name = self.custom_fields[1].add_prefix_to_cf_key()
@@ -287,7 +287,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
     def test_advanced_filter_application(self):
         """Assert that filters are applied successfully when using the advanced filter."""
         # Go to the location list view
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:location_list')}")
         # create a new tag
         tag_object = Tag.objects.create(name="Tag1")
         tag_object.content_types.set([ContentType.objects.get_for_model(Location)])

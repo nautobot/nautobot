@@ -21,6 +21,52 @@
 
     <ul class="list-unstyled my-0 overflow-auto pt-10 w-100">
         {% if request.user.is_authenticated %}
+            {% if nav_menu_version_control %}
+                <li>
+                    {% url 'plugins:nautobot_version_control:branch_list' as branch_list_url %}
+                    <a class="nb-sidenav-list-item nb-sidenav-list-item-flat{% if request.path == branch_list_url %} nb-sidenav-list-item-active{% endif %}" href="{{ branch_list_url }}">
+                        <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
+                        <span>Branches</span>
+                    </a>
+                </li>
+                <li>
+                    <form data-bs-theme="dark" id="sidenav-branch-picker">
+                        <img alt="branch icon" src="{% static 'nautobot-icons/branch.svg' %}">
+                        <select
+                            aria-label="Find a branch..."
+                            class="form-select nautobot-select2-api"
+                            data-allow-clear="false"
+                            data-url="{% url 'plugins-api:nautobot_version_control-api:branch_list' %}"
+                            display-field="name"
+                            id="sidenav-branch-picker-select"
+                            name="branch"
+                            placeholder="Find a branch..."
+                            search-field="name__ic"
+                            value-field="name"
+                        >
+                            <option selected="selected" value="{{ nav_menu_version_control.active_branch }}">
+                                {{ nav_menu_version_control.active_branch }}
+                            </option>
+                        </select>
+                    </form>
+                </li>
+                <li>
+                    {% if nav_menu_version_control.active_branch == 'main' %}
+                        <button class="nb-sidenav-list-item nb-sidenav-list-item-flat" disabled type="button">
+                            <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
+                            <span>View diffs</span>
+                        </button>
+                    {% else %}
+                        {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
+                        <a class="nb-sidenav-list-item nb-sidenav-list-item-flat{% if request.path == branch_diffs_url %} nb-sidenav-list-item-active{% endif %}" href="{{ branch_diffs_url }}">
+                            <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
+                            <span>View diffs</span>
+                        </a>
+                    {% endif %}
+                </li>
+                <li class="nb-sidenav-list-divider"></li>
+            {% endif %}
+
             <li>
                 <button
                     aria-controls="sidenav-flyout-favorites"
@@ -28,9 +74,7 @@
                     class="nb-sidenav-list-item"
                     type="button"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor" stroke-width="1.5"/>
-                    </svg>
+                    <img alt="star icon" src="{% static 'nautobot-icons/star.svg' %}">
                     <span>Favorites</span>
                 </button>
                 <div class="nb-sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
@@ -49,11 +93,16 @@
                             class="nb-sidenav-list-item"
                             type="button"
                         >
-                            <!-- TODO(norbert-mieczkowski-codilime): This is just a placeholder icon, replace it when new icons are ready to use. -->
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" fill="none" r="10" stroke="currentcolor"
-                                        stroke-width="1.5"/>
-                            </svg>
+                            {% if '/' in tab_details.icon %}
+                                {% comment %}If there is a `'/'` in the `icon`, consider it a file URL, not icon name.{% endcomment %}
+                                <img alt="{{ tab_name }} icon" src="{% static tab_details.icon %}">
+                            {% elif tab_details.icon %}
+                                {% comment %}If `icon` is given, treat it as icon name to be fetched from nautobot-icons library.{% endcomment %}
+                                <img alt="{{ tab_details.icon }} icon" src="{% static 'nautobot-icons/'|add:tab_details.icon|add:'.svg' %}">
+                            {% else %}
+                                {% comment %}If `icon` is missing, generate an "icon" depicting the first nav menu tab name letter inside a rounded rectangle.{% endcomment %}
+                                <span class="nb-letter-icon">{{ tab_name|first|upper }}</span>
+                            {% endif %}
                             <span>{{ tab_name }}</span>
                         </button>
 

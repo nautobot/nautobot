@@ -555,6 +555,7 @@ nav:
           - Tags: "user-guide/platform-functionality/tag.md"
           - Template Filters: "user-guide/platform-functionality/template-filters.md"
           - Users:
+              - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
               - Token: "user-guide/platform-functionality/users/token.md"
           - Webhooks: "user-guide/platform-functionality/webhook.md"
@@ -657,6 +658,7 @@ nav:
                   - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
+                  - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:

@@ -1,0 +1,5 @@
+Updated development dependency `pylint` to `~3.3.8`.
+Updated development dependency `pymarkdownlnt` to `~0.9.32`.
+Updated development dependency `ruff` to `~0.12.9`.
+Updated documentation dependency `mkdocs-macros-plugin` to `~1.3.9`.
+Updated documentation dependency `mkdocs-material` to `~9.6.17`.

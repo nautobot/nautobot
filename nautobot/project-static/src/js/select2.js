@@ -121,6 +121,9 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
         const limit = 50;
         const q = params.term;
 
+        // Get search query param name, defaults to `'q'`.
+        const search_field = element.getAttribute('search-field') || 'q';
+
         // Set api_version.
         const api_version = element.getAttribute('data-api-version');
 
@@ -202,7 +205,7 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
           offset: String(offset),
           ...(api_version ? { api_version } : undefined),
           ...(content_type ? { content_type } : undefined),
-          ...(q ? { q } : undefined),
+          ...(q ? { [search_field]: q } : undefined),
           ...extra_query_parameters,
         };
 

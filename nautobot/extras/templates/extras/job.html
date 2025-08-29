@@ -96,7 +96,7 @@
                         type="submit"
                         {% if not perms.extras.run_job or not job_model.runnable %}disabled="disabled"{% endif %}
                     >
-                        <span aria-hidden="true" class="mdi mdi-play"></span><!--
+                        <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
                         -->Run Job Now
                     </button>
                     <a href="{% url 'extras:job_list' %}" class="btn btn-secondary">
@@ -112,71 +112,75 @@
 {% block javascript %}
 {{ block.super }}
 <script type="text/javascript">
-    var run_now_text = "Run Job Now";
-    var schedule_text = "Schedule Job";
-    var dry_run_text = "Run Job Now (DRYRUN)";
-    var schedule_dry_run_text = "Schedule Job (DRYRUN)";
+    (() => {
+        window.addEventListener('DOMContentLoaded', () => {
+            /**
+             * Toggle form elements based on the job execution type.
+             * If the type is `immediately` (the default), don't show
+             * any of the scheduling related elements, else, show them.
+             * If dryrun is selected, the job may run without approval.
+             */
+            const toggleExecutionType = () => {
+                const dryrun = (() => {
+                    switch (document.querySelector('#id_dryrun')?.getAttribute('type')) {
+                        case 'checkbox':
+                            return Boolean(input.checked);
 
-    function toggleExecutionType() {
-        /**
-         * Toggle form elements based on the job execution type.
-         * If the type is `immediately` (the default), don't show
-         * any of the scheduling related elements, else, show them.
-         * If dryrun is selected, the job may run without approval.
-         **/
-        var dryrun = false;
-        if ($("#id_dryrun").prop("type") === "checkbox") {
-            dryrun = $("#id_dryrun").prop("checked")
-        } else if ($("#id_dryrun").prop("type") === "hidden") {
-            dryrun = ($("#id_dryrun").val() === "True")
-        }
-        if ($("#id__schedule_type").val() == "immediately") {
-            // Toggle run button
-            if (dryrun){
-                $("#id__run").html('<i class="mdi mdi-play"></i> ' + dry_run_text);
-            } else {
-                $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
-            }
-            $("#id__run").addClass("btn-primary");
-            $("#id__run").removeClass("btn-warning");
+                        case 'hidden':
+                            return input.value === 'True';
 
-            // Toggle schedule fields
-            $("#id__schedule_name").parent().parent().hide();
-            $("#id__schedule_start_date").parent().parent().hide();
-            $("#id__schedule_start_time").parent().parent().hide();
-        } else {
-            // Toggle run button
-            if (dryrun){
-                $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_dry_run_text);
-            } else {
-                $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
-            }
-            $("#id__run").addClass("btn-warning");
-            $("#id__run").removeClass("btn-primary");
+                        default:
+                            return false;
+                    }
+                })();
 
-            // Toggle schedule fields
-            $("#id__schedule_name").parent().parent().show();
-            $("#id__schedule_start_date").parent().parent().show();
-            $("#id__schedule_start_time").parent().parent().show();
-        }
-        // Toggle custom crontab field
-        if ($("#id__schedule_type").val() != "custom") {
-            $("#id__recurrence_custom_time").parent().parent().hide();
-        } else {
-            $("#id__recurrence_custom_time").parent().parent().show();
-        }
-    }
+                const schedule_type = document.querySelector('#id__schedule_type').selectedOptions[0]?.value;
+                const custom = schedule_type === 'custom';
+                const immediately = schedule_type === 'immediately';
 
-    $(document).ready(function() {
-        {% if not job_model.has_sensitive_variables %}
-            $("#id__schedule_type").change(toggleExecutionType);
-        {% else %}
-            $("#id__schedule_type").val("immediately");
-            $(".job_execution").hide();
-        {% endif %}
-        $("#id_dryrun").change(toggleExecutionType);
-        toggleExecutionType();
-    });
+                const run = document.querySelector('#id__run');
+
+                // Toggle run button text.
+                const text = `${immediately ? 'Run Job Now' : 'Schedule Job'}${dryrun ? ' (DRYRUN)' : ''}`;
+                run.childNodes[run.childNodes.length - 1].replaceWith(text); // The last run button child node is text.
+
+                // Toggle `'mdi-clock'` and `'mdi-play'` icons.
+                const icon = run.querySelector('.mdi');
+                icon.classList.toggle('mdi-play', immediately);
+                icon.classList.toggle('mdi-clock', !immediately);
+
+                // Toggle `'btn-primary'` and `'btn-warning'` classes.
+                run.classList.toggle('btn-primary', immediately);
+                run.classList.toggle('btn-warning', !immediately);
+
+                // Toggle schedule name and schedule time field rows.
+                ['#id__schedule_name', '#id__schedule_start_time'].forEach((selector) => {
+                    const row = document.querySelector(selector).parentElement.parentElement;
+                    row.classList.toggle('d-none', immediately);
+                });
+
+                // Toggle custom crontab field row.
+                const row = document.querySelector('#id__recurrence_custom_time').parentElement.parentElement;
+                row.classList.toggle('d-none', !custom);
+            };
+
+            {% if job_model.has_sensitive_variables %}
+                document.querySelector('#id__schedule_type').value = 'immediately';
+                document.querySelector('.job_execution').classList.toggle('d-none', true);
+            {% endif %}
+
+            document.addEventListener('change', (event) => {
+                const dryrun = event.target.closest('#id_dryrun');
+                const schedule_type = event.target.closest('#id__schedule_type');
+
+                if (dryrun || schedule_type) {
+                    toggleExecutionType();
+                }
+            });
+
+            toggleExecutionType();
+        });
+    })();
 </script>
 {{ job_form.media }}
 {% endblock %}

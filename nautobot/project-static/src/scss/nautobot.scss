@@ -3,6 +3,7 @@
 @use "sass:list";
 @use "sass:map";
 @use "sass:meta";
+@use "sass:string";
 
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
@@ -792,6 +793,64 @@ button {
   }
 }
 
+$table-variant-primary: (
+  "active": var(--#{$prefix}primary-border-subtle),
+  "bg":     var(--#{$prefix}primary-bg-subtle),
+  "border": var(--#{$prefix}primary-text-emphasis),
+  "text":   var(--#{$prefix}primary-text-emphasis),
+);
+$table-variant-secondary: (
+  "active": var(--#{$prefix}secondary-border-subtle),
+  "bg":     var(--#{$prefix}secondary-bg-subtle),
+  "border": var(--#{$prefix}border-color),
+  "text":   var(--#{$prefix}emphasis-color),
+);
+$table-variant-success: (
+  "active": var(--#{$prefix}success-border-subtle),
+  "bg":     var(--#{$prefix}success-bg-subtle),
+  "border": var(--#{$prefix}success-text-emphasis),
+  "text":   var(--#{$prefix}success-text-emphasis),
+);
+$table-variant-danger: (
+  "active": var(--#{$prefix}danger-border-subtle),
+  "bg":     var(--#{$prefix}danger-bg-subtle),
+  "border": var(--#{$prefix}danger-text-emphasis),
+  "text":   var(--#{$prefix}danger-text-emphasis),
+);
+$table-variant-warning: (
+  "active": var(--#{$prefix}warning-border-subtle),
+  "bg":     var(--#{$prefix}warning-bg-subtle),
+  "border": var(--#{$prefix}warning-text-emphasis),
+  "text":   var(--#{$prefix}warning-text-emphasis),
+);
+$table-variants: (
+  "primary":   $table-variant-primary,
+  "secondary": $table-variant-secondary,
+  "success":   $table-variant-success,
+  "danger":    $table-variant-danger,
+  "warning":   $table-variant-warning,
+  "info":      $table-variant-primary,
+  "light":     $table-variant-secondary,
+  "dark":      $table-variant-secondary,
+  "default":   $table-variant-secondary
+);
+@each $color, $variant-colors in $table-variants {
+  .table-#{$color} {
+    --#{$prefix}table-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}table-striped-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-striped-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-active-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-active-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-hover-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-hover-color: #{map.get($variant-colors, "text")};
+
+    color: var(--#{$prefix}table-color);
+    border-color: var(--#{$prefix}table-border-color);
+  }
+}
+
 .nb-table-headings th {
   background-color: var(--#{$prefix}tertiary-bg);
   white-space: nowrap;
@@ -1150,10 +1209,12 @@ textarea {
   color: var(--#{$prefix}badge-color);
 
   &.bg-danger,
+  &.bg-info,
   &.bg-primary,
   &.bg-success,
   &.bg-warning,
   &.text-bg-danger,
+  &.text-bg-info,
   &.text-bg-primary,
   &.text-bg-success,
   &.text-bg-warning {
@@ -1342,11 +1403,12 @@ body {
   @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
-    "sidenav header       drawer"
-    "sidenav main-content drawer"
-    "sidenav footer       drawer";
+    "sidenav header             drawer"
+    "sidenav main-content       drawer"
+    "sidenav banner-bottom-area drawer"
+    "sidenav footer             drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
-  grid-template-rows: fit-content(0) 1fr fit-content(0);
+  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
   overflow-y: scroll;
 
   #sidenav {
@@ -1427,6 +1489,14 @@ body {
     filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
   }
 
+  @mixin filter-nav-gray-3 {
+    /*
+     * CSS workaround to change element color (including its `background-image`) from white to `$nav-gray-3`.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     */
+    filter: invert(39%) sepia(6%) saturate(1228%) hue-rotate(166deg) brightness(54%) contrast(86%);
+  }
+
   @include box-shadow($box-shadow);
   @include transition($transition-collapse-width);
   align-items: center;
@@ -1463,6 +1533,16 @@ body {
 
     .nb-sidenav-toggler::before { /* Sidenav toggler chevron icon */
       transform: rotate(180deg);
+    }
+
+    #sidenav-branch-picker {
+      .select2-selection__rendered { /* Sidenav branch picker select branch name */
+        @include fade-out;
+      }
+
+      .select2-container--bootstrap-5 .select2-selection--single { /* Sidenav branch picker select chevron icon */
+        background-image: none;
+      }
     }
   }
 
@@ -1630,6 +1710,7 @@ body {
     font-weight: $font-weight-medium;
     padding-block: 0.3125rem; /* 5px */
     padding-inline: #{map.get($spacers, 20)}  #{map.get($spacers, 10)};
+    text-decoration: none;
     text-transform: uppercase;
     width: 100%;
 
@@ -1646,8 +1727,8 @@ body {
       }
     }
 
-    &:focus-visible,
-    &:hover {
+    &:not(:disabled):focus-visible,
+    &:not(:disabled):hover {
       background-color: $navy-1;
     }
 
@@ -1663,9 +1744,20 @@ body {
       z-index: -1;
     }
 
+    &:disabled { /* When list item is disabled */
+      color: $nav-gray-3;
+
+      > :first-child, /* Nav menu tab icon */
+      > :last-child::after { /* Chevron icon */
+        @include filter-nav-gray-3;
+      }
+    }
+
+    &.nb-sidenav-list-item-active,
     &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
+      > :first-child, /* Nav menu tab icon */
       > :last-child::after { /* Chevron icon */
         @include filter-nav-orange-0;
       }
@@ -1684,12 +1776,12 @@ body {
       display: inline-flex;
       flex: auto 1 0;
       margin-inline-start: map.get($spacers, 10);
+    }
 
-      &::after { /* Chevron icon */
-        @include chevron(1.5rem); /* 24px */
-        margin-inline-start: auto;
-        transform: rotate(180deg);
-      }
+    &:not(.nb-sidenav-list-item-flat) > :last-child::after { /* Chevron icon, not rendered when `nb-sidenav-list-item` has `nb-sidenav-list-item-flat` class. */
+      @include chevron(1.5rem); /* 24px */
+      margin-inline-start: auto;
+      transform: rotate(180deg);
     }
   }
 
@@ -1707,6 +1799,62 @@ body {
   &:has(> ul .nb-sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
     .nb-sidenav-toggler {
       @include fade-out;
+    }
+  }
+
+  #sidenav-branch-picker {
+    position: relative;
+    width: $sidenav-width-expanded;
+
+    > :first-child { /* Branch icon */
+      height: 1.5rem; /* 24px */
+      left: map.get($spacers, 20);
+      pointer-events: none;
+      position: absolute;
+      top: map.get($spacers, 4);
+      width: 1.5rem; /* 24px */
+      z-index: 2;
+    }
+
+    select,
+    .select2-selection {
+      background-color: $navy-1;
+      border-radius: 0;
+      color: inherit;
+      padding-inline-start: calc(map.get($spacers, 20) + 1.5rem + map.get($spacers, 10)); /* 20px + 24px + 10px = 54px */
+    }
+
+    select,
+    .select2-selection__rendered {
+      font-weight: $font-weight-medium;
+      color: inherit;
+      text-transform: uppercase;
+    }
+
+    .select2-selection__rendered {
+      @include fade-in;
+      @include transition($transition-base);
+    }
+
+    select,
+    .select2-container:not(.select2-container--focus):not(.select2-container--open) .select2-selection:not(:focus-visible):not(:hover) {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    select,
+    .select2-container--bootstrap-5 .select2-selection--single {
+      /*
+       * Change select chevron icon color from `#343a40` (`$gray-800`, default) to `#ffffff` (`$nav-white-0`) and right
+       * offset from `11px` (default) to `13px` to keep it consistent and aligned with with other sidenav chevrons.
+       */
+      $chevron-svg: $s2bs5-indicator;
+      $stroke-color: #{$form-select-indicator-color};
+      $stroke-index: string.index($chevron-svg, $stroke-color);
+      $stroke-length: string.length($stroke-color);
+      $next-chevron-svg: #{string.slice($chevron-svg, 1, $stroke-index - 1)}#{$nav-white-0}#{string.slice($chevron-svg, $stroke-index + $stroke-length, -1)};
+      background-image: escape-svg($next-chevron-svg);
+      background-position: right 0.8125rem center;
     }
   }
 }
@@ -1887,6 +2035,17 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
   }
 }
 
+/* Nautobot icons */
+.nb-letter-icon {
+  align-items: center;
+  border-color: currentcolor;
+  border-radius: 0.375rem; /* 6px - consistent with icons from nautobot-icons library. */
+  border-style: solid;
+  border-width: 0.09375rem; /* 1.5px - consistent with icons from nautobot-icons library. */
+  display: inline-flex;
+  justify-content: center;
+}
+
 /* Tiles */
 .nb-tiles {
   $tile-width: 27rem; /* 432px */
@@ -2026,7 +2185,7 @@ ul.nb-tree-hierarchy {
 
 /* Banners */
 .nb-banner-bottom {
-  margin-bottom: 3.125rem; /* 50px */
+  grid-area: banner-bottom-area;
 }
 
 /* Reports */

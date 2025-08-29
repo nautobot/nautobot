@@ -47,6 +47,7 @@ from rest_framework.views import APIView
 from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -70,7 +71,7 @@ class HomeView(AccessMixin, TemplateView):
                 context[key] = data
 
         # Create standalone template
-        path = f'{details["template_path"]}{details["custom_template"]}'
+        path = f"{details['template_path']}{details['custom_template']}"
         if os.path.isfile(path):
             with open(path, "r") as f:
                 html = f.read()
@@ -275,11 +276,21 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         return {
+            "breadcrumbs": Breadcrumbs(
+                items={
+                    "generic": [
+                        ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
+                        ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
+                    ],
+                },
+            ),
             "content_type": ContentType.objects.get_for_model(Status),
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
             "table": StatusTable(Status.objects.all()[:3]),
+            "title": "Nautobot Theme Preview",
+            "view_action": "generic",
         }
 
 

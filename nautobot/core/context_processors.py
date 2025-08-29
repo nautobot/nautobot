@@ -45,11 +45,12 @@ def settings(request):
 def nav_menu(request):
     """
     Expose nav menu data for navigation and global search.
+    Also, indicate whether `"nautobot_version_control"` app is installed in order to render branch picker in nav menu.
     """
     nav_menu_object = {"tabs": {}}
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
         if not tab_details["permissions"] or has_one_or_more_perms(request.user, tab_details["permissions"]):
-            nav_menu_object["tabs"][tab_name] = {"groups": {}}
+            nav_menu_object["tabs"][tab_name] = {"groups": {}, "icon": tab_details["icon"]}
             for group_name, group_details in tab_details["groups"].items():
                 if not group_details["permissions"] or has_one_or_more_perms(
                     request.user, group_details["permissions"]
@@ -64,9 +65,13 @@ def nav_menu(request):
                                 "weight": item_details["weight"],
                             }
 
-    return {
-        "nav_menu": nav_menu_object,
-    }
+    nav_menu_version_control = None
+    if "nautobot_version_control" in django_settings.PLUGINS:
+        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+        nav_menu_version_control = {"active_branch": active_branch()}
+
+    return {"nav_menu": nav_menu_object, "nav_menu_version_control": nav_menu_version_control}
 
 
 def sso_auth(request):

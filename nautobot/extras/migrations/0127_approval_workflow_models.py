@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         ("auth", "0012_alter_user_first_name_max_length"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0125_approval_workflow_pre_check"),
+        ("extras", "0126_approval_workflow_pre_check"),
     ]
 
     operations = [

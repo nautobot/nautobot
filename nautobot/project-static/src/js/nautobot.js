@@ -21,6 +21,9 @@ import json from 'highlight.js/lib/languages/json';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 
+import htmx from 'htmx.org';
+window.htmx = htmx;
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);
@@ -67,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sidenav.classList.toggle('nb-sidenav-collapsed', expanded);
   });
 
-  [...document.querySelectorAll('.nb-sidenav-list-item')].forEach((sidenavListItem) => {
+  [...document.querySelectorAll('.nb-sidenav-list-item:not(.nb-flat)')].forEach((sidenavListItem) => {
     sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
@@ -93,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('click', onClickDocument);
       }
     });
+  });
+
+  const sidenavBranchPickerSelect = $('#sidenav-branch-picker-select');
+  sidenavBranchPickerSelect.on('change', (event) => event.currentTarget.form.submit());
+  sidenavBranchPickerSelect.on('select2:open', () => {
+    document.querySelector('.select2-dropdown').setAttribute('data-bs-theme', 'dark');
+    document.querySelector('.select2-dropdown .select2-search__field').setAttribute('placeholder', 'Find a branch...');
   });
 
   // Collapse
