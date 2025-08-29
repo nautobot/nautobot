@@ -5,7 +5,7 @@ import random
 from django.apps import apps
 from netaddr import IPNetwork
 
-from nautobot.ipam.models import get_default_namespace
+from nautobot.ipam.models import get_default_namespace_pk
 
 # Calculate the probabilities to use for the maybe_subdivide() function defined below.
 
@@ -112,7 +112,10 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):  #
     print(f"Seeding the PRNG with seed {seed}")
     random.seed(seed)  # suspicious-non-cryptographic-random-usage
 
-    status_active, _ = Status.objects.get_or_create(name="Active", defaults={"slug": "active"})
+    if hasattr(Status, "slug"):
+        status_active, _ = Status.objects.get_or_create(name="Active", defaults={"slug": "active"})
+    else:
+        status_active, _ = Status.objects.get_or_create(name="Active")
 
     for i in range(1, 11):
         Tenant.objects.get_or_create(name=f"{initial_subnet} Tenant {i}")
@@ -126,7 +129,7 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):  #
 
     all_tenants = list(Tenant.objects.all())
     if hasattr(VRF, "namespace"):
-        all_vrfs = list(VRF.objects.filter(namespace=get_default_namespace()))
+        all_vrfs = list(VRF.objects.filter(namespace_id=get_default_namespace_pk()))
     else:
         all_vrfs = list(VRF.objects.all())
 
@@ -156,11 +159,12 @@ def create_prefixes(initial_subnet, all_tenants, all_vrfs, status_active, Prefix
                     network=str(subnet.network),
                     broadcast=str(subnet.broadcast if subnet.broadcast else subnet[-1]),
                     prefix_length=subnet.prefixlen,
+                    ip_version=subnet.version,
                     status=status_active,
                     tenant=maybe_random_instance(all_tenants),
                 )
                 if vrf is not None:
-                    vrf.add_prefix(prefix)
+                    vrf.prefixes.add(prefix)
 
             unique_prefix_count += 1
             if hasattr(Prefix, "vrf"):
@@ -202,6 +206,7 @@ def create_ips(initial_subnet, all_tenants, all_vrfs, status_active, IPAddress):
                 IPAddress.objects.create(
                     host=str(network.ip),
                     mask_length=network.prefixlen,
+                    ip_version=network.version,
                     status=status_active,
                     tenant=maybe_random_instance(all_tenants),
                 )
