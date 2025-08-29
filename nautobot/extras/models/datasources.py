@@ -29,7 +29,10 @@ logger = logging.getLogger(__name__)
 class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_provided_contents(self, provided_contents_type):
         cache_key = construct_cache_key(
-            self, method_name="get_for_provided_contents", provided_contents_type=provided_contents_type
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
         )
         queryset = cache.get(cache_key)
         if queryset is None:

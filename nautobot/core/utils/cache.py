@@ -31,6 +31,7 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
         >>> construct_cache_key(change_logged_models_queryset)
         'nautobot.extras.utils.change_logged_models_queryset'
     """
+    method_name_must_be_set = True
     if isinstance(obj, models.Model):
         tokens = ["nautobot", obj._meta.concrete_model._meta.label_lower, str(obj.pk), method_name]
     elif isinstance(obj, models.Manager):
@@ -49,6 +50,10 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
     else:
         # A standalone function
         tokens = [obj.__module__, obj.__name__]
+        method_name_must_be_set = False
+
+    if method_name_must_be_set and method_name is None:
+        raise ValueError("method_name must be specified for the given obj")
 
     if branch_aware and "nautobot_version_control" in settings.PLUGINS:
         from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

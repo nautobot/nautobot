@@ -139,7 +139,7 @@ def change_logged_models_queryset():
     Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
     queryset = None
-    cache_key = construct_cache_key(change_logged_models_queryset)
+    cache_key = construct_cache_key(change_logged_models_queryset, branch_aware=False)
     with contextlib.suppress(redis.exceptions.ConnectionError):
         queryset = cache.get(cache_key)
     if queryset is None:
@@ -399,8 +399,9 @@ def get_celery_queues():
     from nautobot.core.celery import app  # prevent circular import
 
     celery_queues = None
+    cache_key = construct_cache_key(get_celery_queues, branch_aware=False)
     with contextlib.suppress(redis.exceptions.ConnectionError):
-        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
+        celery_queues = cache.get(cache_key)
 
     if celery_queues is None:
         celery_queues = {}
@@ -420,7 +421,7 @@ def get_celery_queues():
                 for queue in distinct_queues:
                     celery_queues[queue] = celery_queues.get(queue, 0) + 1
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
+            cache.set(cache_key, celery_queues, timeout=5)
 
     return celery_queues
 

@@ -262,7 +262,7 @@ class BaseJob:
     @classproperty
     def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
         """Cache key for singleton jobs."""
-        return construct_cache_key(cls, method_name="running", class_path=cls.class_path)
+        return construct_cache_key(cls, method_name="running", branch_aware=False, class_path=cls.class_path)
 
     @final
     @classproperty

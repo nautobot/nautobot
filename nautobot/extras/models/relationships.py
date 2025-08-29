@@ -451,11 +451,16 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         """
         concrete_model = model._meta.concrete_model
         cache_key = construct_cache_key(
-            self, method_name="get_for_model_source", model=concrete_model._meta.label_lower, hidden=hidden
+            self,
+            method_name="get_for_model_source",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_source",
+            branch_aware=True,
             model=concrete_model._meta.label_lower,
             hidden=hidden,
             listing=True,
@@ -490,11 +495,16 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         """
         concrete_model = model._meta.concrete_model
         cache_key = construct_cache_key(
-            self, method_name="get_for_model_destination", model=concrete_model._meta.label_lower, hidden=hidden
+            self,
+            method_name="get_for_model_destination",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_destination",
+            branch_aware=True,
             model=concrete_model._meta.label_lower,
             hidden=hidden,
             listing=True,
@@ -550,13 +560,23 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             for hidden in ["None", "True", "False"]:
                 cache.set(
                     construct_cache_key(
-                        self, method_name="get_for_model_source", model=label, hidden=hidden, listing=True
+                        self,
+                        method_name="get_for_model_source",
+                        branch_aware=True,
+                        model=label,
+                        hidden=hidden,
+                        listing=True,
                     ),
                     listings["source"][label][hidden],
                 )
                 cache.set(
                     construct_cache_key(
-                        self, method_name="get_for_model_destination", model=label, hidden=hidden, listing=True
+                        self,
+                        method_name="get_for_model_destination",
+                        branch_aware=True,
+                        model=label,
+                        hidden=hidden,
+                        listing=True,
                     ),
                     listings["destination"][label][hidden],
                 )

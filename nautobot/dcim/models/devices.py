@@ -898,7 +898,7 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
-        cache_key = construct_cache_key(self, method_name="has_module_bays")
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
         cache.delete(cache_key)
         return instantiated_components
 
@@ -997,7 +997,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
         """
-        cache_key = construct_cache_key(self, method_name="has_module_bays")
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
         module_bays_exists = cache.get(cache_key)
         if module_bays_exists is None:
             module_bays_exists = self.module_bays.exists()

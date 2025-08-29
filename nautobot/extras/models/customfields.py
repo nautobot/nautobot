@@ -56,9 +56,11 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         Returns a queryset by default, or a list if `get_queryset` param is False.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = construct_cache_key(self, method_name="get_for_model", model=concrete_model._meta.label_lower)
+        cache_key = construct_cache_key(
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
         list_cache_key = construct_cache_key(
-            self, method_name="get_for_model", model=concrete_model._meta.label_lower, listing=True
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
         )
         if not get_queryset:
             listing = cache.get(list_cache_key)
@@ -83,7 +85,9 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             listings[f"{cf.content_type.app_label}.{cf.content_type.model}"].append(cf)
         for ct in ContentType.objects.all():
             label = f"{ct.app_label}.{ct.model}"
-            cache_key = construct_cache_key(self, method_name="get_for_model", model=label, listing=True)
+            cache_key = construct_cache_key(
+                self, method_name="get_for_model", branch_aware=True, model=label, listing=True
+            )
             cache.set(cache_key, listings[label])
 
 
@@ -406,12 +410,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model",
+            branch_aware=True,
             model=concrete_model._meta.label_lower,
             exclude_filter_disabled=exclude_filter_disabled,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model",
+            branch_aware=True,
             model=concrete_model._meta.label_lower,
             exclude_filter_disabled=exclude_filter_disabled,
             listing=True,
@@ -436,7 +442,9 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def keys_for_model(self, model):
         """Return list of all keys for CustomFields assigned to the given model."""
         concrete_model = model._meta.concrete_model
-        cache_key = construct_cache_key(self, method_name="keys_for_model", model=concrete_model._meta.label_lower)
+        cache_key = construct_cache_key(
+            self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
         keys = cache.get(cache_key)
         if keys is None:
             keys = list(self.get_for_model(model).values_list("key", flat=True))
@@ -459,17 +467,30 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             label = f"{ct.app_label}.{ct.model}"
             cache.set(
                 construct_cache_key(
-                    self, method_name="get_for_model", model=label, exclude_filter_disabled=True, listing=True
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=True,
                 ),
                 cf_listings[label][True],
             )
             cache.set(
                 construct_cache_key(
-                    self, method_name="get_for_model", model=label, exclude_filter_disabled=True, listing=False
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=False,
                 ),
                 cf_listings[label][False],
             )
-            cache.set(construct_cache_key(self, method_name="keys_for_model", model=label), key_listings[label])
+            cache.set(
+                construct_cache_key(self, method_name="keys_for_model", branch_aware=True, model=label),
+                key_listings[label],
+            )
 
 
 @extras_features("webhooks")
@@ -598,7 +619,7 @@ class CustomField(
         """
         if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
             return []
-        cache_key = construct_cache_key(self, method_name="choices")
+        cache_key = construct_cache_key(self, method_name="choices", branch_aware=True)
         choices = cache.get(cache_key)
         if choices is None:
             choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))

@@ -143,10 +143,10 @@ def invalidate_models_cache(sender, **kwargs):
 
     with contextlib.suppress(redis.exceptions.ConnectionError):
         # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-        cache_key = construct_cache_key(manager, method_name="get_for_model")
+        cache_key = construct_cache_key(manager, method_name="get_for_model", branch_aware=True)
         cache.delete_pattern(f"{cache_key}(*)")
         if hasattr(manager, "keys_for_model"):
-            cache_key = construct_cache_key(manager, method_name="keys_for_model")
+            cache_key = construct_cache_key(manager, method_name="keys_for_model", branch_aware=True)
             cache.delete_pattern(f"{cache_key}(*)")
 
 
@@ -158,9 +158,9 @@ def invalidate_choices_cache(sender, instance, **kwargs):
     """Invalidate the choices cache for CustomFields."""
     with contextlib.suppress(redis.exceptions.ConnectionError):
         if sender is CustomField:
-            cache_key = construct_cache_key(instance, method_name="choices")
+            cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
         else:
-            cache_key = construct_cache_key(instance.custom_field, method_name="choices")
+            cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
         cache.delete(cache_key)
 
 
@@ -175,7 +175,7 @@ def invalidate_relationship_models_cache(sender, **kwargs):
     ):
         with contextlib.suppress(redis.exceptions.ConnectionError):
             # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-            cache_key = construct_cache_key(Relationship.objects, method_name=method_name)
+            cache_key = construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)
             cache.delete_pattern(f"{cache_key}(*)")
 
 
@@ -209,7 +209,9 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
 @receiver(post_delete, sender=GitRepository)
 def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
     with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache_key = construct_cache_key(GitRepository.objects, method_name="get_for_provided_contents")
+        cache_key = construct_cache_key(
+            GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True
+        )
         cache.delete_pattern(f"{cache_key}(*)")
 
 

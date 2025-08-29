@@ -186,9 +186,11 @@ class RelationshipBaseTest:
     def tearDown(self):
         """Ensure that relationship caches are cleared to avoid leakage into other tests."""
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source')}(*)")
             cache.delete_pattern(
-                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination')}(*)"
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source', branch_aware=True)}(*)"
+            )
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination', branch_aware=True)}(*)"
             )
 
 
