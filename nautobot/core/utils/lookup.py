@@ -43,7 +43,7 @@ def resolve_attr(obj, dotted_field):
         'Not Nestable'
     """
     try:
-        val = str(attrgetter(dotted_field.replace("__", "."))(obj))
+        val = attrgetter(dotted_field.replace("__", "."))(obj)
     except (AttributeError, ObjectDoesNotExist):
         return None
 
@@ -54,7 +54,7 @@ def resolve_attr(obj, dotted_field):
         field_label = attrs[-1].replace("_", " ").title()
         return field_label if val else f"Not {field_label}"
 
-    return val
+    return str(val) if val else None
 
 
 def get_changes_for_model(model):
