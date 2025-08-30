@@ -286,13 +286,11 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_device_has_no_primary_ips(self):
         """
-        Test that host.save() is NOT called when removing an IP assignment from a device
-        that has no primary IPs assigned (optimization test).
+        Test that Device is not saved when removing an IP from an interface and the device
+        has no primary IPs assigned.
         """
         # Create an IP address
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
-
-        # Device has no primary IPs by default (both are None)
 
         # Assign IP to interface
         assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_addr)
@@ -307,14 +305,18 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_removing_non_primary_ip_from_device(self):
         """
-        Test that host.save() is NOT called when removing an IP assignment for an IP
-        that is not the device's primary IP (optimization test for both IPv4 and IPv6).
+        Test that Device is not saved when removing an IP from an interface and the IP
+        is not the device's primary IP.
         """
         # Test removing non-primary IPv4 assignment
         with self.subTest("IPv4 non-primary IP removal"):
             # Create IPv4 addresses
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
-            other_ipv4_addr = IPAddress.objects.create(address="192.0.2.2/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+            other_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.2/24", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IP to interface first (required before setting as primary)
             IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv4_addr)
@@ -324,7 +326,9 @@ class IPAddressToInterfaceTest(TestCase):
             self.test_device.save()
 
             # Assign the other IP to a different interface
-            assignment_other_ipv4 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=other_ipv4_addr)
+            assignment_other_ipv4 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=other_ipv4_addr
+            )
 
             with patch.object(self.test_device, "save") as mock_save:
                 assignment_other_ipv4.delete()
@@ -336,8 +340,12 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create IPv6 addresses
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
-            other_ipv6_addr = IPAddress.objects.create(address="2001:db8::2/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+            other_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::2/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IP to interface first (required before setting as primary)
             IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv6_addr)
@@ -347,7 +355,9 @@ class IPAddressToInterfaceTest(TestCase):
             self.test_device.save()
 
             # Assign the other IP to a different interface
-            assignment_other_ipv6 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=other_ipv6_addr)
+            assignment_other_ipv6 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=other_ipv6_addr
+            )
 
             with patch.object(self.test_device, "save") as mock_save:
                 assignment_other_ipv6.delete()
@@ -355,16 +365,20 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_save_when_removing_primary_ip_from_device(self):
         """
-        Test that host.save() IS called when removing an IP assignment for the device's
-        primary IP and no other assignments exist (tests both IPv4 and IPv6).
+        Test that Device is saved when removing an IP from an interface and the IP is the device's
+        primary IP and no other assignments exist.
         """
         # Test removing primary IPv4 assignment
         with self.subTest("IPv4 primary IP removal"):
             # Create primary IPv4 address
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv4 to an interface first
-            assignment_primary_ipv4 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=primary_ipv4_addr)
+            assignment_primary_ipv4 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv4_addr
+            )
 
             # Set it as the device's primary IP
             self.test_device.primary_ip4 = primary_ipv4_addr
@@ -384,10 +398,14 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create primary IPv6 address
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv6 to an interface first
-            assignment_primary_ipv6 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=primary_ipv6_addr)
+            assignment_primary_ipv6 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv6_addr
+            )
 
             # Set it as the device's primary IP
             self.test_device.primary_ip6 = primary_ipv6_addr
@@ -403,15 +421,19 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_device_primary_ip_has_multiple_assignments(self):
         """
-        Test that host.save() is NOT called when removing a primary IP assignment if
-        the same IP is assigned to other interfaces (tests both IPv4 and IPv6).
+        Test that Device is not saved when removing an IP from an interface and the IP is the device's
+        primary IP but is assigned to other interfaces on that device.
         """
         # Test IPv4 primary IP with multiple assignments
         with self.subTest("IPv4 primary IP with multiple assignments"):
             # Create primary IPv4 address
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
             # Assign primary IPv4 to multiple interfaces
-            assignment_ipv4_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=primary_ipv4_addr)
+            assignment_ipv4_int1 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv4_addr
+            )
             IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv4_addr)
 
             # Set it as the device's primary IP
@@ -432,10 +454,14 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create primary IPv6 address
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv6 to multiple interfaces
-            assignment_ipv6_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=primary_ipv6_addr)
+            assignment_ipv6_int1 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv6_addr
+            )
             IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv6_addr)
 
             # Set it as the device's primary IP
@@ -452,8 +478,8 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_vm_has_no_primary_ips(self):
         """
-        Test that host.save() is NOT called when removing an IP assignment from a VM
-        that has no primary IPs assigned (optimization test).
+        Test that VM is not saved when removing an IP from a VM interface and the VM
+        has no primary IPs assigned.
         """
         # Create an IP address
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
@@ -473,14 +499,18 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_removing_non_primary_ip_from_vm(self):
         """
-        Test that host.save() is NOT called when removing an IP assignment for an IP
-        that is not the VM's primary IP (optimization test for both IPv4 and IPv6).
+        Test that VM is not saved when removing an IP from a VM interface and the IP
+        is not the VM's primary IP.
         """
         # Test removing non-primary IPv4 assignment
         with self.subTest("IPv4 non-primary IP removal"):
             # Create IPv4 addresses
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
-            other_ipv4_addr = IPAddress.objects.create(address="192.0.2.2/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+            other_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.2/24", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IP to VM interface first (required before setting as primary)
             IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv4_addr)
@@ -490,7 +520,9 @@ class IPAddressToInterfaceTest(TestCase):
             self.test_vm.save()
 
             # Assign the other IP to a different VM interface
-            assignment_vm_int1 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=other_ipv4_addr)
+            assignment_vm_int1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=other_ipv4_addr
+            )
 
             with patch.object(self.test_vm, "save") as mock_save:
                 assignment_vm_int1.delete()
@@ -502,8 +534,12 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create IPv6 addresses
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
-            other_ipv6_addr = IPAddress.objects.create(address="2001:db8::2/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+            other_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::2/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IP to VM interface first (required before setting as primary)
             IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv6_addr)
@@ -513,7 +549,9 @@ class IPAddressToInterfaceTest(TestCase):
             self.test_vm.save()
 
             # Assign the other IP to a different VM interface
-            assignment_vm_int1 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=other_ipv6_addr)
+            assignment_vm_int1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=other_ipv6_addr
+            )
 
             with patch.object(self.test_vm, "save") as mock_save:
                 assignment_vm_int1.delete()
@@ -521,16 +559,20 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_save_when_removing_primary_ip_from_vm(self):
         """
-        Test that host.save() IS called when removing an IP assignment for the VM's
-        primary IP and no other assignments exist (tests both IPv4 and IPv6).
+        Test that VM is saved when removing an IP from a VM interface and the IP is the VM's
+        primary IP and no other assignments exist.
         """
         # Test removing primary IPv4 assignment
         with self.subTest("IPv4 primary IP removal"):
             # Create primary IPv4 address
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv4 to VM interface first
-            assignment_primary_ipv4 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr)
+            assignment_primary_ipv4 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr
+            )
 
             # Set it as the VM's primary IP
             self.test_vm.primary_ip4 = primary_ipv4_addr
@@ -550,10 +592,14 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create primary IPv6 address
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv6 to VM interface first
-            assignment_primary_ipv6 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr)
+            assignment_primary_ipv6 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr
+            )
 
             # Set it as the VM's primary IP
             self.test_vm.primary_ip6 = primary_ipv6_addr
@@ -569,16 +615,20 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_ip_address_to_interface_delete_signal_no_save_when_vm_primary_ip_has_multiple_assignments(self):
         """
-        Test that host.save() is NOT called when removing a VM primary IP assignment if
-        the same IP is assigned to other VM interfaces (tests both IPv4 and IPv6).
+        Test that VM is not saved when removing an IP from a VM interface and the IP is the VM's
+        primary IP but is assigned to other VM interfaces on that VM.
         """
         # Test IPv4 primary IP with multiple assignments
         with self.subTest("IPv4 primary IP with multiple assignments"):
             # Create primary IPv4 address
-            primary_ipv4_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv4 to multiple VM interfaces
-            assignment_ipv4_vmint1 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr)
+            assignment_ipv4_vmint1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr
+            )
             IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv4_addr)
 
             # Set it as the VM's primary IP
@@ -599,10 +649,14 @@ class IPAddressToInterfaceTest(TestCase):
             Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
 
             # Create primary IPv6 address
-            primary_ipv6_addr = IPAddress.objects.create(address="2001:db8::1/64", status=self.status, namespace=self.namespace)
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
 
             # Assign primary IPv6 to multiple VM interfaces
-            assignment_ipv6_vmint1 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr)
+            assignment_ipv6_vmint1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr
+            )
             IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv6_addr)
 
             # Set it as the VM's primary IP
