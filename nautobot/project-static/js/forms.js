@@ -79,6 +79,7 @@ function initializeCheckboxes(context){
             $('#select_all_box').removeClass('hidden');
         } else {
             $('#select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
 
         // Reset last selected index when using toggle all
@@ -113,6 +114,7 @@ function initializeCheckboxes(context){
         const hasUnchecked = $allCheckboxes.filter(':not(:checked)').length > 0;
         if (hasUnchecked) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
     });
 }
