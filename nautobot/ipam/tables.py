@@ -205,11 +205,12 @@ VLANGROUP_ADD_VLAN = """
 class NamespaceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:namespace_list")
 
     class Meta(BaseTable.Meta):
         model = Namespace
-        fields = ("pk", "name", "description", "location")
+        fields = ("pk", "name", "description", "tenant", "location")
 
 
 #
