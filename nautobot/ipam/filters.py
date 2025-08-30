@@ -60,7 +60,7 @@ __all__ = (
 )
 
 
-class NamespaceFilterSet(NautobotFilterSet):
+class NamespaceFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
