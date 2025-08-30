@@ -5,16 +5,21 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tenancy', '0009_update_all_charfields_max_length_to_255'),
-        ('ipam', '0052_alter_ipaddress_index_together_and_more'),
+        ("tenancy", "0009_update_all_charfields_max_length_to_255"),
+        ("ipam", "0052_alter_ipaddress_index_together_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='namespace',
-            name='tenant',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='namespaces', to='tenancy.tenant'),
+            model_name="namespace",
+            name="tenant",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="namespaces",
+                to="tenancy.tenant",
+            ),
         ),
     ]

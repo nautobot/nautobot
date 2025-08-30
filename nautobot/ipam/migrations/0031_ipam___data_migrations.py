@@ -19,8 +19,7 @@ def reverse_it(apps, schema_editor):
 
     # This may be overly defensive, but it doesn't hurt to be safe.
     ns_global, _ = Namespace.objects.get_or_create(
-        name="Global",
-        defaults={"description": "Default Global namespace. Created by Nautobot."}
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
     )
     Prefix.objects.update(namespace=ns_global)
     VRF.objects.update(namespace=ns_global)
