@@ -72,11 +72,18 @@ class NamespaceTestCase(
     @classmethod
     def setUpTestData(cls):
         locations = Location.objects.get_for_model(Namespace)
+        tenants = Tenant.objects.all()[:2]
 
-        cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
+        cls.form_data = {
+            "name": "Namespace X",
+            "location": locations[0].pk,
+            "tenant": tenants[0].pk,
+            "description": "A new Namespace",
+        }
 
         cls.bulk_edit_data = {
             "description": "New description",
+            "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
 
