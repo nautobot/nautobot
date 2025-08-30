@@ -40,6 +40,7 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -57,21 +58,25 @@ class NamespaceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.first()
+        tenant = Tenant.objects.first()
         cls.create_data = [
             {
                 "name": "Purple Monkey Namespace 1",
                 "description": "A perfectly cromulent namespace.",
                 "location": location.pk,
+                "tenant": tenant.pk,
             },
             {
                 "name": "Purple Monkey Namespace 2",
                 "description": "A secondarily cromulent namespace.",
                 "location": location.pk,
+                "tenant": tenant.pk,
             },
             {
                 "name": "Purple Monkey Namespace 3",
                 "description": "A third cromulent namespace.",
                 "location": location.pk,
+                "tenant": tenant.pk,
             },
         ]
         cls.bulk_update_data = {
