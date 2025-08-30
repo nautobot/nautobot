@@ -2,24 +2,34 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+
 import nautobot.ipam.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('ipam', '0053_namespace_tenant'),
+        ("ipam", "0053_namespace_tenant"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='prefix',
-            name='namespace',
-            field=models.ForeignKey(default=nautobot.ipam.models.get_default_namespace_pk, on_delete=django.db.models.deletion.PROTECT, related_name='prefixes', to='ipam.namespace'),
+            model_name="prefix",
+            name="namespace",
+            field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace_pk,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="prefixes",
+                to="ipam.namespace",
+            ),
         ),
         migrations.AlterField(
-            model_name='vrf',
-            name='namespace',
-            field=models.ForeignKey(default=nautobot.ipam.models.get_default_namespace_pk, on_delete=django.db.models.deletion.PROTECT, related_name='vrfs', to='ipam.namespace'),
+            model_name="vrf",
+            name="namespace",
+            field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace_pk,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="vrfs",
+                to="ipam.namespace",
+            ),
         ),
     ]
