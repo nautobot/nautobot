@@ -146,7 +146,10 @@ def process_vrfs(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     VRF = apps.get_model("ipam", "VRF")
 
-    global_ns = Namespace.objects.get(name=GLOBAL_NS)
+    global_ns, _ = Namespace.objects.get_or_create(
+        name=GLOBAL_NS,
+        defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
     vrfs = VRF.objects.all().order_by("name", "rd")
     unique_non_empty_vrfs = vrfs.filter(enforce_unique=True).exclude(ip_addresses__isnull=True, prefixes__isnull=True)
     # At the point in the migration where we iterate through vrfs in global_ns_vrfs, every vrf that
