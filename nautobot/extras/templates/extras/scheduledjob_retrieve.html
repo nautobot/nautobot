@@ -1,0 +1,160 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+{% load tz %}
+
+{% block buttons %}
+    {% plugin_buttons object %}
+    {% if user|can_delete:object %}
+        {% delete_button object %}
+    {% endif %}
+{% endblock buttons %}
+
+{% block content %}
+{% if not job_class_found %}
+<div class="alert alert-danger">
+    <i class="mdi mdi-alert"></i>
+    This job source for this scheduled job is no longer installed.
+    This scheduled job will fail to run unless reinstalled at the original location.
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock content %}
+
+{% block content_left_page %}
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>Scheduled Job</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              <tr>
+                  <td>Name</td>
+                  <td>
+                      {{ object.name }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Description</td>
+                  <td>
+                      {{ object.description }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Task</td>
+                  <td>
+                      <code>{{ object.task }}</code>
+                  </td>
+              </tr>
+              <tr>
+                  <td>Job</td>
+                  <td>{{ object.job_model|hyperlinked_object }}</td>
+              </tr>
+              <tr>
+                  <td>Requester</td>
+                  <td>
+                      {{ object.user|placeholder }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Approval Required?</td>
+                  <td>{{ object.approval_required | render_boolean }}</td>
+              </tr>
+              <tr>
+                  <td>Approver</td>
+                  <td>
+                      {{ object.approved_by_user | placeholder }}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Approved At</td>
+                  <td>
+                      {{ object.approved_at | placeholder }}
+                  </td>
+              </tr>
+          </table>
+      </div>
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>Scheduling</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              <tr>
+                  <td>Enabled?</td>
+                  <td>{{ object.enabled | render_boolean }}</td>
+              </tr>
+              <tr>
+                  <td>Job Queue</td>
+                  <td>{{ object.job_queue | hyperlinked_object }}</td>
+              </tr>
+              <tr>
+                  <td>Interval</td>
+                  <td>
+                      {{ object.interval }}
+                      {% if object.interval == "custom" %}({{ object.crontab }}){% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>One Off?</td>
+                  <td>{{ object.one_off | render_boolean }}</td>
+              </tr>
+              <tr>
+                  <td>Start Time</td>
+                  <td>
+                      {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                      {% if default_time_zone != object.time_zone %}
+                          <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Last Run At</td>
+                  <td>
+                      {% if object.last_run_at %}
+                          {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                          {% if default_time_zone != object.time_zone %}
+                              <br>{{ object.last_run_at|timezone:default_time_zone|date:SHORT_DATETIME_FORMAT }}
+                          {% endif %}
+                      {% else %}
+                          {{ object.last_run_at|placeholder }}
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Total Run Count</td>
+                  <td>
+                      {{ object.total_run_count }}
+                  </td>
+              </tr>
+          </table>
+      </div>
+{% endblock %}
+{% block content_right_page %}
+    {% if job_class_found %}
+      <div class="panel panel-default">
+          <div class="panel-heading">
+              <strong>User Inputs</strong>
+          </div>
+          <table class="table table-hover panel-body attr-table">
+              {% for key, value in object.kwargs.items %}
+              <tr>
+                <td>{{ labels|get_item:key }}</td>
+                <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>
+              </tr>
+              {% empty %}
+                <tr><td>—</td></tr>
+              {% endfor %}
+          </table>
+      </div>
+    {% endif %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Celery Keyword Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
+        </div>
+    </div>
+{% endblock %}
