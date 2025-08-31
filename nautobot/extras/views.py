@@ -2903,28 +2903,24 @@ class SavedViewUIViewSet(
         return super().destroy(request, *args, **kwargs)
 
 
-class ScheduledJobListView(generic.ObjectListView):
+class ScheduledJobUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+):
     queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-    filterset_form = forms.ScheduledJobFilterForm
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    serializer_class = serializers.ScheduledJobSerializer
+    table_class = tables.ScheduledJobTable
     action_buttons = ()
-
-
-class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
-    queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-
-
-class ScheduledJobView(generic.ObjectView):
-    queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-
-        # Add job class labels
-        job_class = get_job(instance.task, reload=True)
+        if self.action != "retrieve" and not instance:
+            return context
+        job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
@@ -2960,10 +2956,6 @@ class ScheduledJobView(generic.ObjectView):
         )
 
         return context
-
-
-class ScheduledJobDeleteView(generic.ObjectDeleteView):
-    queryset = ScheduledJob.objects.all()
 
 
 #
