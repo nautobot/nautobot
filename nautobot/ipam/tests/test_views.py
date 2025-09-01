@@ -51,17 +51,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class NamespaceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Namespace
     custom_action_required_permissions = {
         "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
