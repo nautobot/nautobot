@@ -1235,7 +1235,8 @@ class EChartsPanel(Panel, EChartsBase):
             "chart_config": chart_config,
             "chart_width": self.width,
             "chart_height": self.height,
-            "chart_container_id": self.chart_container_id or slugify(f"echart-{self.header}"),
+            "chart_container_id": self.chart_container_id
+            or f"{slugify(f'echart-{self.header}')}-{uuid.uuid4().hex[:8]}",
         }
 
 

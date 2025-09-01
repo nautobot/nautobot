@@ -309,26 +309,15 @@ class EChartsBase:
         if not all(isinstance(v, dict) for v in data.values()):
             return {"x": [], "series": []}
 
-        # Extract x-axis labels from the first series
-        first_series_key = next(iter(data))
-        x_labels = list(data[first_series_key].keys())
+        # Collect union of all x labels
+        x_labels = sorted({k for series in data.values() for k in series.keys()})
 
-        # Ensure all series have the same x-axis labels
-        for series_name, series_data in data.items():
-            if list(series_data.keys()) != x_labels:
-                # Handle mismatched keys - use union and fill missing with 0
-                all_labels = set()
-                for s in series_data:
-                    all_labels.update(s.keys())
-                x_labels = sorted(list(all_labels))
-                break
+        # Build series list, filling missing values with 0
+        series_list = [
+            {"name": name, "data": [series.get(label, 0) for label in x_labels]} for name, series in data.items()
+        ]
 
-        # Transform to internal format
-        series = []
-        for series_name, series_data in data.items():
-            series.append({"name": series_name, "data": [series_data.get(label, 0) for label in x_labels]})
-
-        return {"x": x_labels, "series": series}
+        return {"x": x_labels, "series": series_list}
 
     def _get_theme_colors(self):
         """Map SCSS palette to echarts theme colors (manual sync)."""
