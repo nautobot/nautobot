@@ -7,8 +7,10 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.models.querysets import count_related
 from nautobot.core.ui.object_detail import TextPanel
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, Location
+from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -172,6 +174,31 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                         "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
                         "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
                     },
+                    "combined_with": ui.EChartsBase(
+                        chart_type=ui.EChartsTypeChoices.LINE,
+                        data={
+                            "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                            "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+                        },
+                    ),
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=300,
+                label="EChart - Bar queryset",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "header": "Devices and Prefixes by Location Type",
+                    "description": "Example chart with queryset_to_nested_dict_records_as_series. Please run `nautobot-server generate_test_data` to see data here.",
+                    "data": lambda: ui.queryset_to_nested_dict_records_as_series(
+                        Location.objects.annotate(
+                            device_count=count_related(Device, "location"),
+                            prefix_count=count_related(Prefix, "locations"),
+                        ),
+                        record_key="location_type__nestable",
+                        value_keys=["prefix_count", "device_count"],
+                    ),
                 },
             ),
         ),

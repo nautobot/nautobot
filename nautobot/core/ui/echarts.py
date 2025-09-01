@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 from django.db.models import QuerySet
 
@@ -259,8 +259,7 @@ class EChartsBase:
         """
         self.additional_config = additional_config
         self.chart_type = chart_type
-        resolved_data = data() if callable(data) else data
-        self.data = self._transform_data(resolved_data or {})
+        self._data = data
         self.header = header
         self.description = description
         self.x_label = x_label
@@ -273,6 +272,12 @@ class EChartsBase:
         self.data_view_options = {"readOnly": True, "show": True, **(data_view_options or {})}
         self.permission = permission
         self.combined_with = combined_with
+
+    @property
+    def data(self) -> dict[str, Any]:
+        """Get the chart data in ECharts format, ready for rendering."""
+        resolved_data = self._data() if callable(self._data) else self._data
+        return self._transform_data(resolved_data or {})
 
     @property
     def chart_type(self):
@@ -346,6 +351,8 @@ class EChartsBase:
 
     def get_config(self):
         """Return a dict ready to dump into echarts option JSON."""
+        data = self.data  # Cache transformed data for consistent use
+
         # Base configuration
         config = {
             "title": {"text": self.header, "subtext": self.description},
@@ -356,11 +363,11 @@ class EChartsBase:
             "color": self._get_theme_colors(),
             "legend": self.legend,
         }
-        axis_config = self.strategy.get_axis_config(self.data, self.x_label, self.y_label)
+        axis_config = self.strategy.get_axis_config(data, self.x_label, self.y_label)
         config.update(axis_config)
 
         # Add series configuration (chart-type specific)
-        config["series"] = self.strategy.get_series_config(self.data)
+        config["series"] = self.strategy.get_series_config(data)
 
         # Add any additional chart-specific configuration
         additional_config = self.strategy.get_additional_config()
@@ -375,8 +382,8 @@ class EChartsBase:
 
 
 def queryset_to_nested_dict_records_as_series(
-    queryset: QuerySet, record_key: str, value_keys: List[str]
-) -> Dict[str, Dict[str, Any]]:
+    queryset: QuerySet, record_key: str, value_keys: list[str]
+) -> dict[str, dict[str, Any]]:
     """
     Transform data with one series per record.
     Format: {"<record1>": {"key1": val1, "key2": val2}, "<record2>": {"key1": val3, "key2": val4}}
@@ -405,8 +412,8 @@ def queryset_to_nested_dict_records_as_series(
 
 
 def queryset_to_nested_dict_keys_as_series(
-    queryset: QuerySet, record_key: str, value_keys: List[str]
-) -> Dict[str, Dict[str, Any]]:
+    queryset: QuerySet, record_key: str, value_keys: list[str]
+) -> dict[str, dict[str, Any]]:
     """
     Transform data with one series per key/field.
     Format: {"key1": {"<record1>": val1, "<record2>": val3}, "key2": {"<record1>": val2, "<record2>": val4}}
