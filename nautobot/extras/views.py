@@ -2103,6 +2103,10 @@ class JobResultUIViewSet(
                     "result",
                     "files",
                 ],
+                value_transforms={
+                    "status": [helpers.render_job_label],
+                    "files": [helpers.render_job_files],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 table_title="Logs",
