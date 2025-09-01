@@ -1,39 +1,37 @@
 {% load helpers %}
-{% block content_right_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Response</strong>
-                <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
-            </div>
-            {% if object.variables %}
-                <table class="table table-hover panel-body attr-table">
-                    <tr>
-                        <td>Variables:</td>
-                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea></td>
-                    </tr>
-                </table>
-            {% endif %}
-            <div class="panel-footer">
-                <pre id="query_output">
 
-                </pre>
-            </div>
-        </div>
-{% endblock content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Response</strong>
+        <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+    </div>
 
-{% block javascript %}
+    {% if object.variables %}
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Variables:</td>
+                <td>
+                    <textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea>
+                </td>
+            </tr>
+        </table>
+    {% endif %}
+
+    <div class="panel-footer">
+        <pre id="query_output"></pre>
+    </div>
+</div>
+
 <script>
     function fillQueryOutput(data) {
         const queryOutput = document.querySelector('#query_output');
-
-        [...queryOutput.childNodes].forEach(childNode => childNode.remove());
+        queryOutput.innerHTML = '';
 
         const code = document.createElement('code');
         code.classList.add('language-json');
         code.textContent = JSON.stringify(data, undefined, 2);
 
         queryOutput.appendChild(code);
-
         hljs.highlightElement(code);
     }
 
@@ -46,8 +44,8 @@
             headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
             dataType: "json",
             data: {
-                "query": `{{ object.query | escapejs }}`,
-                "variables": variables,
+                query: `{{ object.query|escapejs }}`,
+                variables: variables,
             },
             success: function(data) {
                 fillQueryOutput(data);
@@ -57,16 +55,17 @@
                 fillQueryOutput(error.responseJSON);
             }
         });
-    };
+    }
 
-    textarea = document.querySelector("#query_variables");
-    textarea.addEventListener('input', autoResize, false);
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    const textarea = document.querySelector("#query_variables");
+    if (textarea) {
+        textarea.addEventListener('input', autoResize, false);
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
 
     function autoResize() {
         this.style.height = 'auto';
         this.style.height = this.scrollHeight + 'px';
     }
 </script>
-{% endblock javascript %}
