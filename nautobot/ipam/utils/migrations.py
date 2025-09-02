@@ -259,6 +259,11 @@ def process_ip_addresses(apps):
                 broadcast = new_parent_cidr[-1]
                 # This can result in duplicate Prefixes being created in the global_ns but that will be
                 # cleaned up subsequently in `process_prefix_duplicates`.
+                if orphaned_ip.vrf and orphaned_ip.vrf.namespace:
+                    prefix_namespace = orphaned_ip.vrf.namespace
+                else:
+                    prefix_namespace = global_ns
+
                 new_parent = Prefix.objects.create(
                     ip_version=orphaned_ip.ip_version,
                     network=network,
@@ -266,7 +271,7 @@ def process_ip_addresses(apps):
                     tenant=orphaned_ip.tenant,
                     vrf=orphaned_ip.vrf,
                     prefix_length=prefix_length,
-                    namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
+                    namespace=prefix_namespace,
                     description=DESCRIPTION,
                 )
             orphaned_ip.parent = new_parent
@@ -297,6 +302,13 @@ def process_prefix_duplicates(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
     global_namespace = Namespace.objects.get(name=GLOBAL_NS)
+
+    # First, assign any remaining prefixes with null namespace to Global namespace
+    null_namespace_prefixes = Prefix.objects.filter(namespace__isnull=True)
+    if null_namespace_prefixes.exists():
+        if "test" not in sys.argv:
+            print(f">>> Assigning {null_namespace_prefixes.count()} prefixes with null namespace to Global namespace")
+        null_namespace_prefixes.update(namespace=global_namespace)
 
     namespaces = list(Namespace.objects.all())
     # Always start with the Global Namespace.
@@ -355,6 +367,9 @@ def reparent_prefixes(apps):
     if "test" not in sys.argv:
         print("\n>>> Processing Prefix parents, please standby...")
     for pfx in Prefix.objects.all().order_by("-prefix_length", "tenant").select_related("namespace").iterator():
+        # Skip prefixes that don't have namespace assigned yet - they will be handled later
+        if pfx.namespace is None:
+            continue
         parent = get_closest_parent(pfx, pfx.namespace.prefixes.all())
         if parent is not None:
             # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
