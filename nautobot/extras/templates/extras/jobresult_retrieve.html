@@ -45,22 +45,6 @@
     {% endif %}
 {% endblock %}
 
-{% block extra_nav_tabs %}
-    {% if result.data.output %}
-        <li role="presentation">
-            <a href="#output" role="tab" data-toggle="tab">Output</a>
-        </li>
-    {% endif %}
-{% endblock %}
-
-
-{% block extra_tab_content %}
-    {% if result.data.output %}
-        <div role="tabpanel" class="tab-pane" id="output">
-            <pre>{{ result.data.output }}</pre>
-        </div>
-    {% endif %}
-{% endblock extra_tab_content %}
 
 
 {% block javascript %}
