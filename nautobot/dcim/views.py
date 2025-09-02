@@ -4197,14 +4197,12 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             params = []
             master = obj.master
 
-            if master:
-                location = getattr(master, "location", None)
-                if location:
-                    params.append(("location", location.pk))
+            if master is not None:
+                if master.location is not None:
+                    params.append(("location", master.location.pk))
 
-                rack = getattr(master, "rack", None)
-                if rack:
-                    params.append(("rack", rack.pk))
+                if master.rack is not None:
+                    params.append(("rack", master.rack.pk))
 
             params.append(("return_url", return_url))
 
