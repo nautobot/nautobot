@@ -494,7 +494,7 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
 
 class IPAMDataMigration0031TestCase(MigratorTestCase):
     migrate_from = ("ipam", "0030_ipam__namespaces")
-    migrate_to = ("ipam", "0032_ipam__namespaces_finish")
+    migrate_to = ("ipam", "0054_add_namespace_defaults")
 
     def prepare(self):
         # Create an arbitrary set of prefixes and IPs mostly subdividing and consuming the given subnet, including dupes

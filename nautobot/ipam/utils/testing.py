@@ -129,7 +129,15 @@ def create_prefixes_and_ips(initial_subnet: str, apps=apps, seed="Nautobot"):  #
 
     all_tenants = list(Tenant.objects.all())
     if hasattr(VRF, "namespace"):
-        all_vrfs = list(VRF.objects.filter(namespace_id=get_default_namespace_pk()))
+        # Simulate mid-migration state: create Global namespace and assign all VRFs to it
+        # This creates more realistic test conditions for namespace-aware migration logic
+        Namespace = apps.get_model("ipam", "Namespace")
+        global_ns, _ = Namespace.objects.get_or_create(
+            name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+        )
+        # Pre-assign all VRFs to Global namespace to simulate early migration state
+        VRF.objects.all().update(namespace=global_ns)
+        all_vrfs = list(VRF.objects.filter(namespace_id=global_ns.pk))
     else:
         all_vrfs = list(VRF.objects.all())
 
