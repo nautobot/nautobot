@@ -581,7 +581,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context, self.context_object_key)
             _type = getattr(obj, "type", None)
 
-            if key == "default" and _type:
+            if key == "default":
                 if not value:
                     return helpers.HTML_NONE
                 if _type == "markdown":
