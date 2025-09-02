@@ -736,7 +736,7 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
+                {{ value.date_created|date:"SHORT_DATETIME_FORMAT" }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}

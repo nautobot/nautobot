@@ -610,7 +610,6 @@ TEMPLATES = [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.template.context_processors.media",
-                "django.template.context_processors.settings",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
