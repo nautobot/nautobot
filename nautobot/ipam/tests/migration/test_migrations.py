@@ -527,7 +527,7 @@ class NamespaceTenantCircularDependencyTestCase(MigratorTestCase):
         self.tenant2 = Tenant.objects.create(name="Test Tenant 2", tenant_group=self.tenant_group)
 
     def test_forward_migration_resolves_circular_dependency(self):
-        """Test that fresh database creation works (the main issue we solved)."""
+        """Test that fresh database creation works with tenant on Namespace."""
         Namespace = self.new_state.apps.get_model("ipam", "Namespace")
         VRF = self.new_state.apps.get_model("ipam", "VRF")
         Prefix = self.new_state.apps.get_model("ipam", "Prefix")
