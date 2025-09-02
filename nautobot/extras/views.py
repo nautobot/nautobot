@@ -795,9 +795,16 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
         ],
     )
     def bulk_assign(self, request):
+        """
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
+        """
         if request.method == "GET":
             return redirect(reverse("extras:staticgroupassociation_list"))
 
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
         content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
         model = content_type.model_class()
         self.default_return_url = get_route_for_model(model, "list")
