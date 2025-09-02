@@ -356,7 +356,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
         """
         # Validate that it's a real CIDR
         cidr = self._validate_cidr(cidr)
-        broadcast = str(cidr.broadcast or cidr.ip)
+        broadcast = str(cidr.broadcast or cidr[-1])
         ip_version = cidr.version
 
         try:

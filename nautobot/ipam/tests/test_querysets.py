@@ -819,3 +819,9 @@ class PrefixQuerysetTestCase(TestCase):
                     .order_by("-prefix_length")
                     .first(),
                 )
+
+        slash32 = Prefix.objects.create(prefix="10.1.1.154/32", namespace=namespace, status=self.status)
+        slash31 = Prefix.objects.create(prefix="10.1.1.154/31", namespace=namespace, status=self.status)
+        slash30 = Prefix.objects.create(prefix="10.1.1.154/30", namespace=namespace, status=self.status)
+        self.assertEqual(slash31, Prefix.objects.get_closest_parent(slash32.prefix))
+        self.assertEqual(slash30, Prefix.objects.get_closest_parent(slash31.prefix))
