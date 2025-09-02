@@ -56,6 +56,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -890,6 +891,8 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_started = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_done = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -961,6 +964,8 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "date_created",
+            "date_started",
+            "date_done",
             "name",
             "job_model",
             "scheduled_job",
@@ -1324,6 +1329,17 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
+
+
+class SecretsGroupAssociationTable(BaseTable):
+    secret = tables.Column(linkify=True)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("access_type", "secret_type", "secret")
+        default_columns = ("access_type", "secret_type", "secret")
+        # Avoid extra UI clutter
+        attrs = {"class": "table table-condensed"}
 
 
 #
