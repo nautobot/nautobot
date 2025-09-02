@@ -1,5 +1,0 @@
-Updated dependency `django-constance` to `~4.3.2`.
-Updated dependency `prometheus-client` to `~0.22.1`.
-Updated dependency `python-slugify` to `~8.0.4`.
-Updated dependency `svgwrite` to `~1.4.3`.
-Regenerated `poetry.lock` to bring latest version of indirect dependencies into the Docker images and development environment.
