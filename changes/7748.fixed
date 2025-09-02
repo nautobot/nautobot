@@ -1,0 +1,1 @@
+Fix failed lookup for settings in TemplateColumn, by adding context processor `django.template.context_processors.settings`.
