@@ -4195,7 +4195,7 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                 return None
 
             params = []
-            master = getattr(obj, "master", None)
+            master = obj.master
 
             if master:
                 location = getattr(master, "location", None)
