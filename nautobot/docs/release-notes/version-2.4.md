@@ -184,6 +184,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Changed in v2.4.17
 
 - [#6151](https://github.com/nautobot/nautobot/issues/6151) - Changed Prefix update logic so that moving a Prefix to a different Namespace now carries along its descendant Prefixes and their associated IP Addresses as well, instead of only carrying along its direct child IP Addresses and leaving behind the other descendants in the original Namespace.
+- [#7670](https://github.com/nautobot/nautobot/issues/7670) - Disable default pagination in ObjectsTablePanel.
 
 ### Deprecated in v2.4.17
 
@@ -199,6 +200,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6151](https://github.com/nautobot/nautobot/issues/6151) - Fixed incorrect data after editing a Prefix's `prefix`/`network`/`prefix_length` fields by adding logic in `save()` to correctly reparent existing child Prefix and IPAddress records.
 - [#6151](https://github.com/nautobot/nautobot/issues/6151) - Fixed potential for incorrect data when moving a VRF-associated Prefix between Namespaces by adding a `clean()` check to detect and block this scenario.
 - [#7496](https://github.com/nautobot/nautobot/issues/7496) - Fixed issue with removed Prefix column in VLANs table.
+- [#7708](https://github.com/nautobot/nautobot/issues/7708) - Hide the 'select all matching query' UI element when the 'select all' checkbox in an object list view is unchecked.
 - [#7720](https://github.com/nautobot/nautobot/issues/7720) - Fixed a Django REST Framework warning related to the `power_factor` attribute on a `DecimalField`.
 
 ### Dependencies in v2.4.17
@@ -208,6 +210,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `python-slugify` to `~8.0.4`.
 - [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `svgwrite` to `~1.4.3`.
 - [#7682](https://github.com/nautobot/nautobot/issues/7682) - Regenerated `poetry.lock` to bring latest version of indirect dependencies into the Docker images and development environment.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated dependency `django-silk` to `~5.4.2`.
 
 ### Documentation in v2.4.17
 
@@ -223,7 +226,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.3.9`.
 - [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated documentation dependency `mkdocs-material` to `~9.6.17`.
 - [#7703](https://github.com/nautobot/nautobot/issues/7703) - Made sure line endings were consistently Unix-style (`\n` rather than `\r\n`) in project source files.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated documentation dependency `mkdocs-material` to `9.6.18`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated development dependency `faker` to `^37.6.0`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated development dependency `ruff` to `~0.12.11`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated test dependency `requests` to `~2.32.5`.
 - [#7732](https://github.com/nautobot/nautobot/issues/7732) - Added code coverage reporting to pull request CI workflow.
+- [#7734](https://github.com/nautobot/nautobot/issues/7734) - Added `--diff` option to `invoke ruff` command.
 
 ## v2.4.16 (2025-08-19)
 
