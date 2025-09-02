@@ -619,7 +619,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=300,
+                weight=200,
                 label="Validation Rules",
                 fields=["validation_minimum", "validation_maximum", "validation_regex"],
                 value_transforms={
