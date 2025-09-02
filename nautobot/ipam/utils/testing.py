@@ -5,8 +5,6 @@ import random
 from django.apps import apps
 from netaddr import IPNetwork
 
-from nautobot.ipam.models import get_default_namespace_pk
-
 # Calculate the probabilities to use for the maybe_subdivide() function defined below.
 
 # Frequency of IPv4 (leaf, network) Prefixes by each given mask length in a "realistic" data set.
