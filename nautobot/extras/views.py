@@ -601,7 +601,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
             ),
             object_detail.DataTablePanel(
-                weight=100,
+                weight=200,
                 section=SectionChoices.LEFT_HALF,
                 label="Custom Field Choices",
                 context_data_key="choices_data",
