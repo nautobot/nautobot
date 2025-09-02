@@ -610,7 +610,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=200,
+                weight=100,
                 label="Assignment",
                 fields=[
                     "content_types",
