@@ -447,7 +447,7 @@ class Breadcrumbs:
         Returns:
             (list[tuple[str, str]]): A list of (url, label) tuples representing breadcrumb entries.
         """
-        action = context.get("view_action", "list")
+        action = context.get("view_action", "")
         detail = context.get("detail", False)
         items = self.get_items_for_action(self.items, action, detail)
         return [item.as_pair(context) for item in items if item.should_render(context)]
@@ -457,7 +457,7 @@ class Breadcrumbs:
         Filters out all items that both label and url are None or empty str.
 
         Args:
-            items (list[tuple[str, str]]): breadcrumb items pair.s
+            items (list[tuple[str, str]]): breadcrumb items pairs.
             context (Context): The view or template context.
 
         Returns:
@@ -491,12 +491,12 @@ class Breadcrumbs:
         Returns:
             list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
         """
-        if detail:
-            return items.get("detail", [])
-
         breadcrumbs_list = items.get(action, [])
         if breadcrumbs_list:
             return breadcrumbs_list
+
+        if detail:
+            return items.get("detail", [])
 
         return items.get("*", [])
 
@@ -517,7 +517,6 @@ class Breadcrumbs:
                 **self.get_extra_context(context),
             }
         ):
-            print(self.items)
             breadcrumbs_items = self.get_breadcrumbs_items(context)
             filtered_items = self.filter_breadcrumbs_items(breadcrumbs_items, context)
             return render_component_template(self.template, context, breadcrumbs_items=filtered_items)

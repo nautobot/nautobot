@@ -2214,35 +2214,17 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
         }
 
 
-class DeviceComponentTabView(generic.ObjectView):
+class DeviceComponentTabView(DevicePageMixin, generic.ObjectView):
     queryset = Device.objects.all()
-    breadcrumbs = Breadcrumbs(
-        items={
-            "detail": [
-                ModelBreadcrumbItem(model=Device),
-                ModelBreadcrumbItem(
-                    model=Device,
-                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
-                ),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_bay.device,
-                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
-                ),
-                BaseBreadcrumbItem(
-                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
-                ),
-            ]
-        }
-    )
 
     def get_extra_context(self, request, instance):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
         return {
+            **super().get_extra_context(request, instance),
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
-            "breadcrumbs": self.breadcrumbs,
         }
 
 

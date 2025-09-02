@@ -92,15 +92,15 @@ class Titles:
         Returns:
             str: The template string for the current action, or an empty string if not found.
         """
-        detail = context.get("detail", False)
-        if detail:
-            return self.titles.get("detail", "")
-
-        action = context.get("view_action", "list")
+        action = context.get("view_action", "")
 
         template_str = self.titles.get(action)
         if template_str:
             return template_str
+
+        detail = context.get("detail", False)
+        if detail:
+            return self.titles.get("detail", "")
 
         return ""
 
