@@ -17,7 +17,7 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -4205,11 +4205,7 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                     params.append(("rack", master.rack.pk))
 
             params.append(("return_url", return_url))
-
-            try:
-                return reverse("dcim:virtualchassis_add_member", kwargs={"pk": obj.pk}) + "?" + urlencode(params)
-            except NoReverseMatch:
-                return None
+            return reverse("dcim:virtualchassis_add_member", kwargs={"pk": obj.pk}) + "?" + urlencode(params)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -4221,7 +4217,7 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             MembersObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                table_class=tables.MembersTable,
+                table_class=tables.VirtualChassisMembersTable,
                 table_filter="virtual_chassis",
                 table_title="Members",
             ),
