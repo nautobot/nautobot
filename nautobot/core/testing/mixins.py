@@ -220,10 +220,11 @@ class NautobotTestCaseMixin:
         Compare a model instance to a dictionary, checking that its attribute values match those specified
         in the dictionary.
 
-        :param instance: Python object instance
-        :param data: Dictionary of test data used to define the instance
-        :param exclude: List of fields to exclude from comparison (e.g. passwords, which get hashed)
-        :param api: Set to True is the data is a JSON representation of the instance
+        Args:
+            instance (Model): Django model instance
+            data (dict): Dictionary of test data used to define the instance
+            exclude (Optional[List[str]]): List of fields to exclude from comparison (e.g. passwords, which get hashed)
+            api (bool): Set to True is the data is a JSON representation of the instance
         """
         if exclude is None:
             exclude = []

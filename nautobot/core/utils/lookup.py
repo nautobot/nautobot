@@ -33,12 +33,14 @@ def get_changes_for_model(model):
 def get_model_from_name(model_name):
     """Given a full model name in dotted format (example: `dcim.model`), a model class is returned if valid.
 
-    :param model_name: Full dotted name for a model as a string (ex: `dcim.model`)
-    :type model_name: str
+    Args:
+        model_name (str): Full dotted name for a model as a string (ex: `dcim.model`)
 
-    :raises TypeError: If given model name is not found.
+    Raises:
+        TypeError: If given model name is not found.
 
-    :return: Found model.
+    Returns:
+        (Model): Found model.
     """
 
     try:

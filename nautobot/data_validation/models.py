@@ -12,6 +12,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -33,25 +34,22 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_model(self, content_type: str):
         """Given a content type string (<app_label>.<model>), return all instances that are enabled for that model."""
         app_label, model = content_type.split(".")
-        cache_key = (
-            # e.g. "nautobot.data_validation.get_for_model.regularexpressionvalidationrule.dcim.device"
-            f"{self.get_for_model.cache_key_prefix}.{self.model._meta.concrete_model._meta.model_name}.{content_type}"
-        )
+        cache_key = construct_cache_key(self, method_name="get_for_model", branch_aware=True, content_type=content_type)
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model)
             cache.set(cache_key, queryset)
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.data_validation.get_for_model"
+    @property
+    def get_for_model_cache_key_prefix(self):
+        return construct_cache_key(self, method_name="get_for_model", branch_aware=True)
 
     def get_enabled_for_model(self, content_type: str):
         """As get_for_model(), but only return enabled rules."""
         app_label, model = content_type.split(".")
-        cache_key = (
-            # e.g. "nautobot.data_validation.get_enabled_for_model.regularexpressionvalidationrule.dcim.device"
-            f"{self.get_enabled_for_model.cache_key_prefix}."
-            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+        cache_key = construct_cache_key(
+            self, method_name="get_enabled_for_model", branch_aware=True, content_type=content_type
         )
         queryset = cache.get(cache_key)
         if queryset is None:
@@ -59,7 +57,9 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache.set(cache_key, queryset)
         return queryset
 
-    get_enabled_for_model.cache_key_prefix = "nautobot.data_validation.get_enabled_for_model"
+    @property
+    def get_enabled_for_model_cache_key_prefix(self):
+        return construct_cache_key(self, method_name="get_enabled_for_model", branch_aware=True)
 
 
 class ValidationRule(PrimaryModel):

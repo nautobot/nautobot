@@ -13,6 +13,7 @@ from django.utils.functional import classproperty
 from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
@@ -115,7 +116,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"nautobot.{cls._meta.label_lower}._content_type"
+        return construct_cache_key(cls, method_name="_content_type")
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument

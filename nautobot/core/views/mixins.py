@@ -267,8 +267,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
 
-        :param model: A model or instance
-        :param actions: A list of actions to perform on the model
+        Args:
+            model (Union[type(Model), Model]): A model or instance
+            actions (List[str]): A list of actions to perform on the model
         """
         model_permissions = []
         for action in actions:
