@@ -623,7 +623,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 label="Validation Rules",
                 fields=["validation_minimum", "validation_maximum", "validation_regex"],
                 value_transforms={
-                    "validation_regex": [helpers.render_code],
+                    "validation_regex": [helpers.pre_tag],
                 },
             ),
         ]

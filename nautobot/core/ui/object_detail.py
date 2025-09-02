@@ -967,6 +967,7 @@ class KeyValueTablePanel(Panel):
         context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
+        key_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
         **kwargs,
     ):
@@ -985,6 +986,8 @@ class KeyValueTablePanel(Panel):
 
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+                For example: {'content_types': 'Content Type'}.
         """
         if data and context_data_key:
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
@@ -992,6 +995,7 @@ class KeyValueTablePanel(Panel):
         self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
+        self.key_transforms = key_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
@@ -1176,7 +1180,6 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         context_object_key=None,
         ignore_nonexistent_fields=False,
         label=None,
-        key_transforms=None,
         **kwargs,
     ):
         """
@@ -1192,14 +1195,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 exist on the provided object; otherwise an exception will be raised at render time.
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
-            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
-                For example: {'content_types': 'Content Type'}.
         """
         self.fields = fields
         self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
-        self.key_transforms = key_transforms or {}
         super().__init__(data=None, label=label, **kwargs)
 
     def render_label(self, context: Context):
@@ -1301,12 +1301,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
+
+        if key in self.key_transforms:
+            return self.key_transforms[key]
+
         instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
             try:
-                if key in self.key_transforms:
-                    return self.key_transforms[key]
                 field = instance._meta.get_field(key)
                 return bettertitle(field.verbose_name)
             # Not all fields have a verbose name, ManyToOneRel for example.

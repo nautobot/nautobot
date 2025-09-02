@@ -136,7 +136,7 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    if value is not None:
+    if value:
         return format_html("<pre>{}</pre>", value)
     return HTML_NONE
 
@@ -272,14 +272,6 @@ def render_yaml(value, syntax_highlight=True):
     if syntax_highlight:
         return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
     return rendered_yaml
-
-
-@library.filter()
-@register.filter()
-def render_code(value):
-    if not value:
-        return HTML_NONE
-    return format_html("<code>{}</code>", value)
 
 
 @library.filter()
