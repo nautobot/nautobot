@@ -2394,6 +2394,23 @@ class NoteUIViewSet(
     table_class = tables.NoteTable
     action_buttons = ()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["user", "assigned_object_type", "assigned_object"],
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="note",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.MARKDOWN,
+            ),
+        ),
+    )
+
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
