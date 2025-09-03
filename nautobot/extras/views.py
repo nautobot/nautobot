@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -46,11 +46,9 @@ from nautobot.core.utils.lookup import (
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
-    GetReturnURLMixin,
     ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -649,212 +647,263 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 #
 
 
-class DynamicGroupListView(generic.ObjectListView):
+class DynamicGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DynamicGroupBulkEditForm
+    filterset_class = filters.DynamicGroupFilterSet
+    filterset_form_class = forms.DynamicGroupFilterForm
+    form_class = forms.DynamicGroupForm
     queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
-    filterset_form = forms.DynamicGroupFilterForm
+    serializer_class = serializers.DynamicGroupSerializer
+    table_class = tables.DynamicGroupTable
     action_buttons = ("add",)
-
-
-class DynamicGroupView(generic.ObjectView):
-    queryset = DynamicGroup.objects.all()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.model
-        table_class = get_table_for_model(model)
-
-        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            # Ensure that members cache is up-to-date for this specific group
-            members = instance.update_cached_members()
-            messages.success(request, f"Refreshed cached members list for {instance}")
-        else:
-            members = instance.members
-
-        if table_class is not None:
-            # Members table (for display on Members nav tab)
-            if hasattr(members, "without_tree_fields"):
-                members = members.without_tree_fields()
-            members_table = table_class(
-                members.restrict(request.user, "view"),
-                orderable=False,
-                exclude=["dynamic_group_count"],
-                hide_hierarchy_ui=True,
-            )
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(members_table)
-
-            # Descendants table
-            descendants_memberships = instance.membership_tree()
-            descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                descendants_memberships,
-                orderable=False,
-            )
-            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
-
-            # Ancestors table
-            ancestors = instance.get_ancestors()
-            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
-            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
-
-            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                context["raw_query"] = pretty_print_query(instance.generate_query())
-                context["members_list_url"] = None
+        if self.action in ("create", "update"):
+            filterform_class = instance.generate_filter_form()
+            if filterform_class is None:
+                context["filter_form"] = None
+            elif request.POST:
+                context["filter_form"] = filterform_class(data=request.POST)
             else:
-                context["raw_query"] = None
-                try:
-                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
-                except NoReverseMatch:
+                initial = instance.get_initial()
+                context["filter_form"] = filterform_class(initial=initial)
+
+            formset_kwargs = {"instance": instance}
+            if request.POST:
+                formset_kwargs["data"] = request.POST
+            context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
+
+        elif self.action == "retrieve":
+            model = instance.model
+            table_class = get_table_for_model(model)
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                # Ensure that members cache is up-to-date for this specific group
+                members = instance.update_cached_members()
+                messages.success(request, f"Refreshed cached members list for {instance}")
+            else:
+                members = instance.members
+            if table_class is not None:
+                if hasattr(members, "without_tree_fields"):
+                    members = members.without_tree_fields()
+
+                members_table = table_class(
+                    members.restrict(request.user, "view"),
+                    orderable=False,
+                    exclude=["dynamic_group_count"],
+                    hide_hierarchy_ui=True,
+                )
+                paginate = {
+                    "paginator_class": EnhancedPaginator,
+                    "per_page": get_paginate_count(request),
+                }
+                RequestConfig(request, paginate).configure(members_table)
+
+                # Descendants table
+                descendants_memberships = instance.membership_tree()
+                descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                    descendants_memberships,
+                    orderable=False,
+                )
+                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+
+                # Ancestors table
+                ancestors = instance.get_ancestors()
+                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                    ancestors,
+                    orderable=False,
+                )
+                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+                if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
-            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
-            context["members_table"] = members_table
-            context["ancestors_table"] = ancestors_table
-            context["ancestors_tree"] = ancestors_tree
-            context["descendants_table"] = descendants_table
-            context["descendants_tree"] = descendants_tree
+                else:
+                    context["raw_query"] = None
+                    try:
+                        context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                    except NoReverseMatch:
+                        context["members_list_url"] = None
+
+                context.update(
+                    {
+                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                        "members_table": members_table,
+                        "ancestors_table": ancestors_table,
+                        "ancestors_tree": ancestors_tree,
+                        "descendants_table": descendants_table,
+                        "descendants_tree": descendants_tree,
+                    }
+                )
 
         return context
 
+    def form_save(self, form, **kwargs):
+        obj = form.save(commit=False)
+        context = self.get_extra_context(self.request, obj)
 
-class DynamicGroupEditView(generic.ObjectEditView):
-    queryset = DynamicGroup.objects.all()
-    model_form = forms.DynamicGroupForm
-    template_name = "extras/dynamicgroup_edit.html"
+        # Save filters
+        if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            filter_form = context.get("filter_form")
+            if not filter_form or not filter_form.is_valid():
+                form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+                raise ValidationError("invalid dynamic group filter_form")
+            try:
+                obj.set_filter(filter_form.cleaned_data)
+            except ValidationError as err:
+                form.add_error(None, "Invalid filter detected in existing DynamicGroup filter data.")
+                for msg in getattr(err, "messages", [str(err)]):
+                    if msg:
+                        form.add_error(None, msg)
+                raise
 
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
+        # After filters have been set, now we save the object to the database.
+        obj.save()
+        # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+        form.save_m2m()
 
-        filterform_class = instance.generate_filter_form()
+        # Process the formsets for children
+        children = context.get("children")
+        if children and not children.is_valid():
+            form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+            # dedupe only non-field errors to avoid duplicates in the banner
+            added_errors = set()
+            for f in children.forms:
+                for msg in f.non_field_errors():
+                    if msg not in added_errors:
+                        form.add_error(None, msg)
+                        added_errors.add(msg)
+            raise ValidationError("invalid DynamicGroupMembershipFormSet")
 
-        if filterform_class is None:
-            filter_form = None
-        elif request.POST:
-            filter_form = filterform_class(data=request.POST)
+        if children:
+            children.save()
+
+        return obj
+
+    # Suppress the global top banner when ValidationError happens
+    def _handle_validation_error(self, e):
+        self.has_error = True
+
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="assign-members",
+        url_name="bulk_assign",
+        custom_view_base_action="add",
+        custom_view_additional_permissions=[
+            "extras.add_staticgroupassociation",
+        ],
+    )
+    def bulk_assign(self, request):
+        """
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
+        """
+        if request.method == "GET":
+            return redirect(reverse("extras:staticgroupassociation_list"))
+
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
+        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
+        model = content_type.model_class()
+        self.default_return_url = get_route_for_model(model, "list")
+        filterset_class = get_filterset_for_model(model)
+
+        if request.POST.get("_all"):
+            if filterset_class:
+                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            else:
+                pk_list = list(model.objects.values_list("pk", flat=True))
         else:
-            initial = instance.get_initial()
-            filter_form = filterform_class(initial=initial)
+            pk_list = request.POST.getlist("pk")
 
-        ctx["filter_form"] = filter_form
-
-        formset_kwargs = {"instance": instance}
-        if request.POST:
-            formset_kwargs["data"] = request.POST
-
-        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
-
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = forms.DynamicGroupBulkAssignForm(model, request.POST)
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
-
             try:
                 with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    # Obtain the instance, but do not yet `save()` it to the database.
-                    obj = form.save(commit=False)
-
-                    ctx = self.get_extra_context(request, obj)
-                    if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                        # Process the filter form and save the query filters to `obj.filter`.
-                        filter_form = ctx["filter_form"]
-                        if filter_form.is_valid():
-                            obj.set_filter(filter_form.cleaned_data)
+                    add_to_groups = list(form.cleaned_data["add_to_groups"])
+                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                    if new_group_name:
+                        if not request.user.has_perm("extras.add_dynamicgroup"):
+                            raise DynamicGroup.DoesNotExist
                         else:
-                            raise RuntimeError(filter_form.errors)
+                            new_group = DynamicGroup(
+                                name=new_group_name,
+                                content_type=content_type,
+                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+                            )
+                            new_group.validated_save()
+                            # Check permissions
+                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
 
-                    # After filters have been set, now we save the object to the database.
-                    obj.save()
-                    # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
-                    form.save_m2m()
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
+                            add_to_groups.append(new_group)
+                            msg = "Created dynamic group"
+                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
+                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
+                            messages.success(request, msg)
 
-                    # Process the formsets for children
-                    children = ctx["children"]
-                    if children.is_valid():
-                        children.save()
-                    else:
-                        raise RuntimeError(children.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            for dynamic_group in add_to_groups:
+                                association, created = StaticGroupAssociation.objects.get_or_create(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type_id=content_type.id,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                if created:
+                                    logger.debug("Created %s", association)
 
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
+                        # Enforce object-level permissions
+                        permitted_associations = StaticGroupAssociation.objects.restrict(request.user, "add")
+                        if permitted_associations.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                            associations
+                        ):
+                            raise StaticGroupAssociation.DoesNotExist
 
-                    return redirect(request.get_full_path())
+                    if associations:
+                        msg = (
+                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                            f"to {len(add_to_groups)} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(request, msg)
 
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
+                    if form.cleaned_data["remove_from_groups"]:
+                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
+                            (
+                                StaticGroupAssociation.objects.restrict(request.user, "delete")
+                                .filter(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id__in=pk_list,
+                                )
+                                .delete()
+                            )
 
+                        msg = (
+                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(request, msg)
+            except ValidationError as e:
+                messages.error(request, e)
             except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving Dynamic Group associations. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a something that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ValidationError as err:
-                msg = "Invalid filter detected in existing DynamicGroup filter data."
-                logger.debug(msg)
-                err_messages = err.args[0].split("\n")
-                for message in err_messages:
-                    if message:
-                        form.add_error(None, message)
+                msg = "Static group association failed due to object-level permissions violation"
+                logger.warning(msg)
+                messages.error(request, msg)
 
         else:
             logger.debug("Form validation failed")
+            messages.error(request, form.errors)
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class DynamicGroupDeleteView(generic.ObjectDeleteView):
-    queryset = DynamicGroup.objects.all()
-
-
-class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
+        return redirect(self.get_return_url(request))
 
 
 class ObjectDynamicGroupsView(generic.GenericView):
@@ -2345,6 +2394,23 @@ class NoteUIViewSet(
     table_class = tables.NoteTable
     action_buttons = ()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["user", "assigned_object_type", "assigned_object"],
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="note",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.MARKDOWN,
+            ),
+        ),
+    )
+
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
@@ -2710,125 +2776,6 @@ class StaticGroupAssociationUIViewSet(
         if request is None or "dynamic_group" not in request.GET:
             queryset = queryset.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC)
         return queryset
-
-
-class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
-    queryset = StaticGroupAssociation.objects.all()
-    form_class = forms.DynamicGroupBulkAssignForm
-
-    def get_required_permission(self):
-        return get_permission_for_model(self.queryset.model, "add")
-
-    def get(self, request):
-        return redirect(self.get_return_url(request))
-
-    def post(self, request, **kwargs):
-        """
-        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
-
-        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
-        there's no separate confirmation step involved.
-        """
-        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
-        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
-        model = content_type.model_class()
-        self.default_return_url = get_route_for_model(model, "list")
-        filterset_class = get_filterset_for_model(model)
-
-        if request.POST.get("_all"):
-            if filterset_class is not None:
-                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
-            else:
-                pk_list = list(model.objects.all().values_list("pk", flat=True))
-        else:
-            pk_list = request.POST.getlist("pk")
-
-        form = self.form_class(model, request.POST)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-            try:
-                with transaction.atomic():
-                    add_to_groups = list(form.cleaned_data["add_to_groups"])
-                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
-                    if new_group_name:
-                        if not request.user.has_perm("extras.add_dynamicgroup"):
-                            raise DynamicGroup.DoesNotExist
-                        else:
-                            new_group = DynamicGroup(
-                                name=new_group_name,
-                                content_type=content_type,
-                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
-                            )
-                            new_group.validated_save()
-                            # Check permissions
-                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
-
-                            add_to_groups.append(new_group)
-                            msg = "Created dynamic group"
-                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
-                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
-                            messages.success(self.request, msg)
-
-                    with deferred_change_logging_for_bulk_operation():
-                        associations = []
-                        for pk in pk_list:
-                            for dynamic_group in add_to_groups:
-                                association, created = StaticGroupAssociation.objects.get_or_create(
-                                    dynamic_group=dynamic_group,
-                                    associated_object_type_id=content_type.id,
-                                    associated_object_id=pk,
-                                )
-                                association.validated_save()
-                                associations.append(association)
-                                if created:
-                                    logger.debug("Created %s", association)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
-                            associations
-                        ):
-                            raise StaticGroupAssociation.DoesNotExist
-
-                    if associations:
-                        msg = (
-                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
-                            f"to {len(add_to_groups)} dynamic group(s)."
-                        )
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    if form.cleaned_data["remove_from_groups"]:
-                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
-                            (
-                                StaticGroupAssociation.objects.restrict(request.user, "delete")
-                                .filter(
-                                    dynamic_group=dynamic_group,
-                                    associated_object_type=content_type,
-                                    associated_object_id__in=pk_list,
-                                )
-                                .delete()
-                            )
-
-                        msg = (
-                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
-                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
-                        )
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-            except ValidationError as e:
-                messages.error(self.request, e)
-            except ObjectDoesNotExist:
-                msg = "Static group association failed due to object-level permissions violation"
-                logger.warning(msg)
-                messages.error(self.request, msg)
-
-        else:
-            logger.debug("Form validation failed")
-            messages.error(self.request, form.errors)
-
-        return redirect(self.get_return_url(request))
 
 
 #
