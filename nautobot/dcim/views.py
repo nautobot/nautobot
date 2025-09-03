@@ -54,10 +54,10 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
-    BulkRenameMixin,
     ComponentCreateViewMixin,
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
@@ -1326,7 +1326,7 @@ class ModuleTypeUIViewSet(
 
 
 class ConsolePortTemplateUIViewSet(
-    BulkRenameMixin,
+    ObjectBulkRenameViewMixin,
     ComponentCreateViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,

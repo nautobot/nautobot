@@ -1516,7 +1516,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
         )
 
 
-class BulkRenameMixin(NautobotViewSetMixin):
+class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     queryset: QuerySet
     template_name = "generic/object_bulk_rename.html"
 
