@@ -3,8 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    CustomField,
-    DynamicGroup,
     Job,
     Relationship,
 )
@@ -17,7 +15,9 @@ router.register("config-context-schemas", views.ConfigContextSchemaUIViewSet)
 router.register("config-contexts", views.ConfigContextUIViewSet)
 router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
+router.register("custom-fields", views.CustomFieldUIViewSet)
 router.register("custom-links", views.CustomLinkUIViewSet)
+router.register("dynamic-groups", views.DynamicGroupUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("git-repositories", views.GitRepositoryUIViewSet)
@@ -25,6 +25,7 @@ router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
+router.register("job-results", views.JobResultUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("notes", views.NoteUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
@@ -57,61 +58,6 @@ urlpatterns = [
         "contact-associations/assign-contact-team/",
         views.ObjectAssignContactOrTeamView.as_view(),
         name="object_contact_team_assign",
-    ),
-    # Custom fields
-    path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
-    path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
-    path(
-        "custom-fields/delete/",
-        views.CustomFieldBulkDeleteView.as_view(),
-        name="customfield_bulk_delete",
-    ),
-    path("custom-fields/<uuid:pk>/", views.CustomFieldView.as_view(), name="customfield"),
-    path(
-        "custom-fields/<uuid:pk>/edit/",
-        views.CustomFieldEditView.as_view(),
-        name="customfield_edit",
-    ),
-    path(
-        "custom-fields/<uuid:pk>/delete/",
-        views.CustomFieldDeleteView.as_view(),
-        name="customfield_delete",
-    ),
-    path(
-        "custom-fields/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="customfield_changelog",
-        kwargs={"model": CustomField},
-    ),
-    path(
-        "custom-fields/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="customfield_notes",
-        kwargs={"model": CustomField},
-    ),
-    # Dynamic Groups
-    path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
-    path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
-    path("dynamic-groups/assign-members/", views.DynamicGroupBulkAssignView.as_view(), name="dynamicgroup_bulk_assign"),
-    path(
-        "dynamic-groups/delete/",
-        views.DynamicGroupBulkDeleteView.as_view(),
-        name="dynamicgroup_bulk_delete",
-    ),
-    path("dynamic-groups/<uuid:pk>/", views.DynamicGroupView.as_view(), name="dynamicgroup"),
-    path("dynamic-groups/<uuid:pk>/edit/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_edit"),
-    path("dynamic-groups/<uuid:pk>/delete/", views.DynamicGroupDeleteView.as_view(), name="dynamicgroup_delete"),
-    path(
-        "dynamic-groups/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="dynamicgroup_changelog",
-        kwargs={"model": DynamicGroup},
-    ),
-    path(
-        "dynamic-groups/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="dynamicgroup_notes",
-        kwargs={"model": DynamicGroup},
     ),
     # Image attachments
     path(
@@ -167,20 +113,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Generic job results
-    path("job-results/", views.JobResultListView.as_view(), name="jobresult_list"),
-    path("job-results/<uuid:pk>/", views.JobResultView.as_view(), name="jobresult"),
-    path("job-results/<uuid:pk>/log-table/", views.JobLogEntryTableView.as_view(), name="jobresult_log-table"),
-    path(
-        "job-results/delete/",
-        views.JobResultBulkDeleteView.as_view(),
-        name="jobresult_bulk_delete",
-    ),
-    path(
-        "job-results/<uuid:pk>/delete/",
-        views.JobResultDeleteView.as_view(),
-        name="jobresult_delete",
-    ),
     # Custom relationships
     path(
         "relationships/<uuid:pk>/changelog/",

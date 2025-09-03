@@ -1,7 +1,9 @@
+from collections.abc import Iterable
 import datetime
 import json
 import logging
 import re
+from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 
 from django import template
@@ -12,7 +14,7 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -22,13 +24,12 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
-from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
+from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
-HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
-HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -762,6 +763,23 @@ def render_address(address):
     return HTML_NONE
 
 
+@register.filter()
+def render_m2m(queryset, full_listing_link, verbose_name_plural, max_visible=5):
+    total_count = queryset.count()
+    display_count = min(total_count, max_visible)
+    if not display_count:
+        return HTML_NONE
+
+    items = [hyperlinked_object(record) for record in queryset[:display_count]]
+
+    remaining = total_count - display_count
+    if remaining > 0:
+        link = format_html('<a href="{}">... View {} more {}</a>', full_listing_link, remaining, verbose_name_plural)
+        items.append(link)
+
+    return format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else HTML_NONE
+
+
 @library.filter()
 @register.filter()
 def render_button_class(value):
@@ -823,11 +841,7 @@ def get_attr(obj, attr, default=None):
     return getattr(obj, attr, default)
 
 
-@register.simple_tag()
-def querystring(request, **kwargs):
-    """
-    Append or update the page number in a querystring.
-    """
+def _base_querystring(request, **kwargs):
     querydict = request.GET.copy()
     for k, v in kwargs.items():
         if v is not None:
@@ -839,6 +853,66 @@ def querystring(request, **kwargs):
         return "?" + query_string
     else:
         return ""
+
+
+# TODO: Remove this tag in Nautobot 3.0.
+
+
+@register.simple_tag()
+@deprecation.method_deprecated(
+    "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
+    "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
+    "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
+    "and is a replica of Django 5.2's `querystring` templatetag."
+)
+def querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+@register.simple_tag()
+def legacy_querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+# Note: This is vendored from Django 5.2
+@register.simple_tag(name="django_querystring", takes_context=True)
+def django_querystring(context, query_dict=None, **kwargs):
+    """
+    Add, remove, and change parameters of a ``QueryDict`` and return the result
+    as a query string. If the ``query_dict`` argument is not provided, default
+    to ``request.GET``.
+
+    For example::
+
+        {% django_querystring foo=3 %}
+
+    To remove a key::
+
+        {% django_querystring foo=None %}
+
+    To use with pagination::
+
+        {% django_querystring page=page_obj.next_page_number %}
+
+    A custom ``QueryDict`` can also be used::
+
+        {% django_querystring my_query_dict foo=3 %}
+    """
+    if query_dict is None:
+        query_dict = context.request.GET
+    params = query_dict.copy()
+    for key, value in kwargs.items():
+        if value is None:
+            if key in params:
+                del params[key]
+        elif isinstance(value, Iterable) and not isinstance(value, str):
+            params.setlist(key, value)
+        else:
+            params[key] = value
+    if not params and not query_dict:
+        return ""
+    query_string = params.urlencode()
+    return f"?{query_string}"
 
 
 @register.simple_tag()
@@ -1124,7 +1198,7 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
     else:
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
@@ -1255,3 +1329,26 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage: <h1>{{ title }}{% saved_view_title "html" %}</h1>
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return ""
+
+    if new_changes_not_applied:
+        title = format_html(' — <i title="Pending changes not saved">{}</i>', current_saved_view.name)
+    else:
+        title = format_html(" — {}", current_saved_view.name)
+
+    if mode == "plain":
+        return strip_tags(title)
+
+    return title
