@@ -247,14 +247,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-  tests-mysql:
-    name: "Unit tests (MySQL and Python 3.13)"
-=======
   tests-mysql-plus-coverage:
-    name: "Unit tests (MySQL and Python 3.12) plus test coverage reporting"
->>>>>>> develop
+    name: "Unit tests (MySQL and Python 3.13) plus test coverage reporting"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -291,10 +286,7 @@ jobs:
           poetry-version: "1.8.5"
           python-version: "3.13"
       - name: "Run unittest"
-<<<<<<< HEAD
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
-=======
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage --e fix_in_v3"
       - name: "Generate coverage comment"
         if: >
           contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
@@ -315,7 +307,6 @@ jobs:
         with:
           name: "python-coverage-comment-action"
           path: "python-coverage-comment-action.txt"
->>>>>>> develop
     needs:
       - "check-migrations"
       - "check-schema"

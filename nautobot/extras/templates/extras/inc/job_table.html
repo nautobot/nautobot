@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-{% load django_tables2 %}
-{% load table_config_button from helpers %}
-=======
 {% load querystring from django_tables2 %}
->>>>>>> develop
+{% load table_config_button from helpers %}
 
 <table id="job_accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}

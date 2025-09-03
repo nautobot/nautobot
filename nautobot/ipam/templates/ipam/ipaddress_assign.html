@@ -51,19 +51,11 @@
         </div>
     </form>
     {% if table %}
-<<<<<<< HEAD
-        <form action="{% querystring request %}" method="post">
+        <form action="{% legacy_querystring request %}" method="post">
             {% csrf_token %}
             <div class="row">
                 <div class="col-md-12">
                     <h3 class="my-16">Search Results</h3>
-=======
-        <div class="row">
-            <form action="{% legacy_querystring request %}" method="post" class="form form-horizontal">
-                {% csrf_token %}
-                <div class="col-md-12" style="margin-top: 20px">
-                    <h3>Search Results</h3>
->>>>>>> develop
                     {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
                     <div class="d-print-none mt-16 text-center">
                         {% if perms.dcim.change_interface %}

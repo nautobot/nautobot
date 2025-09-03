@@ -36,12 +36,8 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-<<<<<<< HEAD
 from nautobot.core.utils.cache import construct_cache_key
-from nautobot.core.utils.data import render_jinja2
-=======
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
->>>>>>> develop
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin

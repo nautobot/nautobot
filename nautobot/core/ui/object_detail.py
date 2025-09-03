@@ -973,12 +973,8 @@ class ObjectsTablePanel(Panel):
             "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
-<<<<<<< HEAD
-            "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
-=======
             "include_paginator": self.include_paginator,
-            "show_table_config_button": self.show_table_config_button,
->>>>>>> develop
+            "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
         }
 
 

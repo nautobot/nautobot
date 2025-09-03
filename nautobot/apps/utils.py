@@ -140,9 +140,5 @@ __all__ = (
     "swap_status_initials",
     "task_queues_as_choices",
     "to_meters",
-<<<<<<< HEAD
-=======
     "validate_jinja2",
-    "wrap_model_clean_methods",
->>>>>>> develop
 )

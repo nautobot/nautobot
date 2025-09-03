@@ -337,12 +337,8 @@ class CoreConfig(NautobotConfig):
         from graphene.types.scalars import BigInt
         from graphene_django.converter import convert_django_field
 
-<<<<<<< HEAD
-=======
-        from nautobot.core.graphql import BigInteger
         import nautobot.core.jobs  # noqa: F401  # unused-import -- but this import registers the system jobs
 
->>>>>>> develop
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert JSONField to GenericScalar."""
