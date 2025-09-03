@@ -5,6 +5,7 @@
     {% if object.vlan_group %}
         <li class="breadcrumb-item"><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
     {% endif %}
+<<<<<<< HEAD
 {% endblock extra_breadcrumbs %}
 
 {% block extra_nav_tabs %}
@@ -82,3 +83,6 @@
                 {% include "inc/paginator.html" with paginator=prefix_table.paginator page=prefix_table.page %}
             {% endif %}
 {% endblock content_full_width_page %}
+=======
+{% endblock extra_breadcrumbs %}
+>>>>>>> develop

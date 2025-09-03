@@ -354,8 +354,12 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
+<<<<<<< HEAD
                     f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                     html=True,
+=======
+                    f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
+>>>>>>> develop
                 )
             else:
                 self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
@@ -377,8 +381,12 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
+<<<<<<< HEAD
                         f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
                         html=True,
+=======
+                        f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
+>>>>>>> develop
                     )
                 else:
                     self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")

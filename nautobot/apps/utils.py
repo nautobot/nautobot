@@ -14,6 +14,7 @@ from nautobot.core.utils.data import (
     render_jinja2,
     shallow_compare_dict,
     to_meters,
+    validate_jinja2,
 )
 from nautobot.core.utils.deprecation import class_deprecated, class_deprecated_in_favor_of
 from nautobot.core.utils.filtering import (
@@ -139,4 +140,9 @@ __all__ = (
     "swap_status_initials",
     "task_queues_as_choices",
     "to_meters",
+<<<<<<< HEAD
+=======
+    "validate_jinja2",
+    "wrap_model_clean_methods",
+>>>>>>> develop
 )

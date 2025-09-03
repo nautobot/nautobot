@@ -1,10 +1,9 @@
-<<<<<<< HEAD
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block extra_nav_tabs %}
-        <li class="nav-item" role="presentation">
-            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'members' %} active{% endif %}">
+        <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab">
                 Members {% badge object.count %}
             </a>
         </li>
@@ -77,7 +76,7 @@
         </div>
         <div class="panel-body">
             {% if object.group_type == "dynamic-set" %}
-                <span class="form-text">
+                <span class="help-block">
                     This is a raw representation of the underlying filter that is derived
                     by aggregating the filters from all descendant groups.
                 </span>
@@ -98,7 +97,3 @@
     </div>
     {% endif %}
 {% endblock content_full_width_page %}
-=======
-{% extends 'extras/dynamicgroup_retrieve.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
->>>>>>> develop

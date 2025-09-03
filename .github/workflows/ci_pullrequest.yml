@@ -247,9 +247,14 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
+<<<<<<< HEAD
       - "ui-code-check"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.13)"
+=======
+  tests-mysql-plus-coverage:
+    name: "Unit tests (MySQL and Python 3.12) plus test coverage reporting"
+>>>>>>> develop
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -258,6 +263,9 @@ jobs:
       NAUTOBOT_DB_HOST: "127.0.0.1"
       NAUTOBOT_DB_PORT: "3306"
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
+    permissions:
+      pull-requests: "write"
+      contents: "write"
     services:
       mysql:
         image: "mysql:8"
@@ -283,7 +291,31 @@ jobs:
           poetry-version: "1.8.5"
           python-version: "3.13"
       - name: "Run unittest"
+<<<<<<< HEAD
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
+=======
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
+      - name: "Generate coverage comment"
+        if: >
+          contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
+          (github.head_ref != 'main') && (!startsWith(github.head_ref, 'release'))
+        id: "coverage_comment"
+        uses: "py-cov-action/python-coverage-comment-action@d1ff8fbb5ff80feedb3faa0f6d7b424f417ad0e1"  # v3.30
+        with:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MINIMUM_GREEN: 90
+          MINIMUM_ORANGE: 80
+          ANNOTATE_MISSING_LINES: true
+          ANNOTATION_TYPE: "warning"
+      - name: "Store Pull Request comment to be posted"
+        if: >
+          contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
+          (github.head_ref != 'main') && (!startsWith(github.head_ref, 'release'))
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "python-coverage-comment-action"
+          path: "python-coverage-comment-action.txt"
+>>>>>>> develop
     needs:
       - "check-migrations"
       - "check-schema"
@@ -526,6 +558,6 @@ jobs:
       - "migration-tests-mysql"
       - "migration-tests-postgres"
       - "pylint"
-      - "tests-mysql"
+      - "tests-mysql-plus-coverage"
       - "tests-postgres"
       - "ui-build-check"

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {% extends 'generic/object_create.html' %}
 {% load static %}
 {% load form_helpers %}
@@ -44,7 +43,7 @@
             <div class="tab-content">
                 <div class="tab-pane active" id="filter-form">
                     {% if filter_form %}
-                    <span class="form-text">
+                    <span class="help-block">
                         Select the filtering criteria to determine membership of objects matching
                         the Content Type for this Dynamic Group. Fields that are not a dropdown are
                         expected to have string inputs and do not support multiple values.
@@ -76,7 +75,7 @@
                         {% endif %}
 
                     {% else %}
-                    <span class="form-text">
+                    <span class="help-block">
                         Filtering criteria will be available after initially saving this group and
                         returning to this page.
                     </span>
@@ -198,7 +197,3 @@
     });
 </script>
 {% endblock javascript %}
-=======
-{% extends 'extras/dynamicgroup_update.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
->>>>>>> develop

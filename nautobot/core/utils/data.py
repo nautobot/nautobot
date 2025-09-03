@@ -95,6 +95,19 @@ def merge_dicts_without_collision(d1, d2):
     return {**d1, **d2}
 
 
+def validate_jinja2(template_code):
+    """
+    Parse a Jinja2 template to validate its syntax. Returns True if the template is valid.
+
+    Raises:
+        jinja2.TemplateSyntaxError: If the template is syntactically invalid.
+    """
+    rendering_engine = engines["jinja"]
+    rendering_engine.env.parse(template_code)
+
+    return True
+
+
 def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.

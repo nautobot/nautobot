@@ -1,11 +1,33 @@
 {% load helpers %}
 
+<<<<<<< HEAD
 <div class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
     {% if page %}
         <div class="">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         <div class="vr border-start my-8"></div>
+=======
+<div class="paginator text-right">
+    {% if paginator.num_pages > 1 %}
+        <nav>
+            <ul class="pagination pull-right">
+                {% if page.has_previous %}
+                    <li><a href="{% legacy_querystring request page=page.previous_page_number %}"><i class="mdi mdi-chevron-double-left"></i></a></li>
+                {% endif %}
+                {% for p in page.smart_pages %}
+                    {% if p %}
+                        <li{% if page.number == p %} class="active"{% endif %}><a href="{% legacy_querystring request page=p %}">{{ p }}</a></li>
+                    {% else %}
+                        <li class="disabled"><span>&hellip;</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page.has_next %}
+                    <li><a href="{% legacy_querystring request page=page.next_page_number %}"><i class="mdi mdi-chevron-double-right"></i></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+>>>>>>> develop
     {% endif %}
     <form class="align-items-center d-flex gap-4" method="get">
         {% for key, value_list in request.GET.lists %}

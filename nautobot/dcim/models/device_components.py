@@ -1,3 +1,4 @@
+from decimal import Decimal
 import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -403,8 +404,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     power_factor = models.DecimalField(
         max_digits=4,
         decimal_places=2,
-        default="0.95",
-        validators=[MinValueValidator(0.01), MaxValueValidator(1.00)],
+        default=Decimal("0.95"),
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
         help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
     )
 

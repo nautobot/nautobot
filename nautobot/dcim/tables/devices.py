@@ -154,6 +154,30 @@ class PlatformTable(BaseTable):
 #
 
 
+class VirtualChassisMembersTable(BaseTable):
+    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK, verbose_name="Device")
+    vc_position = tables.TemplateColumn(
+        verbose_name="Position", template_code='<span class="badge badge-default">{{ record.vc_position }}</span>'
+    )
+    master = BooleanColumn(accessor="is_vc_master", verbose_name="Master")
+    vc_priority = tables.Column(verbose_name="Priority")
+
+    class Meta(BaseTable.Meta):
+        model = Device
+        fields = (
+            "name",
+            "vc_position",
+            "master",
+            "vc_priority",
+        )
+        default_columns = (
+            "name",
+            "vc_position",
+            "master",
+            "vc_priority",
+        )
+
+
 class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
