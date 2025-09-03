@@ -1,0 +1,1 @@
+Changed Prefix update logic so that moving a Prefix to a different Namespace now carries along its descendant Prefixes and their associated IP Addresses as well, instead of only carrying along its direct child IP Addresses and leaving behind the other descendants in the original Namespace.
