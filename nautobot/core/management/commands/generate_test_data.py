@@ -207,7 +207,8 @@ class Command(BaseCommand):
                 prefix=f"2001:db8:0:{i}::/64",
                 type=PrefixTypeChoices.TYPE_CONTAINER,
             )
-        _create_batch(NamespaceFactory, 5, description="without any Prefixes or IPAddresses")
+        _create_batch(NamespaceFactory, 5, description="with a Tenant and without any Prefixes or IPAddresses", has_tenant=True)
+        _create_batch(NamespaceFactory, 5, description="without a Tenant and without any Prefixes or IPAddresses", has_tenant=False)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)

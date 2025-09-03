@@ -278,8 +278,14 @@ class NamespaceFactory(PrimaryModelFactory):
 
     class Meta:
         model = Namespace
+        exclude = (
+            "has_tenant",
+        )
 
     name = UniqueFaker("text", max_nb_chars=20)  # could be up to CHARFIELD_MAX_LENGTH but that gets unwieldy fast
+
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
 
 class PrefixFactory(PrimaryModelFactory):
