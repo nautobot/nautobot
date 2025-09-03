@@ -459,7 +459,7 @@ class DistinctViewTab(Tab):
             return format_html(
                 "{} {}",
                 self.label,
-                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count)),
+                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count, True)),
             )
         except AttributeError:
             logger.warning(
@@ -704,6 +704,7 @@ class ObjectsTablePanel(Panel):
         footer_content_template_path="components/panel/footer_content_table.html",
         footer_buttons=None,
         form_id=None,
+        include_paginator=False,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -752,6 +753,7 @@ class ObjectsTablePanel(Panel):
             footer_buttons (list, optional): A list of Button or FormButton components to render in the panel footer.
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
+            include_paginator (bool, optional): If True, renders a paginator in the panel footer.
         """
         if context_table_key and any(
             [
@@ -796,6 +798,7 @@ class ObjectsTablePanel(Panel):
         self.tab_id = tab_id
         self.footer_buttons = footer_buttons
         self.form_id = form_id
+        self.include_paginator = include_paginator
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -953,6 +956,7 @@ class ObjectsTablePanel(Panel):
             "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
+            "include_paginator": self.include_paginator,
             "show_table_config_button": self.show_table_config_button,
         }
 
@@ -1905,7 +1909,8 @@ class _ObjectDetailContactsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).associated_contacts.count())
+                "utilities/templatetags/badge.html",
+                badge(get_obj_from_context(context).associated_contacts.count(), True),
             ),
         )
 
@@ -1949,7 +1954,7 @@ class _ObjectDetailGroupsTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count())
+                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count(), True)
             ),
         )
 
@@ -1996,6 +2001,6 @@ class _ObjectDetailMetadataTab(Tab):
             self.label,
             render_to_string(
                 "utilities/templatetags/badge.html",
-                badge(get_obj_from_context(context).associated_object_metadata.count()),
+                badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )

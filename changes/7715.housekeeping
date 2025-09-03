@@ -1,0 +1,4 @@
+Updated documentation dependency `mkdocs-material` to `9.6.18`.
+Updated development dependency `faker` to `^37.6.0`.
+Updated development dependency `ruff` to `~0.12.11`.
+Updated test dependency `requests` to `~2.32.5`.
