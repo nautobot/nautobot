@@ -44,7 +44,7 @@
         {% if object.is_contact_associable_model and perms.extras.view_contactassociation %}
             <li class="nav-item" role="presentation">
                 <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-bs-toggle="tab">
-                    Contacts
+                    Contacts{% badge object.associated_contacts.count True %}
                 </a>
             </li>
         {% endif %}
@@ -53,7 +53,7 @@
                 {% if dg_count %}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-bs-toggle="tab">
-                            Dynamic Groups {% badge dg_count %}
+                            Dynamic Groups{% badge dg_count True %}
                         </a>
                     </li>
                 {% endif %}
@@ -64,7 +64,7 @@
                 {% if om_count %}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-bs-toggle="tab">
-                            Object Metadata {% badge om_count %}
+                            Object Metadata{% badge om_count True %}
                         </a>
                     </li>
                 {% endif %}
@@ -79,7 +79,7 @@
                         {% if active_tab == 'notes' %}aria-current="page"{% endif %}
                         href="{{ object.get_notes_url }}"
                     >
-                        Notes {% badge object.notes.count %}
+                        Notes{% badge object.notes.count True %}
                     </a>
                 </li>
             {% endif %}
