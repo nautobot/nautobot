@@ -1,0 +1,1 @@
+Fixed duplicate records returned in some cases by `DynamicGroup.update_cached_members()`.
