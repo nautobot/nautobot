@@ -638,7 +638,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
 
-        if self.action == "retrieve" and hasattr(instance, "custom_field_choices"):
+        if self.action == "retrieve":
             choices_data = []
 
             for choice in instance.custom_field_choices.all():

@@ -137,7 +137,7 @@ def pre_tag(value):
         >>> pre_tag("hello")
         '<pre>hello</pre>'
     """
-    if value is not None:
+    if value:
         return format_html("<pre>{}</pre>", value)
     return HTML_NONE
 
