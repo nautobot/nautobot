@@ -269,20 +269,6 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
-class LocationFieldsPanel(object_detail.ObjectFieldsPanel):
-    """
-    Panel for Location geographical info.
-    GPS coordinates are derived from the model property.
-    """
-
-    def render_value(self, key, value, context):
-        if key == "gps_coordinates":
-            if value != "Not available":
-                return helpers.render_address(value)
-            return helpers.HTML_NONE
-        return super().render_value(key, value, context)
-
-
 class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
     def render_rack_row(self, indent_px, url, name, count, elevation_url):
         return format_html(
@@ -404,7 +390,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "time_zone": [helpers.format_timezone],
                 },
             ),
-            LocationFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=110,
                 section=SectionChoices.LEFT_HALF,
                 label="Geographical Info",
@@ -416,6 +402,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 value_transforms={
                     "physical_address": [helpers.render_address],
                     "shipping_address": [helpers.render_address],
+                    "gps_coordinates": [helpers.render_address],
                 },
             ),
             object_detail.ObjectFieldsPanel(
