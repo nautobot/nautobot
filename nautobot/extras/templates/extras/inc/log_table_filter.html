@@ -1,0 +1,39 @@
+{% load render_table from django_tables2 %}
+{% load static %}
+
+<div class="panel panel-default" id="log-panel">
+    <div class="panel-heading">
+        <strong>Logs</strong>
+        <div class="pull-right noprint">
+            <input class="form-control" id="log-filter" type="text"
+                   placeholder="Filter log level or message"
+                   title="Filter log level or message"
+                   style="height: 23px" />
+        </div>
+    </div>
+
+    {% if body_content_table %}
+        {% render_table body_content_table %}
+    {% else %}
+        <p>No logs available.</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterInput = document.getElementById('log-filter');
+    const table = document.querySelector('#log-panel table');
+
+    if (!filterInput || !table) return;
+
+    filterInput.addEventListener('input', function() {
+        const filterText = this.value.toLowerCase();
+        const rows = table.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const rowText = row.innerText.toLowerCase();
+            row.style.display = rowText.includes(filterText) ? '' : 'none';
+        });
+    });
+});
+</script>

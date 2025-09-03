@@ -2109,11 +2109,13 @@ class JobResultUIViewSet(
                 },
             ),
             object_detail.ObjectsTablePanel(
-                table_title="Logs",
+                table_title=" ",
                 weight=200,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobLogEntryTable,
                 table_filter=["job_result"],
+                body_content_template_path="extras/inc/log_table_filter.html",
+                show_table_config_button=False,
             ),
         ],
         extra_buttons=(
