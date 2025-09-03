@@ -156,7 +156,7 @@ from nautobot.core.ui.choices import EChartsTypeChoices, SectionChoices
 object_detail_content = object_detail.ObjectDetailContent(
     panels=[
         object_detail.EChartsPanel(
-            section=object_detail.SectionChoices.FULL_WIDTH,
+            section=SectionChoices.FULL_WIDTH,
             weight=100,
             label="EChart - BAR",
             chart_kwargs={
@@ -181,7 +181,7 @@ from nautobot.core.ui.choices import EChartsTypeChoices, SectionChoices
 object_detail_content = object_detail.ObjectDetailContent(
     panels=[
         object_detail.EChartsPanel(
-            section=object_detail.SectionChoices.LEFT_HALF,
+            section=SectionChoices.LEFT_HALF,
             weight=100,
             label="EChart - PIE",
             chart_kwargs={
@@ -209,7 +209,7 @@ from nautobot.core.ui.choices import EChartsTypeChoices, SectionChoices
 object_detail_content = object_detail.ObjectDetailContent(
     panels=[
         object_detail.EChartsPanel(
-            section=object_detail.SectionChoices.RIGHT_HALF,
+            section=SectionChoices.RIGHT_HALF,
             weight=100,
             label="EChart - LINE",
             chart_kwargs={

@@ -333,7 +333,7 @@ class EChartsBaseTests(TestCase):
         self.assertEqual(config["series"][0]["data"], [1, 2])
 
 
-class QuerysetToNestedDictTests(TestCase):
+class QuerySetToNestedDictTests(TestCase):
     def setUp(self):
         self.qs = Location.objects.annotate(
             device_count=count_related(Device, "location"), prefix_count=count_related(Prefix, "locations")

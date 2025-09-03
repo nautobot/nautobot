@@ -47,11 +47,14 @@ def resolve_attr(obj, dotted_field):
     except (AttributeError, ObjectDoesNotExist):
         return None
 
+    # to avoid circular import
+    from nautobot.core.templatetags.helpers import bettertitle
+
     # handle booleans specially
     if isinstance(val, bool):
         attrs = dotted_field.split("__")
         # take last part of dotted_field ("nestable" in "location_type__nestable")
-        field_label = attrs[-1].replace("_", " ").title()
+        field_label = bettertitle(attrs[-1].replace("_", " "))
         return field_label if val else f"Not {field_label}"
 
     return str(val) if val else None

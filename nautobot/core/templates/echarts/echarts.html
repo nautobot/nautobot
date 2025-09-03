@@ -10,11 +10,11 @@
         var myChart = window.echarts.init(document.getElementById("{{ chart_container_id }}"), null, { renderer: "{{ chart.renderer }}" });
 
         // Get config from JSON script
-        var option = JSON.parse(
+        var options = JSON.parse(
             document.getElementById("echarts-config-{{ chart_container_id }}").textContent
         );
 
         // Display the chart using the configuration items and data just specified.
-        myChart.setOption(option);
+        myChart.setOption(options);
     });
 </script>

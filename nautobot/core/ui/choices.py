@@ -2,6 +2,8 @@
 
 from nautobot.core.choices import ChoiceSet
 
+from .constants import UI_COLORS
+
 
 class LayoutChoices(ChoiceSet):
     """Page (or more properly tab) column layout choices.
@@ -81,3 +83,20 @@ class EChartsTypeTheme(ChoiceSet):
         (LIGHT, "Default theme"),
         (DARK, "Dark theme"),
     )
+
+    COLORS = {
+        LIGHT: [
+            UI_COLORS["blue"]["light"],
+            UI_COLORS["orange"]["light"],
+            UI_COLORS["green"]["light"],
+            UI_COLORS["red"]["light"],
+            UI_COLORS["gray"]["light"],
+        ],
+        DARK: [
+            UI_COLORS["blue"]["dark"],
+            UI_COLORS["orange"]["dark"],
+            UI_COLORS["green"]["dark"],
+            UI_COLORS["red"]["dark"],
+            UI_COLORS["gray"]["dark"],
+        ],
+    }

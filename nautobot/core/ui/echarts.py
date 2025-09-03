@@ -100,8 +100,12 @@ class PieEChartsStrategy(EChartsStrategy):
                 - "data": list  - Values aligned with data["x"], used to form pie slices.
 
             Pie-specific optional keys:
-                - "radius": str|list - Size of pie (default "50%"). Pie radius, e.g. "50%" or ["40%", "70%"]. See: https://echarts.apache.org/en/option.html#series-pie.radius
-                - "center": list     - Position of pie center (default ["50%", "50%"]). Center positionvof Pie chart, e.g. ["50%", "50%"]. The first of which is the horizontal position, and the second is the vertical position. See: https://echarts.apache.org/en/option.html#series-pie.center
+                - "radius": str|list - Size of pie (default "50%"). Pie radius, e.g. "50%" or ["40%", "70%"].
+                    See: https://echarts.apache.org/en/option.html#series-pie.radius
+                - "center": list     - Position of pie center (default ["50%", "50%"]).
+                    Center positionvof Pie chart, e.g. ["50%", "50%"].
+                    The first of which is the horizontal position, and the second is the vertical position.
+                    See: https://echarts.apache.org/en/option.html#series-pie.center
         Returns:
             list[dict]: ECharts-compatible `series` config for pie.
 
@@ -151,10 +155,10 @@ class LineEChartsStrategy(EChartsStrategy):
             Line-specific optional keys:
             - "smooth": bool     - Whether to show as smooth curve (default False).
             - "lineStyle": dict  - Styling options for the line (e.g., {"type": "dashed"}).
+                See https://echarts.apache.org/en/option.html#series-line.lineStyle
 
         Returns:
             list[dict]: ECharts-compatible `series` config for line.
-
 
         """
         series_data = data.get("series", [])
@@ -319,24 +323,9 @@ class EChartsBase:
 
         return {"x": x_labels, "series": series_list}
 
-    def _get_theme_colors(self):
+    def get_theme_colors(self):
         """Map SCSS palette to echarts theme colors (manual sync)."""
-        if self.theme == EChartsTypeTheme.DARK:
-            return [
-                "#045ab4",  # blue-0-dark
-                "#e07807",  # orange-0-dark
-                "#005c09",  # green-0-dark
-                "#960606",  # red-0-dark
-                "#4f5868",  # gray-3-dark
-            ]
-        # Default light
-        return [
-            "#007dff",  # blue-0
-            "#e07807",  # orange-0
-            "#1ca92a",  # green-0
-            "#e01f1f",  # red-0
-            "#505d68",  # gray-3
-        ]
+        return EChartsTypeTheme.COLORS.get(self.theme, EChartsTypeTheme.COLORS[EChartsTypeTheme.DEFAULT])
 
     def get_config(self):
         """Return a dict ready to dump into echarts option JSON."""
@@ -349,7 +338,7 @@ class EChartsBase:
             "toolbox": self.strategy.get_toolbox_config(
                 self.show_toolbox, self.save_image_options, self.data_view_options
             ),
-            "color": self._get_theme_colors(),
+            "color": self.get_theme_colors(),
             "legend": self.legend,
         }
         axis_config = self.strategy.get_axis_config(data, self.x_label, self.y_label)
