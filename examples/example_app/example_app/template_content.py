@@ -5,12 +5,23 @@ from nautobot.apps.ui import (
     Button,
     ButtonColorChoices,
     DistinctViewTab,
+    EChartsPanel,
+    EChartsTypeChoices,
     ObjectFieldsPanel,
     ObjectTextPanel,
+    queryset_to_nested_dict_records_as_series,
     SectionChoices,
     Tab,
     TemplateExtension,
 )
+from nautobot.circuits.models import Circuit
+from nautobot.core.models.querysets import count_related
+from nautobot.core.views.utils import get_obj_from_context
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
+from nautobot.extras.models import DynamicGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
+from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
 class CircuitContent(TemplateExtension):
@@ -165,6 +176,82 @@ class LocationContent(TemplateExtension):
         return "LOCATION CONTENT - BUTTONS LIST"
 
 
+class TenantContent(TemplateExtension):
+    model = "tenancy.tenant"
+
+    class TenantRelatedObjectsChartPanel(EChartsPanel):
+        def get_data(self, context):
+            instance = get_obj_from_context(context)
+
+            data_series = queryset_to_nested_dict_records_as_series(
+                Tenant.objects.annotate(
+                    Circuits=count_related(Circuit, "tenant"),
+                    Clusters=count_related(Cluster, "tenant"),
+                    Controllers=count_related(Controller, "tenant"),
+                    ControllerManagedDeviceGroups=count_related(ControllerManagedDeviceGroup, "tenant"),
+                    Devices=count_related(Device, "tenant"),
+                    DynamicGroups=count_related(DynamicGroup, "tenant"),
+                    IpAddresses=count_related(IPAddress, "tenant"),
+                    Locations=count_related(Location, "tenant"),
+                    Prefixes=count_related(Prefix, "tenant"),
+                    Racks=count_related(Rack, "tenant"),
+                    RackReservations=count_related(RackReservation, "tenant"),
+                    VirtualMachines=count_related(VirtualMachine, "tenant"),
+                    VLANs=count_related(VLAN, "tenant"),
+                    VRFs=count_related(VRF, "tenant"),
+                ).filter(pk=instance.id),
+                record_key="name",
+                value_keys=[
+                    "Circuits",
+                    "Clusters",
+                    "Controllers",
+                    "ControllerManagedDeviceGroups",
+                    "Devices",
+                    "DynamicGroups",
+                    "IpAddresses",
+                    "Locations",
+                    "Prefixes",
+                    "Racks",
+                    "RackReservations",
+                    "VirtualMachines",
+                    "VLANs",
+                    "VRFs",
+                ],
+            )
+            return data_series
+
+        def get_extra_context(self, context):
+            """Add chart-specific context variables."""
+            self.data = self.get_data(context)
+            return super().get_extra_context(context)
+
+    object_detail_panels = [
+        TenantRelatedObjectsChartPanel(
+            section=SectionChoices.FULL_WIDTH,
+            weight=100,
+            label="EChart - Stats",
+            chart_kwargs={
+                "chart_type": EChartsTypeChoices.PIE,
+                "header": "Stats by Tenant",
+                "description": "Example chart with using context and queryset.",
+                "legend": {"orient": "vertical", "right": 10, "top": "center"},
+                "additional_config": {
+                    "series": [
+                        {
+                            "avoidLabelOverlap": False,
+                            "radius": ["40%", "70%"],
+                            "itemStyle": {"borderRadius": 10, "borderColor": "#fff", "borderWidth": 2},
+                            "label": {"show": False, "position": "center"},
+                            "emphasis": {"label": {"show": True, "fontSize": 40, "fontWeight": "bold"}},
+                            "labelLine": {"show": False},
+                        }
+                    ]
+                },
+            },
+        )
+    ]
+
+
 class ExampleModelContent(TemplateExtension):
     """
     You can also use an app to extend other apps's views, or even (in this case) its *own* views.
@@ -224,4 +311,4 @@ class ExampleModelContent(TemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, LocationContent, CircuitContent, DeviceContent]
+template_extensions = [ExampleModelContent, LocationContent, CircuitContent, DeviceContent, TenantContent]

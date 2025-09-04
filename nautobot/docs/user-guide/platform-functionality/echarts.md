@@ -12,7 +12,7 @@ Base definition for an ECharts chart (no rendering logic). This class transforms
 
 ### Data Handling
 
-The `data` argument can be provided in **two formats**:
+The `data` argument can be provided in **several formats**:
 
 1. Raw nested format (more user-friendly):
 
@@ -66,6 +66,46 @@ The `data` argument can be provided in **two formats**:
         )
     )
     ```
+
+5. Dynamic data from context in `EChartsPanel` subclasses:
+    - For detail views, you often want to compute chart data based on the object currently being rendered.
+    - In this case, subclass `EChartsPanel` and override `get_data(self, context)` to return data in one of the formats above.
+    - This gives you access to the `context` (and therefore the current object) at render time.
+
+    ```no-highlight
+    class TenantRelatedObjectsChartPanel(EChartsPanel):
+        def get_data(self, context):
+            instance = get_obj_from_context(context)
+            return queryset_to_nested_dict_records_as_series(
+                Tenant.objects.annotate(
+                    circuit_count=count_related(Circuit, "tenant"),
+                    cluster_count=count_related(Cluster, "tenant"),
+                ).filter(pk=instance.id),
+                record_key="name",
+                value_keys=["circuit_count", "cluster_count"],
+            )
+
+        def get_extra_context(self, context):
+            """Attach computed data before rendering."""
+            self.data = self.get_data(context)
+            return super().get_extra_context(context)
+
+    object_detail_panels = [
+        TenantRelatedObjectsChartPanel(
+            section=SectionChoices.FULL_WIDTH,
+            weight=100,
+            label="EChart - Stats",
+            chart_kwargs={
+                "chart_type": EChartsTypeChoices.PIE,
+                "header": "Stats by Tenant",
+                "description": "Example chart using context and queryset.",
+            },
+        )
+    ]
+    ```
+
+    - Here, `get_data()` builds the dataset dynamically for the current `Tenant` object.
+    - This approach is recommended when chart data must be tied to the specific object in the detail view.
 
 ### Additional Options
 

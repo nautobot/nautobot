@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any
 
 from django.db.models import QuerySet
@@ -283,6 +284,11 @@ class EChartsBase:
         resolved_data = self._data() if callable(self._data) else self._data
         return self._transform_data(resolved_data or {})
 
+    @data.setter
+    def data(self, data):
+        """Set the data."""
+        self._data = data
+
     @property
     def chart_type(self):
         """Get the current chart type."""
@@ -323,6 +329,40 @@ class EChartsBase:
 
         return {"x": x_labels, "series": series_list}
 
+    def _deep_update(self, original: dict, updates: dict) -> dict:
+        """
+        Recursively update a nested dictionary (and lists of dicts).
+
+        Args:
+            original (dict): The base configuration dictionary that will be updated.
+            updates (dict): The dictionary containing overrides / new values.
+
+        Returns:
+            dict: The updated dictionary (same object as `original`).
+        """
+        for key, value in updates.items():
+            # Case 1: nested dict -> recurse
+            if isinstance(value, Mapping):
+                original[key] = self._deep_update(original.get(key, {}), value)
+
+            # Case 2: list of dicts -> update element by index
+            elif isinstance(value, list) and isinstance(original.get(key), list):
+                for index, item in enumerate(value):
+                    if index < len(original[key]) and isinstance(item, dict) and isinstance(original[key][index], dict):
+                        original[key][index] = self._deep_update(original[key][index], item)
+                    else:
+                        # append if list is shorter or item is not a dict
+                        if index >= len(original[key]):
+                            original[key].append(item)
+                        else:
+                            original[key][index] = item
+
+            # Case 3: scalar or completely new key -> overwrite
+            else:
+                original[key] = value
+
+        return original
+
     def get_theme_colors(self):
         """Map SCSS palette to echarts theme colors (manual sync)."""
         return EChartsTypeTheme.COLORS.get(self.theme, EChartsTypeTheme.COLORS[EChartsTypeTheme.DEFAULT])
@@ -349,7 +389,7 @@ class EChartsBase:
 
         # Add any additional chart-specific configuration
         additional_config = self.strategy.get_additional_config()
-        config.update(additional_config)
+        self._deep_update(config, additional_config)
 
         # Handle combined charts
         if self.combined_with:
