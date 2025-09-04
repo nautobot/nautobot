@@ -13,6 +13,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
+from jinja2 import TemplateError, TemplateSyntaxError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -36,7 +37,7 @@ from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
-from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -89,6 +90,31 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 self, method_name="get_for_model", branch_aware=True, model=label, listing=True
             )
             cache.set(cache_key, listings[label])
+
+    def bulk_create(self, objs, *args, **kwargs):
+        """Validate templates before saving."""
+        self._validate_templates_bulk(objs)
+        return super().bulk_create(objs, *args, **kwargs)
+
+    def bulk_update(self, objs, fields, *args, **kwargs):
+        """Validate templates before updating if template field is being modified."""
+        if "template" in fields:
+            self._validate_templates_bulk(objs)
+
+        return super().bulk_update(objs, fields, *args, **kwargs)
+
+    def _validate_templates_bulk(self, objs):
+        """Helper method to validate templates for multiple objects."""
+        errors = []
+        for obj in objs:
+            try:
+                obj.validate_template()
+            except ValidationError as exc:
+                message_list = [f"'{obj.label}': {x}" for x in exc.messages]
+                errors.extend(message_list)
+
+        if errors:
+            raise ValidationError(f"Template validation failed - {'; '.join(errors)}")
 
 
 @extras_features("graphql")
@@ -150,14 +176,7 @@ class ComputedField(
 
     def render(self, context):
         try:
-            rendered = render_jinja2(self.template, context)
-            # If there is an undefined variable within a template, it returns nothing
-            # Doesn't raise an exception either most likely due to using Undefined rather
-            # than StrictUndefined, but return fallback_value if None is returned
-            if rendered is None:
-                logger.warning("Failed to render computed field %s", self.key)
-                return self.fallback_value
-            return rendered
+            return render_jinja2(self.template, context)
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
@@ -168,8 +187,25 @@ class ComputedField(
 
     def clean(self):
         super().clean()
+
+        self.validate_template()
+
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
+    def validate_template(self):
+        """
+        Validate that the template contains valid Jinja2 syntax.
+        """
+        try:
+            validate_jinja2(self.template)
+        except TemplateSyntaxError as exc:
+            raise ValidationError({"template": f"Template syntax error on line {exc.lineno}: {exc.message}"})
+        except TemplateError as exc:
+            raise ValidationError({"template": f"Template error: {exc}"})
+        except Exception as exc:
+            # System-level exceptions (very rare) - memory, recursion, encoding issues
+            raise ValidationError(f"Template validation failed: {exc}")
 
 
 class CustomFieldModel(models.Model):

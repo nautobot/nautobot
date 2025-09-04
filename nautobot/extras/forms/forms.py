@@ -164,6 +164,7 @@ __all__ = (
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
+    "DynamicGroupBulkEditForm",
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
@@ -920,6 +921,20 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 # Dynamic Groups
 #
+class DynamicGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "description",
+            "tenant",
+        ]
 
 
 class DynamicGroupForm(TenancyForm, NautobotModelForm):

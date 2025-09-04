@@ -354,7 +354,7 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
+                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
                     html=True,
                 )
             else:
@@ -377,7 +377,7 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
+                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
                         html=True,
                     )
                 else:
