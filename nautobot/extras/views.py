@@ -2157,14 +2157,10 @@ class JobResultUIViewSet(
                     "files": [helpers.render_job_files],
                 },
             ),
-            object_detail.ObjectsTablePanel(
-                table_title=" ",
+            object_detail.Panel(
                 weight=200,
-                section=SectionChoices.FULL_WIDTH,
-                table_class=tables.JobLogEntryTable,
-                table_filter=["job_result"],
+                section=object_detail.SectionChoices.FULL_WIDTH,
                 body_content_template_path="extras/inc/log_table_filter.html",
-                show_table_config_button=False,
             ),
         ],
         extra_buttons=(
@@ -2264,14 +2260,6 @@ class JobResultUIViewSet(
             )
 
         return context
-
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related("job_model", "user")
-
-        if not self.detail:
-            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
-
-        return queryset
 
     @action(
         detail=True,
