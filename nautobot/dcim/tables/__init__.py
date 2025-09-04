@@ -40,6 +40,7 @@ from .devices import (
     RearPortTable,
     SoftwareImageFileTable,
     SoftwareVersionTable,
+    VirtualChassisMembersTable,
     VirtualChassisTable,
     VirtualDeviceContextTable,
 )
@@ -128,6 +129,7 @@ __all__ = (
     "RearPortTemplateTable",
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
+    "VirtualChassisMembersTable",
     "VirtualChassisTable",
     "VirtualDeviceContextTable",
 )
