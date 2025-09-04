@@ -17,10 +17,10 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template.loader import render_to_string
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -552,21 +552,42 @@ class RackUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             request = context["request"]
             if request.user.has_perms(self.add_permissions or []):
-                try:
-                    return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
-                except NoReverseMatch:
-                    return None
+                return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
             return None
 
     class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             if key == "space_utilization" or key == "power_utilization":
                 return self.get_utilization_graph(value)
+
+            if key == "rack_group":
+                if not value:
+                    return helpers.HTML_NONE
+                all_groups = [*list(value.ancestors()), value]
+                return format_html_join(" / ", "{}", ((helpers.hyperlinked_object(group),) for group in all_groups))
+
             return super().render_value(key, value, context)
 
         def get_utilization_graph(self, value):
             data = helpers.utilization_graph(value)
             return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+    class DimensionsObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+
+            if key == "u_height":
+                if not value:
+                    return helpers.HTML_NONE
+                orientation = "descending" if obj.desc_units else "ascending"
+                return format_html("{}U ({})", value, orientation)
+
+            if key == "outer_width" or "outer_depth":
+                if not value:
+                    return helpers.HTML_NONE
+                return format_html("{} {}", value, obj.get_outer_unit_display())
+
+            return super().render_value(key, value, context)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -587,7 +608,7 @@ class RackUIViewSet(NautobotUIViewSet):
                     "power_utilization",
                 ],
             ),
-            object_detail.ObjectFieldsPanel(
+            DimensionsObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 label="Dimensions",
@@ -632,11 +653,11 @@ class RackUIViewSet(NautobotUIViewSet):
             ),
             object_detail.Panel(
                 section=SectionChoices.RIGHT_HALF,
-                weight=100,
+                weight=600,
                 template_path="dcim/rack_layout.html",
             ),
             object_detail.ObjectsTablePanel(
-                weight=600,
+                weight=700,
                 section=SectionChoices.RIGHT_HALF,
                 context_table_key="nonracked_devices_table",
                 related_field_name="rack",
