@@ -166,6 +166,73 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.17 (2025-09-02)
+
+### Security in v2.4.17
+
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Removed obsolete package `future` from the `poetry.lock` and hence from the Docker images, eliminating Nautobot's exposure to vulnerability CVE-2025-50817 in that package.
+
+### Added in v2.4.17
+
+- [#3547](https://github.com/nautobot/nautobot/issues/3547) - Added support for using shift+click to select one or more ranges of objects from list views.
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Added `Check/Fix IPAM Parents` system Job that can be run if IP Address and/or Prefix `parent` values are incorrectly set.
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Added logic in IPAddress and Prefix detail views to detect an incorrect `parent` value on the record being viewed and display a banner recommending to run the aforementioned system Job if so.
+- [#7685](https://github.com/nautobot/nautobot/issues/7685) - Added Jinja2 validation to `ComputedField` model to catch template syntax errors at save time.
+- [#8000](https://github.com/nautobot/nautobot/issues/8000) - Added `django_querystring`, copied from `querystring` templatetag in Django 5.1 and above.
+- [#8000](https://github.com/nautobot/nautobot/issues/8000) - Added `legacy_querystring`, copied from `querystring` templatetag in Nautobot 2.4 and below.
+
+### Changed in v2.4.17
+
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Changed Prefix update logic so that moving a Prefix to a different Namespace now carries along its descendant Prefixes and their associated IP Addresses as well, instead of only carrying along its direct child IP Addresses and leaving behind the other descendants in the original Namespace.
+- [#7670](https://github.com/nautobot/nautobot/issues/7670) - Disable default pagination in ObjectsTablePanel.
+
+### Deprecated in v2.4.17
+
+- [#8000](https://github.com/nautobot/nautobot/issues/8000) - Deprecate the `querystring` templatetag as it overlaps with Django 5.1.
+
+### Removed in v2.4.17
+
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Removed UI warnings about various combinations of Prefix types (container versus network versus pool) and IP addresses, as time has shown that there are valid use cases for many of these combinations.
+
+### Fixed in v2.4.17
+
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Fixed incorrect data after editing a Prefix's `prefix`/`network`/`prefix_length` fields by adding a `clean()` check to detect and block cases where it could result in orphaned IPAddress records.
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Fixed incorrect data after editing a Prefix's `prefix`/`network`/`prefix_length` fields by adding logic in `save()` to correctly reparent existing child Prefix and IPAddress records.
+- [#6151](https://github.com/nautobot/nautobot/issues/6151) - Fixed potential for incorrect data when moving a VRF-associated Prefix between Namespaces by adding a `clean()` check to detect and block this scenario.
+- [#7496](https://github.com/nautobot/nautobot/issues/7496) - Fixed issue with removed Prefix column in VLANs table.
+- [#7708](https://github.com/nautobot/nautobot/issues/7708) - Hide the 'select all matching query' UI element when the 'select all' checkbox in an object list view is unchecked.
+- [#7720](https://github.com/nautobot/nautobot/issues/7720) - Fixed a Django REST Framework warning related to the `power_factor` attribute on a `DecimalField`.
+
+### Dependencies in v2.4.17
+
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `django-constance` to `~4.3.2`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `prometheus-client` to `~0.22.1`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `python-slugify` to `~8.0.4`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated dependency `svgwrite` to `~1.4.3`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Regenerated `poetry.lock` to bring latest version of indirect dependencies into the Docker images and development environment.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated dependency `django-silk` to `~5.4.2`.
+
+### Documentation in v2.4.17
+
+- [#6671](https://github.com/nautobot/nautobot/issues/6671) - Documented different approaches for initial population of data.
+
+### Housekeeping in v2.4.17
+
+- [#7124](https://github.com/nautobot/nautobot/issues/7124) - Fixed developer docker flow when override files drop ancillary containers.
+- [#7496](https://github.com/nautobot/nautobot/issues/7496) - Refactored VLAN model related UI views to use `UI component framework`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated development dependency `pylint` to `~3.3.8`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated development dependency `pymarkdownlnt` to `~0.9.32`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated development dependency `ruff` to `~0.12.9`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.3.9`.
+- [#7682](https://github.com/nautobot/nautobot/issues/7682) - Updated documentation dependency `mkdocs-material` to `~9.6.17`.
+- [#7703](https://github.com/nautobot/nautobot/issues/7703) - Made sure line endings were consistently Unix-style (`\n` rather than `\r\n`) in project source files.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated documentation dependency `mkdocs-material` to `9.6.18`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated development dependency `faker` to `^37.6.0`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated development dependency `ruff` to `~0.12.11`.
+- [#7715](https://github.com/nautobot/nautobot/issues/7715) - Updated test dependency `requests` to `~2.32.5`.
+- [#7732](https://github.com/nautobot/nautobot/issues/7732) - Added code coverage reporting to pull request CI workflow.
+- [#7734](https://github.com/nautobot/nautobot/issues/7734) - Added `--diff` option to `invoke ruff` command.
+
 ## v2.4.16 (2025-08-19)
 
 ### Fixed in v2.4.16
