@@ -979,6 +979,7 @@ class DynamicGroupTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     # NOTE: This isn't using `ViewTestCases.PrimaryObjectViewTestCase` because bulk-import/edit
     # views for DynamicGroup do not make sense at this time, primarily because `content_type` is
     # immutable after create.
@@ -1008,6 +1009,10 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
         }
 
     def _get_queryset(self):

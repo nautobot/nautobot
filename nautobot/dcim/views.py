@@ -21,7 +21,7 @@ from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html, format_html_join
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
@@ -4318,6 +4318,45 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
 
+    class MembersObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
+
+            if not request.user.has_perm("dcim.change_virtualchassis"):
+                return None
+
+            params = []
+            master = obj.master
+
+            if master is not None:
+                if master.location is not None:
+                    params.append(("location", master.location.pk))
+
+                if master.rack is not None:
+                    params.append(("rack", master.rack.pk))
+
+            params.append(("return_url", return_url))
+            return reverse("dcim:virtualchassis_add_member", kwargs={"pk": obj.pk}) + "?" + urlencode(params)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            MembersObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=tables.VirtualChassisMembersTable,
+                table_filter="virtual_chassis",
+                table_title="Members",
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -4345,10 +4384,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                     "return_url": self.get_return_url(request, instance),
                 }
             )
-
-        elif self.action == "retrieve":
-            members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
-            context.update({"members": members})
 
         return context
 

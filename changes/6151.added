@@ -1,2 +1,0 @@
-Added `Check/Fix IPAM Parents` system Job that can be run if IP Address and/or Prefix `parent` values are incorrectly set.
-Added logic in IPAddress and Prefix detail views to detect an incorrect `parent` value on the record being viewed and display a banner recommending to run the aforementioned system Job if so.
