@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404,HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
@@ -2264,6 +2264,43 @@ class JobResultUIViewSet(
             )
 
         return context
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("job_model", "user")
+
+        if not self.detail:
+            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
+
+        return queryset
+
+    @action(
+        detail=True,
+        url_path="log-table",
+        url_name="log-table",
+        custom_view_base_action="view",
+    )
+    def log_table(self, request, pk=None):
+        """
+        Custom action to return a rendered JobLogEntry table for a JobResult.
+        """
+
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(log_table)
+
+        return HttpResponse(log_table.as_html(request))
 
 
 #
