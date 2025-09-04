@@ -566,6 +566,16 @@ class RackUIViewSet(NautobotUIViewSet):
                 all_groups = [*list(value.ancestors()), value]
                 return format_html_join(" / ", "{}", ((helpers.hyperlinked_object(group),) for group in all_groups))
 
+            if key == "devices":
+                request = context["request"]
+                obj = get_obj_from_context(context)
+                device_count = Device.objects.restrict(request.user, "view").filter(rack=obj).count()
+                if not device_count:
+                    return helpers.HTML_NONE
+                full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
+                link = format_html('<a href="{}">{}</a>', full_url, device_count)
+                return link
+
             return super().render_value(key, value, context)
 
         def get_utilization_graph(self, value):
@@ -589,6 +599,22 @@ class RackUIViewSet(NautobotUIViewSet):
 
             return super().render_value(key, value, context)
 
+    class NonRackedDevicesObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("dcim.add_device"):
+                return None
+
+            obj = get_obj_from_context(context)
+            params = []
+            if obj is not None:
+                params.append(("rack", obj.pk))
+                if obj.location is not None:
+                    params.append(("location", obj.location.pk))
+
+            params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
+            return f"{reverse('dcim:device_add')}?{urlencode(params)}"
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             RackObjectFieldsPanel(
@@ -604,6 +630,7 @@ class RackUIViewSet(NautobotUIViewSet):
                     "role",
                     "serial",
                     "asset_tag",
+                    "devices",
                     "space_utilization",
                     "power_utilization",
                 ],
@@ -656,7 +683,7 @@ class RackUIViewSet(NautobotUIViewSet):
                 weight=600,
                 template_path="dcim/rack_layout.html",
             ),
-            object_detail.ObjectsTablePanel(
+            NonRackedDevicesObjectsTablePanel(
                 weight=700,
                 section=SectionChoices.RIGHT_HALF,
                 context_table_key="nonracked_devices_table",
