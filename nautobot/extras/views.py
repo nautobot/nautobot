@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
-from django.http import Http404,HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
@@ -2264,6 +2264,7 @@ class JobResultUIViewSet(
             )
 
         return context
+
     def get_queryset(self):
         queryset = super().get_queryset().select_related("job_model", "user")
 
