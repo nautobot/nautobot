@@ -582,7 +582,7 @@ class RackUIViewSet(NautobotUIViewSet):
                 orientation = "descending" if obj.desc_units else "ascending"
                 return format_html("{}U ({})", value, orientation)
 
-            if key == "outer_width" or "outer_depth":
+            if key == "outer_width" or key == "outer_depth":
                 if not value:
                     return helpers.HTML_NONE
                 return format_html("{} {}", value, obj.get_outer_unit_display())
