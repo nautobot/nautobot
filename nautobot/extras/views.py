@@ -2094,7 +2094,7 @@ class JobResultUIViewSet(
                 label="Summary of Results",
                 weight=100,
                 fields=[
-                    "job_model",
+                    "job_description",
                     "status",
                     "date_created",
                     "date_started",
