@@ -1,25 +1,23 @@
 {% load helpers %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Response</strong>
-        <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
-    </div>
+<div class="panel-heading">
+    <strong>Response</strong>
+    <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+</div>
 
-    {% if object.variables %}
-        <table class="table table-hover panel-body attr-table">
-            <tr>
-                <td>Variables:</td>
-                <td>
-                    <textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea>
-                </td>
-            </tr>
-        </table>
-    {% endif %}
+{% if object.variables %}
+    <table class="table table-hover panel-body attr-table">
+        <tr>
+            <td>Variables:</td>
+            <td>
+                <textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea>
+            </td>
+        </tr>
+    </table>
+{% endif %}
 
-    <div class="panel-footer">
-        <pre id="query_output"></pre>
-    </div>
+<div class="panel-footer">
+    <pre id="query_output"></pre>
 </div>
 
 <script>
