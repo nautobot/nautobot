@@ -304,11 +304,15 @@ MODULEBAY_BUTTONS = """
 """
 
 PARENT_BAY = """
+{% if record.parent_bay %}
+    {{ record.parent_bay }}
+{% endif %}
+"""
+PARENT_DEVICE = """
 {% load helpers %}
 {% if record.parent_bay %}
-    <td>{{ record.parent_bay.device|hyperlinked_object }}</td>
-    <td>{{ record.parent_bay }}</td>
+    {{ record.parent_bay.device|hyperlinked_object }}
 {% else %}
-    <td colspan="2" class="text-muted">&mdash;</td>
+    &mdash;
 {% endif %}
 """

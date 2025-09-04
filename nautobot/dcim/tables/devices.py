@@ -56,6 +56,7 @@ from .template_code import (
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
     PARENT_BAY,
+    PARENT_DEVICE,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -1604,9 +1605,10 @@ class NonRackedDevicesTable(RoleTableMixin, BaseTable):
         verbose_name="Type",
         text=lambda record: record.device_type.display,
     )
-    parent_device = tables.TemplateColumn(attrs={"th": {"colspan": "2"}}, template_code=PARENT_BAY)
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
+    parent_bay = tables.TemplateColumn(template_code=PARENT_BAY, verbose_name="")
 
     class Meta(BaseTable.Meta):
         model = Device
-        fields = ("pk", "name", "role", "device_type", "parent_device")
-        default_columns = ("name", "role", "device_type", "parent_device")
+        fields = ("pk", "name", "role", "device_type", "parent_device", "parent_bay")
+        default_columns = ("name", "role", "device_type", "parent_device", "parent_bay")
