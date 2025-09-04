@@ -24,7 +24,7 @@ from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem, InstanceBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -336,7 +336,19 @@ class PrefixView(generic.ObjectView):
         "vlan__vlan_group",
         "namespace",
     ).prefetch_related("locations")
-    breadcrumbs = Breadcrumbs(items={"detail": [ModelBreadcrumbItem(model=Namespace), InstanceBreadcrumbItem]})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Namespace),
+                InstanceBreadcrumbItem(instance=lambda context: context["object"].namespace),
+                ModelBreadcrumbItem(
+                    model=Prefix,
+                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
+                    label_key="verbose_name_plural",
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table

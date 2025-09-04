@@ -15,24 +15,20 @@
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
         {% captureas default_breadcrumbs %}
-            {% spaceless %}
-                {% with list_url=object|validated_viewname:"list" %}
-                    <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
-                {% endwith %}
-                <li>{{ object|hyperlinked_object }}</li>
-            {% endspaceless %}
+            {% with list_url=object|validated_viewname:"list" %}
+                <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+            {% endwith %}
+            <li>{{ object|hyperlinked_object }}</li>
         {% endcaptureas %}
 
         {% captureas block_breadcrumbs %}
-            {% spaceless %}
-                {% block breadcrumbs %}
-                    {% with list_url=object|validated_viewname:"list" %}
-                        <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
-                    {% endwith %}
-                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                    <li>{{ object|hyperlinked_object }}</li>
-                {% endblock %}
-            {% endspaceless %}
+            {% block breadcrumbs %}
+                {% with list_url=object|validated_viewname:"list" %}
+                    <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+                {% endwith %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                <li>{{ object|hyperlinked_object }}</li>
+            {% endblock %}
         {% endcaptureas %}
 
         {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}

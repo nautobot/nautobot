@@ -87,9 +87,9 @@ class InstalledAppsView(GenericView):
 
     table = InstalledAppsTable
     breadcrumbs = Breadcrumbs(
-        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]}
+        items={"*": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]}
     )
-    view_titles = Titles(titles={"generic": "Installed Apps"})
+    view_titles = Titles(titles={"*": "Installed Apps"})
 
     def get(self, request):
         marketplace_data = load_marketplace_data()
@@ -129,7 +129,6 @@ class InstalledAppsView(GenericView):
                 "filter_form": None,
                 "app_icons": app_icons,
                 "display": display,
-                "view_action": "generic",
                 "breadcrumbs": self.breadcrumbs,
                 "view_titles": self.view_titles,
             },
@@ -140,6 +139,20 @@ class InstalledAppDetailView(GenericView):
     """
     View for showing details of an installed App.
     """
+
+    breadcrumbs = Breadcrumbs(
+        items={
+            "*": [
+                ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed App"),
+                ViewNameBreadcrumbItem(
+                    view_name="apps:app_detail",
+                    reverse_kwargs=lambda context: {"app": context["app_data"]["package"]},
+                    label=lambda context: context["app_data"]["name"],
+                ),
+            ]
+        }
+    )
+    view_titles = Titles(titles={"*": "{{ app_data.name | bettertitle }}"})
 
     def get(self, request, app=None, plugin=None):
         if plugin and not app:
@@ -154,6 +167,8 @@ class InstalledAppDetailView(GenericView):
             {
                 "app_data": extract_app_data(app_config, load_marketplace_data()),
                 "object": app_config,
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
             },
         )
 

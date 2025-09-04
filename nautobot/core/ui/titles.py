@@ -102,7 +102,7 @@ class Titles:
         if detail:
             return self.titles.get("detail", "")
 
-        return ""
+        return self.titles.get("*", "")
 
     @property
     def template_plugins_str(self) -> str:

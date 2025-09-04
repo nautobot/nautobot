@@ -2,7 +2,8 @@ from functools import partial
 import logging
 
 from django import template
-from django.utils.html import format_html_join
+from django.template.defaulttags import spaceless
+from django.utils.html import format_html_join, strip_spaces_between_tags
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
@@ -62,7 +63,7 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
         context,
     )
 
-    if legacy_default_breadcrumbs != legacy_block_breadcrumbs:
+    if strip_spaces_between_tags(legacy_default_breadcrumbs) != strip_spaces_between_tags(legacy_block_breadcrumbs):
         return render_breadcrumbs(legacy_breadcrumbs=legacy_block_breadcrumbs)
 
     breadcrumbs_obj = context.get("breadcrumbs")
