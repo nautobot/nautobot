@@ -802,6 +802,23 @@ class PrefixQuerysetTestCase(TestCase):
                 status=self.status,
             )
 
+        # same but for IPv6
+        container_v6 = netaddr.IPNetwork("2001:db8::/120")
+        Prefix.objects.create(
+            prefix=container_v6,
+            type=choices.PrefixTypeChoices.TYPE_CONTAINER,
+            namespace=namespace,
+            status=self.status,
+        )
+        for prefix_length in range(121, 129):
+            network = list(container_v6.subnet(prefix_length))[1]
+            Prefix.objects.create(
+                prefix=network,
+                type=choices.PrefixTypeChoices.TYPE_NETWORK,
+                namespace=namespace,
+                status=self.status,
+            )
+
         for last_octet in range(1, 255):
             ip = netaddr.IPAddress(f"10.0.0.{last_octet}")
             expected_prefix_length = 33 - len(bin(last_octet)[2:])  # [1] = 32, [2,3] = 31, [4,5,6,7] = 30, etc.
@@ -820,8 +837,31 @@ class PrefixQuerysetTestCase(TestCase):
                     .first(),
                 )
 
+            ip = netaddr.IPAddress(f"2001:db8::{last_octet:x}")
+            expected_prefix_length = 129 - len(bin(last_octet)[2:])  # [1] = 128, [2,3] = 127, [4,5,6,7] = 126, etc.
+            with self.subTest(ip=ip, expected_prefix_length=expected_prefix_length):
+                closest_parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(ip, include_self=True)
+                expected_parent = list(container_v6.subnet(expected_prefix_length))[1]
+                self.assertEqual(closest_parent.prefix, expected_parent)
+                self.assertEqual(
+                    closest_parent,
+                    Prefix.objects.filter(
+                        network__lte=ip.value,
+                        broadcast__gte=ip.value,
+                        namespace=namespace,
+                    )
+                    .order_by("-prefix_length")
+                    .first(),
+                )
+
         slash32 = Prefix.objects.create(prefix="10.1.1.154/32", namespace=namespace, status=self.status)
         slash31 = Prefix.objects.create(prefix="10.1.1.154/31", namespace=namespace, status=self.status)
         slash30 = Prefix.objects.create(prefix="10.1.1.154/30", namespace=namespace, status=self.status)
         self.assertEqual(slash31, Prefix.objects.get_closest_parent(slash32.prefix))
         self.assertEqual(slash30, Prefix.objects.get_closest_parent(slash31.prefix))
+
+        slash126 = Prefix.objects.create(prefix="::1/126", namespace=namespace, status=self.status)
+        slash127 = Prefix.objects.create(prefix="::1/127", namespace=namespace, status=self.status)
+        slash128 = Prefix.objects.create(prefix="::1/128", namespace=namespace, status=self.status)
+        self.assertEqual(slash126, Prefix.objects.get_closest_parent(slash127.prefix))
+        self.assertEqual(slash127, Prefix.objects.get_closest_parent(slash128.prefix))
