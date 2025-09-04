@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 
 from django import template
@@ -5,6 +6,7 @@ from django.utils.html import format_html_join
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
+from nautobot.core.ui.utils import render_component_template
 from nautobot.core.utils.lookup import get_view_for_model
 from nautobot.core.views.utils import get_obj_from_context
 
@@ -41,11 +43,33 @@ def render_title(context, mode="plain"):
 
 
 @register.simple_tag(takes_context=True)
-def render_breadcrumbs(context):
+def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_breadcrumbs=None):
+    """
+    Renders the breadcrumbs using the UI Component Framework or legacy template-defined breadcrumbs.
+
+    Function checks if breadcrumbs from UI Component Framework are available and render them but only
+    when there is no other changes coming from legacy template-defined breadcrumbs.
+
+    Examples:
+    - UI Component Framework breadcrumbs are defined in the view. But in the template, {% block breadcrumbs %} is being used,
+    to override breadcrumbs. Output: template breadcrumbs will be rendered.
+    - There is no UI Component Framework breadcrumbs and no other block overrides. Output: default breadcrumbs will be rendered.
+    - UI Component Framework breadcrumbs are defined in the view. No breadcrumbs block overrides. Output: UI Component Framework breadcrumbs will be rendered.
+    """
+    render_breadcrumbs = partial(
+        render_component_template,
+        "components/breadcrumbs.html",
+        context,
+    )
+
+    if legacy_default_breadcrumbs != legacy_block_breadcrumbs:
+        return render_breadcrumbs(legacy_breadcrumbs=legacy_block_breadcrumbs)
+
     breadcrumbs_obj = context.get("breadcrumbs")
     if breadcrumbs_obj is not None and isinstance(breadcrumbs_obj, Breadcrumbs):
         return breadcrumbs_obj.render(context)
-    return ""
+
+    return render_breadcrumbs(legacy_breadcrumbs=legacy_default_breadcrumbs)
 
 
 @register.simple_tag(takes_context=True)

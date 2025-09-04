@@ -14,11 +14,28 @@
     <div class="row noprint">
         {% with list_url=object|validated_viewname:"list" %}
         <div class="col-sm-8 col-md-9">
-            {% if breadcrumbs %}
-                {% render_breadcrumbs %}
-            {% else %}
-                {% include 'inc/breadcrumbs_retrieve.html' %}
-            {% endif %}
+        {% captureas default_breadcrumbs %}
+            {% spaceless %}
+                {% with list_url=object|validated_viewname:"list" %}
+                    <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+                {% endwith %}
+                <li>{{ object|hyperlinked_object }}</li>
+            {% endspaceless %}
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
+            {% spaceless %}
+                {% block breadcrumbs %}
+                    {% with list_url=object|validated_viewname:"list" %}
+                        <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+                    {% endwith %}
+                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                    <li>{{ object|hyperlinked_object }}</li>
+                {% endblock %}
+            {% endspaceless %}
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
         </div>
         {% if list_url %}
         <div class="col-sm-4 col-md-3">

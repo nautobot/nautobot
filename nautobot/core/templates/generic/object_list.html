@@ -11,11 +11,26 @@
 {% block header %}
     <div class="row noprint">
         <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
-            {% if breadcrumbs %}
-                {% render_breadcrumbs %}
-            {% else %}
-                {% include 'inc/breadcrumbs_list.html' %}
-            {% endif %}
+        {% captureas default_breadcrumbs %}
+            {% spaceless %}
+                {% if list_url %}
+                    <li><a href="{% url list_url %}">{{ title }}</a></li>
+                {% endif %}
+            {% endspaceless %}
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
+            {% spaceless %}
+                {% block breadcrumbs %}
+                    {% if list_url %}
+                        <li><a href="{% url list_url %}">{{ title }}</a></li>
+                    {% endif %}
+                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                {% endblock breadcrumbs %}
+            {% endspaceless %}
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
         </div>
         {% if search_form %}
         <div class="col-sm-4 col-md-3">
