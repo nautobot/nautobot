@@ -55,6 +55,7 @@ from .template_code import (
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
+    PARENT_BAY,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -1603,18 +1604,9 @@ class NonRackedDevicesTable(RoleTableMixin, BaseTable):
         verbose_name="Type",
         text=lambda record: record.device_type.display,
     )
-    parent_device = tables.Column()
+    parent_device = tables.TemplateColumn(attrs={"th": {"colspan": "2"}}, template_code=PARENT_BAY)
 
     class Meta(BaseTable.Meta):
         model = Device
         fields = ("pk", "name", "role", "device_type", "parent_device")
         default_columns = ("name", "role", "device_type", "parent_device")
-
-    def render_parent_device(self, record, value, **kwargs):
-        if not value:
-            return format_html("&mdash;")
-
-        if record.parent_bay:
-            return format_html("{} | {}", record.parent_bay.device, record.parent_bay)
-
-        return format_html('<span class="text-muted">&mdash;</span>')
