@@ -193,7 +193,7 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "virtual_device_context": cls.vdcs[0].pk,
+                "virtual_device_context": cls.vdcs[1].pk,
             },
         ]
         cls.bulk_update_data = {
