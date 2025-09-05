@@ -8,6 +8,7 @@ from .fields import (
 from .serializers import (
     BaseModelSerializer,
     BulkOperationSerializer,
+    BulkRenameSerializer,
     CustomFieldModelSerializerMixin,
     NautobotModelSerializer,
     NotesSerializerMixin,
@@ -20,6 +21,7 @@ from .serializers import (
 __all__ = (
     "BaseModelSerializer",
     "BulkOperationSerializer",
+    "BulkRenameSerializer",
     "ChoiceField",
     "ContentTypeField",
     "CustomFieldModelSerializerMixin",

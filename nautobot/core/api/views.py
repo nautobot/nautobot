@@ -2,6 +2,7 @@ from collections import OrderedDict
 import logging
 import os
 import platform
+import re
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -38,7 +39,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 import yaml
 
-from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api import BulkOperationSerializer, BulkRenameSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
@@ -169,6 +170,48 @@ class BulkDestroyModelMixin:
         with transaction.atomic():
             for obj in objects:
                 self.perform_destroy(obj)
+
+
+class BulkRenameModelMixin:
+    bulk_operation_serializer_class = BulkRenameSerializer
+
+    def perform_bulk_rename(self, queryset, find: str, replace: str, use_regex: bool = False):
+        renamed_objects = []
+
+        with transaction.atomic():
+            for obj in queryset:
+                original_name = obj.name
+                try:
+                    new_name = (
+                        re.sub(find, replace, original_name) if use_regex else original_name.replace(find, replace)
+                    )
+                except re.error:
+                    new_name = original_name
+
+                if new_name != original_name:
+                    obj.name = new_name
+                    obj.save()
+                    renamed_objects.append(obj)
+
+        if queryset.filter(pk__in=[obj.pk for obj in renamed_objects]).count() != len(renamed_objects):
+            raise ObjectDoesNotExist
+
+        return renamed_objects
+
+    def _bulk_rename(self, request, *args, **kwargs):
+        serializer = self.bulk_operation_serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated = serializer.validated_data
+        object_ids = validated["ids"]
+        find = validated["find"]
+        replace = validated["replace"]
+        use_regex = validated.get("use_regex", False)
+
+        queryset = self.get_queryset().filter(pk__in=object_ids)
+        renamed_objects = self.perform_bulk_rename(queryset, find, replace, use_regex)
+
+        return Response([self.get_serializer(obj).data for obj in renamed_objects], status=status.HTTP_200_OK)
 
 
 #

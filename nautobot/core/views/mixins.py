@@ -34,7 +34,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from nautobot.core import exceptions as core_exceptions
-from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
+from nautobot.core.api.views import BulkDestroyModelMixin, BulkRenameModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
     BulkRenameForm,
@@ -1516,7 +1516,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
         )
 
 
-class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
+class ObjectBulkRenameViewMixin(NautobotViewSetMixin, BulkRenameModelMixin):
     queryset: QuerySet
     template_name = "generic/object_bulk_rename.html"
 
