@@ -57,7 +57,7 @@ The `data` argument can be provided in **several formats**:
         chart_type=EChartsTypeChoices.BAR,
         header="EChart",
         description="Example chart",
-        data=lambda: queryset_to_nested_dict_keys_as_series(
+        data=lambda context: queryset_to_nested_dict_keys_as_series(
             Location.objects.annotate(
                 device_count=count_related(Device, "location"),
             ),
@@ -67,26 +67,29 @@ The `data` argument can be provided in **several formats**:
     )
     ```
 
-5. Dynamic data from context in `EChartsPanel` subclasses:
-    - For detail views, you often want to compute chart data based on the object currently being rendered.
-    - In this case, subclass `EChartsPanel` and override `get_data(self, context)` to return data in one of the formats above.
-    - This gives you access to the `context` (and therefore the current object) at render time.
+5. Using a callable with context:
+    - For detail views, you often need to compute chart data dynamically based on the object currently being rendered.
+    - You can do this by passing a callable (such as a function or `lambda`) to the `data` argument inside `chart_kwargs`.
+    - The callable receives the `context`, giving you access to the current object at render time.
 
     ```no-highlight
-    class TenantRelatedObjectsChartPanel(EChartsPanel):
-        def get_data(self, context):
-            instance = get_obj_from_context(context)
-            return queryset_to_nested_dict_records_as_series(
-                Tenant.objects.annotate(
-                    circuit_count=count_related(Circuit, "tenant"),
-                    cluster_count=count_related(Cluster, "tenant"),
-                ).filter(pk=instance.id),
-                record_key="name",
-                value_keys=["circuit_count", "cluster_count"],
-            )
+    def tenant_related_objects_data(context):
+        instance = get_obj_from_context(context)
+        data_series = queryset_to_nested_dict_records_as_series(
+            Tenant.objects.annotate(
+                Circuits=count_related(Circuit, "tenant"),
+                Clusters=count_related(Cluster, "tenant"),
+            ).filter(pk=instance.id),
+            record_key="name",
+            value_keys=[
+                "Circuits",
+                "Clusters",
+            ],
+        )
+        return data_series
 
     object_detail_panels = [
-        TenantRelatedObjectsChartPanel(
+        EChartsPanel(
             section=SectionChoices.FULL_WIDTH,
             weight=100,
             label="EChart - Stats",
@@ -94,13 +97,14 @@ The `data` argument can be provided in **several formats**:
                 "chart_type": EChartsTypeChoices.PIE,
                 "header": "Stats by Tenant",
                 "description": "Example chart using context and queryset.",
+                "data": lambda context: tenant_related_objects_data(context)
             },
         )
     ]
     ```
 
-    - Here, `get_data()` builds the dataset dynamically for the current `Tenant` object.
-    - This approach is recommended when chart data must be tied to the specific object in the detail view.
+    - Here, the dataset is generated dynamically for the current `Tenant` object by using a callable with `context`.
+    - This approach is recommended when chart data should be tied to the specific object being rendered in the detail view.
 
 ### Additional Options
 

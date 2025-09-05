@@ -4,7 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
-from typing import Any, Callable
+from typing import Any
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -1218,33 +1218,22 @@ class EChartsPanel(Panel, EChartsBase):
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
         EChartsBase.__init__(self, **chart_kwargs)
 
-    def get_data(self, context: Context) -> dict[str, Any] | Callable[[], dict[str, Any]] | None:
+    def get_data(self, context: Context) -> dict[str, Any] | None:
         """Get the data for chart.
-
-        This method can be overridden in subclasses to generate
-        data dynamically using the provided `context`.
-
-        Example subclass usage:
-            class TenantRelatedObjectsChartPanel(EChartsPanel):
-                def get_data(self, context: Context):
-                    instance = get_obj_from_context(context)
-                    # Return a lambda or dict based on `instance`
-                    return lambda: queryset_to_nested_dict_records_as_series(
-                        Tenant.objects.annotate(...).filter(pk=instance.id)
-                    )
 
         Args:
             context (Context): The template or request context.
 
         Returns:
-            dict[str, Any] | Callable[[], dict[str, Any]] | None:
+            dict[str, Any] | None:
                 - A dictionary in internal chart format, e.g.:
                     {"x": [...], "series": [{"name": str, "data": [...]}]}
                 - A nested dictionary of series, e.g.:
                     {"Series1": {"x1": val1, "x2": val2}, ...}
-                - A callable (lambda or function) returning one of the above.
                 - `None` if no data is set.
         """
+        if callable(self.data):
+            return self.data(context) # pylint: disable=not-callable
         return self.data
 
     def should_render(self, context: Context):

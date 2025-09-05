@@ -3,6 +3,7 @@ from collections.abc import Mapping
 from typing import Any, Callable
 
 from django.db.models import QuerySet
+from django.template import Context
 
 from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeTheme
 from nautobot.core.utils.lookup import resolve_attr
@@ -285,11 +286,11 @@ class EChartsBase:
         return self._transform_data(resolved_data or {})
 
     @property
-    def data(self) -> dict[str, Any] | Callable[[], dict[str, Any]] | None:
+    def data(self) -> dict[str, Any] | Callable[[Context], dict[str, Any]] | None:
         """Get the data.
 
         Returns:
-            dict[str, Any] | Callable | None:
+            dict[str, Any] | Callable[[Context], dict[str, Any]] | None:
                 Either a dictionary:
                     1. A dict in internal format: {"x": [...], "series": [{"name": str, "data": [...]}]}
                     2. A nested dict: {"Series1": {"x1": val1, "x2": val2}, ...}

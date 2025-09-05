@@ -191,7 +191,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                     "chart_type": ui.EChartsTypeChoices.BAR,
                     "header": "Devices and Prefixes by Location Type",
                     "description": "Example chart with queryset_to_nested_dict_records_as_series. Please run `nautobot-server generate_test_data` to see data here.",
-                    "data": lambda: ui.queryset_to_nested_dict_records_as_series(
+                    "data": lambda context: ui.queryset_to_nested_dict_records_as_series(
                         Location.objects.annotate(
                             device_count=count_related(Device, "location"),
                             prefix_count=count_related(Prefix, "locations"),
