@@ -292,6 +292,7 @@ plugins:
 
         # Post 2.x redirects
         "overview/index.md": "index.md"
+        "development/apps/api/platform-features/populating-extensibility-features.md": "development/apps/api/platform-features/prepopulating-data.md"
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
         "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
@@ -308,7 +309,7 @@ plugins:
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
-        "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
+        "models/extras/savedview.md": "user-guide/platform-functionality/user-interface/savedview.md"
         "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
         "models/wireless/supporteddatarate.md": "user-guide/core-data-model/wireless/supporteddatarate.md"
         "models/wireless/radioprofile.md": "user-guide/core-data-model/wireless/radioprofile.md"
@@ -323,6 +324,7 @@ plugins:
         "user-guide/administration/installation-extras/docker.md": "user-guide/administration/guides/docker.md"
         "user-guide/administration/installation-extras/health-checks.md": "user-guide/administration/guides/health-checks.md"
         "user-guide/administration/installation-extras/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
+        "user-guide/platform-functionality/savedview.md": "user-guide/platform-functionality/user-interface/savedview.md"
 
 nav:
   - Overview:
@@ -549,11 +551,13 @@ nav:
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
-          - Saved Views: "user-guide/platform-functionality/savedview.md"
           - Secrets: "user-guide/platform-functionality/secret.md"
           - Statuses: "user-guide/platform-functionality/status.md"
           - Tags: "user-guide/platform-functionality/tag.md"
           - Template Filters: "user-guide/platform-functionality/template-filters.md"
+          - User Interface:
+              - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
+              - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
@@ -602,7 +606,7 @@ nav:
               - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
               - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
               - Jobs: "development/apps/api/platform-features/jobs.md"
-              - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
+              - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"

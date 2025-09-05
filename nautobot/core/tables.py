@@ -30,9 +30,7 @@ logger = logging.getLogger(__name__)
 
 class BaseTable(django_tables2.Table):
     """
-    Default table for object lists
-
-    :param user: Personalize table display for the given user (optional). Has no effect if AnonymousUser is passed.
+    Default table for object lists.
     """
 
     class Meta:
@@ -59,7 +57,7 @@ class BaseTable(django_tables2.Table):
             *args (list, optional): Passed through to django_tables2.Table
             table_changes_pending (bool): TODO
             saved_view (SavedView, optional): TODO
-            user (User, optional): TODO
+            user (User, optional): Personalize table display for the given user (optional)
             hide_hierarchy_ui (bool): Whether to display or hide hierarchy indentation of nested objects.
             order_by (list, optional): Field(s) to sort by
             data_transform_callback (function, optional): A function that takes the given `data` as an input and
@@ -396,9 +394,10 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     """
     Render edit, delete, and changelog buttons for an object.
 
-    :param model: Model class to use for calculating URL view names
-    :param prepend_template: Additional template content to render in the column (optional)
-    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        prepend_template (Optional[str]): Additional template content to render in the column
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
     buttons = ("changelog", "edit", "delete")
@@ -487,9 +486,9 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
     Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
 
-    :param model: Model class to use for calculating URL view names
-    :param prepend_template: Additional template content to render in the column (optional)
-    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
@@ -688,9 +687,9 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
     performance hit to querysets for table views. If this becomes an issue,
     set `sort_items=False`.
 
-    :param sort_items: Whether to sort by `(app_label, name)`. (default: True)
-    :param truncate_words:
-        Number of words at which to truncate, or `None` to disable. (default: None)
+    Args:
+        sort_items (bool): Whether to sort by `(app_label, name)`.
+        truncate_words (Optional[int]): Number of words at which to truncate, or `None` to disable.
     """
 
     def __init__(self, sort_items=True, truncate_words=None, *args, **kwargs):

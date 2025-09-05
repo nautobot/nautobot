@@ -339,6 +339,7 @@ class VMInterfaceFilterSet(
         to_field_name="vid",
         queryset=VLAN.objects.all(),
     )
+    vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Any assigned VLAN (tagged or untagged)")
     ip_addresses = MultiValueCharFilter(
         method="filter_ip_addresses",
         label="IP addresses (address or ID)",
@@ -352,6 +353,12 @@ class VMInterfaceFilterSet(
 
         ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
         return queryset.filter(ip_addresses__in=ip_queryset).distinct()
+
+    def filter_vlan_id(self, queryset, name, value):
+        value = value.strip()
+        if not value:
+            return queryset
+        return queryset.filter(Q(untagged_vlan_id=value) | Q(tagged_vlans=value))
 
     class Meta:
         model = VMInterface

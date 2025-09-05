@@ -23,6 +23,9 @@ function slugify(s, num_chars) {
 
 // Static choice selection
 function initializeCheckboxes(context){
+    // Track last selected checkbox for range selection
+    let lastSelectedIndex = null;
+
     // "Toggle" checkbox for object lists (PK column)
     document.querySelectorAll('input[type="checkbox"].toggle').forEach(toggleCheckbox => {
         toggleCheckbox.addEventListener('click', function () {
@@ -44,12 +47,39 @@ function initializeCheckboxes(context){
                 }
             }
         });
+
+        // Reset last selected index when using toggle all
+        lastSelectedIndex = null;
     });
 
     // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
-    document.querySelectorAll('input[type="checkbox"][name="pk"]').forEach(itemCheckbox => {
+    document.querySelectorAll('input[type="checkbox"][name="pk"]').forEach((itemCheckbox) => {
         itemCheckbox.addEventListener('click', function () {
-            if (!this.checked) {
+            const table = this.closest('table');
+            const allCheckboxes = Array.from(table.querySelectorAll('input[type="checkbox"][name="pk"]:not([visually-hidden])'));
+            const currentIndex = allCheckboxes.indexOf(this);
+
+            // Handle shift-click for range selection/deselection
+            if (event.shiftKey && lastSelectedIndex !== null) {
+                // Create range from previous click to current click
+                const startIndex = Math.min(lastSelectedIndex, currentIndex);
+                const endIndex = Math.max(lastSelectedIndex, currentIndex);
+
+                // Use the clicked item's new state for entire range
+                const shouldSelect = this.checked;
+
+                // Apply to entire range
+                for (let i = startIndex; i <= endIndex; i++) {
+                    allCheckboxes[i].checked = shouldSelect;
+                }
+            }
+
+            // Always update anchor to current click (normal click or shift+click)
+            lastSelectedIndex = currentIndex;
+
+            // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
+            const hasUnchecked = allCheckboxes.some(checkbox => !checkbox.checked);
+            if (hasUnchecked) {
                 document.querySelectorAll('input[type="checkbox"].toggle, #select_all')
                     .forEach(checkbox => checkbox.checked = false);
             }

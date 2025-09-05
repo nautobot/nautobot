@@ -1,0 +1,2 @@
+Added `nautobot.apps.utils.construct_cache_key()` function for consistent construction of Redis cache keys.
+Added awareness of Version Control active branch to various Redis caches.

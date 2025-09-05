@@ -1,5 +1,6 @@
 """Utilities for handling deprecation of code and features."""
 
+from functools import wraps
 import logging
 import traceback
 import warnings
@@ -51,6 +52,7 @@ def method_deprecated(message):
     """Decorator to mark a method as deprecated with a custom message about what to call instead."""
 
     def decorate(method):
+        @wraps(method)
         def decorated_method(*args, **kwargs):
             warnings.warn(
                 f"Method `{method.__name__}` is deprecated, and will be removed in a future Nautobot release. "

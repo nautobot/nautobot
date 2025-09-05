@@ -1,6 +1,7 @@
 """Nautobot utility functions."""
 
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.color import foreground_color, hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import (
@@ -13,6 +14,7 @@ from nautobot.core.utils.data import (
     render_jinja2,
     shallow_compare_dict,
     to_meters,
+    validate_jinja2,
 )
 from nautobot.core.utils.deprecation import class_deprecated, class_deprecated_in_favor_of
 from nautobot.core.utils.filtering import (
@@ -83,6 +85,7 @@ __all__ = (
     "check_if_key_is_graphql_safe",
     "class_deprecated",
     "class_deprecated_in_favor_of",
+    "construct_cache_key",
     "convert_git_diff_log_to_list",
     "convert_querydict_to_factory_formset_acceptable_querydict",
     "deepmerge",
@@ -137,4 +140,5 @@ __all__ = (
     "swap_status_initials",
     "task_queues_as_choices",
     "to_meters",
+    "validate_jinja2",
 )
