@@ -777,7 +777,7 @@ class ViewTestCases:
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
-        def test_model_properties_on_field_are_not_orderable(self):
+        def test_model_properties_as_table_columns_are_not_orderable(self):
             """
             Check for table columns that are property-based and not orderable.
             """
@@ -795,8 +795,8 @@ class ViewTestCases:
                 if hasattr(column, "order_by") and column.order_by:
                     continue
                 if name in property_fields and name != "pk":
-                    self.assertTrue(
-                        column.orderable is False,
+                    self.assertFalse(
+                        column.orderable,
                         f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
                     )
 
