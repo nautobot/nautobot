@@ -97,7 +97,7 @@ The `data` argument can be provided in **several formats**:
                 "chart_type": EChartsTypeChoices.PIE,
                 "header": "Stats by Tenant",
                 "description": "Example chart using context and queryset.",
-                "data": lambda context: tenant_related_objects_data(context)
+                "data": tenant_related_objects_data,
             },
         )
     ]
