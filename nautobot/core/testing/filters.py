@@ -454,7 +454,7 @@ class FilterTestCases:
             tenant_groups = list(
                 models.TenantGroup.objects.filter(
                     tenants__isnull=False, **{f"tenants__{self.tenancy_related_name}__isnull": False}
-                )
+                ).distinct()
             )[:2]
             tenant_groups_including_children = []
             for tenant_group in tenant_groups:
