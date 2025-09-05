@@ -61,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -574,6 +574,59 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     template_name = "extras/customfield_update.html"
     action_buttons = ("add",)
 
+    class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+            _type = getattr(obj, "type", None)
+
+            if key == "default":
+                if not value:
+                    return helpers.HTML_NONE
+                if _type == "markdown":
+                    return helpers.render_markdown(value)
+                elif _type == "json":
+                    return helpers.render_json(value)
+                else:
+                    return helpers.placeholder(value)
+            return super().render_value(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            CustomFieldObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
+            ),
+            object_detail.DataTablePanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Custom Field Choices",
+                context_data_key="choices_data",
+                context_columns_key="columns",
+                context_column_headers_key="header",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Assignment",
+                fields=[
+                    "content_types",
+                ],
+                key_transforms={"content_types": "Content Types"},
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Validation Rules",
+                fields=["validation_minimum", "validation_maximum", "validation_regex"],
+                value_transforms={
+                    "validation_regex": [lambda val: None if val == "" else val, helpers.pre_tag],
+                },
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -582,6 +635,16 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        if self.action == "retrieve":
+            choices_data = []
+
+            for choice in instance.custom_field_choices.all():
+                choices_data.append({"value": choice.value, "weight": choice.weight})
+
+            context["columns"] = ["value", "weight"]
+            context["header"] = ["Value", "Weight"]
+            context["choices_data"] = choices_data
 
         return context
 
