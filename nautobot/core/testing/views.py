@@ -795,10 +795,11 @@ class ViewTestCases:
                 if hasattr(column, "order_by") and column.order_by:
                     continue
                 if name in property_fields and name != "pk":
-                    self.assertFalse(
-                        column.orderable,
-                        f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
-                    )
+                    with self.subTest(column_name=name):
+                        self.assertFalse(
+                            column.orderable,
+                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
+                        )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
