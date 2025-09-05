@@ -356,6 +356,18 @@ class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
         return None
 
 
+class LocationObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+    FIELD_LABEL_OVERRIDES = {
+        "parent": "Hierarchy",
+        "asn": "AS Number",
+    }
+
+    def render_key(self, key, value, context):
+        if key in self.FIELD_LABEL_OVERRIDES:
+            return self.FIELD_LABEL_OVERRIDES[key]
+        return super().render_key(key, value, context)
+
+
 class LocationUIViewSet(NautobotUIViewSet):
     # We are only accessing the tree fields from the list view, where `with_tree_fields` is called dynamically
     # depending on whether the hierarchy is shown in the UI (note that `parent` itself is a normal foreign key, not a
@@ -372,7 +384,7 @@ class LocationUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            LocationObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
