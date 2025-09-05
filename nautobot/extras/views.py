@@ -2251,32 +2251,23 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     action_buttons = ("export",)
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
-    def get_queryset(self):
+    def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
         # newer methods specifying the lookup method.
 
         # They will only use the previous arguments if the newer ones are undefined
 
-        """
-        Temporary compatibility patch for old query parameters (`time_after`, `time_before`)
-        mapped to the correct Django filter lookups (`time__gte`, `time__lte`).
-        """
-
-        queryset = super().get_queryset()
-        request = self.request
-
-        # Handle deprecated filters
-        if request.GET.get("time_after") and not request.GET.get("time__gte"):
+        if request.GET.get("time_after") and request.GET.get("time__gte") is None:
             request.GET._mutable = True
-            request.GET["time__gte"] = request.GET.get("time_after")
+            request.GET.update({"time__gte": request.GET.get("time_after")})
             request.GET._mutable = False
 
-        if request.GET.get("time_before") and not request.GET.get("time__lte"):
+        if request.GET.get("time_before") and request.GET.get("time__lte") is None:
             request.GET._mutable = True
-            request.GET["time__lte"] = request.GET.get("time_before")
+            request.GET.update({"time__lte": request.GET.get("time_before")})
             request.GET._mutable = False
 
-        return queryset
+        return super().get(request=request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
         """
