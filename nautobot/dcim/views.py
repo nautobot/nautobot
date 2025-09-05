@@ -3740,18 +3740,18 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
 #
 
 
-class InventoryItemListView(generic.ObjectListView):
-    queryset = InventoryItem.objects.all()
-    filterset = filters.InventoryItemFilterSet
-    filterset_form = forms.InventoryItemFilterForm
-    table = tables.InventoryItemTable
-    action_buttons = ("import", "export")
-
-
-class InventoryItemView(generic.ObjectView):
+class InventoryItemUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.InventoryItemBulkEditForm
+    filterset_class = filters.InventoryItemFilterSet
+    filterset_form_class = forms.InventoryItemFilterForm
+    form_class = forms.InventoryItemForm
     queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
+    serializer_class = serializers.InventoryItemSerializer
+    table_class = tables.InventoryItemTable
 
     def get_extra_context(self, request, instance):
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         # Software images
         if instance.software_version is not None:
             software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
@@ -3765,12 +3765,6 @@ class InventoryItemView(generic.ObjectView):
         }
 
 
-class InventoryItemEditView(generic.ObjectEditView):
-    queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_edit.html"
-
-
 class InventoryItemCreateView(generic.ComponentCreateView):
     queryset = InventoryItem.objects.all()
     form = forms.InventoryItemCreateForm
@@ -3778,31 +3772,8 @@ class InventoryItemCreateView(generic.ComponentCreateView):
     template_name = "dcim/inventoryitem_add.html"
 
 
-class InventoryItemDeleteView(generic.ObjectDeleteView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = InventoryItem.objects.all()
-    table = tables.InventoryItemTable
-
-
-class InventoryItemBulkEditView(generic.BulkEditView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    filterset = filters.InventoryItemFilterSet
-    table = tables.InventoryItemTable
-    form = forms.InventoryItemBulkEditForm
-
-
 class InventoryItemBulkRenameView(BaseDeviceComponentsBulkRenameView):
     queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkDeleteView(generic.BulkDeleteView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    table = tables.InventoryItemTable
-    template_name = "dcim/inventoryitem_bulk_delete.html"
-    filterset = filters.InventoryItemFilterSet
 
 
 #

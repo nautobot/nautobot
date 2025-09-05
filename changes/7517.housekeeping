@@ -1,0 +1,1 @@
+Refactored inventoryitem model related UI views to use `NautobotUIViewSet`.

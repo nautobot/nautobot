@@ -14,7 +14,6 @@ from .models import (
     DeviceBay,
     FrontPort,
     Interface,
-    InventoryItem,
     Location,
     PowerFeed,
     PowerOutlet,
@@ -33,6 +32,7 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("inventory-items", views.InventoryItemUIViewSet)
 router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
@@ -1066,61 +1066,14 @@ urlpatterns = [
     ),
     # Inventory items
     path(
-        "inventory-items/",
-        views.InventoryItemListView.as_view(),
-        name="inventoryitem_list",
-    ),
-    path(
         "inventory-items/add/",
         views.InventoryItemCreateView.as_view(),
         name="inventoryitem_add",
     ),
     path(
-        "inventory-items/import/",
-        views.InventoryItemBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="inventoryitem_import",
-    ),
-    path(
-        "inventory-items/edit/",
-        views.InventoryItemBulkEditView.as_view(),
-        name="inventoryitem_bulk_edit",
-    ),
-    path(
         "inventory-items/rename/",
         views.InventoryItemBulkRenameView.as_view(),
         name="inventoryitem_bulk_rename",
-    ),
-    path(
-        "inventory-items/delete/",
-        views.InventoryItemBulkDeleteView.as_view(),
-        name="inventoryitem_bulk_delete",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/",
-        views.InventoryItemView.as_view(),
-        name="inventoryitem",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/edit/",
-        views.InventoryItemEditView.as_view(),
-        name="inventoryitem_edit",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/delete/",
-        views.InventoryItemDeleteView.as_view(),
-        name="inventoryitem_delete",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="inventoryitem_changelog",
-        kwargs={"model": InventoryItem},
-    ),
-    path(
-        "inventory-items/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="inventoryitem_notes",
-        kwargs={"model": InventoryItem},
     ),
     path(
         "devices/inventory-items/add/",
