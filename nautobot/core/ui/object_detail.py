@@ -1233,7 +1233,7 @@ class EChartsPanel(Panel, EChartsBase):
                 - `None` if no data is set.
         """
         if callable(self.data):
-            return self.data(context) # pylint: disable=not-callable
+            return self.data(context)  # pylint: disable=not-callable
         return self.data
 
     def should_render(self, context: Context):
