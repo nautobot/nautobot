@@ -391,6 +391,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "current_saved_view": current_saved_view,
             "saved_views": saved_views,
             "model": model,
+            "verbose_name_plural": model._meta.verbose_name_plural,
+            "view_action": "list",
             "breadcrumbs": self.breadcrumbs,
             "view_titles": self.view_titles,
         }
@@ -401,7 +403,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # in plugins and core that either override or implement it without request.
         setattr(self, "request", request)
         context.update(self.extra_context())
-
         return render(request, self.template_name, context)
 
     def alter_queryset(self, request):

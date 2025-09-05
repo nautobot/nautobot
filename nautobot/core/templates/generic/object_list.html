@@ -12,22 +12,18 @@
     <div class="row noprint">
         <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
         {% captureas default_breadcrumbs %}
-            {% spaceless %}
-                {% if list_url %}
-                    <li><a href="{% url list_url %}">{{ title }}</a></li>
-                {% endif %}
-            {% endspaceless %}
+            {% if list_url %}
+                <li><a href="{% url list_url %}">{{ title }}</a></li>
+            {% endif %}
         {% endcaptureas %}
 
         {% captureas block_breadcrumbs %}
-            {% spaceless %}
-                {% block breadcrumbs %}
-                    {% if list_url %}
-                        <li><a href="{% url list_url %}">{{ title }}</a></li>
-                    {% endif %}
-                    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-                {% endblock breadcrumbs %}
-            {% endspaceless %}
+            {% block breadcrumbs %}
+                {% if list_url %}
+                    <li><a href="{% url list_url %}">{{ title }}</a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock breadcrumbs %}
         {% endcaptureas %}
 
         {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}

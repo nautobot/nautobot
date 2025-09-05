@@ -2,7 +2,6 @@ from functools import partial
 import logging
 
 from django import template
-from django.template.defaulttags import spaceless
 from django.utils.html import format_html_join, strip_spaces_between_tags
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
@@ -40,6 +39,7 @@ def render_title(context, mode="plain"):
 
     if fallback_title := context.get("title"):
         return fallback_title
+
     return ""
 
 
