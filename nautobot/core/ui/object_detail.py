@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 import logging
 import uuid
+from typing import Any, Callable
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
@@ -1213,7 +1214,36 @@ class EChartsPanel(Panel, EChartsBase):
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
         EChartsBase.__init__(self, **chart_kwargs)
 
-    def should_render(self, context):
+    def get_data(self, context: Context) -> dict[str, Any] | Callable[[], dict[str, Any]] | None:
+        """Get the data for chart.
+
+        This method can be overridden in subclasses to generate
+        data dynamically using the provided `context`.
+
+        Example subclass usage:
+            class TenantRelatedObjectsChartPanel(EChartsPanel):
+                def get_data(self, context: Context):
+                    instance = get_obj_from_context(context)
+                    # Return a lambda or dict based on `instance`
+                    return lambda: queryset_to_nested_dict_records_as_series(
+                        Tenant.objects.annotate(...).filter(pk=instance.id)
+                    )
+
+        Args:
+            context (Context): The template or request context.
+
+        Returns:
+            dict[str, Any] | Callable[[], dict[str, Any]] | None:
+                - A dictionary in internal chart format, e.g.:
+                    {"x": [...], "series": [{"name": str, "data": [...]}]}
+                - A nested dictionary of series, e.g.:
+                    {"Series1": {"x1": val1, "x2": val2}, ...}
+                - A callable (lambda or function) returning one of the above.
+                - `None` if no data is set.
+        """
+        return self.data
+
+    def should_render(self, context: Context):
         """Determine if the panel should be rendered."""
         if not super().should_render(context):
             return False
@@ -1228,6 +1258,7 @@ class EChartsPanel(Panel, EChartsBase):
 
     def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
+        self.data = self.get_data(context)
         chart_config = self.get_config()
         return {
             **super().get_extra_context(context),

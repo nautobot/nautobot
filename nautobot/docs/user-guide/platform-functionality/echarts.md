@@ -85,11 +85,6 @@ The `data` argument can be provided in **several formats**:
                 value_keys=["circuit_count", "cluster_count"],
             )
 
-        def get_extra_context(self, context):
-            """Attach computed data before rendering."""
-            self.data = self.get_data(context)
-            return super().get_extra_context(context)
-
     object_detail_panels = [
         TenantRelatedObjectsChartPanel(
             section=SectionChoices.FULL_WIDTH,

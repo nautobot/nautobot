@@ -182,8 +182,8 @@ class TenantContent(TemplateExtension):
     class TenantRelatedObjectsChartPanel(EChartsPanel):
         def get_data(self, context):
             instance = get_obj_from_context(context)
-
-            data_series = queryset_to_nested_dict_records_as_series(
+            # ruff: noqa: E731
+            data_series = lambda: queryset_to_nested_dict_records_as_series(
                 Tenant.objects.annotate(
                     Circuits=count_related(Circuit, "tenant"),
                     Clusters=count_related(Cluster, "tenant"),
@@ -219,11 +219,6 @@ class TenantContent(TemplateExtension):
                 ],
             )
             return data_series
-
-        def get_extra_context(self, context):
-            """Add chart-specific context variables."""
-            self.data = self.get_data(context)
-            return super().get_extra_context(context)
 
     object_detail_panels = [
         TenantRelatedObjectsChartPanel(

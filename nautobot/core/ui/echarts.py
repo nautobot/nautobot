@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Callable
 
 from django.db.models import QuerySet
 
@@ -279,10 +279,24 @@ class EChartsBase:
         self.combined_with = combined_with
 
     @property
-    def data(self) -> dict[str, Any]:
+    def get_tranform_data(self) -> dict[str, Any]:
         """Get the chart data in ECharts format, ready for rendering."""
         resolved_data = self._data() if callable(self._data) else self._data
         return self._transform_data(resolved_data or {})
+
+    @property
+    def data(self) -> dict[str, Any] | Callable[[], dict[str, Any]] | None:
+        """Get the data.
+
+        Returns:
+            dict[str, Any] | Callable | None:
+                Either a dictionary:
+                    1. A dict in internal format: {"x": [...], "series": [{"name": str, "data": [...]}]}
+                    2. A nested dict: {"Series1": {"x1": val1, "x2": val2}, ...}
+                or , a callable (e.g., lambda or function) returning any of the above.
+                or `None` if not set.
+        """
+        return self._data
 
     @data.setter
     def data(self, data):
@@ -369,7 +383,7 @@ class EChartsBase:
 
     def get_config(self):
         """Return a dict ready to dump into echarts option JSON."""
-        data = self.data  # Cache transformed data for consistent use
+        data = self.get_tranform_data
 
         # Base configuration
         config = {
