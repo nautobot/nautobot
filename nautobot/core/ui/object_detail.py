@@ -4,8 +4,8 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
-import uuid
 from typing import Any, Callable
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
