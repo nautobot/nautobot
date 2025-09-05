@@ -689,7 +689,10 @@ class JobResult(BaseModel, CustomFieldModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.use_job_logs_db = (connection.vendor != "sqlite")
+        # The JOB_LOGS hack to escape atomic blocks doesn't currently work on sqlite, "database table is locked",
+        # so for now don't try to use it there. The consequence is that on sqlite, rollback of an atomic transaction will
+        # also roll back any job log entries created in that block.
+        self.use_job_logs_db = connection.vendor != "sqlite"
 
     class Meta:
         ordering = ["-date_created"]

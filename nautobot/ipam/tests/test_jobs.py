@@ -1,7 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 import netaddr
 
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobLogEntry, Status
 from nautobot.ipam.models import get_default_namespace, IPAddress, Namespace, Prefix
@@ -264,6 +266,8 @@ class FixIPAMParentsTestCase(TransactionTestCase):
             self.assert_prefix_parents(self.corrupted_pfx_parents)  # no change
             self.assert_ip_parents(self.corrupted_ip_parents)  # no change
 
+    # nautobot.ipam.lookups.get_ip_info() does not yet support sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_fixup_with_constrained_permissions(self):
         self.corrupt_the_hierarchy()  # 🤘
 

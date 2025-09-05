@@ -16,6 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
@@ -26,6 +27,7 @@ from nautobot.core.testing import (
     TestCase,
     TransactionTestCase,
 )
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras import models
@@ -538,6 +540,8 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    # JOB_LOGS hack to escape atomicity is not supported on sqlite at present, so job log entries will be rolled back too
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -1014,6 +1018,8 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_run(self):
         module = "location_with_custom_field"
         name = "TestCreateLocationWithCustomField"

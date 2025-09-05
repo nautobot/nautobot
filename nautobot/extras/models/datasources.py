@@ -9,7 +9,7 @@ import tempfile
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import connection, models
+from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
@@ -109,17 +109,13 @@ class GitRepository(PrimaryModel):
                 raise ValidationError({"slug": f"Please choose a different slug; {self.slug!r} is {reason}"})
 
         if self.provided_contents:
-            q = models.Q()
-            # TODO: Django's sqlite backend doesn't support JSONField __contains lookup
-            if connection.vendor != "sqlite":
-                for item in self.provided_contents:
-                    q |= models.Q(provided_contents__contains=item)
-            duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
-            if duplicate_repos.exists():
-                raise ValidationError(
-                    f"Another Git repository already configured for remote URL {self.remote_url} "
-                    "provides contents overlapping with this repository."
-                )
+            # Django sqlite backend doesn't support JSONField __contains lookup
+            for repo in GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id):
+                if any([c in repo.provided_contents for c in self.provided_contents]):
+                    raise ValidationError(
+                        f"Another Git repository already configured for remote URL {self.remote_url} "
+                        "provides contents overlapping with this repository."
+                    )
 
         # Changing branch or remote_url invalidates current_head
         if self.present_in_database:

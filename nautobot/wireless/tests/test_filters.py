@@ -1,4 +1,7 @@
+from django.db import connection
+
 from nautobot.core.testing import FilterTestCases
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.extras.models import SecretsGroup
 from nautobot.wireless import filters, models
 
@@ -26,6 +29,8 @@ class RadioProfileTestCase(FilterTestCases.FilterTestCase):
         ("regulatory_domain",),
     ]
 
+    # contains lookup is not supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_channel_width(self):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset({"channel_width": "80"}, self.queryset).qs,

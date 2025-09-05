@@ -4,6 +4,7 @@ import logging
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db.models import ProtectedError, QuerySet
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
@@ -15,7 +16,7 @@ from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.core.testing.utils import extract_page_body, post_data
+from nautobot.core.testing.utils import expectedFailureIf, extract_page_body, post_data
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
@@ -61,6 +62,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         with self.assertRaisesRegex(ValidationError, "Type cannot be changed once created"):
             instance.validated_save()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_simple_fields(self):
         DATA = (
             {
@@ -153,6 +156,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             # Delete the custom field
             cf.delete()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_select_field(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -192,6 +197,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         # Delete the custom field
         cf.delete()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_multi_select_field(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -231,6 +238,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         # Delete the custom field
         cf.delete()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_multi_select_field_value_after_bulk_update(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -288,6 +297,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
         cf.delete()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_text_field_value(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -325,6 +336,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         # Delete the custom field
         cf.delete()
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_regex_validation(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -1732,6 +1745,8 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf2": False}, self.queryset).qs, self.queryset.filter(_custom_field_data__cf2=False)
         )
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_filter_text(self):
         self.assertQuerysetEqual(
             self.filterset({"cf_cf3": "foo"}, self.queryset).qs,
@@ -2008,6 +2023,8 @@ class CustomFieldFilterTest(TestCase):
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_filter_multi_select(self):
         self.assertQuerysetEqual(
             self.filterset({"cf_cf9": "Foo"}, self.queryset).qs,
@@ -2074,11 +2091,15 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         self.choice.delete()
         self.assertEqual(self.cf.choices, [])
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
         self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the Example App
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_regex_validation(self):
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -2118,6 +2139,8 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
 
 class CustomFieldBackgroundTasks(TransactionTestCase):
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
         location_status = Status.objects.get_for_model(Location).first()
@@ -2148,6 +2171,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
         self.assertEqual(oc_list[0].user, self.user)
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
         cf_1 = CustomField(
@@ -2191,6 +2216,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
         self.assertEqual(oc_list[0].user, self.user)
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_clear_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
         cf_1 = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT)
@@ -2215,6 +2242,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].change_context_detail, "delete custom field data from existing content types")
         self.assertEqual(oc_list[0].user, self.user)
 
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(

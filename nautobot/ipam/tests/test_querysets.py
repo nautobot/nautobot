@@ -1,11 +1,11 @@
 import re
-from unittest import skipIf
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, transaction
 import netaddr
 
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.extras.models import Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
@@ -180,6 +180,8 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if ":" in ip],
         )
 
+    # nautobot.ipam.lookups.get_ip_info() does not yet support sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_host_net_host(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host="10.0.0.1"),
@@ -201,6 +203,8 @@ class IPAddressQuerySet(TestCase):
             [self.ips["10.0.0.1/24"], self.ips["10.0.0.1/25"]],
         )
 
+    # nautobot.ipam.lookups.get_ip_info() does not yet support sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_host_net_host_contained(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24"),
@@ -234,6 +238,8 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if "2001:db8:" in ip],
         )
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_host_net_in(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["10.0.0.0/31", "10.0.0.2/31"]),
@@ -268,6 +274,8 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
 
+    # nautobot.ipam.lookups.get_ip_info() does not yet support sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_lookup_not_ambiguous(self):
         """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
         obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
@@ -290,10 +298,8 @@ class IPAddressQuerySet(TestCase):
                 finally:
                     delattr(self.user, "_object_perm_cache")
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_host_exact(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__exact="10.0.0.1"),
@@ -335,10 +341,8 @@ class IPAddressQuerySet(TestCase):
             [self.ips["2001:db8::1/64"]],
         )
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_host_endswith(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__endswith="0.2"),
@@ -376,10 +380,8 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(IPAddress.objects.select_related("nat_inside").filter(host__endswith="0.1").count(), 2)
         self.assertEqual(IPAddress.objects.select_related("nat_inside").filter(host__iendswith="8::1").count(), 1)
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_host_startswith(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__startswith="10.0.0."),
@@ -431,10 +433,8 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::")],
         )
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_host_regex(self):
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__regex=r"10\.(.*)\.1"),
@@ -614,6 +614,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__family=4).count(), 7)
         self.assertEqual(Prefix.objects.filter(network__family=6).count(), 3)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_net_equals(self):
         self.assertEqual(Prefix.objects.filter(network__net_equals="192.168.0.0/16").count(), 1)
         self.assertEqual(Prefix.objects.filter(network__net_equals="192.1.0.0/16").count(), 0)
@@ -623,6 +625,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__net_equals="fd78:da4f:e596:c218::/122").count(), 0)
         self.assertEqual(Prefix.objects.filter(network__net_equals="fd78:da4f:e596:c218::/64").count(), 0)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_net_contained(self):
         self.assertEqual(Prefix.objects.filter(network__net_contained="192.0.0.0/8").count(), 7)
         self.assertEqual(Prefix.objects.filter(network__net_contained="192.168.0.0/16").count(), 6)
@@ -635,6 +639,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__net_contained="fd78:da4f:e596:c217::/120").count(), 1)
         self.assertEqual(Prefix.objects.filter(network__net_contained="fd78:da4f:e596:c218::/64").count(), 0)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_net_contained_or_equal(self):
         self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.0.0.0/8").count(), 7)
         self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="192.168.0.0/16").count(), 7)
@@ -647,6 +653,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="fd78:da4f:e596:c217::/120").count(), 2)
         self.assertEqual(Prefix.objects.filter(network__net_contained_or_equal="fd78:da4f:e596:c218::/64").count(), 0)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_net_contains(self):
         self.assertEqual(Prefix.objects.filter(network__net_contains="192.0.0.0/8").count(), 0)
         self.assertEqual(Prefix.objects.filter(network__net_contains="192.168.0.0/16").count(), 0)
@@ -660,6 +668,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c217::/122").count(), 2)
         self.assertEqual(Prefix.objects.filter(network__net_contains="fd78:da4f:e596:c218::/64").count(), 0)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_net_contains_or_equals(self):
         self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.0.0.0/8").count(), 0)
         self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="192.168.0.0/16").count(), 1)
@@ -673,19 +683,27 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c217::/122").count(), 3)
         self.assertEqual(Prefix.objects.filter(network__net_contains_or_equals="fd78:da4f:e596:c218::/64").count(), 0)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_get_by_prefix(self):
         prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
         self.assertEqual(Prefix.objects.get(prefix="192.168.0.0/16"), prefix)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_get_by_prefix_fails(self):
         _ = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
         with self.assertRaises(Prefix.DoesNotExist):
             Prefix.objects.get(prefix="192.168.3.0/16")
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_network_filter_by_prefix(self):
         prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
         self.assertEqual(Prefix.objects.filter(prefix="192.168.0.0/16")[0], prefix)
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_lookup_not_ambiguous(self):
         """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
         obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
@@ -710,10 +728,8 @@ class PrefixQuerysetTestCase(TestCase):
                 finally:
                     delattr(self.user, "_object_perm_cache")
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_network_exact(self):
         self.assertEqual(Prefix.objects.filter(network__exact="192.168.0.0").count(), 1)
         self.assertEqual(Prefix.objects.filter(network__exact="192.168.1.0").count(), 1)
@@ -727,10 +743,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__iexact="fd78:da4f:e596:c217::").count(), 3)
         self.assertEqual(Prefix.objects.filter(network__iexact="fd78:da4f:e596:c218::").count(), 0)
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_network_endswith(self):
         self.assertEqual(Prefix.objects.filter(network__endswith=".224").count(), 1)
         self.assertEqual(Prefix.objects.filter(network__endswith=".0").count(), 4)
@@ -744,10 +758,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__iendswith="c217::").count(), 3)
         self.assertEqual(Prefix.objects.filter(network__iendswith="c218::").count(), 0)
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_network_startswith(self):
         self.assertEqual(Prefix.objects.filter(network__startswith="192.").count(), 7)
         self.assertEqual(Prefix.objects.filter(network__startswith="192.168.3.").count(), 4)
@@ -763,10 +775,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__istartswith="fd78:").count(), 3)
         self.assertEqual(Prefix.objects.filter(network__istartswith="fd79:").count(), 0)
 
-    @skipIf(
-        connection.vendor in ["postgresql", "sqlite"],
-        "Not currently supported on postgresql or sqlite",
-    )
+    # Currently a MySQL exclusive feature
+    @expectedFailureIf(connection.vendor != "mysql")
     def test_network_regex(self):
         self.assertEqual(Prefix.objects.filter(network__regex=r"192\.(.*)\.0").count(), 4)
         self.assertEqual(Prefix.objects.filter(network__regex=r"192\.\d+(.*)\.0").count(), 4)

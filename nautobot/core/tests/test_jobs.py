@@ -8,6 +8,7 @@ from pathlib import Path
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.base import ContentFile
+from django.db import connection
 from django.utils import timezone
 import yaml
 
@@ -16,6 +17,7 @@ from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
@@ -412,6 +414,8 @@ class ImportObjectsTestCase(TransactionTestCase):
         self.assertEqual(device_1.serial, "1021C4")
         self.assertEqual(device_2.serial, "1021C5")
 
+    # Jobs run against sqlite don't use the JOB_LOGS hack to escape atomicity, and so the logs will be rolled back too
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_csv_import_bad_row(self):
         """A row of incorrect data should fail validation for that object but import all others successfully if `roll_back_if_error` is False."""
         csv_data = self.csv_data.split("\n")

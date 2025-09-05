@@ -1,11 +1,15 @@
+from django.db import connection
+
 from nautobot.core.models.query_functions import JSONRemove, JSONSet
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.dcim.models import Manufacturer
 
 
 class JSONFuncTests(TestCase):
     """Test JSONSet and JSONRemove functionality."""
 
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_json_set(self):
         # Setting a key/value should efficiently work
         with self.assertNumQueries(1):
@@ -56,6 +60,7 @@ class JSONFuncTests(TestCase):
             self.assertIn("b", mfr._custom_field_data)
             self.assertEqual("more text", mfr._custom_field_data["b"])
 
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_json_remove(self):
         Manufacturer.objects.all().update(_custom_field_data=JSONSet("_custom_field_data", "a", 1))
         Manufacturer.objects.filter(name__istartswith="a").update(

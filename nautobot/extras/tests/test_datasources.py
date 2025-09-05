@@ -8,6 +8,7 @@ from celery.exceptions import NotRegistered
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.test import RequestFactory
 import yaml
 
@@ -17,6 +18,7 @@ from nautobot.core.testing import (
     run_job_for_testing,
     TransactionTestCase,
 )
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -223,6 +225,9 @@ class GitTest(TransactionTestCase):
             with self.assertRaises(NotRegistered):
                 job_model.job_task
 
+    # GitRepositorySync runs atomically and sqlite can't currently use the JOB_LOGS hack to escape atomicity,
+    # so the logs are rolled back when the job fails.
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_pull_git_repository_and_refresh_data_with_no_data(self):
         """
         The pull_git_repository_and_refresh_data job should fail if the given repo is empty.
@@ -409,6 +414,9 @@ class GitTest(TransactionTestCase):
                 jh = JobHook.objects.get(name="MyJobHook")
                 self.assertFalse(jh.enabled)
 
+    # GitRepositorySync runs atomically and sqlite can't currently use the JOB_LOGS hack to escape atomicity,
+    # so the logs are rolled back when the job fails.
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_pull_git_repository_and_refresh_data_with_bad_data(self):
         """
         The test_pull_git_repository_and_refresh_data job should gracefully handle bad data in the Git repository.

@@ -3,6 +3,7 @@ import logging
 import random
 import re
 import string
+from unittest import expectedFailure
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -12,6 +13,17 @@ from tree_queries.models import TreeNodeForeignKey
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+def expectedFailureIf(condition):
+    """Mark the test as an expected failure if the given condition is satisfied."""
+
+    def wrap(test_func):
+        if condition:
+            return expectedFailure(test_func)
+        return test_func
+
+    return wrap
 
 
 def post_data(data):

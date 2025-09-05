@@ -7,6 +7,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
@@ -21,7 +22,7 @@ from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
+from nautobot.core.testing.utils import disable_warnings, expectedFailureIf, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
@@ -879,6 +880,21 @@ class CustomFieldTestCase(
         self.assertFormsetError(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_delete_object_with_constrained_permission(self):
+        super().test_delete_object_with_constrained_permission()
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_delete_object_with_permission(self):
+        super().test_delete_object_with_permission()
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_delete_object_with_permission_and_xwwwformurlencoded(self):
+        super().test_delete_object_with_permission_and_xwwwformurlencoded()
 
 
 class CustomLinkRenderingTestCase(TestCase):

@@ -1,7 +1,7 @@
 import contextlib
 import re
 from typing import Optional, Sequence
-from unittest import mock, skipIf
+from unittest import mock
 import uuid
 
 from django.apps import apps
@@ -950,10 +950,7 @@ class ViewTestCases:
                     content,
                 )
 
-        @skipIf(
-            "example_app" not in settings.PLUGINS,
-            "example_app not in settings.PLUGINS",
-        )
+        @utils.expectedFailureIf("example_app" not in settings.PLUGINS)
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_view_app_banner(self):
             """

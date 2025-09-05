@@ -17,6 +17,7 @@ from nautobot.core.testing.schema import OpenAPISchemaTestCases
 from nautobot.core.testing.utils import (
     create_test_user,
     disable_warnings,
+    expectedFailureIf,
     extract_form_failures,
     extract_page_body,
     generate_random_device_asset_tag_of_specified_size,
@@ -45,6 +46,7 @@ __all__ = (
     "create_job_result_and_run_job",
     "create_test_user",
     "disable_warnings",
+    "expectedFailureIf",
     "extract_form_failures",
     "extract_page_body",
     "generate_random_device_asset_tag_of_specified_size",

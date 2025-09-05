@@ -1,7 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases, TestCase
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
@@ -1413,6 +1415,8 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         params = {"protocol": [ServiceProtocolChoices.PROTOCOL_TCP]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
+    # contains lookup is not supported on sqlite at present
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_ports(self):
         params = {"ports": "1001"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)

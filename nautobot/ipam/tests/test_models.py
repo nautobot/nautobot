@@ -8,6 +8,7 @@ from django.test import TestCase
 import netaddr
 
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.core.testing.utils import expectedFailureIf
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
 from nautobot.extras.models import Role, Status
@@ -1486,6 +1487,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix_v4.get_all_ips(), IPAddress.objects.filter(ip_version=4, parent__namespace=self.namespace)
         )
 
+    # nautobot.ipam.lookups.get_ip_info() not yet supported on sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_get_utilization(self):
         # Container Prefix
         prefix = Prefix.objects.create(

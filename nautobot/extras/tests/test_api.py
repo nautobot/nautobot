@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
@@ -16,7 +17,7 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
+from nautobot.core.testing.utils import disable_warnings, expectedFailureIf, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -682,6 +683,21 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             # error messages from the label field.
             {"label": ["This field is required."]},
         )
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_bulk_delete_objects(self):
+        super().test_bulk_delete_objects()
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_delete_object(self):
+        super().test_delete_object()
+
+    # JSONSet is not implemented for database sqlite
+    @expectedFailureIf(connection.vendor == "sqlite")
+    def test_recreate_object_csv(self):
+        super().test_recreate_object_csv()
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):

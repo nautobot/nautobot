@@ -2,13 +2,13 @@ import json
 import os
 import re
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import urllib.parse
 
 from django.apps import apps
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
@@ -19,7 +19,7 @@ from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.testing.utils import expectedFailureIf, extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -318,6 +318,8 @@ class FilterFormsTestCase(TestCase):
         response = self.client.get(reverse("circuits:circuit_list"))
         self.assertBodyContains(response, filter_tabs, html=True)
 
+    # "__contains" lookup is not supported on this database backend
+    @expectedFailureIf(connection.vendor == "sqlite")
     def test_filtering_on_custom_select_filter_field(self):
         """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
         self.add_permissions("dcim.view_location")
@@ -709,10 +711,6 @@ class SilkUIAccessTestCase(TestCase):
 
 
 class ExampleViewWithCustomPermissionsTest(TestCase):
-    @skipIf(
-        "example_app" not in settings.PLUGINS,
-        "example_app not in settings.PLUGINS",
-    )
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_permission_classes_attribute_is_enforced(self):
         """

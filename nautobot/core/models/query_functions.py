@@ -44,6 +44,7 @@ class JSONSet(Func):
     References:
         - https://code.djangoproject.com/ticket/32519
         - https://github.com/django/django/pull/18489/files
+        - https://github.com/django/django/pull/18758/files
     """
 
     function = None
@@ -133,6 +134,7 @@ class JSONRemove(Func):
     References:
         - https://code.djangoproject.com/ticket/32519
         - https://github.com/django/django/pull/18489/files
+        - https://github.com/django/django/pull/18758/files
     """
 
     def __init__(self, expression, path):
