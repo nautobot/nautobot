@@ -182,7 +182,7 @@ class TenantContent(TemplateExtension):
                 "header": "Stats by Tenant",
                 "description": "Example chart with using context and queryset.",
                 "legend": {"orient": "vertical", "right": 10, "top": "center"},
-                "data": lambda context: tenant_related_objects_data(context),
+                "data": lambda context: tenant_related_objects_data(context),  # pylint: disable=unnecessary-lambda
                 "additional_config": {
                     "series": [
                         {
