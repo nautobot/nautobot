@@ -5,6 +5,7 @@ import uuid
 from django.db import migrations, models
 import django.db.models.deletion
 
+import nautobot.core.models.fields
 import nautobot.extras.models.mixins
 
 
@@ -33,7 +34,7 @@ class Migration(migrations.Migration):
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("text", models.CharField(max_length=500)),
-                ("weight", models.PositiveSmallIntegerField(default=100)),
+                ("weight", nautobot.core.models.fields.PositiveSmallIntegerField(default=100)),
                 ("group_name", models.CharField(blank=True, max_length=50)),
                 ("button_class", models.CharField(default="default", max_length=30)),
                 ("confirmation", models.BooleanField(default=True)),

@@ -8,17 +8,20 @@ from .cables import CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
+    ControllerManagedDeviceGroupTable,
+    ControllerTable,
     DeviceBayTable,
-    DeviceConsolePortTable,
-    DeviceConsoleServerPortTable,
     DeviceDeviceBayTable,
-    DeviceFrontPortTable,
     DeviceImportTable,
-    DeviceInterfaceTable,
     DeviceInventoryItemTable,
-    DevicePowerOutletTable,
-    DevicePowerPortTable,
-    DeviceRearPortTable,
+    DeviceModuleBayTable,
+    DeviceModuleConsolePortTable,
+    DeviceModuleConsoleServerPortTable,
+    DeviceModuleFrontPortTable,
+    DeviceModuleInterfaceTable,
+    DeviceModulePowerOutletTable,
+    DeviceModulePowerPortTable,
+    DeviceModuleRearPortTable,
     DeviceRedundancyGroupTable,
     DeviceTable,
     FrontPortTable,
@@ -26,23 +29,31 @@ from .devices import (
     InterfaceRedundancyGroupTable,
     InterfaceTable,
     InventoryItemTable,
+    ModuleBayTable,
+    ModuleFamilyTable,
+    ModuleModuleBayTable,
+    ModuleTable,
     PlatformTable,
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
     SoftwareImageFileTable,
     SoftwareVersionTable,
+    VirtualChassisMembersTable,
     VirtualChassisTable,
+    VirtualDeviceContextTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
     ConsoleServerPortTemplateTable,
     DeviceBayTemplateTable,
+    DeviceFamilyTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
-    HardwareFamilyTable,
     InterfaceTemplateTable,
     ManufacturerTable,
+    ModuleBayTemplateTable,
+    ModuleTypeTable,
     PowerOutletTemplateTable,
     PowerPortTemplateTable,
     RearPortTemplateTable,
@@ -63,33 +74,42 @@ __all__ = (
     "ConsolePortTemplateTable",
     "ConsoleServerPortTable",
     "ConsoleServerPortTemplateTable",
+    "ControllerManagedDeviceGroupTable",
+    "ControllerTable",
     "DeviceBayTable",
     "DeviceBayTemplateTable",
-    "DeviceConsolePortTable",
-    "DeviceConsoleServerPortTable",
     "DeviceDeviceBayTable",
-    "DeviceFrontPortTable",
+    "DeviceFamilyTable",
     "DeviceImportTable",
-    "DeviceInterfaceTable",
     "DeviceInventoryItemTable",
-    "DevicePowerOutletTable",
-    "DevicePowerPortTable",
-    "DeviceRearPortTable",
+    "DeviceModuleBayTable",
+    "DeviceModuleConsolePortTable",
+    "DeviceModuleConsoleServerPortTable",
+    "DeviceModuleFrontPortTable",
+    "DeviceModuleInterfaceTable",
+    "DeviceModulePowerOutletTable",
+    "DeviceModulePowerPortTable",
+    "DeviceModuleRearPortTable",
     "DeviceRedundancyGroupTable",
     "DeviceTable",
     "DeviceTypeTable",
     "FrontPortTable",
     "FrontPortTemplateTable",
-    "HardwareFamilyTable",
     "InterfaceConnectionTable",
-    "InterfaceTable",
-    "InterfaceRedundancyGroupTable",
     "InterfaceRedundancyGroupAssociationTable",
+    "InterfaceRedundancyGroupTable",
+    "InterfaceTable",
     "InterfaceTemplateTable",
     "InventoryItemTable",
     "LocationTable",
     "LocationTypeTable",
     "ManufacturerTable",
+    "ModuleBayTable",
+    "ModuleBayTemplateTable",
+    "ModuleFamilyTable",
+    "ModuleModuleBayTable",
+    "ModuleTable",
+    "ModuleTypeTable",
     "PlatformTable",
     "PowerConnectionTable",
     "PowerFeedTable",
@@ -106,7 +126,9 @@ __all__ = (
     "RearPortTemplateTable",
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
+    "VirtualChassisMembersTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 #
@@ -116,7 +138,7 @@ __all__ = (
 
 class ConsoleConnectionTable(BaseTable):
     console_server = tables.Column(
-        accessor=Accessor("_path__destination__device"),
+        accessor=Accessor("_path__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="Console Server",
@@ -127,7 +149,7 @@ class ConsoleConnectionTable(BaseTable):
         linkify=True,
         verbose_name="Port",
     )
-    device = tables.Column(linkify=True)
+    device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Console Port")
     reachable = BooleanColumn(accessor=Accessor("_path__is_active"), verbose_name="Reachable")
 
@@ -144,7 +166,7 @@ class ConsoleConnectionTable(BaseTable):
 
 class PowerConnectionTable(BaseTable):
     pdu = tables.Column(
-        accessor=Accessor("_path__destination__device"),
+        accessor=Accessor("_path__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="PDU",
@@ -155,7 +177,7 @@ class PowerConnectionTable(BaseTable):
         linkify=True,
         verbose_name="Outlet",
     )
-    device = tables.Column(linkify=True)
+    device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Power Port")
     reachable = BooleanColumn(accessor=Accessor("_path__is_active"), verbose_name="Reachable")
 
@@ -165,10 +187,10 @@ class PowerConnectionTable(BaseTable):
 
 
 class InterfaceConnectionTable(BaseTable):
-    device_a = tables.Column(accessor=Accessor("device"), linkify=True, verbose_name="Device A")
+    device_a = tables.Column(accessor=Accessor("parent"), linkify=True, verbose_name="Device A", orderable=False)
     interface_a = tables.Column(accessor=Accessor("name"), linkify=True, verbose_name="Interface A")
     device_b = tables.Column(
-        accessor=Accessor("_path__destination__device"),
+        accessor=Accessor("_path__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="Device B",

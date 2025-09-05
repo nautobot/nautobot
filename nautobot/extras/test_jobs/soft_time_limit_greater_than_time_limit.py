@@ -8,7 +8,7 @@ class TestSoftTimeLimitGreaterThanHardTimeLimit(Job):
         soft_time_limit = 10
         time_limit = 5
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         pass
 
 

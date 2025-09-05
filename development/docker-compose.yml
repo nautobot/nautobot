@@ -1,5 +1,4 @@
 ---
-version: "3.9"
 volumes:
   media_root:
 services:
@@ -10,7 +9,9 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
       target: dev
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    healthcheck:
+      start_period: 10m
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
       - "8080:8080"
     volumes:
@@ -22,9 +23,10 @@ services:
         condition: service_started
     env_file:
       - dev.env
+    init: true
     tty: true
   celery_worker:
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
       - "8081:8080"
     volumes:
@@ -32,14 +34,10 @@ services:
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
     healthcheck:
       interval: 60s
-      timeout: 30s
+      timeout: 10s
       start_period: 30s
       retries: 3
-      test:
-        - "CMD"
-        - "bash"
-        - "-c"
-        - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
+      test: "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
     depends_on:
       nautobot:
         condition: service_healthy
@@ -49,15 +47,15 @@ services:
       - ./dev.env
     tty: true
   celery_beat:
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
-    entrypoint: "nautobot-server celery beat -l INFO"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery beat -l INFO"
     healthcheck:
-      disable: true
-    #   interval: 5s
-    #   timeout: 5s
-    #   start_period: 5s
-    #   retries: 3
-    #   test: ["CMD", "nautobot-server", "health_check"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+      # find the heartbeat file and report success if it was modified less than 0.1 minutes (6 seconds) ago, else fail
+      test: "[ $$(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false"
     depends_on:
       nautobot:
         condition: service_healthy
@@ -72,10 +70,15 @@ services:
       - sh
       - -c # this is to evaluate the $REDIS_PASSWORD from the env
       - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      test: "redis-cli -h localhost ping | grep PONG"
     env_file:
-      - dev.env
+      - ./dev.env
   selenium:
-    image: selenium/standalone-firefox:4.17
+    image: selenium/standalone-firefox:4.27
     ports:
         - "4444:4444"
         - "15900:5900"
@@ -83,7 +86,7 @@ services:
   mkdocs:
     profiles:
       - mkdocs
-    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     entrypoint: "mkdocs serve -a '0.0.0.0:8001'"
     healthcheck:
       disable: true

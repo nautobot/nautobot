@@ -1,0 +1,20 @@
+<div class="panel panel-default">
+    {% if label.strip or header_extra_content.strip %}
+        <div class="panel-heading">
+            {% if label %}
+                <strong>{{ label }}</strong>
+            {% endif %}
+            {{ header_extra_content }}
+        </div>
+    {% endif %}
+    {{ body }}
+    {% if footer_content.strip %}
+        <div class="panel-footer">
+            {{ footer_content }}
+        </div>
+    {% endif %}
+</div>
+
+{% if include_paginator and body_content_table.paginator%}
+    {% include 'inc/paginator.html' with paginator=body_content_table.paginator page=body_content_table.page %}
+{% endif %}

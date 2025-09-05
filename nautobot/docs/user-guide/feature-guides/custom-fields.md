@@ -65,7 +65,7 @@ The default value for the custom field. This form field only accepts JSON data s
 
 #### Filter Logic
 
-+/- 1.4.0
+!!! tip
     Custom field [extended filtering](../platform-functionality/rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
 
 The filter logic setting applies to filtering on custom fields in the UI and API. For example, when filtering in the API to find a device with the custom field `cf1` set to `"abc"` you would query `/api/dcim/devices/?cf_cf1=abc`. If the filter logic setting is set to `Loose` this would match on `"ABC"` and `"abcdef"`. If the filter logic setting is set to `Strict` only devices with the custom field set to exactly "abc" (case sensitive) would be returned. If the filter logic setting is set to `disabled`, no filters will be available for this custom field, including extended lookup filters. The `Loose` and `Strict` settings only change the behavior of the default filter (`cf_customfieldname`) on `text`, `url` and `json` custom fields.
@@ -89,15 +89,15 @@ Validation rules are used for constraining custom fields to specific values.
 
 #### Minimum value
 
-Minimum allowed value for `Integer` fields.
+Minimum allowed value for `Integer` fields. Minimum allowed length for `Text`, `URL`, `JSON`, and `Markdown` fields. Minimum allowed length of each defined choice for a `Select` or `Multiple Selection` field.
 
 #### Maximum value
 
-Maximum allowed value for `Integer` fields.
+Maximum allowed value for `Integer` fields. Maximum allowed length for `Text`, `URL`, `JSON`, and `Markdown` fields. Maximum allowed length of each defined choice for a `Select` or `Multiple Selection` field.
 
 #### Validation Regex
 
-Regular expression to enforce on `Text`, `URL`, `Selection` and `Multiple selection` field values. Regex validation is handled by the [python re engine](https://docs.python.org/3/library/re.html) which uses a PCRE or perl-like regular expression syntax. Examples of common regex validations:
+Regular expression to enforce on `Text`, `URL`, `JSON`, `Markdown`, `Selection` and `Multiple selection` field values. Regex validation is handled by the [Python `re` engine](https://docs.python.org/3/library/re.html) which uses a PCRE or perl-like regular expression syntax. Examples of common regex validations:
 
 Must start with companyname
 
@@ -176,7 +176,7 @@ Custom fields augment an existing model so retrieving custom field values is dif
 
 The `key` of the custom field is used as the key for the associated object's data dictionary.
 
-### Retrieve Custom Field Data in the Rest API
+### Retrieve Custom Field Data in the REST API
 
 Custom fields are returned in the API for all supported models in the `custom_fields` key:
 
@@ -274,7 +274,7 @@ All custom field data can be retrieved in GraphQL queries by using the `_custom_
 
 #### Filter Queries on Custom Field Data in GraphQL
 
-Queries can also be filtered by custom field values using any of the filters available in the UI and Rest API:
+Queries can also be filtered by custom field values using any of the filters available in the UI and REST API:
 
 ```no-highlight
 # Retrieve devices where custom field support_group
@@ -308,7 +308,7 @@ Queries can also be filtered by custom field values using any of the filters ava
 
 ### Modify Custom Field Data in Nautobot Shell
 
-Custom field data behaves like a python dictionary in the Nautobot Shell. When modifying custom fields through the Nautobot Shell, make sure to use the `.validated_save()` method to save the object to ensure that custom field validation is performed.  Example:
+Custom field data behaves like a Python dictionary in the Nautobot Shell. When modifying custom fields through the Nautobot Shell, make sure to use the `.validated_save()` method to save the object to ensure that custom field validation is performed.  Example:
 
 ```py
 >>> device.cf["support_group"]
@@ -321,15 +321,15 @@ Custom field data behaves like a python dictionary in the Nautobot Shell. When m
 
 If you do not use `.validated_save()` when creating or updating objects, the custom field dictionary will not be populated with default values or even empty values and this can lead to unintuitive behaviour.
 
-### Modify Custom Field Data in the Rest API
+### Modify Custom Field Data in the REST API
 
-Individual custom field data can be modified by sending a PATCH to the Rest API and setting the new value in the `custom_fields` key:
+Individual custom field data can be modified by sending a PATCH to the REST API and setting the new value in the `custom_fields` key:
 
 ```no-highlight
 PATCH http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc481/
 {
     "custom_fields": {
-        "support_group": "Rest API test"
+        "support_group": "REST API test"
     }
 }
 ```
@@ -344,7 +344,7 @@ PATCH http://localhost:8080/api/dcim/devices/ffd8df99-6d1a-41c3-b19f-b8357eefc48
         "dmz_device": true,
         "eol_date": "1970-01-01",
         "cmdb_id": 12345,
-        "support_group": "Rest API test"
+        "support_group": "REST API test"
       }
     }
     ```

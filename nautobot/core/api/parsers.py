@@ -136,6 +136,56 @@ class NautobotCSVParser(BaseParser):
 
         return data_without_missing_field_lookups_values
 
+    def _convert_m2m_dict_to_list_of_dicts(self, data, field):
+        """
+        Converts a nested dictionary into list of flat dictionaries for M2M serializer.
+
+        Args:
+            data (dict): Nested dictionary with comma-separated string values.
+            field (str): Field name used in error messages.
+
+        Returns:
+            list: List of dictionaries, each containing one set of related values.
+
+        Raises:
+            ParseError: If the number of comma-separated values is inconsistent
+                       across different keys.
+
+        Examples:
+            >>> data = {'manufacturer': {'name': 'Cisco,Cisco,Aruba'}, 'model': 'C9300,C9500,CX 6300'}
+            >>> field = "device_type"
+            >>> value = self.convert_m2m_dict_to_list_of_dicts(data, field)
+            >>> value
+            [
+                {'manufacturer': {'name': 'Cisco'},'model': 'C9300'},
+                {'manufacturer': {'name': 'Cisco'},'model': 'C9500'},
+                {'manufacturer': {'name': 'Aruba'},'model': 'CX 6300'}
+            ]
+        """
+
+        def flatten_dict(d, parent_key=""):
+            """Flatten nested dictionary with __ separated keys"""
+            items = []
+            for k, v in d.items():
+                new_key = f"{parent_key}__{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_dict(v, new_key).items())
+                else:
+                    items.append((new_key, v.split(",")))
+            return dict(items)
+
+        flat_data = flatten_dict(data)
+
+        # Convert dictionary to list of dictionaries
+        values_count = {len(value) for value in flat_data.values()}
+        if len(values_count) > 1:
+            raise ParseError(f"Incorrect number of values provided for the {field} field")
+        values_count = values_count.pop()
+        return [
+            self._group_data_by_field_name({key: value[i] for key, value in flat_data.items()})
+            for i in range(values_count)
+        ]
+
     def row_elements_to_data(self, counter, row, serializer):
         """
         Parse a single row of CSV data (represented as a dict) into a dict suitable for consumption by the serializer.
@@ -171,9 +221,13 @@ class NautobotCSVParser(BaseParser):
                 continue
 
             if isinstance(serializer_field, serializers.ManyRelatedField):
-                # A list of related objects, represented as a list of composite-keys
                 if value:
-                    value = value.split(",")
+                    # A list of related objects, represented as a list of composite-keys
+                    if isinstance(value, str):
+                        value = value.split(",")
+                    # A dictionary of fields identifying the objects
+                    elif isinstance(value, dict):
+                        value = self._convert_m2m_dict_to_list_of_dicts(value, key)
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):
@@ -190,7 +244,13 @@ class NautobotCSVParser(BaseParser):
             elif isinstance(serializer_field, (serializers.DictField, serializers.JSONField)):
                 # We currently only store lists or dicts in JSONFields, never bare ints/strings.
                 # On the CSV write side, we only render dicts to JSON
-                if value is not None:
+                from nautobot.extras.api.serializers import ObjectMetadataValueJSONField
+
+                if isinstance(serializer_field, ObjectMetadataValueJSONField):
+                    # Do not split value into a list or dicts when it comes to the value of ObjectMetadata
+                    # we want to store it as bare ints/strings
+                    pass
+                elif value is not None:
                     if value.startswith(("{", "[")):
                         value = json.loads(value)
                     else:

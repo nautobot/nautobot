@@ -1,10 +1,13 @@
+import contextlib
 import logging
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
+import redis.exceptions
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.forms import (
@@ -12,15 +15,39 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
 )
 from nautobot.core.tables import RelationshipColumn
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, DeviceTypeToSoftwareImageFile, Location, LocationType, Platform, Rack
+from nautobot.dcim.forms import DeviceForm
+from nautobot.dcim.models import (
+    Controller,
+    ControllerManagedDeviceGroup,
+    Device,
+    DeviceType,
+    DeviceTypeToSoftwareImageFile,
+    Location,
+    LocationType,
+    Platform,
+    Rack,
+)
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation, Status
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    LogLevelChoices,
+    RelationshipRequiredSideChoices,
+    RelationshipSideChoices,
+    RelationshipTypeChoices,
+)
+from nautobot.extras.models import (
+    Relationship,
+    RelationshipAssociation,
+    Role,
+    Status,
+)
+from nautobot.extras.models.jobs import JobLogEntry
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 
 class RelationshipBaseTest:
@@ -154,6 +181,12 @@ class RelationshipBaseTest:
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
             ),
         ]
+
+    def tearDown(self):
+        """Ensure that relationship caches are cleared to avoid leakage into other tests."""
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
+            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
 
 
 class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -343,20 +376,24 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My VLANs")
-        self.assertEqual(field.query_params, {})
+        self.assertEqual(field.query_params, {"exclude_m2m": "true"})
 
         field = self.m2m_1.to_form_field("destination")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
         self.assertEqual(
-            field.query_params, {"location": [self.locations[0].name, self.locations[1].name, self.locations[2].name]}
+            field.query_params,
+            {
+                "location": [self.locations[0].name, self.locations[1].name, self.locations[2].name],
+                "exclude_m2m": "true",
+            },
         )
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
-        self.assertEqual(field.query_params, {})
+        self.assertEqual(field.query_params, {"exclude_m2m": "true"})
 
     def test_to_form_field_o2m(self):
         field = self.o2m_1.to_form_field("source")
@@ -428,19 +465,33 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             str(error.exception),
         )
 
-    def test_get_for_model_lru_cache_invalidation(self):
-        """Test that the lru cache is properly invalidated when Relationships are created or deleted."""
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        """Test that the cache is used and is properly invalidated when Relationships are created or deleted."""
 
         manager = Relationship.objects
-        manager_methods = (manager.get_for_model, manager.get_for_model_source, manager.get_for_model_destination)
+        manager_methods = [
+            (manager.get_for_model, 2),
+            (manager.get_for_model_source, 1),
+            (manager.get_for_model_destination, 1),
+        ]
 
-        for manager_method in manager_methods:
+        for manager_method, expected_queries in manager_methods:
             with self.subTest(manager_method=manager_method.__name__):
-                qs1 = manager_method(Location)
+                manager_method(Location)
 
                 # Assert that the cache is used when calling method a second time
-                qs1_cached = manager_method(Location)
-                self.assertTrue(qs1_cached is qs1)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
+
+                # Assert that different models are cached separately
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Rack, get_queryset=False)
+                with self.assertNumQueries(0):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
 
                 # Assert that the cache is invalidated on object save
                 relationship = Relationship(
@@ -453,13 +504,240 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 )
                 relationship.save()
-                qs2 = manager_method(Location)
-                self.assertFalse(qs2 is qs1)
+                try:
+                    with self.assertNumQueries(expected_queries):
+                        manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location, get_queryset=False)
+                finally:
+                    # Assert that the cache is invalidated on object delete
+                    relationship.delete()
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location, get_queryset=False)
 
-                # Assert that the cache is invalidated on object delete
-                relationship.delete()
-                qs3 = manager_method(Location)
-                self.assertNotIn(qs3, (qs1, qs2))
+    def test_required_related_object_errors(self):
+        """
+        Confirm that the fix in https://github.com/nautobot/nautobot/pull/5570 is working as expected
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        status = Status.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        # Create a Device with role Role 1
+        role_1 = Role.objects.create(name="Role 1")
+        role_1.content_types.add(ContentType.objects.get_for_model(Device))
+        device_1 = Device.objects.create(
+            device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 2
+        role_2 = Role.objects.create(name="Role 2")
+        role_2.content_types.add(ContentType.objects.get_for_model(Device))
+        device_2 = Device.objects.create(
+            device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 3
+        role_3 = Role.objects.create(name="Role 3")
+        role_3.content_types.add(ContentType.objects.get_for_model(Device))
+        device_3 = Device.objects.create(
+            device_type=device_type, role=role_3, name="Device 3", location=self.locations[0], status=status
+        )
+        # Create a one-to-many relationship with destination required, source filter: {"role": ["Role 1"]}
+        # and destination filter {"role": ["Role 2"]}
+        relationship = Relationship.objects.create(
+            label="Device to Devices",
+            key="device_to_devices",
+            source_type=device_ct,
+            source_filter={"role": ["Role 1"]},
+            destination_type=device_ct,
+            destination_filter={"role": ["Role 2"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            required_on="destination",
+        )
+        # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
+        # Assert that the form is valid and no ValueError is raised.
+        update_status = Status.objects.get_for_model(Device).last()
+        update_data_for_device_3 = {
+            "location": device_3.location.pk,
+            "device_type": device_3.device_type.pk,
+            "role": device_3.role.pk,
+            "name": device_3.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(instance=device_3, data=update_data_for_device_3)
+        self.assertTrue(form.is_valid())
+        # Attempt to update device_1 which will not be in the destination filter,
+        # but is in the source filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+        }
+        form2 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form2.is_valid())
+        # Attempt to update device_2 which will be in the destination filter, so it should
+        # require the relationship.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+        }
+        form3 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertFalse(form3.is_valid())
+        # Device 1 has a relationship to Device 2
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [device_2.pk],
+        }
+        form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form4.is_valid())
+        form4.save()
+        # Device 2 has a relationship to Device 1, form should validate and save.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_1.pk,
+        }
+        form5 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form5.is_valid())
+        form5.save()
+        # Device 2 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_3.pk,
+        }
+        form6 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        with self.assertRaises(ValidationError):
+            form6.save()
+        # Device 1 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": "Device 1",
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
+        }
+        form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        with self.assertRaises(ValidationError):
+            form6.save()
+
+        relationship.required_on = "source"
+        relationship.save()
+        # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
+        # Assert that the form is valid and no ValueError is raised. This ensures that an object that
+        # does not take part in any relationships can still be updated, addressing issue #5569.
+        update_status = Status.objects.get_for_model(Device).last()
+        update_data_for_device_3 = {
+            "location": device_3.location.pk,
+            "device_type": device_3.device_type.pk,
+            "role": device_3.role.pk,
+            "name": device_3.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(instance=device_3, data=update_data_for_device_3)
+        self.assertTrue(form.is_valid())
+        # Attempt to update device_1 which will not be in the destination filter,
+        # but is in the source filter. Should fail as device_to_devices is required.
+        device_1.delete()
+        device_1 = Device.objects.create(
+            device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
+        )
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+        }
+        form2 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertFalse(form2.is_valid())
+        # Attempt to update device_2 which will be in the destination filter, which should not require the
+        # relationship anymore.
+        device_2.delete()
+        device_2 = Device.objects.create(
+            device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
+        )
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+        }
+        form3 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form3.is_valid())
+        # Device 1 has a relationship to Device 2
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [device_2.pk],
+        }
+        form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form4.is_valid())
+        form4.save()
+        # Device 2 has a relationship to Device 1, form should validate and save.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_1.pk,
+        }
+        form5 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form5.is_valid())
+        form5.save()
+        # Device 2 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_3.pk,
+        }
+        form6 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        with self.assertRaises(ValidationError):
+            form6.save()
+        # Device 1 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": "Device 1",
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
+        }
+        form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        with self.assertRaises(ValidationError):
+            form6.save()
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1080,7 +1358,7 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
             self.assertIsNotNone(relationship_column)
             self.assertIsInstance(relationship_column, RelationshipColumn)
 
-            rendered_value = bound_row.get_cell(internal_col_name)
+            rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
             # Test if the expected value is in the rendered value.
             # Exact match is difficult because the order of rendering is unpredictable.
             for value in col_expected_value:
@@ -1150,6 +1428,10 @@ class RequiredRelationshipTestMixin:
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
+        ControllerManagedDeviceGroup.objects.all().delete()
+        Controller.objects.all().delete()
+        Device.objects.all().delete()
+
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)
         platform_ct = ContentType.objects.get_for_model(Platform)
@@ -1182,7 +1464,7 @@ class RequiredRelationshipTestMixin:
             required_on="source",
         )
         relationship_o2o.validated_save()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
 
         tests_params = [
             # Required many-to-many:
@@ -1333,6 +1615,7 @@ class RequiredRelationshipTestMixin:
                 self.assertEqual(from_model.objects.count(), existing_count)
 
                 # 3. Try creating an object when all required data is present
+                related_objects_data = {}
                 if interact_with == "ui":
                     related_objects_data = {related_field_name: required_object_pks}
 
@@ -1387,7 +1670,7 @@ class RequiredRelationshipTestMixin:
                     response = self.send_data(
                         from_model,
                         {
-                            "name": f'{params["create_data"]["name"]} edited',
+                            "name": f"{params['create_data']['name']} edited",
                             "relationships": {},
                         },
                         interact_with,
@@ -1405,13 +1688,13 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
+                        {"name": f"{params['create_data']['name']} edited", **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 200)
-                    self.assertEqual(f'{params["create_data"]["name"]} edited', response.json()["name"])
+                    self.assertEqual(f"{params['create_data']['name']} edited", response.json()["name"])
 
                     """
                     - Object is created with the required relationship data (succeeds)
@@ -1421,7 +1704,7 @@ class RequiredRelationshipTestMixin:
                     """
 
                     # Delete the object that was previously created, so we can test with the same data again
-                    from_model.objects.get(name=f'{params["create_data"]["name"]} edited').delete()
+                    from_model.objects.get(name=f"{params['create_data']['name']} edited").delete()
                     self.assertEqual(from_model.objects.count(), existing_count)
 
                     # Object is created with the required relationship data (succeeds)
@@ -1435,19 +1718,19 @@ class RequiredRelationshipTestMixin:
                     newly_created_object = from_model.objects.get(name=params["create_data"]["name"])
                     response = self.send_data(
                         from_model,
-                        {"name": f'{params["create_data"]["name"]} changed'},
+                        {"name": f"{params['create_data']['name']} changed"},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},
                     )
                     self.assertHttpStatus(response, 200)
-                    self.assertEqual(f'{params["create_data"]["name"]} changed', response.json()["name"])
+                    self.assertEqual(f"{params['create_data']['name']} changed", response.json()["name"])
 
                     # Object is updated to remove the relationship data (fails)
                     response = self.send_data(
                         from_model,
                         {
-                            "name": f'{params["create_data"]["name"]} changed again',
+                            "name": f"{params['create_data']['name']} changed again",
                             "relationships": {},
                         },
                         interact_with,
@@ -1461,3 +1744,97 @@ class RequiredRelationshipTestMixin:
                         }
                     }
                     self.assertEqual(expected_error_json, response.json())
+
+
+class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase):
+    databases = ("default", "job_logs")
+
+    def create_job(self, pk_list, **extra_form_data):
+        """"""
+        vlan_ct = ContentType.objects.get_for_model(VLAN)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=vlan_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={"pk": pk_list, **extra_form_data},
+            username=self.user.username,
+        )
+        return job_result
+
+    def test_required_relationships(self):
+        """
+        1. Try creating an object when no required target object exists
+        2. Try creating an object without specifying required target object(s)
+        3. Try creating an object when all required data is present
+        4. Test bulk edit
+        """
+
+        # Delete existing factory generated objects that may interfere with this test
+        IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
+        Prefix.objects.all().delete()
+        ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()
+        VLAN.objects.all().delete()
+
+        # Parameterized tests (for creating and updating single objects):
+        self.required_relationships_test(interact_with="ui")
+
+        # 4. Bulk create/edit tests:
+
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlans = (
+            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
+        )
+
+        # Try deleting all devices and then editing the 6 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
+        Device.objects.all().delete()
+
+        pk_list = [str(vlan.id) for vlan in vlans]
+        job_result = self.create_job(pk_list)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn("VLANs require at least one device, but no devices exist yet.", error_log.message)
+
+        # Create test device for association
+        device_for_association = create_test_device("VLAN Required Device")
+
+        # Try editing all 6 VLANs without adding the required device(fails):
+        job_result = self.create_job(pk_list)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',
+            error_log.message,
+        )
+
+        # Try editing 3 VLANs without adding the required device(fails):
+        job_result = self.create_job(pk_list[:3])
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            'These VLANs require a device for the required relationship \\"VLANs require at least one Device',
+            error_log.message,
+        )
+        for vlan in vlans[:3]:
+            self.assertIn(str(vlan), error_log.message)
+
+        # Try editing 6 VLANs and adding the required device (succeeds):
+        job_result = self.create_job(pk_list, add_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
+        self.assertJobResultStatus(job_result)
+
+        # Try editing 6 VLANs and removing the required device (fails):
+        job_result = self.create_job(pk_list, remove_cr_vlans_devices_m2m__source=[str(device_for_association.id)])
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            '6 VLANs require a device for the required relationship \\"VLANs require at least one Device',
+            error_log.message,
+        )

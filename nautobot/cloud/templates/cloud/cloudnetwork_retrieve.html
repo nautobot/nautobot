@@ -1,0 +1,8 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% if object.parent %}
+        <li>{{ object.parent|hyperlinked_object:"name" }}</li>
+    {% endif %}
+{% endblock extra_breadcrumbs %}

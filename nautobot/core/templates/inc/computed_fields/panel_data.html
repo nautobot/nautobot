@@ -1,25 +1,34 @@
-{% if not advanced_ui %}
-    {% if object.has_computed_fields_basic %}
-        {% load computed_fields %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Computed Fields</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                {% computed_fields object advanced_ui %}
-            </table>
+{% load helpers %}
+{% if computed_fields %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Computed Fields</strong>
+            <button type="button"
+                    class="btn-xs btn-primary pull-right accordion-toggle-all"
+                    data-target="#computed_fields_accordion_{{ advanced_ui }}">Collapse All</button>
         </div>
-    {% endif %}
-{% else %}
-    {% if object.has_computed_fields_advanced %}
-        {% load computed_fields %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Computed Fields</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                {% computed_fields object advanced_ui %}
-            </table>
-        </div>
-    {% endif %}
+        <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
+            {% for grouping, fields in computed_fields.items %}
+            {% with forloop.counter0 as count %}
+                {% if grouping != "" %}
+                    <tr>
+                        <td colspan="2"><strong>
+                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
+                                    name="grouping.{{ grouping }}" data-toggle="collapse"
+                                    data-target=".collapseme-computed-{{ count }}">
+                                {{ grouping }}
+                            </button></strong>
+                        </td>
+                    </tr>
+                {% endif %}
+                    {% for field, value in fields %}
+                        <tr class="collapseme-computed-{{ count }} collapse in" data-parent="#accordion">
+                            <td><span title="{{ field.description }}">{{ field }}</span></td>
+                            <td>{{ value }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endwith %}
+                {% endfor %}
+        </table>
+    </div>
 {% endif %}

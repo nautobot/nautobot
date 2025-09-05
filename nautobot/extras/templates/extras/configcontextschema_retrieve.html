@@ -1,0 +1,48 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load plugins %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
+        <a href="{% url 'extras:configcontextschema_object_validation' pk=object.pk %}">Validation</a>
+    </li>
+{% endblock extra_nav_tabs %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Config Context Schema</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.name }}
+                        </td>
+                    </tr>
+                    {% if object.owner %}
+                        <tr>
+                            <td>Owner</td>
+                            <td>{{ object.owner|hyperlinked_object }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Description</td>
+                        <td>{{ object.description|placeholder }}</td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Data Schema</strong>
+                    {% include 'extras/inc/configcontext_format.html' %}
+                </div>
+                <div class="panel-body">
+                    {% include 'extras/inc/json_data.html' with data=object.data_schema format=data_format %}
+                </div>
+            </div>
+{% endblock content_right_page %}

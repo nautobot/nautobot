@@ -1,1 +1,0 @@
-Deprecated the `nautobot.apps.exceptions.ConfigurationError` class as it is no longer used in Nautobot core and is trivially reimplementable by any App if desired.

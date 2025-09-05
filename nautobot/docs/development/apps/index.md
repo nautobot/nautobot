@@ -5,9 +5,6 @@ This documentation covers the development of custom Apps for Nautobot. Nautobot 
 Apps can [do a lot of different things](./index.md#capabilities), all of which will be covered in detail in this document.
 Keep in mind that each piece of functionality is entirely optional. For example, if your app merely adds a piece of middleware or an API endpoint for existing data, there's no need to define any new models.
 
-+/- 1.5.2
-    The `nautobot.apps` namespace was added in Nautobot 1.5.2. If developing apps to be backwards-compatible with older versions of Nautobot, please refer to the app developer documentation of your required Nautobot version.
-
 !!! tip
     The app detail view (`/apps/installed-apps/<app_name>/`, accessible via **Apps -> Installed Apps** in the navigation menu, then selecting a specific app) provides in-depth information about which features any installed app is implementing or making use of.
 
@@ -24,29 +21,18 @@ The Nautobot App architecture allows for Apps to do any or all of the following:
 * **Add navigation menu items.** An App can extend the navigation menus with new links and buttons or even entirely new menus.
 * **Add home page content.** An App can add custom items or custom panels to the Nautobot home page.
 * **Add content to existing model detail views.** An App can inject custom HTML content within the view of a core Nautobot model. This content can appear in the left column, right column, or full width of the page, and can also include custom buttons at the top of the page.
-
-+++ 1.2.0
-    * **Add a banner.** An App can add a custom banner to the top of any appropriate views.
-
-+++ 1.4.0
-    * **Add extra tabs to existing model detail views.** An App can inject additional tabs which will appear at the end of the object detail tabs list.
+* **Add a banner.** An App can add a custom banner to the top of any appropriate views.
+* **Add extra tabs to existing model detail views.** An App can inject additional tabs which will appear at the end of the object detail tabs list.
 
 ### Extend and customize existing Nautobot functionality
 
 * **Add custom validation logic to existing data models.** An App can provide additional logic to customize the rules for validating created/updated data records.
 * **Provide Jobs.** An App can serve as a convenient way to package and install [Jobs](../../user-guide/platform-functionality/jobs/index.md).
 * **Add additional Git data types.** An App can add support for processing additional types of data stored in a [Git repository](../../user-guide/platform-functionality/gitrepository.md).
-
-+++ 1.1.0
-    * **Register additional Jinja2 filters.** An App can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
-
-+++ 1.2.0
-    * **Populate extensibility features in the database.** An App can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
-
-    * **Add additional secrets providers.** An App can add support for retrieving [Secret](../../user-guide/platform-functionality/secret.md) values from additional sources or external systems.
-
-+++ 1.4.0
-    * **Override already-defined views.** An App can define a view which can be set to override a view from the core set of views or another App's view.
+* **Register additional Jinja2 filters.** An App can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
+* **Populate extensibility features in the database.** An App can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
+* **Add additional secrets providers.** An App can add support for retrieving [Secret](../../user-guide/platform-functionality/secret.md) values from additional sources or external systems.
+* **Override already-defined views.** An App can define a view which can be set to override a view from the core set of views or another App's view.
 
 ### Add entirely new features
 
@@ -60,7 +46,7 @@ The Nautobot App architecture allows for Apps to do any or all of the following:
 
 ### Declare dependencies and requirements
 
-* **Declare configuration parameters.** An App can define required, optional, and default configuration parameters within its unique namespace. App configuration parameters are configurable under [`PLUGINS_CONFIG`](../../user-guide/administration/configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.
+* **Declare configuration parameters.** An App can define required, optional, and default configuration parameters within its unique namespace. App configuration parameters are configurable under [`PLUGINS_CONFIG`](../../user-guide/administration/configuration/settings.md#plugins_config) in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** An App can specify a minimum and/or maximum Nautobot version with which it is compatible.
 * **Add additional Django dependencies.** An App can define additional Django application dependencies to require when the App is enabled.
 

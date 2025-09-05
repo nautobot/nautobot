@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.utils.http import urlencode
 import svgwrite
 
+from nautobot.core.utils.config import get_settings_or_config
+
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
 
@@ -94,17 +96,30 @@ class RackElevationSVG:
         device_fullname = str(device) + device_bay_details
         device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + device_bay_details
 
-        color = device.role.color
-        reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
+        role_color = device.role.color
+        status_color = device.status.color
+        device_reverse_url = reverse("dcim:device", kwargs={"pk": device.pk})
+        status_reverse_url = reverse("extras:status", kwargs={"pk": device.status.pk})
         link = drawing.add(
             drawing.a(
-                href=f"{self.base_url}{reverse_url}",
+                href=f"{self.base_url}{device_reverse_url}",
                 target="_top",
                 fill="black",
             )
         )
         link.set_desc(self._get_device_description(device))
-        link.add(drawing.rect(start, end, style=f"fill: #{color}", class_="slot"))
+        link.add(drawing.rect(start, end, style=f"fill: #{role_color}", class_="slot"))
+
+        status_rect = drawing.add(
+            drawing.a(
+                href=f"{self.base_url}{status_reverse_url}",
+                target="_top",
+                fill="black",
+            )
+        )
+        status_rect.set_desc(device.status.name)
+        status_end = (end[0] / 20, end[1])  # width, y
+        status_rect.add(drawing.rect(start, status_end, style=f"fill: #{status_color}"))
 
         # Embed front device type image if one exists
         if self.include_images and device.device_type.front_image:
@@ -233,7 +248,9 @@ class RackElevationSVG:
                 start_y + unit_height / 2 + RACK_ELEVATION_BORDER_WIDTH,
             )
             unit = ru + 1 if self.rack.desc_units else self.rack.u_height - ru
-            drawing.add(drawing.text(str(unit), position_coordinates, class_="unit"))
+            unit_two_digit_format = get_settings_or_config("RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT")
+            unit_display = f"{unit:02d}" if unit_two_digit_format else str(unit)
+            drawing.add(drawing.text(unit_display, position_coordinates, class_="unit"))
 
         for unit in self.merge_elevations(face):
             # Loop through all units in the elevation

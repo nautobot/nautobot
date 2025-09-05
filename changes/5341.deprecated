@@ -1,1 +1,0 @@
-Deprecated the `plugins` key under the `/api/status/` REST API endpoint. Refer to `nautobot-apps` instead.

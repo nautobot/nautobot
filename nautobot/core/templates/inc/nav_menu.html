@@ -56,7 +56,7 @@
                                                                         {% endcomment %}
                                                                         {% url button_details.link as button_url %}
                                                                         {% if button_url %}
-                                                                            <a href="{{ button_url }}"
+                                                                            <a href="{{ button_url }}{{ button_details.querystring }}"
                                                                                data-button-weight="{{ button_details.weight }}"
                                                                                class="btn btn-xs btn-{{ button_details.button_class }}"
                                                                                title="{{ button_title }}">
@@ -93,8 +93,10 @@
                             <span class="mdi mdi-chevron-down"></span>
                         </a>
                         <ul class="collapse nav-dropdown-menu" id="adminDropdown">
+                            <li><a href="{% url 'about' %}"><i class="mdi mdi-information"></i> About</a></li>
                             <li><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
                             {% if request.user.is_staff %}
+                                <li><a href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i> Worker Status</a></li>
                                 <li><a href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
                             {% endif %}
                             <li class="divider"></li>
@@ -112,131 +114,7 @@
         </div>
     </div>
 </nav>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var navbar = document.querySelector('.navbar-fixed-left');
-        var dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
-        var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
-        var lastDropdownId = sessionStorage.getItem('lastOpenedDropdown');
-        var savedScrollPosition = sessionStorage.getItem('navbarScrollPosition');
-        var activeLink = sessionStorage.getItem('activeLink');
-
-        // Function to reset stored dropdown state information
-        function resetNavbarState() {
-            sessionStorage.removeItem('lastOpenedDropdown');
-            sessionStorage.removeItem('savedScrollPosition');
-            sessionStorage.removeItem('activeLink');
-        }
-
-        // Select the navbar dropdown elements
-        var navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
-
-        // Add a title attribute and tooltip, only if necessary
-        navbarItems.forEach(function(item) {
-            // Check if the text overflows
-            if (item.scrollWidth > item.clientWidth) {
-                // Set the title attribute
-                item.setAttribute('title', item.innerText);
-
-                // Reinitialize Bootstrap tooltip
-                $(item).tooltip();
-            }
-        });
-
-        // Add an event listener for the home link click
-        var homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
-        if (homeLink) {
-            homeLink.addEventListener('click', function() {
-                resetNavbarState();
-            });
-        }
-
-        // Debounce function
-        function debounce(func, wait, immediate) {
-            var timeout;
-            return function() {
-                var context = this, args = arguments;
-                var later = function() {
-                    timeout = null;
-                    if (!immediate) func.apply(context, args);
-                };
-                var callNow = immediate && !timeout;
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-                if (callNow) func.apply(context, args);
-            };
-        }
-
-        // Close all dropdowns except the one specified
-        function closeAllDropdownsExcept(exceptId) {
-            dropdowns.forEach(function(collapse) {
-                if (collapse.id !== exceptId && collapse.classList.contains('in')) {
-                    $(collapse).collapse('hide');
-                }
-            });
-        }
-
-        // Add click event listener to the dropdown links and save the clicked one
-        function addLinkClickListeners() {
-            var dropdownLinks = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a');
-
-            dropdownLinks.forEach(function(link) {
-                link.addEventListener('click', function() {
-                    sessionStorage.setItem('activeLink', link.getAttribute('href'));
-                });
-            });
-        }
-
-        // Close all dropdowns except the last opened one
-        dropdownToggles.forEach(function(toggle) {
-            toggle.addEventListener('click', function(event) {
-                event.preventDefault();
-                var collapseElement = document.getElementById(this.getAttribute('href').substring(1));
-
-                if (!collapseElement.classList.contains('in')) {
-                    closeAllDropdownsExcept(collapseElement.id);
-                    $(collapseElement).collapse('show');
-                    sessionStorage.setItem('lastOpenedDropdown', collapseElement.id);
-                } else {
-                    $(collapseElement).collapse('hide');
-                    sessionStorage.removeItem('lastOpenedDropdown');
-                }
-            });
-        });
-
-        // Open the last opened dropdown
-        if (lastDropdownId) {
-            var lastDropdownMenu = document.getElementById(lastDropdownId);
-            if (lastDropdownMenu && !lastDropdownMenu.classList.contains('in')) {
-                $(lastDropdownMenu).collapse('show');
-            }
-        }
-
-        // Restore the last saved scroll position
-        if (savedScrollPosition) {
-            navbar.scrollTop = savedScrollPosition;
-        }
-
-        // Save the scroll position when the navbar is scrolled
-        navbar.addEventListener('scroll', debounce(function() {
-            sessionStorage.setItem('navbarScrollPosition', navbar.scrollTop);
-        }, 250));
-
-         // Add click event listeners to dropdown links
-        addLinkClickListeners();
-
-        // Apply the 'active' class to the previously clicked link
-        if (activeLink) {
-            var previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
-            var currentLocation = window.location.pathname + window.location.search;
-            
-            if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
-                previouslyClickedLink.parentElement.classList.add('active');
-            }
-            else {
-                sessionStorage.removeItem('activeLink');
-            }
-        }
-    });
-</script>
+<!-- Collapsible button -->
+<button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
+    <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
+</button>

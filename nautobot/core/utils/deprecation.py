@@ -1,5 +1,6 @@
 """Utilities for handling deprecation of code and features."""
 
+from functools import wraps
 import logging
 import traceback
 import warnings
@@ -45,3 +46,33 @@ def class_deprecated(message):
 def class_deprecated_in_favor_of(replacement_class):
     """Decorator to mark a class as deprecated and suggest a replacement class if it is subclassed from."""
     return class_deprecated(f"please migrate your code to inherit from class {replacement_class.__name__} instead")
+
+
+def method_deprecated(message):
+    """Decorator to mark a method as deprecated with a custom message about what to call instead."""
+
+    def decorate(method):
+        @wraps(method)
+        def decorated_method(*args, **kwargs):
+            warnings.warn(
+                f"Method `{method.__name__}` is deprecated, and will be removed in a future Nautobot release. "
+                f"{message}",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if LOG_DEPRECATION_WARNINGS:
+                logger.warning(
+                    f"Method `{method.__name__}` is deprecated, and will be removed in a future Nautobot release. "
+                    f"{message}",
+                    stacklevel=2,
+                )
+            return method(*args, **kwargs)
+
+        return decorated_method
+
+    return decorate
+
+
+def method_deprecated_in_favor_of(replacement_method):
+    """Decorator to mark a method as deprecated and suggest a replacement method instead."""
+    return method_deprecated(f"Please migrate your code to call `{replacement_method.__name__}` instead.")

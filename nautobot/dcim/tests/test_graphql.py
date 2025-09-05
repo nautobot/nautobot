@@ -4,12 +4,22 @@ from django.test import override_settings
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Platform
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    Platform,
+)
 from nautobot.extras.models import DynamicGroup, Role, Status
 
 
 class GraphQLTestCase(TestCase):
     def setUp(self):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         self.user = create_test_user("graphql_testuser")
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -73,3 +83,55 @@ class GraphQLTestCase(TestCase):
             self.assertEqual(
                 resp["data"]["devices"][0]["platform"]["network_driver_mappings"]["scrapli"], "cisco_iosxe"
             )
+
+        with self.subTest("device serial number query"):
+            non_empty_serial_device = Device.objects.first()
+            non_empty_serial_device.serial = "1234567890abceFGHIJKL"
+            non_empty_serial_device.save()
+
+            # Test device serial query default behavior: serial__ie
+            query = 'query { devices (serial: " ") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            for device in resp["data"]["devices"]:
+                self.assertEqual(device["serial"], "")
+
+            # Test device serial default filter with non-empty serial number
+            query = 'query { devices (serial:"' + non_empty_serial_device.serial.lower() + '") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            self.assertEqual(resp["data"]["devices"][0]["serial"], non_empty_serial_device.serial)
+
+            # Test device serial iexact filter with non-empty serial number
+            query = 'query { devices (serial__ie:"' + non_empty_serial_device.serial.upper() + '") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            self.assertEqual(resp["data"]["devices"][0]["serial"], non_empty_serial_device.serial)
+
+            # Test device serial__nie filter with non-empty serial number
+            query = 'query { devices (serial__nie:"' + non_empty_serial_device.serial.lower() + '") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            for device in resp["data"]["devices"]:
+                self.assertNotEqual(device["serial"], non_empty_serial_device.serial)
+
+            # Test device serial__ie filter with empty serial number
+            query = 'query { devices (serial__ie:" ") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            for device in resp["data"]["devices"]:
+                self.assertEqual(device["serial"], "")
+
+            # Test device serial__nie filter with empty serial number
+            query = 'query { devices (serial__nie:" ") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            for device in resp["data"]["devices"]:
+                self.assertNotEqual(device["serial"], "")
+
+            # Test device serial__n filter with empty serial number
+            query = 'query { devices (serial__n:" ") { name serial } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            for device in resp["data"]["devices"]:
+                self.assertNotEqual(device["serial"], "")

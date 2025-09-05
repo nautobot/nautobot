@@ -1,0 +1,85 @@
+from nautobot.core.apps import (
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
+
+menu_items = (
+    NavMenuTab(
+        name="Cloud",
+        weight=150,
+        groups=(
+            NavMenuGroup(
+                name="Cloud",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="cloud:cloudservice_list",
+                        name="Cloud Services",
+                        weight=100,
+                        permissions=[
+                            "cloud.view_cloudservice",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudservice_add",
+                                permissions=[
+                                    "cloud.add_cloudservice",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudnetwork_list",
+                        name="Cloud Networks",
+                        weight=200,
+                        permissions=[
+                            "cloud.view_cloudnetwork",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudnetwork_add",
+                                permissions=[
+                                    "cloud.add_cloudnetwork",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudresourcetype_list",
+                        name="Cloud Resource Types",
+                        weight=300,
+                        permissions=[
+                            "cloud.view_cloudresourcetype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudresourcetype_add",
+                                permissions=[
+                                    "cloud.add_cloudresourcetype",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudaccount_list",
+                        name="Cloud Accounts",
+                        weight=400,
+                        permissions=[
+                            "cloud.view_cloudaccount",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudaccount_add",
+                                permissions=[
+                                    "cloud.add_cloudaccount",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)

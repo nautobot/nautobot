@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField, PositiveSmallIntegerField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
@@ -74,7 +75,7 @@ class Cable(PrimaryModel):
     termination_b = GenericForeignKey(ct_field="termination_b_type", fk_field="termination_b_id")
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
     status = StatusField(blank=False, null=False)
-    label = models.CharField(max_length=100, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     color = ColorField(blank=True)
     length = PositiveSmallIntegerField(blank=True, null=True)
     length_unit = models.CharField(
@@ -254,8 +255,20 @@ class Cable(PrimaryModel):
         # Store the parent Device for the A and B terminations (if applicable) to enable filtering
         if hasattr(self.termination_a, "device"):
             self._termination_a_device = self.termination_a.device
+        if (
+            not self._termination_a_device
+            and hasattr(self.termination_a, "module")
+            and self.termination_a.module.device
+        ):
+            self._termination_a_device = self.termination_a.module.device
         if hasattr(self.termination_b, "device"):
             self._termination_b_device = self.termination_b.device
+        if (
+            not self._termination_b_device
+            and hasattr(self.termination_b, "module")
+            and self.termination_b.module.device
+        ):
+            self._termination_b_device = self.termination_b.module.device
 
         super().save(*args, **kwargs)
 
@@ -313,6 +326,9 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
+    # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
+    # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
+    is_metadata_associable_model = False
 
     natural_key_field_names = ["pk"]
 

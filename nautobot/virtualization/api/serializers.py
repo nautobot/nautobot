@@ -87,10 +87,10 @@ class VMInterfaceSerializer(
         model = VMInterface
         fields = "__all__"
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate many-to-many VLAN assignments
-        virtual_machine = self.instance.virtual_machine if self.instance else data.get("virtual_machine")
-        for vlan in data.get("tagged_vlans", []):
+        virtual_machine = self.instance.virtual_machine if self.instance else attrs.get("virtual_machine")
+        for vlan in attrs.get("tagged_vlans", []):
             if vlan.location not in [virtual_machine.location, None]:
                 raise serializers.ValidationError(
                     {
@@ -99,4 +99,4 @@ class VMInterfaceSerializer(
                     }
                 )
 
-        return super().validate(data)
+        return super().validate(attrs)

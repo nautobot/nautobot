@@ -28,7 +28,7 @@ Uploaded media (device images, etc.) are stored on the filesystem rather than in
 
 ### Copy Uploaded Media
 
-The exact command will depend on where your [`MEDIA_ROOT`](../configuration/optional-settings.md#media_root) is configured in NetBox as well as where it's configured in Nautobot, but in general it will be:
+The exact command will depend on where your [`MEDIA_ROOT`](../configuration/settings.md#media_root) is configured in NetBox as well as where it's configured in Nautobot, but in general it will be:
 
 ```no-highlight
 cp -pr $NETBOX_MEDIA_ROOT/* $NAUTOBOT_MEDIA_ROOT/*
@@ -36,7 +36,7 @@ cp -pr $NETBOX_MEDIA_ROOT/* $NAUTOBOT_MEDIA_ROOT/*
 
 ### Copy Custom Scripts and Reports
 
-Similarly, the exact commands depend on your `SCRIPTS_ROOT` and `REPORTS_ROOT` settings in NetBox and your [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) in Nautobot, but in general they will be:
+Similarly, the exact commands depend on your `SCRIPTS_ROOT` and `REPORTS_ROOT` settings in NetBox and your [`JOBS_ROOT`](../configuration/settings.md#jobs_root) in Nautobot, but in general they will be:
 
 ```no-highlight
 cp -pr $NETBOX_SCRIPTS_ROOT/* $NAUTOBOT_JOBS_ROOT/

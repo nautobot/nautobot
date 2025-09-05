@@ -28,6 +28,13 @@ class ContactForm(NautobotModelForm):
             "tags",
         ]
 
+    def __init__(self, instance=None, initial=None, **kwargs):
+        if instance is not None:
+            if initial is None:
+                initial = {}
+            initial.setdefault("teams", instance.teams.all())
+        super().__init__(instance=instance, initial=initial, **kwargs)
+
     def save(self, *args, **kwargs):
         """
         Since `teams` field on Contact Model is the reverse side of an M2M,
@@ -64,7 +71,7 @@ class ObjectNewContactForm(NautobotModelForm):
     associated_object_id = forms.CharField(required=True)
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
-        required=False,
+        required=True,
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
     status = DynamicModelChoiceField(
@@ -102,7 +109,7 @@ class ObjectNewContactForm(NautobotModelForm):
 
 class ObjectNewTeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
-        queryset=Team.objects.all(),
+        queryset=Contact.objects.all(),
         required=False,
         label="Contact(s)",
     )
@@ -110,7 +117,7 @@ class ObjectNewTeamForm(NautobotModelForm):
     associated_object_id = forms.CharField(required=True)
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
-        required=False,
+        required=True,
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
     status = DynamicModelChoiceField(

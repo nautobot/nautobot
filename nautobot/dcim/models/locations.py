@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.functional import classproperty
 from timezone_field import TimeZoneField
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
@@ -30,8 +31,8 @@ class LocationType(TreeModel, OrganizationalModel):
     while a "Room" LocationType might allow Racks and Devices.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="location_types",
@@ -144,8 +145,8 @@ class Location(TreeModel, PrimaryModel):
     """
 
     # A Location's name is unique within context of its parent, not globally unique.
-    name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,
@@ -159,8 +160,10 @@ class Location(TreeModel, PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
-    facility = models.CharField(max_length=50, blank=True, help_text="Local facility ID or description")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    facility = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Local facility ID or description"
+    )
     asn = ASNField(
         blank=True,
         null=True,
@@ -184,8 +187,8 @@ class Location(TreeModel, PrimaryModel):
         null=True,
         help_text="GPS coordinate (longitude)",
     )
-    contact_name = models.CharField(max_length=100, blank=True)
-    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    contact_phone = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
@@ -216,6 +219,15 @@ class Location(TreeModel, PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def display(self):
+        """
+        Honor LOCATION_NAME_AS_NATURAL_KEY for display value rendering, else fallback to TreeModel.display().
+        """
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            return self.name
+        return super().display
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
@@ -280,7 +292,7 @@ class Location(TreeModel, PrimaryModel):
             # We shouldn't have a parent, *unless* our own location type is permitted to be nested.
             if self.parent is not None:
                 if self.location_type.nestable:
-                    if self.parent.location_type != self.location_type:
+                    if self.parent.location_type != self.location_type:  # pylint: disable=no-member
                         raise ValidationError(
                             {
                                 "parent": f"A Location of type {self.location_type} may only have "
@@ -301,7 +313,7 @@ class Location(TreeModel, PrimaryModel):
 
             # Is the parent location of a correct type?
             if self.location_type.nestable:
-                if self.parent.location_type not in (self.location_type, self.location_type.parent):
+                if self.parent.location_type not in (self.location_type, self.location_type.parent):  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "
@@ -309,7 +321,7 @@ class Location(TreeModel, PrimaryModel):
                         }
                     )
             else:
-                if self.parent.location_type != self.location_type.parent:
+                if self.parent.location_type != self.location_type.parent:  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "parent": f"A Location of type {self.location_type} can only have a Location "

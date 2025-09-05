@@ -1,0 +1,8 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% if object.vlan_group %}
+        <li><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
+    {% endif %}
+{% endblock extra_breadcrumbs %}

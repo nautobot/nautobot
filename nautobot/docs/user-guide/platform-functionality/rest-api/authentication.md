@@ -23,7 +23,7 @@ http://nautobot/api/dcim/locations/
 }
 ```
 
-A token is not required for read-only operations which have been exempted from permissions enforcement (using the [`EXEMPT_VIEW_PERMISSIONS`](../../administration/configuration/optional-settings.md#exempt_view_permissions) configuration parameter). However, if a token _is_ required but not present in a request, the API will return a 403 (Forbidden) response:
+A token is not required for read-only operations which have been exempted from permissions enforcement (using the [`EXEMPT_VIEW_PERMISSIONS`](../../administration/configuration/settings.md#exempt_view_permissions) configuration parameter). However, if a token _is_ required but not present in a request, the API will return a 403 (Forbidden) response:
 
 ```bash
 curl http://nautobot/api/dcim/locations/
@@ -36,8 +36,6 @@ curl http://nautobot/api/dcim/locations/
 ```
 
 ## Initial Token Provisioning
-
-+++ 1.3.0
 
 Ideally, each user should provision his or her own REST API token(s) via the web UI. However, you may encounter where a token must be created by a user via the REST API itself. Nautobot provides a special endpoint to provision tokens using a valid username and password combination.
 

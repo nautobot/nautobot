@@ -52,9 +52,9 @@ Result
 
 It is possible to explore the Graph and create some queries in a human friendly UI at the endpoint `graphql/`. This interface (called `graphqli`) provides a great playground to build new queries as it provides full autocompletion and type validation.
 
-## Querying the GraphQL interface over the rest API
+## Querying the GraphQL interface over the REST API
 
-It is possible to query the GraphQL interface via the rest API as well, the endpoint is available at `api/graphql/` and supports the same Token based authentication as all other Nautobot APIs.
+It is possible to query the GraphQL interface via the REST API as well, the endpoint is available at `api/graphql/` and supports the same Token based authentication as all other Nautobot APIs.
 
 A GraphQL Query must be encapsulated in a JSON payload with the `query` key and sent with a POST request. Optionally it is possible to provide a list of `variables` in the same payload as presented below.
 
@@ -101,7 +101,7 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field with a `key` of `location_size` will appear in GraphQL as `cf_location_size` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_custom_field_prefix).
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field with a `key` of `location_size` will appear in GraphQL as `cf_location_size` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../administration/configuration/settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {
@@ -210,7 +210,7 @@ Result
 
 ## Working with Computed Fields
 
-By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_computed_field_prefix).
+By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../administration/configuration/settings.md#graphql_computed_field_prefix).
 
 ```graphql
 {
@@ -247,8 +247,6 @@ Result
     Computed Fields with the prefixed `cpf_` are only available in GraphQL **after** the computed field is created **and** the web service is restarted.
 
 ## Saved Queries
-
-+++ 1.1.0
 
 Queries can now be stored inside of Nautobot, allowing the user to easily rerun previously defined queries.
 

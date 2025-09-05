@@ -18,7 +18,7 @@ class APITestJob(Job):
     var3 = BooleanVar()
     var4 = ObjectVar(model=Role)
 
-    def run(self, var1, var2, var3, var4):
+    def run(self, var1, var2, var3, var4):  # pylint:disable=arguments-differ
         logger.debug(var1)
         logger.info(var2)
         logger.warning(var3)

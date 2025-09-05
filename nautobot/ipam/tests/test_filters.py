@@ -10,6 +10,7 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
@@ -17,24 +18,32 @@ from nautobot.ipam.filters import (
     IPAddressFilterSet,
     IPAddressToInterfaceFilterSet,
     PrefixFilterSet,
+    PrefixLocationAssignmentFilterSet,
     RIRFilterSet,
     RouteTargetFilterSet,
     ServiceFilterSet,
     VLANFilterSet,
     VLANGroupFilterSet,
+    VLANLocationAssignmentFilterSet,
+    VRFDeviceAssignmentFilterSet,
     VRFFilterSet,
+    VRFPrefixAssignmentFilterSet,
 )
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -61,44 +70,56 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     tenancy_related_name = "vrfs"
     # skip testing "rd" attribute for generic q filter test as it's not trivially modifiable
     exclude_q_filter_predicates = ["rd"]
+    generic_filter_tests = (
+        # ("device", "devices__id"),
+        # ("device", "devices__name"),
+        ("export_targets", "export_targets__id"),
+        ("export_targets", "export_targets__name"),
+        ("import_targets", "import_targets__id"),
+        ("import_targets", "import_targets__name"),
+        ("prefix", "prefixes__id"),
+        ("name",),
+        ("namespace", "namespace__id"),
+        ("namespace", "namespace__name"),
+        ("rd",),
+        # ("virtual_machines", "virtual_machines__id"),
+        # ("virtual_machines", "virtual_machines__name"),
+    )
 
     @classmethod
     def setUpTestData(cls):
         instance = cls.queryset.first()
         instance.tags.set(Tag.objects.all()[:2])
 
-    def test_name(self):
-        names = list(self.queryset.values_list("name", flat=True))[:2]
-        params = {"name": names}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names))
-
-    def test_rd(self):
-        vrfs = self.queryset.filter(rd__isnull=False)[:2]
-        params = {"rd": [vrfs[0].rd, vrfs[1].rd]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_import_targets(self):
-        route_targets = list(RouteTarget.objects.filter(importing_vrfs__isnull=False).distinct())[:2]
-        params = {"import_targets": [route_targets[0].pk, route_targets[1].name]}
+    def test_prefix_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
+        params = {"prefix": [prefix.prefix]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(import_targets__in=route_targets).distinct(),
+            self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
             ordered=False,
         )
 
-    def test_export_targets(self):
-        route_targets = list(RouteTarget.objects.filter(exporting_vrfs__isnull=False).distinct())[:2]
-        params = {"export_targets": [route_targets[0].pk, route_targets[1].name]}
+
+class VRFPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VRFPrefixAssignment.objects.all()
+    filterset = VRFPrefixAssignmentFilterSet
+    generic_filter_tests = (
+        ("prefix", "prefix__id"),
+        ("vrf", "vrf__id"),
+        ("vrf", "vrf__name"),
+    )
+
+    def test_prefix_filter_by_string(self):
+        """Test filtering by prefix strings as an alternative to pk."""
+        prefix = self.queryset.first().prefix
+        params = {"prefix": [prefix.prefix]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(export_targets__in=route_targets).distinct(),
+            self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
             ordered=False,
         )
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -107,44 +128,27 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
     tenancy_related_name = "route_targets"
     # skip testing "name" attribute for generic q filter test as it's not trivially modifiable
     exclude_q_filter_predicates = ["name"]
+    generic_filter_tests = (
+        ("exporting_vrfs", "exporting_vrfs__id"),
+        ("exporting_vrfs", "exporting_vrfs__rd"),
+        ("importing_vrfs", "importing_vrfs__id"),
+        ("importing_vrfs", "importing_vrfs__rd"),
+        ("name",),
+    )
 
     @classmethod
     def setUpTestData(cls):
         instance = cls.queryset.first()
         instance.tags.set(Tag.objects.all()[:2])
 
-    def test_name(self):
-        params = {"name": [self.queryset[0].name, self.queryset[1].name, self.queryset[2].name]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-    def test_importing_vrfs(self):
-        vrfs = list(VRF.objects.filter(import_targets__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"importing_vrfs": [vrfs[0].pk, vrfs[1].rd]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(importing_vrfs__in=vrfs).distinct()
-        )
-
-    def test_exporting_vrfs(self):
-        vrfs = list(VRF.objects.filter(export_targets__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"exporting_vrfs": [vrfs[0].pk, vrfs[1].rd]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(exporting_vrfs__in=vrfs).distinct()
-        )
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
-
-class RIRTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class RIRTestCase(FilterTestCases.FilterTestCase):
     queryset = RIR.objects.all()
     filterset = RIRFilterSet
-
-    def test_description(self):
-        descriptions = self.queryset.exclude(description="").values_list("description", flat=True)[:2]
-        params = {"description": list(descriptions)}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+    generic_filter_tests = (
+        ("description",),
+        ("name",),
+    )
 
     def test_is_private(self):
         params = {"is_private": "true"}
@@ -163,6 +167,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
     generic_filter_tests = (
+        ["cloud_networks", "cloud_networks__name"],
         ["date_allocated"],
         ["prefix_length"],
         ["rir", "rir__id"],
@@ -173,6 +178,24 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["status", "status__name"],
         ["type"],
     )
+
+    def test_filters_generic(self):
+        # We usually have type container and network prefixes present
+        # but we need a third value for test_filters_generic() to work.
+        # So this is to ensure we have type pool prefixes in our test data.
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        Prefix.objects.create(
+            prefix="192.0.2.0/30",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        return super().test_filters_generic()
 
     def test_search(self):
         prefixes = Prefix.objects.all()[:2]
@@ -196,6 +219,47 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+
+class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = PrefixLocationAssignment.objects.all()
+    filterset = PrefixLocationAssignmentFilterSet
+    # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+    generic_filter_tests = ()
+    # generic_filter_tests = (
+    #     ["location", "location__name"],
+    #     ["location", "location__id"],
+    # )
+
+    def test_prefix(self):
+        ipv4_prefix = self.queryset.filter(prefix__ip_version=4).first().prefix
+        ipv6_prefix = self.queryset.filter(prefix__ip_version=6).first().prefix
+
+        params = {"prefix": [ipv4_prefix.prefix, ipv6_prefix.pk]}
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix=ipv6_prefix)
+            | self.queryset.filter(
+                prefix__network=ipv4_prefix.network,
+                prefix__prefix_length=ipv4_prefix.prefix_length,
+                prefix__broadcast=ipv4_prefix.broadcast,
+            ),
+            ordered=False,
+        )
+
+        params = {"prefix": [ipv4_prefix.pk, ipv6_prefix.prefix]}
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix=ipv4_prefix)
+            | self.queryset.filter(
+                prefix__network=ipv6_prefix.network,
+                prefix__prefix_length=ipv6_prefix.prefix_length,
+                prefix__broadcast=ipv6_prefix.broadcast,
+            ),
+            ordered=False,
+        )
 
 
 class PrefixFilterCustomDataTestCase(TestCase):
@@ -284,10 +348,20 @@ class PrefixFilterCustomDataTestCase(TestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent4)
         )
+        params = {"parent": ["10.0.0.0/16"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__network="10.0.0.0", parent__prefix_length=16),
+        )
         parent6 = Prefix.objects.get(prefix="2001:db8::/32", namespace=self.namespace)
         params = {"parent": [str(parent6.pk)]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent6)
+        )
+        params = {"parent": ["2001:db8::/32"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__network="2001:db8::", parent__prefix_length=32),
         )
 
     def test_ip_version(self):
@@ -434,6 +508,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
     tenancy_related_name = "ip_addresses"
+    generic_filter_tests = (["nat_inside", "nat_inside__id"],)
 
     @classmethod
     def setUpTestData(cls):
@@ -609,6 +684,20 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             tenant=None,
             status=statuses[0],
             namespace=cls.namespace,
+        )
+        IPAddress.objects.create(
+            address="10.1.1.1/32",
+            tenant=None,
+            status=statuses[0],
+            namespace=cls.namespace,
+            nat_inside=ip0,
+        )
+        IPAddress.objects.create(
+            address="10.2.2.2/32",
+            tenant=None,
+            status=statuses[0],
+            namespace=cls.namespace,
+            nat_inside=ip1,
         )
 
     def test_search(self):
@@ -911,9 +1000,14 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status, role=vm_int_role
+            ),
         ]
 
         IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)
@@ -955,9 +1049,77 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
                 )
 
 
-class VLANGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VRFDeviceAssignment.objects.all()
+    filterset = VRFDeviceAssignmentFilterSet
+    generic_filter_tests = (
+        ["vrf", "vrf__id"],
+        ["vrf", "vrf__name"],
+        ["device", "device__id"],
+        ["device", "device__name"],
+        ["virtual_machine", "virtual_machine__id"],
+        ["virtual_machine", "virtual_machine__name"],
+        ["virtual_device_context", "virtual_device_context__id"],
+        ["virtual_device_context", "virtual_device_context__name"],
+        ["name"],
+        ["rd"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        # Creating VRFDeviceAssignment instances manually until VRFFactory is enhanced to generate VRFDeviceAssignments
+        cls.vrfs = VRF.objects.all()
+        cls.devices = Device.objects.all()
+        cls.vdcs = VirtualDeviceContext.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0])
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        cls.test_vm_1 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        cls.test_vm_2 = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="VM 2",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_machine=cls.test_vm_1,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            virtual_machine=cls.test_vm_2,
+            rd="65000:4",
+        )
+
+
+class VLANGroupTestCase(FilterTestCases.FilterTestCase):
     queryset = VLANGroup.objects.all()
     filterset = VLANGroupFilterSet
+    generic_filter_tests = (
+        ("description",),
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ("location", "location__id"),
+        # ("location", "location__name"),
+        ("name",),
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -977,26 +1139,21 @@ class VLANGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
         VLANGroup.objects.create(name="VLAN Group 3", location=cls.locations[2], description="C")
         VLANGroup.objects.create(name="VLAN Group 4", location=None)
 
-    def test_description(self):
-        descriptions = list(VLANGroup.objects.exclude(description="").values_list("description", flat=True)[:2])
-        params = {"description": descriptions}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_location(self):
-        params = {"location": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(location__in=params["location"])
-        )
-        params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
-        )
-
 
 class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = VLAN.objects.all()
     filterset = VLANFilterSet
     tenancy_related_name = "vlans"
+    generic_filter_tests = (
+        ("name",),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+        ("vid",),
+        ("vlan_group", "vlan_group__id"),
+        ("vlan_group", "vlan_group__name"),
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -1082,16 +1239,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         vlans[0].tags.set(Tag.objects.all()[:2])
         vlans[1].tags.set(Tag.objects.all()[:2])
 
-    def test_name(self):
-        names = list(VLAN.objects.all().values_list("name", flat=True)[:2])
-        params = {"name": names}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(name__in=names))
-
-    def test_vid(self):
-        vids = list(VLAN.objects.all().values_list("vid", flat=True)[:3])
-        params = {"vid": vids}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vid__in=vids))
-
     def test_location(self):
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqual(
@@ -1114,31 +1261,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             self.queryset.filter(locations__name__in=params["locations"]).distinct(),
         )
 
-    def test_vlan_group(self):
-        groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        filter_params = [{"vlan_group": [groups[0].pk, groups[1].pk]}, {"vlan_group": [groups[0].pk, groups[1].name]}]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups)
-            )
-
-    def test_role(self):
-        roles = Role.objects.get_for_model(VLAN)[:2]
-        params = {"role": [roles[0].pk, roles[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(role__in=[roles[0], roles[1]])
-        )
-
-    def test_status(self):
-        statuses = list(Status.objects.get_for_model(VLAN).filter(vlans__isnull=False).distinct())[:2]
-        params = {"status": [statuses[0].name, statuses[1].id]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
     def test_available_on_device(self):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
@@ -1153,6 +1275,44 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(locations__in=[device.location]) | Q(locations__isnull=True)),
         )
+
+
+class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VLANLocationAssignment.objects.all()
+    filterset = VLANLocationAssignmentFilterSet
+
+    generic_filter_tests = (
+        ["vlan", "vlan__vid"],
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ["location", "location__name"],
+        # ["location", "location__id"],
+    )
+
+    def test_q_filter_vlan__vid_predicate(self):
+        vlan = VLAN.objects.first()
+        vlan_ct = ContentType.objects.get_for_model(vlan)
+        vlan_vid = vlan.vid
+
+        # Exclude any locations that might cause conflicts with our FilterSet TestCase,
+        # the 'VLANLocationAssignmentFilterSet' `q` field filters
+        # based on both `vlan__vid` and `location__name`. We want to ensure that
+        # the location names do not contain the VLAN ID to avoid collisions.
+        vlan_location_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid).exclude(
+            location__name__icontains=vlan_vid
+        )
+        # If we don't have enough queryset items for testing (less than 5),
+        # add 5 VLANLocationAssignments to test on.
+        if vlan_location_queryset.count() < 5:
+            locations = Location.objects.filter(location_type__content_types__in=[vlan_ct]).exclude(
+                name__icontains=vlan_vid
+            )[:5]
+            vlan.locations.set(locations)
+
+        params = {"q": vlan_vid}
+        queryset = VLANLocationAssignment.objects.exclude(location__name__icontains=vlan_vid)
+        filterset = VLANLocationAssignmentFilterSet(params, queryset).qs
+        expected_queryset = queryset.filter(vlan__vid__exact=vlan_vid)
+        self.assertQuerysetEqualAndNotEmpty(filterset, expected_queryset)
 
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):
@@ -1256,8 +1416,3 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
     def test_ports(self):
         params = {"ports": "1001"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)

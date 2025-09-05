@@ -1,7 +1,5 @@
 # Job Buttons
 
-+++ 1.5.14
-
 Job Buttons are predefined buttons that allow users to run jobs directly from within Nautobot object views. It uses the object where the button was pressed as the only input to the job. These are helpful when you want to start a job that requires minimal or no input without having to use the standard job form. For example, you may have a job that only requires a user to select a device. Instead, they can now go to that device in the web UI and click the associated Job Button instead.
 
 Job Buttons can be created in web UI located in the navbar under Jobs > Job Buttons. Each button can be associated with multiple Nautobot object types (location, device, prefix, etc.) and will be displayed on all of the associated object detail views. The text displayed on the button supports Jinja2 templating which allows for using [context data](#context-data) to dynamically update or [even be hidden under certain conditions](#conditional-rendering).
@@ -13,18 +11,19 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Name** - A unique name for the Job Button.
 * **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
 * **Text** - The text that will be displayed on the button.
-* **Job** - The [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers) that this button will run.
+* **Job** - The [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers) that this button will run.
+* **Enabled** - Whether this Job Button will appear in relevant UI. A Job Button may be disabled if, for example, the underlying Job Button Receiver is uninstalled or temporarily disabled.
 * **Weight** - The number used for determining the order the buttons will appear.
 * **Group** - The name of the dropdown group to add this button into (optional).
 * **Button Class** - The button CSS class, which dictates the color.
 * **Confirmation** - Should the button pop up a confirmation dialog before running.
 
-!!! warning
-    As you can see, there is no `commit` option for a Job Button like there is for a normal Job. All Job Buttons will run with `commit=True` **implicitly**.
++++ 2.2.6
+    The `enabled` field was added to Job Buttons to allow them to be temporarily disabled.
 
 ![Job Button Form](../../../media/models/jobbutton_form.png "Job Button Form")
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./index.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 ## Required Permissions
 

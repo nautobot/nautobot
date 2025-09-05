@@ -1,3 +1,0 @@
-Renamed `Plugins` navigation menu to `Apps`. Apps that add to this menu are encouraged to update their `navigation.py` to use the new name.
-Renamed `Installed Plugins` view to `Installed Apps`.
-Changed permissions on the `Installed Apps` views to be visible to all authenticated users, not just staff/superuser accounts.

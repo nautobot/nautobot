@@ -22,7 +22,7 @@ def fixup_null_ip_version_values(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0042_remove_location_from_vlan"),
+        ("ipam", "0042_remove_location_from_vlan_and_prefix"),
     ]
 
     operations = [migrations.RunPython(fixup_null_ip_version_values, migrations.RunPython.noop)]

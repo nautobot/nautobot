@@ -1,6 +1,5 @@
 # Used to integrate with Microsoft VS Code remote debug feature.
 ---
-version: "3.4"
 services:
   nautobot:
     ports:

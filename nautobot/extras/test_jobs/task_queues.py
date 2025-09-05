@@ -16,7 +16,7 @@ class TestWorkerQueues(Job):
             "nonexistent",  # This queue doesn't exist and should have zero workers
         ]
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         pass
 
 

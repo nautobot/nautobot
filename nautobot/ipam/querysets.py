@@ -1,11 +1,13 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
+from nautobot.ipam.mixins import LocationToLocationsQuerySetMixin
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -55,7 +57,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
             return call_map[version](search)
 
         except netaddr.core.AddrFormatError:
-            ver_map = {4: "0/32", 6: "::/128"}
+            ver_map = {4: "0.0.0.0/32", 6: "::/128"}
             return netaddr.IPNetwork(ver_map[version])
 
     def _check_and_prep_ipv6(self, search):
@@ -194,7 +196,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return ip, last_ip
 
 
-class PrefixQuerySet(BaseNetworkQuerySet):
+class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
     def net_equals(self, *prefixes):
@@ -354,7 +356,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         """
         # Validate that it's a real CIDR
         cidr = self._validate_cidr(cidr)
-        broadcast = str(cidr.broadcast or cidr.ip)
+        broadcast = str(cidr.broadcast or cidr[-1])
         ip_version = cidr.version
 
         try:
@@ -364,7 +366,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
 
         # Prepare the queryset filter
         lookup_kwargs = {
-            "network__lte": cidr.value,
+            "network__lte": cidr.network,
             "prefix_length__gte": shortest_prefix_length,
             "broadcast__gte": broadcast,
             "ip_version": ip_version,
@@ -374,7 +376,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         # we can choose the first one.
         possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
         if not include_self:
-            possible_ancestors = possible_ancestors.exclude(network=cidr.value, prefix_length=cidr.prefixlen)
+            possible_ancestors = possible_ancestors.exclude(network=cidr.network, prefix_length=cidr.prefixlen)
 
         # If we've got any matches, the first one is our closest parent.
         try:
@@ -395,6 +397,37 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         IP address as a /32 or /128.
         """
         return super().order_by("host")
+
+    def get_or_create(self, defaults=None, **kwargs):
+        from nautobot.ipam.models import get_default_namespace, Prefix
+
+        parent = kwargs.get("parent")
+        namespace = kwargs.pop("namespace", None)
+        host = kwargs.get("host")
+        mask_length = kwargs.get("mask_length")
+        address = kwargs.get("address")
+        if host is None and address is not None:
+            address = netaddr.IPNetwork(address)
+            host = str(address.ip)
+            mask_length = address.prefixlen
+
+        # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
+        if parent is None and host is not None and mask_length is not None:
+            if namespace is None:
+                namespace = get_default_namespace()
+            cidr = f"{host}/{mask_length}"
+
+            try:
+                validate_ipv46_address(host)
+            except ValidationError as err:
+                raise ValidationError({"host": err.error_list}) from err
+            try:
+                netaddr.IPNetwork(cidr)
+            except netaddr.AddrFormatError as err:
+                raise ValidationError(f"{cidr} does not appear to be an IPv4 or IPv6 network.") from err
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(cidr=cidr, include_self=True)
+            kwargs["parent"] = parent
+        return super().get_or_create(defaults=defaults, **kwargs)
 
     def string_search(self, search):
         """
@@ -474,3 +507,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             q |= Q(pk__in=pk_values)
 
         return super().filter(q)
+
+
+class VLANQuerySet(LocationToLocationsQuerySetMixin, RestrictedQuerySet):
+    """Queryset for `VLAN` objects."""

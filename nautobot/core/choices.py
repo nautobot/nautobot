@@ -11,27 +11,6 @@ class ChoiceSetMeta(type):
         choices = getattr(cls, "CHOICES", ())
         return iter(choices)
 
-    def __getattribute__(cls, attr):
-        """
-        Overrides the default __getattribute__ method to provide custom behavior when accessing attributes of a ChoiceSet
-        instance. If the attribute name is an uppercase string and not equal to 'CHOICES', this method returns a new class
-        instance of the same type as the original attribute value, but with an additional 'label' property. This 'label'
-        property looks up the choice label for the given attribute value in the 'CHOICES' sequence and returns it.
-        """
-        value = super().__getattribute__(attr)
-        # Check if the attribute is a member of the CHOICES sequence and is uppercase;
-        # Mostly only ChoiceSet choices are uppercase
-        if attr != "CHOICES" and attr.isupper():
-            choices = cls.as_dict()
-
-            class Choice(value.__class__):
-                @property
-                def label(self):
-                    return choices.get(self)
-
-            return Choice(value)
-        return value
-
 
 class ChoiceSet(metaclass=ChoiceSetMeta):
     """
@@ -203,18 +182,19 @@ class ButtonActionColorChoices(ChoiceSet):
     Map standard button actions to Bootstrap color classes.
     """
 
-    ADD = "info"
+    ADD = "primary"
     CANCEL = "default"
     CLONE = "success"
     CONFIGURE = "default"
     CONNECT = "success"
     DEFAULT = "default"
     DELETE = "danger"
-    DISCONNECT = "info"
+    DISCONNECT = "danger"
     EDIT = "warning"
     EXPORT = "success"
     IMPORT = "primary"
     INFO = "info"
+    RENAME = "warning"
     SUBMIT = "primary"
     SWAP = "primary"
 
@@ -231,6 +211,7 @@ class ButtonActionColorChoices(ChoiceSet):
         (EXPORT, "Export"),
         (IMPORT, "Import"),
         (INFO, "Info"),
+        (RENAME, "Rename"),
         (SUBMIT, "Submit"),
         (SWAP, "Swap"),
     )
@@ -257,6 +238,7 @@ class ButtonActionIconChoices(ChoiceSet):
     LOCK = "mdi-lock"
     MAGNIFY = "mdi-magnify"
     NOTE = "mdi-note-text"
+    RENAME = "mdi-pencil"
     SWAP = "mdi-swap-vertical"
     TRASH = "mdi-trash-can-outline"
 
@@ -277,6 +259,7 @@ class ButtonActionIconChoices(ChoiceSet):
         (LOCK, "Lock"),
         (MAGNIFY, "Magnify"),
         (NOTE, "Note"),
+        (RENAME, "Rename"),
         (SWAP, "Swap"),
         (TRASH, "Trash"),
     )

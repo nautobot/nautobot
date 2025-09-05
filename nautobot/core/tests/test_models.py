@@ -72,6 +72,15 @@ class NaturalKeyTestCase(BaseModelTest):
         dt = DeviceType.objects.first()
         self.assertEqual(dt.natural_key(), [dt.manufacturer.name, dt.model])
 
+    def test_natural_key_with_proxy_model(self):
+        """Test that natural_key_field_lookups function returns the same value as its base class."""
+
+        class ProxyManufacturer(Manufacturer):
+            class Meta:
+                proxy = True
+
+        self.assertEqual(ProxyManufacturer.natural_key_field_lookups, Manufacturer.natural_key_field_lookups)
+
     @skip("Composite keys aren't being supported at this time")
     def test_composite_key(self):
         """Test the composite_key default implementation with some representative models."""
@@ -113,7 +122,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached
@@ -127,7 +136,7 @@ class NaturalKeyTestCase(BaseModelTest):
             self.assertEqual(mock__content_type.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
@@ -136,7 +145,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached

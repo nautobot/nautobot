@@ -4919,7 +4919,8 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 }
 .label {
   display: inline;
-  padding: 0.2em 0.6em 0.3em;
+  padding: -webkit-calc(0.2em - 1px) -webkit-calc(0.6em - 1px) -webkit-calc(0.3em - 1px);
+  padding: calc(0.2em - 1px) calc(0.6em - 1px) calc(0.3em - 1px);
   font-size: 75%;
   font-weight: 700;
   line-height: 1;
@@ -4927,11 +4928,13 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
   text-align: center;
   white-space: nowrap;
   vertical-align: baseline;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 1px;
   border-radius: 0.25em;
 }
 a.label:hover,
 a.label:focus {
-  color: #ffffff;
   text-decoration: none;
   cursor: pointer;
 }
@@ -4943,46 +4946,81 @@ a.label:focus {
   top: -1px;
 }
 .label-default {
+  color: #ffffff;
   background-color: #919396;
+  border-color: transparent;
 }
 .label-default[href]:hover,
 .label-default[href]:focus {
+  color: #ffffff;
   background-color: #77797d;
+  border-color: rgba(0, 0, 0, 0);
+}
+.label-transparent {
+  color: #007dff;
+  background-color: transparent;
+  border-color: #007dff;
+}
+.label-transparent[href]:hover,
+.label-transparent[href]:focus {
+  color: #007dff;
+  background-color: rgba(0, 0, 0, 0);
+  border-color: #005fc2;
 }
 .label-primary {
+  color: #ffffff;
   background-color: #007dff;
+  border-color: transparent;
 }
 .label-primary[href]:hover,
 .label-primary[href]:focus {
+  color: #ffffff;
   background-color: #0064cc;
+  border-color: rgba(0, 0, 0, 0);
 }
 .label-success {
+  color: #ffffff;
   background-color: #169f32;
+  border-color: transparent;
 }
 .label-success[href]:hover,
 .label-success[href]:focus {
+  color: #ffffff;
   background-color: #107224;
+  border-color: rgba(0, 0, 0, 0);
 }
 .label-info {
+  color: #ffffff;
   background-color: #0938e1;
+  border-color: transparent;
 }
 .label-info[href]:hover,
 .label-info[href]:focus {
+  color: #ffffff;
   background-color: #072cb0;
+  border-color: rgba(0, 0, 0, 0);
 }
 .label-warning {
+  color: #ffffff;
   background-color: #ff8000;
+  border-color: transparent;
 }
 .label-warning[href]:hover,
 .label-warning[href]:focus {
+  color: #ffffff;
   background-color: #cc6600;
+  border-color: rgba(0, 0, 0, 0);
 }
 .label-danger {
+  color: #ffffff;
   background-color: #e01f1f;
+  border-color: transparent;
 }
 .label-danger[href]:hover,
 .label-danger[href]:focus {
+  color: #ffffff;
   background-color: #b31919;
+  border-color: rgba(0, 0, 0, 0);
 }
 .badge {
   display: inline-block;

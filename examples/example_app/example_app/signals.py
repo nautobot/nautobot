@@ -1,4 +1,5 @@
 """Signal handlers for the example_app."""
+
 EXAMPLE_APP_CUSTOM_FIELD_DEFAULT = "Default value"
 EXAMPLE_APP_CUSTOM_FIELD_NAME = "example_app_auto_custom_field"  # Note underscores rather than dashes!
 

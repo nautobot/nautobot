@@ -1,4 +1,3 @@
-<!-- markdownlint-disable MD024 -->
 # Nautobot v1.3
 
 This document describes all new features and changes in Nautobot 1.3.
@@ -43,7 +42,7 @@ For more details please refer to the [Jobs feature documentation](../user-guide/
 
 #### Jobs With Sensitive Parameters ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
-Jobs model now includes a [`has_sensitive_variables`](../user-guide/platform-functionality/jobs/index.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
+Jobs model now includes a [`has_sensitive_variables`](../development/jobs/job-structure.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
 
 #### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
@@ -81,7 +80,7 @@ The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive reg
 
 #### Remove Stale Scheduled Jobs ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
-[remove_stale_scheduled_jobs](../user-guide/administration/tools/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
+[`remove_stale_scheduled_jobs`](../user-guide/administration/tools/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 
@@ -156,7 +155,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## v1.3.10 (2022-08-08)
 
-### Security
+### Security in v1.3.10
 
 !!! important
     With introducing the `has_sensitive_variables` flag on Job classes and model (see: [#2091](https://github.com/nautobot/nautobot/issues/2091)), jobs can be prevented from storing their inputs in the database. Due to the nature of queuing or scheduling jobs, the desired inputs must be stored for future use.
@@ -171,7 +170,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
     **Note:** Leveraging the Secrets and Secret Groups features in Jobs does not need to be considered a sensitive variable. Secrets are retrieved by reference at run time, which means no secret value is stored directly in the database.
 
-### Added
+### Added in v1.3.10
 
 - [#1226](https://github.com/nautobot/nautobot/issues/1226) - Added custom job intervals package management.
 - [#2073](https://github.com/nautobot/nautobot/pull/2073) - Added `--local` option to `nautobot-server runjob` command.
@@ -179,39 +178,39 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#2091](https://github.com/nautobot/nautobot/issues/2091) - Added `remove_stale_scheduled_jobs` management command which removes all stale scheduled jobs and also added `has_sensitive_variables` field to Job model which prevents the job's input parameters from being saved to the database.
 - [#2143](https://github.com/nautobot/nautobot/pull/2143) - Scheduled Job detail view now includes details of any custom interval.
 
-### Changed
+### Changed in v1.3.10
 
 - [#2114](https://github.com/nautobot/nautobot/issues/2114) - Home page now redirects to the login page when `HIDE_RESTRICTED_UI` is enabled and user is not authenticated.
 
-### Fixed
+### Fixed in v1.3.10
 
 - [#1739](https://github.com/nautobot/nautobot/issues/1739) - Fixed paginator not enforcing `max_page_size` setting in web UI views.
 - [#2060](https://github.com/nautobot/nautobot/issues/2060) - Fixed relationship `peer_id` filter non-existent error on relationship association page.
 - [#2095](https://github.com/nautobot/nautobot/issues/2095) - Fixed health check failing with Redis Sentinel, TLS configuration.
 
-### Dependencies
+### Dependencies in v1.3.10
 
 - [#2115](https://github.com/nautobot/nautobot/pull/2115) - Patch updates to `mkdocs`, `svgwrite`.
 
-### Housekeeping
+### Housekeeping in v1.3.10
 
 - [#2025](https://github.com/nautobot/nautobot/pull/2025) - Tweak Renovate config for automated package management.
 - [#2119](https://github.com/nautobot/nautobot/pull/2119) - Fixed flaky integration test for cable connection UI.
 
 ## v1.3.9 (2022-07-25)
 
-### Added
+### Added in v1.3.9
 
 - [#1595](https://github.com/nautobot/nautobot/issues/1595) - Add ability to specify uWSGI buffer size via environment variable.
 - [#1757](https://github.com/nautobot/nautobot/issues/1757) - Added nullable face, position to Device bulk edit form to provided desired behavior to bulk assigning to a new rack.
 
-### Changed
+### Changed in v1.3.9
 
 - [#386](https://github.com/nautobot/nautobot/issues/386) - Clarified messaging in API for rack position occupied.
 - [#1356](https://github.com/nautobot/nautobot/issues/1356) - Virtual chassis master device interface list is less confusing.
 - [#2045](https://github.com/nautobot/nautobot/pull/2045) - Clarified Job authoring around proper class inheritance.
 
-### Fixed
+### Fixed in v1.3.9
 
 - [#1035](https://github.com/nautobot/nautobot/issues/1035) - Fix assertion raised if SLAAC Status is missing when creating `IPAddress` objects
 - [#1694](https://github.com/nautobot/nautobot/issues/1694) - Fixed CablePath not found error when disconnects/delete action performed on a cable
@@ -224,72 +223,72 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#2077](https://github.com/nautobot/nautobot/issues/2077) - Fixed an error when viewing object detail pages after uninstalling a plugin but still having RelationshipAssociations involving the plugin's models.
 - [#2081](https://github.com/nautobot/nautobot/issues/2081) - Fixed error raised if status connected not found when creating a cable
 
-### Documentation
+### Documentation in v1.3.9
 
 - [#860](https://github.com/nautobot/nautobot/issues/860) - Added documentation that adding device component to device type does not modify existing device instances
 - [#2036](https://github.com/nautobot/nautobot/pull/2036) - Fixed outdated UI navigation references in documentation.
 
 ## v1.3.8 (2022-07-11)
 
-### Security
+### Security in v1.3.8
 
 !!! important
     CVE in Django versions `>= 3.2, < 3.2.14`. This update upgrades Django to `3.2.14`.
 
 - [#2004](https://github.com/nautobot/nautobot/pull/2004) - Bump Django from 3.2.13 to 3.2.14 for for [CVE-2022-34265](https://github.com/advisories/GHSA-p64x-8rxx-wf6q).
 
-### Added
+### Added in v1.3.8
 
 - [#1464](https://github.com/nautobot/nautobot/issues/1464) - Added "Continue with SSO" link on login page.
 
-### Changed
+### Changed in v1.3.8
 
 - [#1407](https://github.com/nautobot/nautobot/issues/1407) - Changed custom field export column headings to prefix with `cf_`.
 - [#1603](https://github.com/nautobot/nautobot/issues/1603) - Changed GraphQL schema generation to call time for GraphQL API.
 
-### Fixed
+### Fixed in v1.3.8
 
 - [#1838](https://github.com/nautobot/nautobot/issues/1838) - Fixed job result to show latest not oldest.
 - [#1874](https://github.com/nautobot/nautobot/issues/1874) - Fixed Git repo sync issue with Sentinel with deprecated `rq_count` check.
 
-### Dependencies
+### Dependencies in v1.3.8
 
 - [#2020](https://github.com/nautobot/nautobot/pull/2020) - Updated `celery >= 5.2.7`, `django-jinja >= 2.10.2`, and `mysqlclient >= 2.1.1` versions in lock file (patch updates).
 
-### Housekeeping
+### Housekeeping in v1.3.8
 
 - [#1977](https://github.com/nautobot/nautobot/pull/1977) - Updated Renovate config to batch updates (additional PRs included to further refine config).
 
 ## v1.3.7 (2022-06-27)
 
-### Added
+### Added in v1.3.7
 
 - [#1900](https://github.com/nautobot/nautobot/issues/1900) - Added ability to filter Git repository table based on provided contents.
 
-### Changed
+### Changed in v1.3.7
 
 - [#1645](https://github.com/nautobot/nautobot/issues/1645) - Hide search bar for unauthenticated users if `HIDE_RESTRICTED_UI` is True
 - [#1946](https://github.com/nautobot/nautobot/pull/1946) - Increase character limit on `FileAttachment.mimetype` to 255 to allow for all mime types to be used.
 
-### Fixed
+### Fixed in v1.3.7
 
 - [#1677](https://github.com/nautobot/nautobot/issues/1677) - Fixed default values of custom fields on device components (such as Interface) not being applied upon Device creation.
 - [#1769](https://github.com/nautobot/nautobot/issues/1769) - Resolve missing menu 'General / Installed Plugins' in navbar if `HIDE_RESTRICTED_UI` is activated
 - [#1836](https://github.com/nautobot/nautobot/issues/1836) - Fixed incorrect pre-population of custom field filters in table views.
 - [#1870](https://github.com/nautobot/nautobot/issues/1870) - Fixed cable `_abs_length` validation error.
 
-### Documentation
+### Documentation in v1.3.7
 
 - [#1941](https://github.com/nautobot/nautobot/pull/1941) - Fixed uWSGI config example, development environment links in Docker section of docs.
 
-### Housekeeping
+### Housekeeping in v1.3.7
 
 - [#1896](https://github.com/nautobot/nautobot/pull/1856) - Added Renovate Bot configuration, targeting `next`.
 - [#1948](https://github.com/nautobot/nautobot/issues/1948) - Switched Renovate Bot configuration to bump lock-file only on patch releases instead of bumping in `pyproject.toml`.
 
 ## v1.3.6 (2022-06-13)
 
-### Fixed
+### Fixed in v1.3.6
 
 - [#1409](https://github.com/nautobot/nautobot/issues/1409) - Fixed page title on device status (NAPALM) page template.
 - [#1524](https://github.com/nautobot/nautobot/issues/1524) - Fixed valid "None" option removed from search field upon display.
@@ -300,21 +299,21 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1841](https://github.com/nautobot/nautobot/issues/1841) - Fixed incorrect display of boolean values in Git Repository view.
 - [#1850](https://github.com/nautobot/nautobot/pull/1850) - Added `{{block.super}}` to negate the override from the js block in rack.html. This change fixed the issue of unable to navigate away from rack changelog tab.
 
-### Documentation
+### Documentation in v1.3.6
 
 - [#207](https://github.com/nautobot/nautobot/issues/207) - Update permissions documentation to add assigning permissions section.
 - [#1763](https://github.com/nautobot/nautobot/issues/1763) - Job testing documentation updated to include details around enabling jobs. Job logs database added to `TransactionTestCase`.
 - [#1856](https://github.com/nautobot/nautobot/pull/1856) - Updated links to Slack community.
 - [#1868](https://github.com/nautobot/nautobot/pull/1868) - Updated link to advanced Docker compose use in getting started guide.
 
-### Housekeeping
+### Housekeeping in v1.3.6
 
 - [#1829](https://github.com/nautobot/nautobot/pull/1829) - Change Docker build GitHub Action to cache with matrix awareness.
 - [#1848](https://github.com/nautobot/nautobot/pull/1848) - Fix Poetry cache issue in CI causing version tests to fail in `next`.
 
 ## v1.3.5 (2022-05-30)
 
-### Security
+### Security in v1.3.5
 
 !!! attention
     `PyJWT` - Nautobot does not directly depend on `PyJWT` so your upgrading Nautobot via `pip` or other package management tools may not pick up the patched version (we are not pinning this dependency). However some tools support an "eager" upgrade policy as an option. For example, `pip install --upgrade --upgrade-strategy eager nautobot` will upgrade Nautobot and all it's dependencies to their latest compatible version. This may not work for all use cases so it may be safer to update Nautobot then perform `pip install --upgrade PyJWT`.
@@ -323,7 +322,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 - [#1808](https://github.com/nautobot/nautobot/pull/1808) - Bump PyJWT from 2.3.0 to 2.4.0
 
-### Fixed
+### Fixed in v1.3.5
 
 - [#895](https://github.com/nautobot/nautobot/issues/895) - Fixed validation when creating `Interface` and `VMInterface` objects via the REST API while specifying `untagged_vlan` without `mode` also set in the payload. A 400 error will now be raised as expected.
 - [#1289](https://github.com/nautobot/nautobot/issues/1289) - Fixed issue where job result live pagination would reset to page 1 on refresh. The currently selected page will now persist until the job run completes.
@@ -335,12 +334,12 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1772](https://github.com/nautobot/nautobot/issues/1772) - Fix RelationshipAssociationSerializer not triggering model clean method.
 - [#1784](https://github.com/nautobot/nautobot/issues/1784) - Fix `nautobot-server dumpdata` not working due to `django_rq` update. Updated documentation.
 
-### Documentation
+### Documentation in v1.3.5
 
 - [#1606](https://github.com/nautobot/nautobot/issues/1606) - Added best practices for working with FilterSet classes to developer documentation.
 - [#1796](https://github.com/nautobot/nautobot/issues/1796) - Added documentation for using Git Repositories behind/via proxies.
 
-### Housekeeping
+### Housekeeping in v1.3.5
 
 - [#1805](https://github.com/nautobot/nautobot/pull/1805) - Fix git pre-commit hook incompatibility with dash shell and add warning on skipped tests.
 - [#1811](https://github.com/nautobot/nautobot/pull/1811) - Added developer Docker container for running mkdocs instead of locally.
@@ -348,16 +347,16 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## v1.3.4 (2022-05-16)
 
-### Security
+### Security in v1.3.4
 
-- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../user-guide/administration/configuration/settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
 
-### Added
+### Added in v1.3.4
 
 - [#1766](https://github.com/nautobot/nautobot/pull/1766) - Added configuration for downloaded filename branding.
 - [#1752](https://github.com/nautobot/nautobot/pull/1752) - Added a new `SearchFilter` that is now used on all core filtersets to provide the `q=` search parameter for basic searching in list view of objects.
 
-### Fixed
+### Fixed in v1.3.4
 
 - [#1263](https://github.com/nautobot/nautobot/issues/1263) - Rack device image toggle added back to detail UI.
 - [#1449](https://github.com/nautobot/nautobot/issues/1449) - Fixed a performance bug in `/api/dcim/devices/` and `/api/virtualization/virtual-machines/` relating to configuration contexts.
@@ -365,7 +364,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1712](https://github.com/nautobot/nautobot/issues/1712) - Fixed circuit termination detail view getting 500 response when it's a provider network.
 - [#1755](https://github.com/nautobot/nautobot/issues/1755) - Fixed "Select All" helper widget from taking full UI height.
 
-### Documentation
+### Documentation in v1.3.4
 
 - [#1744](https://github.com/nautobot/nautobot/issues/1744) - Updated REST API token provisioning docs to include added in version.
 - [#1751](https://github.com/nautobot/nautobot/pull/1751) - Updated secrets documentation advisory notes.
@@ -373,16 +372,16 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## v1.3.3 (2022-05-02)
 
-### Added
+### Added in v1.3.3
 
 - [#1481](https://github.com/nautobot/nautobot/issues/1481) - Pre-Generate Docs, Add Support for Plugin-Provided Docs
 - [#1617](https://github.com/nautobot/nautobot/pull/1617) - Added `run_job_for_testing` helper method for testing Jobs in plugins, internally.
 
-### Changed
+### Changed in v1.3.3
 
 - [#1481](https://github.com/nautobot/nautobot/issues/1481) - Docs link in footer now opens link to bundled documentation instead of Read the Docs.
 
-### Fixed
+### Fixed in v1.3.3
 
 - [#473](https://github.com/nautobot/nautobot/issues/473) - Fix `get_return_url` for plugin reverse URLs.
 - [#1430](https://github.com/nautobot/nautobot/issues/1430) - Fix not being able to print Job results, related IPs.
@@ -395,65 +394,65 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1701](https://github.com/nautobot/nautobot/pull/1701) - Fix static file serving of drf-spectacular-sidecar assets when using alternative `STATICFILES_STORAGE` settings.
 - [#1705](https://github.com/nautobot/nautobot/pull/1705) - Fix `NestedVMInterfaceSerializer` referencing the wrong model.
 
-### Dependencies
+### Dependencies in v1.3.3
 
 - [#1680](https://github.com/nautobot/nautobot/pull/1680) - Bump netutils dependency to 1.1.0.
 - [#1700](https://github.com/nautobot/nautobot/pull/1700) - Revert vendoring `drf-spectacular`.
 
-### Documentation
+### Documentation in v1.3.3
 
 - [#1697](https://github.com/nautobot/nautobot/pull/1697) - Fix docs incorrectly stating Celery Redis URLs defaulting from CACHES.
 
-### Housekeeping
+### Housekeeping in v1.3.3
 
 - [#1685](https://github.com/nautobot/nautobot/issues/1685) - Fix Hadolint issue of `docker/Dockerfile`.
 
 ## v1.3.2 (2022-04-22)
 
-### Security
+### Security in v1.3.2
 
 !!! important
     Critical CVEs in Django versions `>= 3.2, < 3.2.13`. This update upgrades Django to `3.2.13`.
 
 - [#1686](https://github.com/nautobot/nautobot/pull/1686) - Implemented fixes for [CVE-2022-28347](https://github.com/advisories/GHSA-w24h-v9qh-8gxj) and [CVE-2022-28346](https://github.com/advisories/GHSA-2gwj-7jmv-h26r) to require Django >=3.2.13.
 
-### Added
+### Added in v1.3.2
 
 - [#1219](https://github.com/nautobot/nautobot/pull/1219) - Add ARM64 support (alpha).
 
-### Changed
+### Changed in v1.3.2
 
-- [#1670](https://github.com/nautobot/nautobot/pull/1670) - Configure drf-spectacular schema to more closely match drf-yasg (related to: [nautobot-ansible#135](https://github.com/nautobot/nautobot-ansible/pull/135)).
+- [#1670](https://github.com/nautobot/nautobot/pull/1670) - Configure `drf-spectacular` schema to more closely match `drf-yasg` (related to: [`nautobot-ansible#135`](https://github.com/nautobot/nautobot-ansible/pull/135)).
 
-### Fixed
+### Fixed in v1.3.2
 
 - [#1682](https://github.com/nautobot/nautobot/issues/1682) - Fixed Nautobot health checks failing if Redis Sentinel password is required.
 
-### Documentation
+### Documentation in v1.3.2
 
 - [#1426](https://github.com/nautobot/nautobot/issues/1426) - Added plugin development documentation around using ObjectListView.
 - [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/core/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
 - [#1666](https://github.com/nautobot/nautobot/pull/1666) - Fixed errors in documentation with incomplete import statements.
 - [#1667](https://github.com/nautobot/nautobot/issues/1667) - Updated README.md screenshots.
 
-### Housekeeping
+### Housekeeping in v1.3.2
 
 - [#1674](https://github.com/nautobot/nautobot/pull/1674) - Added flag in Dockerfile, tasks.py to enable Poetry install parallelization.
 
 ## v1.3.1 (2022-04-19)
 
-### Changed
+### Changed in v1.3.1
 
 - [#1647](https://github.com/nautobot/nautobot/pull/1647) - Changed class inheritance of JobViewSet to be simpler and more self-consistent.
 
-### Fixed
+### Fixed in v1.3.1
 
 - [#1278](https://github.com/nautobot/nautobot/issues/1278) - Fixed several different errors that could be raised when working with RelationshipAssociations.
 - [#1662](https://github.com/nautobot/nautobot/issues/1662) - Fixed `nat_outside` prefetch on Device API view, and displaying multiple `nat_outside` entries on VM detail view.
 
 ## v1.3.0 (2022-04-18)
 
-### Added
+### Added in v1.3.0
 
 - [#630](https://github.com/nautobot/nautobot/issues/630) - Added support for multiple NAT outside IP addresses.
 - [#872](https://github.com/nautobot/nautobot/issues/872) - Added ability to scope tags to content types.
@@ -464,7 +463,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1525](https://github.com/nautobot/nautobot/issues/1525) - Implemented support for regex lookup expressions for `BaseFilterSet` filter fields in the API.
 - [#1638](https://github.com/nautobot/nautobot/issues/1638) - Implemented numerous indexes on models natural lookup fields as well as some index togethers for `ObjectChange`.
 
-### Changed
+### Changed in v1.3.0
 
 - [#595](https://github.com/nautobot/nautobot/issues/595) - Migrated from `drf-yasg` (OpenAPI 2.0) to `drf-spectacular` (OpenAPI 3.0) for REST API interactive Swagger documentation.
 - [#792](https://github.com/nautobot/nautobot/issues/792) - Poetry-installed dependencies are now identical between `dev` and `final` images.
@@ -473,7 +472,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1502](https://github.com/nautobot/nautobot/issues/1502) Finalized Dynamic Groups implementation for 1.3 release (including documentation and integration tests).
 - [#1521](https://github.com/nautobot/nautobot/pull/1521) - Consolidated Job REST API endpoints, taking advantage of REST API versioning.
 
-### Fixed
+### Fixed in v1.3.0
 
 - [#794](https://github.com/nautobot/nautobot/issues/794) - Fixed health check issue when using Redis Sentinel for caching with Cacheops. The Redis health check backend is now aware of Redis Sentinel.
 - [#1311](https://github.com/nautobot/nautobot/issues/1311) - Fixed where it was not possible to set the rack height to `0` when performing a bulk edit of device types.
@@ -486,13 +485,13 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1632](https://github.com/nautobot/nautobot/pull/1632) - Fixed issue accessing request attributes when request may be None.
 - [#1637](https://github.com/nautobot/nautobot/pull/1637) - Fixed warnings logged during REST API schema generation.
 
-### Documentation
+### Documentation in v1.3.0
 
 - [#814](https://github.com/nautobot/nautobot/issues/814) - Extended documentation for configuring Celery for use Redis Sentinel clustering.
 - [#1479](https://github.com/nautobot/nautobot/issues/1479) - Updated Jobs documentation regarding the concrete Job database model.
 - [#1556](https://github.com/nautobot/nautobot/issues/1556) - Cleaned up typos and formatting issues across docs, few code spots.
 
-### Housekeeping
+### Housekeeping in v1.3.0
 
 - [#1385](https://github.com/nautobot/nautobot/issues/1385) - Added MarkdownLint validation and enforcement to CI.
 - [#1417](https://github.com/nautobot/nautobot/issues/1417) - CI scope improvements for streamlined performance.
@@ -500,7 +499,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ## v1.3.0b1 (2022-03-11)
 
-### Added
+### Added in v1.3.0b1
 
 - [#5](https://github.com/nautobot/nautobot/issues/5) - Added the option to perform a "dry run" of Git repository syncing.
 - [#330](https://github.com/nautobot/nautobot/issues/330) - Added pre-/post-change data to WebHooks leveraging snapshots.
@@ -521,7 +520,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1457](https://github.com/nautobot/nautobot/pull/1457) - Added new Jobs REST API, added control logic to use JobModel rather than JobClass where appropriate; improved permissions enforcement for Jobs.
 - [#1470](https://github.com/nautobot/nautobot/issues/1470) - Added plugin framework for extending FilterSets and Filter Forms.
 
-### Changed
+### Changed in v1.3.0b1
 
 - [#368](https://github.com/nautobot/nautobot/issues/368) - Added `nautobot.extras.forms.NautobotModelForm` and `nautobot.extras.filters.NautobotFilterSet` base classes. All form classes which inherited from all three of (`BootstrapMixin`, `CustomFieldModelForm`, and `RelationshipModelForm`) now inherit from `NautobotModelForm` as their base class. All filterset classes which inherited from all three of (`BaseFilterSet`, `CreatedUpdatedFilterSet`, and `CustomFieldModelFilterSet`) now inherit from `NautobotFilterSet` as their base class.
 - [#591](https://github.com/nautobot/nautobot/issues/591) - All uses of `type()` are now refactored to use `isinstance()` where applicable.
@@ -532,15 +531,15 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1252](https://github.com/nautobot/nautobot/pull/1252) - As Python 3.6 has reached end-of-life, the default Docker images published for this release (i.e. `1.3.0`, `stable`, `latest`) have been updated to use Python 3.7 instead.
 - [#1367](https://github.com/nautobot/nautobot/pull/1367) - Extracted Job-related models to submodule `nautobot.extras.models.jobs`; refined Job testing best practices.
 
-### Removed
+### Removed in v1.3.0b1
 
 - [#1268](https://github.com/nautobot/nautobot/issues/1268) - Drop Support for Python 3.6.
 
-### Fixed
+### Fixed in v1.3.0b1
 
 - [#1440](https://github.com/nautobot/nautobot/issues/1440) - Handle models missing serializer methods, dependent from adding pre-/post-change data to WebHooks.
 
-### Dependencies
+### Dependencies in v1.3.0b1
 
 - [#1277](https://github.com/nautobot/nautobot/issues/1277) - Updated Django dependency to 3.2.X LTS.
 - [#1307](https://github.com/nautobot/nautobot/pull/1307) - Updated various Python package dependencies to their latest compatible versions.
@@ -548,7 +547,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 - [#1391](https://github.com/nautobot/nautobot/issues/1391) - Updated Jinja2 dependency to 3.0.X.
 - [#1435](https://github.com/nautobot/nautobot/issues/1435) - Update to Selenium 4.X.
 
-### Housekeeping
+### Housekeeping in v1.3.0b1
 
 - [#443](https://github.com/nautobot/nautobot/issues/443) - The provided "Dummy Plugin" has been renamed to "Example Plugin".
 - [#1314](https://github.com/nautobot/nautobot/pull/1314) - Updated various development-only Python package dependencies to their latest compatible versions.

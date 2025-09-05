@@ -1,0 +1,9 @@
+{% load form_helpers %}
+
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Tenancy</strong></div>
+    <div class="panel-body">
+        {% render_field form.tenant_group %}
+        {% render_field form.tenant %}
+    </div>
+</div>

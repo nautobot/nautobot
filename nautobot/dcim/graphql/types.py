@@ -11,6 +11,8 @@ from nautobot.dcim.filters import (
     FrontPortFilterSet,
     InterfaceFilterSet,
     LocationFilterSet,
+    ModuleBayFilterSet,
+    ModuleFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
@@ -28,6 +30,8 @@ from nautobot.dcim.models import (
     FrontPort,
     Interface,
     Location,
+    Module,
+    ModuleBay,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -55,10 +59,36 @@ class DeviceType(OptimizedNautobotObjectType):
         filterset_class = DeviceFilterSet
         exclude = ["_name"]
 
+    all_console_ports = graphene.List("nautobot.dcim.graphql.types.ConsolePortType")
+    all_console_server_ports = graphene.List("nautobot.dcim.graphql.types.ConsoleServerPortType")
+    all_front_ports = graphene.List("nautobot.dcim.graphql.types.FrontPortType")
+    all_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
+    all_module_bays = graphene.List("nautobot.dcim.graphql.types.ModuleBayType")
+    all_modules = graphene.List("nautobot.dcim.graphql.types.ModuleType")
+    all_power_ports = graphene.List("nautobot.dcim.graphql.types.PowerPortType")
+    all_power_outlets = graphene.List("nautobot.dcim.graphql.types.PowerOutletType")
+    all_rear_ports = graphene.List("nautobot.dcim.graphql.types.RearPortType")
+    common_vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+    primary_ip = graphene.Field("nautobot.ipam.graphql.types.IPAddressType")
+    vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
+
+
+class ModuleBayType(OptimizedNautobotObjectType):
+    class Meta:
+        model = ModuleBay
+        filterset_class = ModuleBayFilterSet
+
+
+class ModuleType(OptimizedNautobotObjectType):
+    device = graphene.Field("nautobot.dcim.graphql.types.DeviceType")
+
+    class Meta:
+        model = Module
+        filterset_class = ModuleFilterSet
 
 
 class PlatformType(OptimizedNautobotObjectType):
@@ -82,7 +112,7 @@ class RackType(OptimizedNautobotObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class CableType(OptimizedNautobotObjectType):
@@ -98,13 +128,13 @@ class CableType(OptimizedNautobotObjectType):
 
     def resolve_termination_a_type(self, args):
         if self.termination_a_type:
-            model = self.termination_a_type.model_class()
+            model = self.termination_a_type.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 
     def resolve_termination_b_type(self, args):
         if self.termination_b_type:
-            model = self.termination_b_type.model_class()
+            model = self.termination_b_type.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 

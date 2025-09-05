@@ -4,8 +4,6 @@ from nautobot.core.testing.integration import SeleniumTestCase
 class PluginBannerTestCase(SeleniumTestCase):
     """Integration test for rendering of plugin-injected banner content."""
 
-    fixtures = ("user-data",)
-
     def test_banner_not_rendered(self):
         """As implemented, plugin banner does not render if the user is not logged in.
 

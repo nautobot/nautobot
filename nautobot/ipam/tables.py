@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -35,35 +36,21 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
 {% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
 """
 
-PREFIX_LINK = """
-{% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-    <a href="\
-{% if record.present_in_database %}\
-{% url 'ipam:prefix' pk=record.pk %}\
-{% else %}\
-{% url 'ipam:prefix_add' %}\
-?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
-{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-{% endif %}\
-">{{ record.prefix }}</a>
-"""
 
+# record: the Prefix being rendered in this row
+# object: the base ancestor Prefix, in the case of PrefixDetailTable, else None
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% if not table.hide_hierarchy_ui %}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
+{% endif %}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -95,7 +82,7 @@ IPADDRESS_LINK = """
 {% elif perms.ipam.add_ipaddress %}
     <a href="\
 {% url 'ipam:ipaddress_add' %}\
-?address={{ record.1 }}\
+?address={{ record.1 }}&namespace={{ object.namespace.pk }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
 {% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
 " class="btn btn-xs btn-success">\
@@ -117,7 +104,7 @@ IPADDRESS_COPY_LINK = """
 {% elif perms.ipam.add_ipaddress %}
     <a href="\
 {% url 'ipam:ipaddress_add' %}\
-?address={{ record.1 }}\
+?address={{ record.1 }}&namespace={{ object.namespace.pk }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
 {% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
 " class="btn btn-xs btn-success">\
@@ -179,10 +166,9 @@ VLAN_LINK = """
 {% url 'ipam:vlan_add' %}\
 ?vid={{ record.vid }}&vlan_group={{ vlan_group.pk }}\
 {% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
-{% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
-" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>\
+" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available ({{ record.range }})</a>\
 {% else %}
-    {{ record.available }} VLAN{{ record.available|pluralize }} available
+    {{ record.available }} VLAN{{ record.available|pluralize }} available ({{ record.range }})
 {% endif %}
 """
 
@@ -192,14 +178,6 @@ VLAN_PREFIXES = """
 {% empty %}
     &mdash;
 {% endfor %}
-"""
-
-VLAN_ROLE_LINK = """
-{% if record.role %}
-    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
-{% else %}
-    &mdash;
-{% endif %}
 """
 
 VLANGROUP_ADD_VLAN = """
@@ -236,10 +214,10 @@ class NamespaceTable(BaseTable):
 #
 
 
-class VRFTable(BaseTable):
+class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    # rd = tables.Column(verbose_name="RD")
+    rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
@@ -250,7 +228,8 @@ class VRFTable(BaseTable):
         fields = (
             "pk",
             "name",
-            # "rd",
+            "rd",
+            "status",
             "namespace",
             "tenant",
             "description",
@@ -258,8 +237,7 @@ class VRFTable(BaseTable):
             "export_targets",
             "tags",
         )
-        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "rd", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -271,13 +249,27 @@ class VRFDeviceAssignmentTable(BaseTable):
         linkify=lambda record: record.vrf.namespace.get_absolute_url(),
         accessor="vrf.namespace.name",
     )
-    device = tables.Column(
-        linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
+    related_object_type = tables.TemplateColumn(
+        template_code="""
+        {% if record.device %}
+            Device
+        {% elif record.virtual_machine %}
+            Virtual Machine
+        {% else %}
+            Virtual Device Context
+        {% endif %}
+        """
     )
-    virtual_machine = tables.Column(
-        linkify=lambda record: record.virtual_machine.get_absolute_url(),
-        accessor="virtual_machine.name",
-        verbose_name="Virtual Machine",
+    related_object_name = tables.TemplateColumn(
+        template_code="""
+        {% if record.device %}
+            <a href="{{ record.device.get_absolute_url }}">{{ record.device.name }}</a>
+        {% elif record.virtual_machine %}
+            <a href="{{ record.virtual_machine.get_absolute_url }}">{{ record.virtual_machine.name }}</a>
+        {% else %}
+            <a href="{{ record.virtual_device_context.get_absolute_url }}">{{ record.virtual_device_context.name }}</a>
+        {% endif %}
+        """
     )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")
@@ -285,7 +277,7 @@ class VRFDeviceAssignmentTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "namespace", "device", "virtual_machine", "rd", "tenant")
+        fields = ("vrf", "related_object_type", "related_object_name", "namespace", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):
@@ -364,48 +356,60 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
-    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    vrf_count = LinkedCountColumn(
+        viewname="ipam:vrf_list",
+        url_params={"prefix": "pk"},
+        display_field="name",
+        reverse_lookup="prefixes",
+        verbose_name="VRFs",
+    )
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
-    children = tables.Column(accessor="descendants_count")
+    children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"
     )
+    cloud_networks_count = LinkedCountColumn(
+        viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
+    )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = Prefix
-        orderable = False
         fields = (
             "pk",
             "prefix",
             "type",
             "status",
             "children",
-            # "vrf",
+            "vrf_count",
             "namespace",
             "tenant",
             "location_count",
+            "cloud_networks_count",
             "vlan",
             "role",
             "rir",
             "date_allocated",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
             "prefix",
             "type",
             "status",
-            # "vrf",
+            "vrf_count",
             "namespace",
             "tenant",
             "location_count",
             "vlan",
             "role",
             "description",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not record.present_in_database else "",
@@ -417,6 +421,15 @@ class PrefixDetailTable(PrefixTable):
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_conditional_prefetch(
+            "utilization",
+            prefetch=Prefetch(
+                "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+            ),
+        )
+
     class Meta(PrefixTable.Meta):
         fields = (
             "pk",
@@ -425,7 +438,7 @@ class PrefixDetailTable(PrefixTable):
             "type",
             "status",
             "children",
-            # "vrf",
+            "vrf_count",
             "utilization",
             "tenant",
             "location_count",
@@ -441,7 +454,7 @@ class PrefixDetailTable(PrefixTable):
             "type",
             "status",
             "children",
-            # "vrf",
+            "vrf_count",
             "utilization",
             "tenant",
             "location_count",
@@ -463,12 +476,27 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
-    interface_count = tables.Column(verbose_name="Interfaces")
-    interface_parent_count = tables.Column(verbose_name="Devices")
+    interface_count = LinkedCountColumn(
+        viewname="dcim:interface_list", url_params={"ip_addresses": "pk"}, verbose_name="Interfaces"
+    )
+    # TODO: what about interfaces assigned to modules?
+    interface_parent_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"ip_addresses": "pk"},
+        reverse_lookup="interfaces__ip_addresses",
+        distinct=True,
+        verbose_name="Devices",
+    )
     vm_interface_count = LinkedCountColumn(
         viewname="virtualization:vminterface_list", url_params={"ip_addresses": "pk"}, verbose_name="VM Interfaces"
     )
-    vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
+    vm_interface_parent_count = LinkedCountColumn(
+        viewname="virtualization:virtualmachine_list",
+        url_params={"ip_addresses": "pk"},
+        reverse_lookup="interfaces__ip_addresses",
+        distinct=True,
+        verbose_name="Virtual Machines",
+    )
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -493,7 +521,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 
 class IPAddressDetailTable(IPAddressTable):
-    nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
+    nat_inside = tables.Column(linkify=True, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:ipaddress_list")
     assigned = BooleanColumn(accessor="assigned_count")
@@ -679,8 +707,8 @@ class VLANGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = VLANGroup
-        fields = ("pk", "name", "location", "vlan_count", "description", "actions")
-        default_columns = ("pk", "name", "location", "vlan_count", "description", "actions")
+        fields = ("pk", "name", "location", "range", "vlan_count", "description", "actions")
+        default_columns = ("pk", "name", "range", "location", "vlan_count", "description", "actions")
 
 
 #
@@ -695,6 +723,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
+        display_field="name",
         verbose_name="Locations",
     )
     tenant = TenantColumn()
@@ -780,7 +809,7 @@ class VLANVirtualMachinesTable(VLANMembersTable):
         fields = ("virtual_machine", "name", "tagged", "actions")
 
 
-class InterfaceVLANTable(StatusTableMixin, BaseTable):
+class InterfaceVLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """
     List VLANs assigned to a specific Interface.
     """
@@ -789,9 +818,8 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
-    role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
     location_count = LinkedCountColumn(
-        viewname="dcim:location",
+        viewname="dcim:location_list",
         url_params={"vlans": "pk"},
         verbose_name="Locations",
     )

@@ -4,8 +4,16 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
+from drf_spectacular.plumbing import (
+    build_array_type,
+    build_basic_type,
+    build_media_type_object,
+    get_doc,
+    is_serializer,
+    list_hash,
+)
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
+from drf_spectacular.types import OpenApiTypes
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -112,13 +120,13 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
-        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
         if operation is not None and "parameters" in operation:
             for param in operation["parameters"]:
+                # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
                 if param["name"] == "id" and "description" not in param:
                     param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
             if self.method == "GET":
-                if "depth" not in operation["parameters"]:
+                if not any(param["name"] == "depth" for param in operation["parameters"]):
                     operation["parameters"].append(
                         {
                             "in": "query",
@@ -128,6 +136,17 @@ class NautobotAutoSchema(AutoSchema):
                             "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
                         }
                     )
+                if not any(param["name"] == "exclude_m2m" for param in operation["parameters"]):
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "exclude_m2m",
+                            "required": False,
+                            "description": "Exclude many-to-many fields from the response",
+                            "schema": {"type": "boolean", "default": False},
+                        }
+                    )
+                # TODO: add "include" parameter to the schema where relevant - nautobot/nautobot#685
         return operation
 
     def get_operation_id(self):
@@ -302,6 +321,14 @@ class NautobotAutoSchema(AutoSchema):
             component.schema["required"] = ["id"]
         return component
 
+    def _get_serializer_field_meta(self, field, direction):
+        """Fix for ChoiceField that sets the default value's type to match the schema returned in the ChoiceFieldFix extension."""
+        meta = super()._get_serializer_field_meta(field, direction)
+        if isinstance(field, ChoiceField) and "default" in meta and direction == "request":
+            meta["default"] = field.default
+
+        return meta
+
 
 class NautobotFilterExtension(DjangoFilterExtension):
     """
@@ -359,6 +386,8 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
             return {
                 "type": value_type,
                 "enum": list(choices.keys()),
+                # Used to deduplicate enums with the same set of choices, since drf-spectacular 0.27.2
+                "x-spec-enum-id": list_hash([(k, v) for k, v in choices.items() if k not in ("", None)]),
             }
         else:
             return {
@@ -388,3 +417,25 @@ class SerializedPKRelatedFieldFix(OpenApiSerializerFieldExtension):
         On requests, require PK only; on responses, represent the entire nested serializer.
         """
         return auto_schema._map_serializer(self.target.serializer, direction)
+
+
+class EmailFieldFix(OpenApiSerializerFieldExtension):
+    """Fix invalid schema for EmailField when default is an empty string."""
+
+    target_class = "rest_framework.serializers.EmailField"
+
+    def map_serializer_field(self, auto_schema, direction):
+        email_schema = build_basic_type(OpenApiTypes.EMAIL)
+        str_schema = build_basic_type(OpenApiTypes.STR)
+        auto_schema._insert_field_validators(self.target, email_schema)
+        auto_schema._insert_field_validators(self.target, str_schema)
+        email_schema.pop("format", None)
+        if self.target.default == "":
+            return {
+                "oneOf": [
+                    str_schema,
+                    email_schema,
+                ]
+            }
+        else:
+            return email_schema

@@ -1,0 +1,14 @@
+{% load helpers %}
+
+<strong>{{ body_content_table_verbose_name_plural|bettertitle }}</strong>
+{% if body_content_table_list_url %}
+    <a href="{{ body_content_table_list_url }}" class="badge badge-primary">{% if badge_count_override %}{{ badge_count_override }}{% else %}{{ body_content_table.rows|length }}{% endif %}</a>
+{% endif %}
+
+<div class="pull-right noprint">
+    {% if request.user.is_authenticated and show_table_config_button %}
+        {% table_config_button_small body_content_table %}
+    {% endif %}
+</div>
+
+{% table_config_form body_content_table %}

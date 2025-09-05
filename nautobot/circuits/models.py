@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusField
@@ -28,9 +29,9 @@ __all__ = (
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     comments = models.TextField(blank=True)
 
     class Meta:
@@ -61,7 +62,7 @@ class Provider(PrimaryModel):
     stores information pertinent to the user's relationship with the Provider.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     asn = ASNField(
         blank=True,
         null=True,
@@ -69,7 +70,7 @@ class Provider(PrimaryModel):
         help_text="32-bit autonomous system number",
     )
     # todoindex:
-    account = models.CharField(max_length=100, blank=True, verbose_name="Account number")
+    account = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Account number")
     portal_url = models.URLField(blank=True, verbose_name="Portal URL")
     noc_contact = models.TextField(blank=True, verbose_name="NOC contact")
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
@@ -97,9 +98,9 @@ class CircuitType(OrganizationalModel):
     "Long Haul," "Metro," or "Out-of-Band".
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
 
@@ -126,7 +127,7 @@ class Circuit(PrimaryModel):
     Circuit port speed and commit rate are measured in Kbps.
     """
 
-    cid = models.CharField(max_length=100, verbose_name="Circuit ID")
+    cid = models.CharField(max_length=CHARFIELD_MAX_LENGTH, verbose_name="Circuit ID")
     status = StatusField(blank=False, null=False)
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
     circuit_type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
@@ -139,7 +140,7 @@ class Circuit(PrimaryModel):
     )
     install_date = models.DateField(blank=True, null=True, verbose_name="Date installed")
     commit_rate = models.PositiveIntegerField(blank=True, null=True, verbose_name="Commit rate (Kbps)")
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
@@ -204,6 +205,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         null=True,
     )
+    cloud_network = models.ForeignKey(
+        to="cloud.CloudNetwork",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
     port_speed = models.PositiveIntegerField(verbose_name="Port speed (Kbps)", blank=True, null=True)
     upstream_speed = models.PositiveIntegerField(
         blank=True,
@@ -211,25 +219,31 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         verbose_name="Upstream speed (Kbps)",
         help_text="Upstream speed, if different from port speed",
     )
-    xconnect_id = models.CharField(max_length=50, blank=True, verbose_name="Cross-connect ID")
-    pp_info = models.CharField(max_length=100, blank=True, verbose_name="Patch panel/port(s)")
-    description = models.CharField(max_length=200, blank=True)
+    xconnect_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Cross-connect ID")
+    pp_info = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Patch panel/port(s)")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["circuit", "term_side"]
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return f"Termination {self.term_side}: {self.location or self.provider_network}"
+        return f"Termination {self.term_side}: {self.location or self.provider_network or self.cloud_network}"
 
     def clean(self):
         super().clean()
 
         # Must define either location *or* provider network
-        if self.location is None and self.provider_network is None:
-            raise ValidationError("A circuit termination must attach to either a location or a provider network.")
+        if self.location is None and self.provider_network is None and self.cloud_network is None:
+            raise ValidationError(
+                "A circuit termination must attach to a location, a provider network or a cloud network."
+            )
         if self.location and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+        elif self.location and self.cloud_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a cloud network.")
+        elif self.provider_network and self.cloud_network:
+            raise ValidationError("A circuit termination cannot attach to both a provider network and a cloud network.")
         # A valid location for contenttype CircuitTermination must be assigned.
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

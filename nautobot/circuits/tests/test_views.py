@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -10,7 +11,10 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.core.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType
+from nautobot.core.testing import post_data, TestCase as NautobotTestCase, utils, ViewTestCases
+from nautobot.dcim.models.devices import Manufacturer
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.models import Status, Tag
 
 
@@ -40,7 +44,7 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = CircuitType
 
     @classmethod
@@ -48,6 +52,9 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         cls.form_data = {
             "name": "Circuit Type X",
             "description": "A new circuit type",
+        }
+        cls.bulk_edit_data = {
+            "description": "A new updated circuit type",
         }
 
 
@@ -143,10 +150,104 @@ class CircuitTerminationTestCase(
     # create/edit views are special cases, not currently tested
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    # No bulk-edit support currently
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CircuitTermination
+
+    @classmethod
+    def setUpTestData(cls):
+        provider = Provider.objects.first()
+
+        # Set up Manufacturer for cloud account
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+
+        # Provider Network
+        provider_network = ProviderNetwork.objects.create(
+            name="Test Provider Network 1",
+            provider=provider,
+        )
+
+        # Cloud account and resource type
+        cloud_account = CloudAccount.objects.create(
+            name="Test Cloud Account",
+            provider=manufacturer,
+        )
+        cloud_resource_type = CloudResourceType.objects.create(
+            name="VPC Network",
+            provider=manufacturer,
+        )
+        cloud_network = CloudNetwork.objects.create(
+            name="Test Cloud Network",
+            cloud_account=cloud_account,
+            cloud_resource_type=cloud_resource_type,
+        )
+
+        # Location Type and Location
+        location_type = LocationType.objects.get(name="Building")
+        location_type.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
+        status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="NYC02", location_type=location_type, status=status)
+
+        # Circuit setup
+        circuit_type = CircuitType.objects.first()
+        status = Status.objects.get_for_model(Circuit).first()
+
+        circuit1 = Circuit.objects.create(
+            cid="Test Circuit 1",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=status,
+        )
+        circuit2 = Circuit.objects.create(
+            cid="Test Circuit 2",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=status,
+        )
+
+        # Terminations
+        CircuitTermination.objects.create(
+            circuit=circuit1,
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+            location=location,
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-001",
+            pp_info="Patch-01",
+            description="Initial termination A",
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit1,
+            term_side=CircuitTerminationSideChoices.SIDE_Z,
+            provider_network=provider_network,
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-002",
+            pp_info="Patch-02",
+            description="Initial termination Z",
+        )
+        CircuitTermination.objects.create(
+            circuit=circuit2,
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+            cloud_network=cloud_network,
+            port_speed=1000000,
+            upstream_speed=1000000,
+            xconnect_id="XC-003",
+            pp_info="Patch-03",
+            description="Initial termination cloud A",
+        )
+
+        cls.bulk_edit_data = {
+            "location": location.pk,
+            "provider_network": None,
+            "cloud_network": None,
+            "port_speed": 2000000,
+            "upstream_speed": 1500000,
+            "xconnect_id": "Updated XConnect Location",
+            "pp_info": "Updated Patch Panel Info Location",
+            "description": "Updated description for Location",
+        }
 
     def test_circuit_termination_detail_200(self):
         """
@@ -176,13 +277,12 @@ class CircuitTerminationTestCase(
 
         # Visit the termination detail page and assert responses:
         response = self.client.get(reverse("circuits:circuittermination", kwargs={"pk": termination.pk}))
-        self.assertEqual(200, response.status_code)
-        self.assertIn("Test Provider Network", str(response.content))
-        self.assertNotIn("</span> Connect", str(response.content))
+        self.assertBodyContains(response, "Test Provider Network")
+        self.assertNotIn("</span> Connect", utils.extract_page_body(response.content.decode(response.charset)))
 
         # Visit the circuit object detail page and check there is no connect button present:
         response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
-        self.assertNotIn("</span> Connect", str(response.content))
+        self.assertNotIn("</span> Connect", utils.extract_page_body(response.content.decode(response.charset)))
 
 
 class CircuitSwapTerminationsTestCase(NautobotTestCase):

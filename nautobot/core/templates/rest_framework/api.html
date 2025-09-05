@@ -7,13 +7,23 @@
     {% include 'inc/media.html' %}
 {% endblock bootstrap_theme %}
 
-{% block navbar %}
-    {% include 'inc/nav_menu.html' %}
-{% endblock navbar %}
-
 {% block body %}
-    {{ block.super }}
+    {% include 'inc/nav_menu.html' %}
+    <div class="container-fluid" id="main-content">
+        {{ block.super }}
+    </div>
     {% include 'inc/footer.html' %}
+    <style>
+        .navbar-static-top {
+            display: none;
+        }
+        #main-content {
+            min-height: calc(100vh - 70px);
+        }
+        .request-info {
+            clear: both;  /* Fix description floating issue */
+        }
+    </style>
 {% endblock body %}
 
 {% block script %}

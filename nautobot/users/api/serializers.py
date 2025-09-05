@@ -18,13 +18,13 @@ class UserSerializer(ValidatedModelSerializer):
         exclude = ["user_permissions"]
         extra_kwargs = {"password": {"write_only": True, "required": False, "allow_null": True}}
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Handle omission of a password by setting it to the unusable None value."""
         mock_password = False
-        if "password" not in data and not self.partial:
-            data["password"] = make_password(None)
+        if "password" not in attrs and not self.partial:
+            attrs["password"] = make_password(None)
             mock_password = True
-        validated_data = super().validate(data)
+        validated_data = super().validate(attrs)
         if mock_password:
             validated_data["password"] = None
         return validated_data
@@ -45,12 +45,12 @@ class UserSerializer(ValidatedModelSerializer):
         Extract the password from validated data and set it separately to ensure proper hash generation.
         """
         update_password = False
+        password = None
         if "password" in validated_data:
             update_password = True
             password = validated_data.pop("password")
         elif not self.partial:
             update_password = True
-            password = None
         super().update(instance, validated_data)
         if update_password:
             instance.set_password(password)
@@ -59,6 +59,7 @@ class UserSerializer(ValidatedModelSerializer):
 
 
 class GroupSerializer(ValidatedModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="users-api:group-detail")
     user_count = serializers.IntegerField(read_only=True)
 

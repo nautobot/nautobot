@@ -1,11 +1,14 @@
 """Custom signals and handlers for the core Nautobot application."""
+
+import contextlib
 from functools import wraps
 import inspect
 import logging
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from django.db.models.signals import post_delete, post_save
+from django.core.cache import cache
 from django.dispatch import receiver, Signal
+import redis.exceptions
 
 nautobot_database_ready = Signal()
 """
@@ -58,11 +61,16 @@ def disable_for_loaddata(signal_handler):
     return wrapper
 
 
-@receiver(post_save)
-@receiver(post_delete)
 def invalidate_max_depth_cache(sender, **kwargs):
-    """Clear the appropriate TreeManager.max_depth cache as the create/update/delete may have changed the tree."""
+    """
+    Clear the appropriate TreeManager.max_depth cache as the create/update/delete may have changed the tree.
+
+    Note that this signal is connected in `TreeModel.__init_subclass__()` so as to only apply to those models.
+    """
     from nautobot.core.models.tree_queries import TreeManager
 
-    if isinstance(sender.objects, TreeManager) and hasattr(sender.objects, "max_depth"):
-        del sender.objects.max_depth
+    if not isinstance(sender.objects, TreeManager):
+        return
+
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete(sender.objects.max_depth_cache_key)

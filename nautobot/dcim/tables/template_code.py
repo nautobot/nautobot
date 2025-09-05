@@ -41,6 +41,8 @@ CABLE_TERMINATION_PARENT = """
     <a href="{{ value.circuit.get_absolute_url }}">{{ value.circuit }}</a>
 {% elif value.power_panel %}
     <a href="{{ value.power_panel.get_absolute_url }}">{{ value.power_panel }}</a>
+{% elif value.module and value.module.device %}
+    <a href="{{ value.module.device.get_absolute_url }}">{{ value.module.device }}</a>
 {% endif %}
 """
 
@@ -91,7 +93,9 @@ LINKED_RECORD_COUNT = """
 
 TREE_LINK = """
 {% load helpers %}
-{% tree_hierarchy_ui_representation record.tree_depth|as_range table.order_by %}
+{% if not table.hide_hierarchy_ui %}
+{% tree_hierarchy_ui_representation record.tree_depth|as_range table.hide_hierarchy_ui %}
+{% endif %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
@@ -137,9 +141,9 @@ CONSOLEPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Console Server Port</a></li>
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={{ request.path }}">Console Server Port</a></li>
+            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}">Front Port</a></li>
+            <li><a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}">Rear Port</a></li>
         </ul>
     </span>
 {% endif %}
@@ -157,9 +161,9 @@ CONSOLESERVERPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Port</a></li>
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_consoleserverports' pk=object.pk %}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={{ request.path }}">Console Port</a></li>
+            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}">Front Port</a></li>
+            <li><a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}">Rear Port</a></li>
         </ul>
     </span>
 {% endif %}
@@ -177,8 +181,8 @@ POWERPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-outlet' %}?return_url={% url 'dcim:device_powerports' pk=object.pk %}">Power Outlet</a></li>
-            <li><a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-feed' %}?return_url={% url 'dcim:device_powerports' pk=object.pk %}">Power Feed</a></li>
+            <li><a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-outlet' %}?return_url={{ request.path }}">Power Outlet</a></li>
+            <li><a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-feed' %}?return_url={{ request.path }}">Power Feed</a></li>
         </ul>
     </span>
 {% endif %}
@@ -191,7 +195,7 @@ POWEROUTLET_BUTTONS = """
 {% elif perms.dcim.add_cable %}
     <a href="#" class="btn btn-default btn-xs disabled"><i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i></a>
     <a href="#" class="btn btn-default btn-xs disabled"><i class="mdi mdi-lan-connect" aria-hidden="true"></i></a>
-    <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=record.pk termination_b_type='power-port' %}?return_url={% url 'dcim:device_poweroutlets' pk=object.pk %}" title="Connect" class="btn btn-success btn-xs">
+    <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=record.pk termination_b_type='power-port' %}?return_url={{ request.path }}" title="Connect" class="btn btn-success btn-xs">
         <i class="mdi mdi-ethernet-cable" aria-hidden="true"></i>
     </a>
 {% endif %}
@@ -199,7 +203,7 @@ POWEROUTLET_BUTTONS = """
 
 INTERFACE_BUTTONS = """
 {% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
-    <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-xs btn-success" title="Add IP address">
+    <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={{ request.path }}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
 {% endif %}
@@ -214,10 +218,10 @@ INTERFACE_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}">Interface</a></li>
+            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}">Front Port</a></li>
+            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
@@ -235,12 +239,12 @@ FRONTPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Server Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Console Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_frontports' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}">Interface</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={{ request.path }}">Console Server Port</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={{ request.path }}">Console Port</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}">Front Port</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
@@ -258,10 +262,10 @@ REARPORT_BUTTONS = """
             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Interface</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Front Port</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Rear Port</a></li>
-            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={% url 'dcim:device_rearports' pk=object.pk %}">Circuit Termination</a></li>
+            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}">Interface</a></li>
+            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}">Front Port</a></li>
+            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}">Rear Port</a></li>
+            <li><a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}">Circuit Termination</a></li>
         </ul>
     </span>
 {% endif %}
@@ -270,12 +274,30 @@ REARPORT_BUTTONS = """
 DEVICEBAY_BUTTONS = """
 {% if perms.dcim.change_devicebay %}
     {% if record.installed_device %}
-        <a href="{% url 'dcim:devicebay_depopulate' pk=record.pk %}?return_url={% url 'dcim:device_devicebays' pk=object.pk %}" class="btn btn-danger btn-xs">
+        <a href="{% url 'dcim:devicebay_depopulate' pk=record.pk %}?return_url={{ request.path }}" class="btn btn-danger btn-xs">
             <i class="mdi mdi-minus-thick" aria-hidden="true" title="Remove device"></i>
         </a>
     {% else %}
-        <a href="{% url 'dcim:devicebay_populate' pk=record.pk %}?return_url={% url 'dcim:device_devicebays' pk=object.pk %}" class="btn btn-success btn-xs">
+        <a href="{% url 'dcim:devicebay_populate' pk=record.pk %}?return_url={{ request.path }}" class="btn btn-success btn-xs">
             <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install device"></i>
+        </a>
+    {% endif %}
+{% endif %}
+"""
+
+MODULE_BUTTONS = """
+<a href="{% url 'dcim:module' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
+"""
+
+MODULEBAY_BUTTONS = """
+{% if perms.dcim.change_modulebay and perms.dcim.add_module %}
+    {% if not record.installed_module %}
+        <a href="{% url 'dcim:module_add' %}?parent_module_bay={{ record.pk }}&return_url={{ request.path }}" class="btn btn-success btn-xs">
+            <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install module"></i>
+        </a>
+    {% else %}
+        <a href="{% url 'dcim:module_delete' pk=record.installed_module.pk %}?return_url={{ request.path }}" class="btn btn-danger btn-xs">
+            <i class="mdi mdi-minus-thick" aria-hidden="true" title="Delete installed module"></i>
         </a>
     {% endif %}
 {% endif %}

@@ -1,0 +1,4 @@
+{% extends 'generic/object_retrieve.html' %}
+{% block extra_breadcrumbs %}
+                <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
+{% endblock extra_breadcrumbs %}

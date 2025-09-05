@@ -1,7 +1,5 @@
 # NautobotUIViewSet
 
-+++ 1.4.0
-
 New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
 
 Note that this ViewSet is catered specifically to the UI, not the API.
@@ -24,6 +22,22 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.YourAppModelSerializer
     table_class = tables.YourAppModelTable
 ```
+
+## UI Component Framework
+
+The Nautobot UI Component Framework is a system for building user interfaces in Nautobot Apps.
+Each ViewSet defines how queries are handled, the layout of panels,
+and the organization of content.
+Panels are the building blocks of the UI and they contain specific types of content
+and can be placed in sections.
+The UI Component Framework uses a declarative method that lets developers create UI
+structures with Python objects instead of HTML templates.
+This method simplifies the process of creating consistent and maintainable user interfaces.
+The framework provides many pre-built panel types.
+
+| [Migration tutorial](../../migration/ui-component-framework/index.md)
+
+| [UI Component Framework documentation](../../../../development/core/ui-component-framework.md)
 
 ## Setting ViewSet Attributes
 
@@ -60,6 +74,9 @@ Templates can benefit from a very rich context passed down from the views and re
 * `table_config_form`: A TableConfigForm object for the associated `table`, providing the ability to customize the table
 * `verbose_name`: The singular form of the model's name
 * `verbose_name_plural`: The plural form of the model's name
+* `model`: The model class associated for given view
+* `view_action`: Current request action
+* `detail`: Boolean indicating whether request has given instance or not
 
 An example from editing a Provider object:
 
@@ -74,7 +91,10 @@ An example from editing a Provider object:
     'table': None,
     'table_config_form': None,
     'verbose_name': 'provider',
-    'verbose_name_plural': 'providers'
+    'verbose_name_plural': 'providers',
+    'model': <Provider>,
+    'view_action': 'retrieve',
+    'detail': True,
 }
 ```
 
@@ -147,3 +167,50 @@ For example, for a DetailView template for `YourAppModel`, the template name wil
 If you do not provide your own templates in the `yourapp/templates/yourapp` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
+
+### Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
+
+Django REST Framework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
+
+Below is an example of adding a custom action view to an App's ViewSet. A few considerations to keep in mind:
+
+* The method name is the `action` in Django REST Framework terms.
+* The `action` will be used for [template lookup](#template-naming-for-nautobotuiviewset)
+* The `action` will be used for URL naming and construction (`plugins:<app>:<model>_<action>`, `/plugins/<app>/<model>/<uuid>/<action>/`).
+* The `action` will be used as a custom permission that users must have (`<app>.<action>_<model>`)
+
+In the below example:
+
+* The expected template must be named `yourapp/yourappmodel_customview.html`
+* The reversible URL name will be `plugins:yourapp:yourappmodel_customview`
+* The URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
+* Users will need `yourapp.customview_yourappmodel` permission to access this view.
+
+```python
+from nautobot.apps.views import NautobotUIViewSet
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from yourapp import filters, forms, models, tables
+from yourapp.api import serializers
+
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.YourAppModelBulkEditForm
+    filterset_class = filters.YourAppModelFilterSet
+    filterset_form_class = forms.YourAppModelFilterForm
+    form_class = forms.YourAppModelForm
+    queryset = models.YourAppModel.objects.all()
+    serializer_class = serializers.YourAppModelSerializer
+    table_class = tables.YourAppModelTable
+
+    @action(detail=True)
+    def customview(self, request, *args, **kwargs):
+        """Context passed to template for rendering.
+
+        Expected URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
+        """
+        context = {
+            "some_key": "some value",
+        }
+        return Response(context)
+```

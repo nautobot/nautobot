@@ -1,1 +1,0 @@
-Added `MigrationsBackend` to health-check, which will fail if any unapplied database migrations are present.

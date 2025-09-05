@@ -45,7 +45,7 @@
 {% else %}
     {% include table_template|default:'responsive_table.html' %}
 {% endif %}
-{% if not disable_pagination %}
+{% if table.paginator.num_pages > 1 and not disable_pagination %}
     {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
 {% endif %}
 <div class="clearfix"></div>

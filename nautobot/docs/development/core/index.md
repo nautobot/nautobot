@@ -69,6 +69,33 @@ Nautobot adheres to the Semantic Versioning ("SemVer") strategy, which gives us 
 
 For more information, please visit [SemVer.org](https://semver.org/).
 
+#### Public Interface
+
+The guiding principals behind Nautobot's SemVer strategy is scoped to adhering to the prescribed public interface. This includes both the application operators and application developer. Anything not explicitly covered here is presumed to not be covered under SemVer.
+
+* Behavior of a given X.Y version of the REST API. New versions of the REST API may be added, which may introduce changes to
+    * URL structures
+    * Expected request and response formats
+    * Behavior of each endpoint
+    * Status and error codes
+    * The HTTP verbs
+* GraphQL data structures
+* URL structures for primary navigation and feature access
+* Any Django model and their relationships for models provided by Nautobot
+* Functions, classes, and modules in `nautobot.apps.*` and their backwards-compatible signatures
+* Any management commands provided by Nautobot
+* Documented configuration options
+
+!!! info
+    The public interface may change the function signature but will not break backwards-compatibility between minor & patch versions in accordance with SemVer.
+
+While anything not explicitly stated above should be not be considered scoped to SemVer, the following should be strictly avoided when developing non-core Nautobot Apps and Jobs.
+
+* Functions or methods that start with an underscore (e.g., `_private_func`)
+* Any functions, classes, and modules **not** in `nautobot.apps.*`.
+* Any modules, classes, functions, or features that are explicitly marked as "internal" or "experimental" in the documentation
+* Any features or functionalities that are not part of the official documentation should not be relied upon
+
 ### Release Schedule
 
 Nautobot aims to publish against following release schedule:
@@ -177,7 +204,7 @@ Communication among the contributors should always occur via public channels. Th
 
 ### Slack
 
-* [**#nautobot** on Network to Code Slack](http://slack.networktocode.com/) - Good for quick chats. Avoid any discussion that might need to be referenced later on, as the chat history is not retained long.
+* [`#nautobot` on Network to Code Slack](http://slack.networktocode.com/) - Good for quick chats. Avoid any discussion that might need to be referenced later on, as the chat history is not retained long.
 
 ### GitHub
 
@@ -332,3 +359,7 @@ The change summary is added to the file in plain text. Change summaries should b
     ```plaintext title="changes/1234.changed"
     Changed release notes generation.
     ```
+
+### Documentation Updates
+
+The main landing page needs to remain at `docs/index.md` to prevent 404 errors when switching documentation versions on readthedocs.

@@ -12,7 +12,9 @@ from nautobot.core.forms import utils
 __all__ = (
     "APISelect",
     "APISelectMultiple",
+    "AutoPopulateWidget",
     "BulkEditNullBooleanSelect",
+    "ClearableFileInput",
     "ColorSelect",
     "ContentTypeSelect",
     "DatePicker",
@@ -39,6 +41,23 @@ class SlugWidget(forms.TextInput):
     """
 
     template_name = "widgets/sluginput.html"
+
+    def get_context(self, name, value, attrs):
+        custom_title = self.attrs.pop("title", None)
+        context = super().get_context(name, value, attrs)
+        context["widget"]["custom_title"] = custom_title
+        return context
+
+
+class AutoPopulateWidget(SlugWidget):
+    """
+    Subclass SlugWidget and add support for auto-populate JavaScript logic from `form.js`.
+    """
+
+    def get_context(self, name, value, attrs):
+        attrs["data-autopopulate"] = ""
+        context = super().get_context(name, value, attrs)
+        return context
 
 
 class ColorSelect(forms.Select):
@@ -116,6 +135,23 @@ class ContentTypeSelect(StaticSelect2):
     option_template_name = "widgets/select_contenttype.html"
 
 
+class MinimalModelChoiceIterator(ModelChoiceIterator):
+    """
+    Helper class for APISelect and APISelectMultiple.
+
+    Allows the widget to keep a full `queryset` for data validation, but, for performance reasons, returns a minimal
+    subset of choices at render time derived from the widget's `data_queryset`.
+    """
+
+    @property
+    def queryset(self):
+        return self.field.data_queryset
+
+    @queryset.setter
+    def queryset(self, value):
+        return self.field.data_queryset
+
+
 class APISelect(SelectWithDisabled):
     """
     A select widget populated via an API call
@@ -173,7 +209,7 @@ class APISelect(SelectWithDisabled):
             and isinstance(self.choices, Iterable)
         ):
 
-            class ModelChoiceIteratorWithNullOption(ModelChoiceIterator):
+            class ModelChoiceIteratorWithNullOption(MinimalModelChoiceIterator):
                 def __init__(self, *args, **kwargs):
                     self.null_options = kwargs.pop("null_option", None)
                     super().__init__(*args, **kwargs)
@@ -182,8 +218,7 @@ class APISelect(SelectWithDisabled):
                     # ModelChoiceIterator.__iter__() yields a tuple of (value, label)
                     # using this approach first yield a tuple of (null(value), null_option(label))
                     yield "null", self.null_options
-                    for item in super().__iter__():
-                        yield item
+                    yield from super().__iter__()
 
             null_option = self.attrs.get("data-null-option")
             self.choices = ModelChoiceIteratorWithNullOption(field=self.choices.field, null_option=null_option)
@@ -240,3 +275,10 @@ class MultiValueCharInput(StaticSelect2Multiple):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-multi-value-char"
+
+
+class ClearableFileInput(forms.ClearableFileInput):
+    template_name = "widgets/clearable_file.html"
+
+    class Media:
+        js = ["bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js"]

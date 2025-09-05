@@ -1,13 +1,15 @@
 import re
 from unittest import skipIf
 
-from django.db import connection
+from django.contrib.contenttypes.models import ContentType
+from django.db import connection, transaction
 import netaddr
 
 from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.users.models import ObjectPermission
 
 
 class IPAddressQuerySet(TestCase):
@@ -97,7 +99,7 @@ class IPAddressQuerySet(TestCase):
         self.assertFalse(self.queryset._is_ambiguous_network_string("b2a"))
 
     def test__safe_parse_network_string(self):
-        fallback_ipv4 = netaddr.IPNetwork("0/32")
+        fallback_ipv4 = netaddr.IPNetwork("0.0.0.0/32")
         fallback_ipv6 = netaddr.IPNetwork("::/128")
 
         self.assertEqual(self.queryset._safe_parse_network_string("taco", 4), fallback_ipv4)
@@ -265,6 +267,28 @@ class IPAddressQuerySet(TestCase):
             IPAddress.objects.select_related("nat_inside").filter(host__net_in=["10.0.0.0/24"]),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
+
+    def test_lookup_not_ambiguous(self):
+        """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
+        obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+        obj_perm.users.add(self.user)
+        queryset = IPAddress.objects.select_related("parent", "nat_inside", "status")
+
+        for permission_constraint in (
+            {"host__family": 4},
+            {"host__net_host": "10.0.0.1"},
+            {"host__net_host_contained": "10.0.0.0/24"},
+            {"host__net_in": ["10.0.0.0/24"]},
+        ):
+            with self.subTest(permission_type=next(iter(permission_constraint.keys()))):
+                try:
+                    with transaction.atomic():
+                        obj_perm.constraints = permission_constraint
+                        obj_perm.save()
+                        list(queryset.restrict(self.user, "view"))
+                finally:
+                    delattr(self.user, "_object_perm_cache")
 
     @skipIf(
         connection.vendor in ["postgresql", "sqlite"],
@@ -453,6 +477,20 @@ class IPAddressQuerySet(TestCase):
             IPAddress.objects.select_related("nat_inside").filter(host__iregex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
+
+    def test_get_or_create(self):
+        # https://github.com/nautobot/nautobot/issues/6676
+        ip_obj, created = IPAddress.objects.update_or_create(
+            defaults={
+                "status": self.ipaddr_status,
+            },
+            host="10.0.0.1",
+            mask_length="24",
+            namespace=self.namespace,
+        )
+        self.assertFalse(created)
+        self.assertEqual(str(ip_obj.address), "10.0.0.1/24")
+        self.assertEqual(ip_obj.parent.namespace, self.namespace)
 
 
 class PrefixQuerysetTestCase(TestCase):
@@ -648,6 +686,30 @@ class PrefixQuerysetTestCase(TestCase):
         prefix = Prefix.objects.filter(network__net_equals="192.168.0.0/16")[0]
         self.assertEqual(Prefix.objects.filter(prefix="192.168.0.0/16")[0], prefix)
 
+    def test_lookup_not_ambiguous(self):
+        """Check for issues like https://github.com/nautobot/nautobot/issues/5166."""
+        obj_perm = ObjectPermission.objects.create(name="Test Permission", constraints={}, actions=["view"])
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        obj_perm.users.add(self.user)
+        queryset = Prefix.objects.select_related("parent", "rir", "role", "status", "namespace")
+
+        for permission_constraint in (
+            {"network__family": 4},
+            {"network__net_equals": "192.168.0.0/16"},
+            {"network__net_contained": "192.0.0.0/8"},
+            {"network__net_contained_or_equal": "192.0.0.0/8"},
+            {"network__net_contains": "192.168.3.192/32"},
+            {"network__net_contains_or_equals": "192.168.3.192/32"},
+        ):
+            with self.subTest(permission_type=next(iter(permission_constraint.keys()))):
+                try:
+                    with transaction.atomic():
+                        obj_perm.constraints = permission_constraint
+                        obj_perm.save()
+                        list(queryset.restrict(self.user, "view"))
+                finally:
+                    delattr(self.user, "_object_perm_cache")
+
     @skipIf(
         connection.vendor in ["postgresql", "sqlite"],
         "Not currently supported on postgresql or sqlite",
@@ -740,6 +802,23 @@ class PrefixQuerysetTestCase(TestCase):
                 status=self.status,
             )
 
+        # same but for IPv6
+        container_v6 = netaddr.IPNetwork("2001:db8::/120")
+        Prefix.objects.create(
+            prefix=container_v6,
+            type=choices.PrefixTypeChoices.TYPE_CONTAINER,
+            namespace=namespace,
+            status=self.status,
+        )
+        for prefix_length in range(121, 129):
+            network = list(container_v6.subnet(prefix_length))[1]
+            Prefix.objects.create(
+                prefix=network,
+                type=choices.PrefixTypeChoices.TYPE_NETWORK,
+                namespace=namespace,
+                status=self.status,
+            )
+
         for last_octet in range(1, 255):
             ip = netaddr.IPAddress(f"10.0.0.{last_octet}")
             expected_prefix_length = 33 - len(bin(last_octet)[2:])  # [1] = 32, [2,3] = 31, [4,5,6,7] = 30, etc.
@@ -757,3 +836,32 @@ class PrefixQuerysetTestCase(TestCase):
                     .order_by("-prefix_length")
                     .first(),
                 )
+
+            ip = netaddr.IPAddress(f"2001:db8::{last_octet:x}")
+            expected_prefix_length = 129 - len(bin(last_octet)[2:])  # [1] = 128, [2,3] = 127, [4,5,6,7] = 126, etc.
+            with self.subTest(ip=ip, expected_prefix_length=expected_prefix_length):
+                closest_parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(ip, include_self=True)
+                expected_parent = list(container_v6.subnet(expected_prefix_length))[1]
+                self.assertEqual(closest_parent.prefix, expected_parent)
+                self.assertEqual(
+                    closest_parent,
+                    Prefix.objects.filter(
+                        network__lte=ip.value,
+                        broadcast__gte=ip.value,
+                        namespace=namespace,
+                    )
+                    .order_by("-prefix_length")
+                    .first(),
+                )
+
+        slash32 = Prefix.objects.create(prefix="10.1.1.154/32", namespace=namespace, status=self.status)
+        slash31 = Prefix.objects.create(prefix="10.1.1.154/31", namespace=namespace, status=self.status)
+        slash30 = Prefix.objects.create(prefix="10.1.1.154/30", namespace=namespace, status=self.status)
+        self.assertEqual(slash31, Prefix.objects.get_closest_parent(slash32.prefix))
+        self.assertEqual(slash30, Prefix.objects.get_closest_parent(slash31.prefix))
+
+        slash126 = Prefix.objects.create(prefix="::1/126", namespace=namespace, status=self.status)
+        slash127 = Prefix.objects.create(prefix="::1/127", namespace=namespace, status=self.status)
+        slash128 = Prefix.objects.create(prefix="::1/128", namespace=namespace, status=self.status)
+        self.assertEqual(slash126, Prefix.objects.get_closest_parent(slash127.prefix))
+        self.assertEqual(slash127, Prefix.objects.get_closest_parent(slash128.prefix))

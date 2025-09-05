@@ -4,7 +4,7 @@ This section describes how to get started with configuring Nautobot.
 
 ## Initializing the Configuration
 
-An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key).
+An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](settings.md#secret_key).
 
 By default (if you haven't set [`NAUTOBOT_ROOT`](#nautobot-root-directory) to some other value), the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -19,7 +19,7 @@ Configuration file created at '/opt/nautobot/nautobot_config.py'
 ```
 
 !!! tip
-    The [Nautobot Installation Docs](../installation/nautobot.md#choose-your-nautobot_root) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`.
+    The [Nautobot Installation Docs](../installation/nautobot.md#create-the-nautobot-system-user) example sets `NAUTOBOT_ROOT` to `/opt/nautobot`, so `nautobot_config.py` would be found at `/opt/nautobot/nautobot_config.py`.
 
 You may specify a different location for the configuration as the argument to `init`:
 
@@ -77,7 +77,7 @@ This setting is also used in the [Nautobot deployment guide](../installation/nau
 
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [Jobs](../../platform-functionality/jobs/index.md), [Git repositories](../../platform-functionality/gitrepository.md), [image attachments](../../platform-functionality/imageattachment.md), and [static files](optional-settings.md#static_root) (CSS, JavaScript, etc.).
+Nautobot is capable of storing various types of files. This includes [Jobs](../../platform-functionality/jobs/index.md), [Git repositories](../../platform-functionality/gitrepository.md), [image attachments](../../platform-functionality/imageattachment.md), and [static files](settings.md#static_root) (CSS, JavaScript, etc.).
 
 Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
@@ -85,14 +85,11 @@ Each of the features requiring use of file storage default to being stored in `N
 
 While Nautobot has many configuration settings, only a few of them must be defined at the time of installation. These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
 
-* [Required settings](required-settings.md)
-* [Optional settings](optional-settings.md)
-
-## Optional Authentication Configuration
-
-* [LDAP Authentication](authentication/ldap.md)
-* [Remote User Authentication](authentication/remote.md)
-* [SSO Authentication](authentication/sso.md)
+* [Settings](settings.md)
+* Optional Authentication Configuration:
+    * [LDAP Authentication](authentication/ldap.md)
+    * [Remote User Authentication](authentication/remote.md)
+    * [SSO Authentication](authentication/sso.md)
 
 ## Changing the Configuration
 
@@ -123,11 +120,10 @@ Output:
 ..
 from django.conf import settings
 ...
-# Django version 3.2.18
-# Nautobot version 2.0.0a2
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 ...
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -149,7 +145,7 @@ echo $NAUTOBOT_CONFIG
 ### Adding your own dependencies
 
 !!! warning
-    Be cautious not to confuse extra applications with Nautobot Apps which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
+    Be cautious not to confuse extra applications with Nautobot Apps which are installed using the [`PLUGINS`](settings.md#plugins) setting. They are similar, but distinctly different!
 
 Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
 
@@ -161,17 +157,17 @@ If you attempt to modify `INSTALLED_APPS` yourself, you might see an error such 
 Traceback (most recent call last):
   File "/usr/local/bin/nautobot-server", line 8, in <module>
     sys.exit(main())
-  File "/usr/local/lib/python3.8/site-packages/nautobot/core/cli.py", line 53, in main
+  File "/usr/local/lib/python3.12/site-packages/nautobot/core/cli.py", line 53, in main
     initializer=_configure_settings,  # Called after defaults
-  File "/usr/local/lib/python3.8/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
+  File "/usr/local/lib/python3.12/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
     management.execute_from_command_line([runner_name, command] + command_args)
-  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
+  File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
     utility.execute()
-  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 377, in execute
+  File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 377, in execute
     django.setup()
-  File "/usr/local/lib/python3.8/site-packages/django/__init__.py", line 24, in setup
+  File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
     apps.populate(settings.INSTALLED_APPS)
-  File "/usr/local/lib/python3.8/site-packages/django/apps/registry.py", line 95, in populate
+  File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 95, in populate
     "duplicates: %s" % app_config.label)
 django.core.exceptions.ImproperlyConfigured: Application labels aren't unique, duplicates: health_check
 ```
@@ -185,6 +181,6 @@ EXTRA_INSTALLED_APPS = [
 ]
 ```
 
-For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings.md#extra-applications).
+For more information on installing extra applications, please see the documentation on [Extra Applications](settings.md#extra-applications).
 
 For more information on installing or developing Nautobot Apps, please see the [documentation on Apps](../../../apps/index.md).

@@ -4,7 +4,6 @@ from nautobot.core.testing.integration import SeleniumTestCase
 class NavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
-    fixtures = ["user-data.json"]
     navbar = {
         "Organization": {
             "Locations": {
@@ -60,7 +59,7 @@ class NavBarTestCase(SeleniumTestCase):
             tab_xpath = f"//*[@id='navbar']//span[normalize-space()='{tab_name}']/.."
             tab = self.browser.find_by_xpath(tab_xpath)
             tab.click()
-            self.assertTrue(bool(tab["aria-expanded"]))
+            self.assertEqual(tab["aria-expanded"], "true")
 
             for group_name, items in groups.items():
                 # Append onto tab xpath with group name search

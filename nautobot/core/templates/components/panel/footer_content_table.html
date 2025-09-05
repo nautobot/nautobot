@@ -1,0 +1,43 @@
+{% load ui_framework %}
+
+{% if body_content_table_list_url and more_queryset_count > 0 %}
+    <a href="{{ body_content_table_list_url }}">
+        <span class="mdi mdi-dots-horizontal" aria-hidden="true"></span> View {{ more_queryset_count }} more {{ body_content_table_verbose_name_plural }}
+    </a>
+{% endif %}
+
+{% if footer_buttons %}
+    <div class="pull-left">
+        {% render_components footer_buttons %}
+    </div>
+    <div class="clearfix"></div>
+{% endif %}
+
+{% if body_content_table_add_url %}
+    <div class="pull-right">
+        <a href="{{ body_content_table_add_url }}" class="btn btn-xs btn-primary">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
+        </a>
+    </div>
+
+    <div class="clearfix"></div>
+{% endif %}
+
+{% if footer_buttons %}
+    <script>
+        document.querySelectorAll('button[data-form-id="{{ form_id }}"]').forEach(button => {
+            button.addEventListener('click', function () {
+                const actionUrl = button.getAttribute('action-url');
+                const form = document.getElementById('{{ form_id }}');
+                if (form && actionUrl) {
+                    form.action = actionUrl;
+                    form.submit();
+                }
+                else {
+                    console.warn('Missing form_id or action_url:', button);
+                    return;
+                }
+            });
+        });
+    </script>
+{% endif %}

@@ -1,5 +1,3 @@
-from rest_framework.routers import APIRootView
-
 from nautobot.circuits import filters
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.models.querysets import count_related
@@ -8,23 +6,13 @@ from nautobot.extras.api.views import NautobotModelViewSet
 
 from . import serializers
 
-
-class CircuitsRootView(APIRootView):
-    """
-    Circuits API root view
-    """
-
-    def get_view_name(self):
-        return "Circuits"
-
-
 #
 # Providers
 #
 
 
 class ProviderViewSet(NautobotModelViewSet):
-    queryset = Provider.objects.prefetch_related("tags").annotate(circuit_count=count_related(Circuit, "provider"))
+    queryset = Provider.objects.annotate(circuit_count=count_related(Circuit, "provider"))
     serializer_class = serializers.ProviderSerializer
     filterset_class = filters.ProviderFilterSet
 
@@ -46,9 +34,7 @@ class CircuitTypeViewSet(NautobotModelViewSet):
 
 
 class CircuitViewSet(NautobotModelViewSet):
-    queryset = Circuit.objects.select_related(
-        "status", "circuit_type", "tenant", "provider", "circuit_termination_a", "circuit_termination_z"
-    ).prefetch_related("tags")
+    queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     filterset_class = filters.CircuitFilterSet
 
@@ -59,9 +45,7 @@ class CircuitViewSet(NautobotModelViewSet):
 
 
 class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = CircuitTermination.objects.select_related("circuit", "location", "cable").prefetch_related(
-        "_path__destination"
-    )
+    queryset = CircuitTermination.objects.prefetch_related("_path__destination")
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet
 
@@ -72,6 +56,6 @@ class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 
 class ProviderNetworkViewSet(NautobotModelViewSet):
-    queryset = ProviderNetwork.objects.prefetch_related("tags")
+    queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     filterset_class = filters.ProviderNetworkFilterSet

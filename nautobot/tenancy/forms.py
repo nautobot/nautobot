@@ -1,23 +1,34 @@
 from django import forms
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     CommentField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    StaticSelect2,
     TagFilterField,
 )
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
-    TagsBulkEditFormMixin,
 )
+from nautobot.extras.forms.mixins import TagsBulkEditFormMixin
 
 from .models import Tenant, TenantGroup
 
 #
 # Tenant groups
 #
+
+
+class TenantGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TenantGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = []
 
 
 class TenantGroupForm(NautobotModelForm):
@@ -30,6 +41,13 @@ class TenantGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
+
+
+class TenantGroupFilterForm(NautobotFilterForm):
+    model = TenantGroup
+    q = forms.CharField(required=False, label="Search")
+    parent = DynamicModelMultipleChoiceField(queryset=TenantGroup.objects.all(), to_field_name="name", required=False)
+    has_tenants = forms.NullBooleanField(required="False", widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #

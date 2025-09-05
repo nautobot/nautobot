@@ -66,6 +66,10 @@ function initializeStaticChoiceSelection(context, dropdownParent=null){
 // Static choice selection
 function initializeCheckboxes(context){
     this_context = $(context);
+
+    // Track last selected checkbox for range selection
+    let lastSelectedIndex = null;
+
     // "Toggle" checkbox for object lists (PK column)
     this_context.find('input:checkbox.toggle').click(function() {
         $(this).closest('table').find('input:checkbox[name=pk]:visible').prop('checked', $(this).prop('checked'));
@@ -75,56 +79,133 @@ function initializeCheckboxes(context){
             $('#select_all_box').removeClass('hidden');
         } else {
             $('#select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
+
+        // Reset last selected index when using toggle all
+        lastSelectedIndex = null;
     });
 
-    // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
+    // Enhanced checkbox click handler with shift-click range selection
     this_context.find('input:checkbox[name=pk]').click(function (event) {
-        if (!$(this).attr('checked')) {
+        const $table = $(this).closest('table');
+        const $allCheckboxes = $table.find('input:checkbox[name=pk]:visible');
+        const currentIndex = $allCheckboxes.index(this);
+
+        // Handle shift-click for range selection/deselection
+        if (event.shiftKey && lastSelectedIndex !== null) {
+            // Create range from previous click to current click
+            const startIndex = Math.min(lastSelectedIndex, currentIndex);
+            const endIndex = Math.max(lastSelectedIndex, currentIndex);
+
+            // Use the clicked item's new state for entire range
+            const shouldSelect = this.checked;
+
+            // Apply to entire range
+            for (let i = startIndex; i <= endIndex; i++) {
+                $allCheckboxes.eq(i).prop('checked', shouldSelect);
+            }
+        }
+
+        // Always update anchor to current click (normal click or shift+click)
+        lastSelectedIndex = currentIndex;
+
+        // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
+        const hasUnchecked = $allCheckboxes.filter(':not(:checked)').length > 0;
+        if (hasUnchecked) {
             $('input:checkbox.toggle, #select_all').prop('checked', false);
+            $('#select_all_box').addClass('hidden');
         }
     });
 }
 
-function initializeSlugField(context){
-    this_context = $(context);
-    var slug_field = this_context.find('#id_slug');
-    // If id_slug field is not to be found
-    // check if it is rename to key field like what we did for CustomField and Relationship
-    if (slug_field.length == 0) {
-        slug_field = this_context.find('#id_key');
-    }
-    if (slug_field.length != 0) {
-        var slug_source_arr = slug_field.attr('slug-source').split(" ");
-        var slug_length = slug_field.attr('maxlength');
-        if (slug_field.val()) {
-            slug_field.attr('_changed', true);
-        }
-        slug_field.change(function() {
-            $(this).attr('_changed', true);
-        });
-        function reslugify() {
-            let slug_str = "";
-            for (slug_source_str of slug_source_arr) {
-                if (slug_str != "") {
-                    slug_str += " ";
-                }
-                let slug_source = $('#id_' + slug_source_str);
-                slug_str += slug_source.val();
-            }
-            slug_field.val(slugify(slug_str, (slug_length ? slug_length : 100)));
-        };
+function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
+   const newValues = sourceFields.map(function(sourceFieldName){
+        const sourceFieldId = `id_${sourceFieldName}`;
+        return context.getElementById(sourceFieldId).value;
+    })
 
-        for (slug_source_str of slug_source_arr) {
-            let slug_source = $('#id_' + slug_source_str);
-            slug_source.on('keyup change', function() {
-                if (slug_field && !slug_field.attr('_changed')) {
-                    reslugify();
-                }
-            });
-        }
-        this_context.find('button.reslugify').click(reslugify);
+    const newValue = newValues.join(" ")
+    if(transformValue){
+        targetField.value = transformValue(newValue, maxLength)
+    } else {
+        targetField.value = newValue.slice(0, maxLength)
     }
+}
+
+function repopulateIfChanged(targetField, repopulate){
+    if(targetField.dataset.manuallyChanged === 'true'){
+        return;
+    }
+    repopulate()
+}
+
+function watchManualChanges(field){
+    field.dataset.manuallyChanged = Boolean(field.value)
+    field.addEventListener('change', function(){
+        field.dataset.manuallyChanged = Boolean(field.value)
+    })
+}
+
+function watchSourceFields(context, targetField, sourceFields, repopulate){
+    // Watch for any changes in source fields to regenerate the target field
+    sourceFields.forEach(function(sourceFieldName){
+        const sourceFieldId = `id_${sourceFieldName}`;
+        const sourceField = context.getElementById(sourceFieldId);
+        const onFieldUpdate = function(){ repopulateIfChanged(targetField, repopulate)}
+        sourceField.addEventListener('keyup', onFieldUpdate)
+        sourceField.addEventListener('change', onFieldUpdate)
+    })
+}
+
+function watchRegenerateButton(context, targetField, repopulate){
+    // If user clicks the "regenerate" button, set target field to be auto-populate again
+    const regenerateButton = context.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
+    regenerateButton.addEventListener('click', repopulate)
+}
+
+function getSlugField(){
+    const slugField = document.getElementById("id_slug");
+    if(slugField){
+        return slugField
+    }
+    // If id_slug field is not to be found
+    // check if it is renamed to key field like what we did for CustomField and Relationship
+    return document.getElementById("id_key");
+}
+
+function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
+    // Get source fields and length values set as html attributes on given field
+    const sourceFields = field.getAttribute(sourceFieldsAttrName).split(" ");
+    const length = field.getAttribute('maxlength') || defaultMaxLength
+
+    // Prepare repopulate function with custom source fields and length set on this field
+    const repopulateField = function() {
+        repopulateAutoField(context, field, sourceFields, length, transformValue)
+    }
+    watchSourceFields(context, field, sourceFields, repopulateField);
+    watchRegenerateButton(context, field, repopulateField);
+    watchManualChanges(field);
+}
+
+function initializeSlugField(context){
+    // Function to support slug fields auto-populate and slugify logic
+    const vanilla_context = context[0] // jsify form passes jquery context
+    const slugField = getSlugField()
+    if(!slugField){
+        return
+    }
+    initializeAutoField(vanilla_context, slugField, 'slug-source', 100, slugify);
+}
+
+function initializeAutoPopulateField(context){
+    // Function to support other auto-populate fields like position for Device Module Bay
+    const vanilla_context = context[0] // jsify form passes jquery context
+    const fields = vanilla_context.querySelectorAll('[data-autopopulate]');
+
+    fields.forEach(function(field){
+        initializeAutoField(vanilla_context, field, 'source');
+    })
 }
 
 function initializeFormActionClick(context){
@@ -212,7 +293,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-api').each(function(){
         thisobj = $(this);
-        placeholder = thisobj.attr("data-null-option") || "---------";
+        placeholder = "---------";
         thisobj.select2({
             allowClear: true,
             placeholder: placeholder,
@@ -268,6 +349,11 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                                     if(element_id.includes("id_form-")){
                                         let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
                                         ref_field = $("#" + id_prefix + value.slice(1));
+                                    }
+                                    // If the element is in a table row with a class containing "dynamic-formset"
+                                    // We need to find the reference field in the same row
+                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
+                                        ref_field = $(element).closest("tr").find("select[id*=" + value.slice(1) + "]");
                                     }
                                     else {
                                         ref_field = $('#id_' + value.slice(1));
@@ -632,18 +718,45 @@ function initializeDynamicFilterForm(context){
 
     // Remove applied filters
     this_context.find(".remove-filter-param").on("click", function(){
-        let query_params = location.search;
+        let query_params = new URLSearchParams(location.search);
+        if (query_params.has("saved_view")) {
+            // Need to reverse-engineer the "real" query params from the rendered page
+            for (let element of document.getElementsByClassName("filter-selection-choice-remove")) {
+                let key = element.getAttribute("data-field-parent");
+                let value = element.getAttribute("data-field-value");
+                if (!query_params.has(key, value)) {
+                    query_params.append(key, value);
+                }
+            }
+        }
         let type = $(this).attr("data-field-type");
         let field_value = $(this).attr("data-field-value");
-        let query_string = location.search.substr(1).split("&");
 
         if (type === "parent") {
-            query_string = query_string.filter(item => item.search(field_value) < 0);
+            // Remove all instances of this query param
+            query_params.delete(field_value);
+
         } else {
+            // Remove this specific instance of this query param
             let parent = $(this).attr("data-field-parent");
-            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+            query_params.delete(parent, field_value);
         }
-        location.replace("?" + query_string.join("&"))
+        if (query_params.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
+
+            query_params.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !query_params.has("all_filters_removed")){
+                query_params.append("all_filters_removed", true);
+            }
+        }
+        location.assign("?" + query_params);
     })
 
     // On submit of filter form
@@ -651,18 +764,49 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         let dynamic_form = $("#dynamic-filter-form");
         dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+
         // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
         let q_field_phantom = $('<input type="hidden" name="q" />')
         q_field_phantom.val(q_field.val())
         dynamic_form.append(q_field_phantom);
 
-        // Get the serialize data from the forms and filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
-        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
-        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
-        // Union Operation
-        let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
-        location.replace("?" + search_query)
+        // Get the serialized data from the forms and:
+        // 1) filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
+        // 2) combine the two forms into a single set of data without duplicate entries
+        let search_query = new URLSearchParams();
+        let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
+        const urlParams = new URLSearchParams(window.location.search);
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "clear_view"]
+        urlParams.forEach((value, key) => {
+            if (non_filter_params.includes(key)){
+                search_query.append(key, value)
+            }
+        })
+        dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
+        // Some list views may lack a default-filter form
+        let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter")?.firstElementChild));
+        default_query.forEach((value, key) => {
+            if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
+        });
+        $("#FilterForm_modal").modal("hide");
+
+        if (search_query.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
+
+            search_query.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !search_query.has("all_filters_removed")){
+                search_query.append("all_filters_removed", true);
+            }
+        }
+        location.assign("?" + search_query);
     })
 
     // On submit of filter search form
@@ -671,6 +815,27 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         $("#dynamic-filter-form").submit()
     })
+
+    // On clear of filter form
+    this_context.find("#dynamic-filter-form, #default-filter form").on("reset", function(e){
+        e.preventDefault()
+        // make two copies of url params
+        const urlParams = new URLSearchParams(window.location.search);
+        const newUrlParams = new URLSearchParams(window.location.search);
+        // every query string that is non-filter-related
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
+        for (const [key, value] of urlParams.entries()) {
+            // remove filter params
+            if (non_filter_params.includes(key) === false) {
+                newUrlParams.delete(key, value)
+            }
+        }
+        if (!newUrlParams.has("all_filters_removed")){
+            newUrlParams.append("all_filters_removed", true)
+        }
+        location.assign("?" + newUrlParams.toString())
+    })
+
 
     // Clear new row values upon creation
     this_context.find(".dynamic-filterform-add .add-row").click(function(){
@@ -805,10 +970,11 @@ function replaceEl(replaced_el, replacing_el) {
 }
 
 function initializeInputs(context) {
-    this_context = $(context);
+    const this_context = $(context);
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
+    initializeAutoPopulateField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
     initializeColorPicker(this_context)
@@ -823,7 +989,7 @@ function initializeInputs(context) {
     initializeMultiValueChar(this_context)
 
     $(this_context).find(".modal").each(function() {
-        this_modal = $(this)
+        const this_modal = $(this)
         initializeStaticChoiceSelection(this_modal, this_modal)
         initializeColorPicker(this_modal, this_modal)
         initializeDynamicChoiceSelection(this_modal, this_modal)
@@ -833,7 +999,7 @@ function initializeInputs(context) {
 }
 
 function jsify_form(context) {
-    this_context = $(context);
+    const this_context = $(context);
     // Pagination
     initializeInputs(this_context)
 }
@@ -854,23 +1020,19 @@ function createInput(element){
     replaceEl(element, input_field)
 }
 
+function submitOnEnter(event) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        if (!event.repeat) {
+            event.target.form.requestSubmit();
+        }
+
+        event.preventDefault(); // Prevents the addition of a new line in the text field
+    }
+}
 
 $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
+    document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
-// Scroll up an offset equal to the first nav element if a hash is present
-// Cannot use '#navbar' because it is not always visible, like in small windows
-function headerOffsetScroll() {
-    if (window.location.hash) {
-        // Short wait needed to allow the page to scroll to the element
-        setTimeout(function() {
-            window.scrollBy(0, -$('nav').height())
-        }, 10);
-    }
-}
-
-// Account for the header height when hash-scrolling
-window.addEventListener('load', headerOffsetScroll);
-window.addEventListener('hashchange', headerOffsetScroll);

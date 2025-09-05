@@ -3,7 +3,9 @@ from django.db.models import Lookup, lookups
 import netaddr
 
 
-def _mysql_varbin_to_broadcast():
+def _mysql_varbin_to_broadcast(alias=None):
+    if alias:
+        return f"HEX({alias}.broadcast)"
     return "HEX(broadcast)"
 
 
@@ -13,11 +15,15 @@ def _mysql_varbin_to_hex(lhs, alias=None):
     return f"HEX({lhs})"
 
 
-def _mysql_varbin_to_network():
+def _mysql_varbin_to_network(alias=None):
+    if alias:
+        return f"HEX({alias}.network)"
     return "HEX(network)"
 
 
-def _postgresql_varbin_to_broadcast(length):
+def _postgresql_varbin_to_broadcast(length, alias=None):
+    if alias:
+        return f"right({alias}.broadcast::text, -1)::varbit::bit({length})"
     return f"right(broadcast::text, -1)::varbit::bit({length})"
 
 
@@ -27,8 +33,10 @@ def _postgresql_varbin_to_integer(lhs, length, alias=None):
     return f"right({lhs}::text, -1)::varbit::bit({length})"
 
 
-def _postgresql_varbin_to_network(lhs, length):
+def _postgresql_varbin_to_network(lhs, length, alias=None):
     # convert to bitstring, 0 out everything larger than prefix_length
+    if alias:
+        return f"lpad(right({alias}.{lhs}::text, -1)::varbit::text, {alias}.prefix_length, '0')::bit({length})"
     return f"lpad(right({lhs}::text, -1)::varbit::text, prefix_length, '0')::bit({length})"
 
 
@@ -52,8 +60,8 @@ def get_ip_info(field_name, ip_str, alias=None):
         ip_details.rhs = py_to_hex(ip.ip, ip_details.length)
         ip_details.net_addr = f"'{py_to_hex(ip.network, ip_details.length)}'"
         ip_details.bcast_addr = f"'{py_to_hex(ip[-1], ip_details.length)}'"
-        ip_details.q_net = _mysql_varbin_to_network()
-        ip_details.q_bcast = _mysql_varbin_to_broadcast()
+        ip_details.q_net = _mysql_varbin_to_network(alias=alias)
+        ip_details.q_bcast = _mysql_varbin_to_broadcast(alias=alias)
         ip_details.q_ip = _mysql_varbin_to_hex(field_name, alias=alias)
 
     elif _connection.vendor == "postgresql":
@@ -61,8 +69,8 @@ def get_ip_info(field_name, ip_str, alias=None):
         ip_details.addr_str = f"B'{bin(int(ip_details.addr))[2:].zfill(ip_details.length)}'"
         ip_details.net_addr = f"B'{bin(int(ip.network))[2:].zfill(ip_details.length)}'"
         ip_details.bcast_addr = f"B'{bin(int(ip[-1]))[2:].zfill(ip_details.length)}'"
-        ip_details.q_net = _postgresql_varbin_to_network(field_name, ip_details.length)
-        ip_details.q_bcast = _postgresql_varbin_to_broadcast(ip_details.length)
+        ip_details.q_net = _postgresql_varbin_to_network(field_name, ip_details.length, alias=alias)
+        ip_details.q_bcast = _postgresql_varbin_to_broadcast(ip_details.length, alias=alias)
         ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length, alias=alias)
 
     else:
@@ -74,25 +82,38 @@ def get_ip_info(field_name, ip_str, alias=None):
 class IPDetails:
     """Class for setting up all details about an IP they may be needed"""
 
-    net = None
-    addr = None
-    ip = None
-    prefix = None
-    length = None
-    addr_str = None
-    rhs = None
-    net_addr = None
-    bcast_addr = None
-    q_net = None
-    q_bcast = None
-    q_ip = None
+    addr = None  # 10.0.0.0
+    ip = None  # 10.0.0.0/8
+    prefix = None  # 8
+    length = None  # 32
+    addr_str = None  # B'00001010000000000000000000000000'
+    rhs = None  # 00001010000000000000000000000000
+    net_addr = None  # B'00001010000000000000000000000000'
+    bcast_addr = None  # B'00001010111111111111111111111111'
+    q_net = None  # mysql or postgres specific
+    q_bcast = None  # mysql or postgres specific
+    q_ip = None  # mysql or postgres specific
     to_len = {4: 32, 6: 128}
+
+    def __str__(self):
+        return f"""\
+addr: {self.addr}
+ip: {self.ip}
+prefix: {self.prefix}
+length: {self.length}
+addr_str: {self.addr_str}
+rhs: {self.rhs}
+net_addr: {self.net_addr}
+bcast_addr: {self.bcast_addr}
+q_net: {self.q_net}
+q_bcast: {self.q_bcast}
+q_ip: {self.q_ip}"""
 
 
 class StringMatchMixin:
-    def process_lhs(self, qn, connection, lhs=None):
+    def process_lhs(self, compiler, connection, lhs=None):
         lhs = lhs or self.lhs
-        lhs_string, lhs_params = qn.compile(lhs)
+        lhs_string, lhs_params = compiler.compile(lhs)
         if connection.vendor in ["postgresql", "sqlite"]:
             raise NotSupportedError(f"Lookup not supported on {connection.vendor}.")
         return f"INET6_NTOA({lhs_string})", lhs_params
@@ -132,6 +153,7 @@ class IRegex(StringMatchMixin, lookups.IRegex):
 
 class NetworkFieldMixin:
     def get_prep_lookup(self):
+        self.alias = self.lhs.alias
         field_name = self.lhs.field.name
         if field_name not in ["host", "network"]:
             raise NotSupportedError(f"Lookup only provided on the host and network fields, not {field_name}.")
@@ -142,8 +164,8 @@ class NetworkFieldMixin:
         self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
-    def process_rhs(self, qn, connection):
-        sql, params = super().process_rhs(qn, connection)
+    def process_rhs(self, compiler, connection):
+        sql, params = super().process_rhs(compiler, connection)
         params[0] = self.ip.rhs
         return sql, params
 
@@ -151,50 +173,67 @@ class NetworkFieldMixin:
 class NetEquals(NetworkFieldMixin, Lookup):
     lookup_name = "net_equals"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        query = f"prefix_length = {self.ip.prefix} AND {rhs} = {self.ip.q_ip}"
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        if self.alias:
+            query = f"{self.alias}.prefix_length = {self.ip.prefix} AND {rhs} = {self.ip.q_ip}"
+        else:
+            query = f"prefix_length = {self.ip.prefix} AND {rhs} = {self.ip.q_ip}"
         return query, lhs_params + rhs_params
 
 
 class NetContainsOrEquals(NetworkFieldMixin, Lookup):
     lookup_name = "net_contains_or_equals"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        query = f"prefix_length <= {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        if self.alias:
+            query = f"{self.alias}.prefix_length <= {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
+        else:
+            query = f"prefix_length <= {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
         return query, lhs_params + rhs_params
 
 
 class NetContains(NetworkFieldMixin, Lookup):
     lookup_name = "net_contains"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        query = f"prefix_length < {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        if self.alias:
+            query = (
+                f"{self.alias}.prefix_length < {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
+            )
+        else:
+            query = f"prefix_length < {self.ip.prefix} AND {rhs} BETWEEN {self.ip.q_net} AND {self.ip.q_bcast}"
         return query, lhs_params + rhs_params
 
 
 class NetContainedOrEqual(NetworkFieldMixin, Lookup):
     lookup_name = "net_contained_or_equal"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        query = f"prefix_length >= {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        if self.alias:
+            query = f"{self.alias}.prefix_length >= {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
+        else:
+            query = f"prefix_length >= {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
         return query, lhs_params + rhs_params
 
 
 class NetContained(NetworkFieldMixin, Lookup):
     lookup_name = "net_contained"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        query = f"prefix_length > {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        if self.alias:
+            query = f"{self.alias}.prefix_length > {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
+        else:
+            query = f"prefix_length > {self.ip.prefix} AND {self.ip.q_net} BETWEEN {rhs} AND {self.ip.bcast_addr}"
         return query, lhs_params + rhs_params
 
 
@@ -208,19 +247,19 @@ class NetHost(Lookup):
         self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
         return str(self.ip.ip)
 
-    def process_rhs(self, qn, connection):
-        sql, params = super().process_rhs(qn, connection)
+    def process_rhs(self, compiler, connection):
+        sql, params = super().process_rhs(compiler, connection)
         params[0] = self.ip.rhs
         return sql, params
 
-    def process_lhs(self, qn, connection, lhs=None):
+    def process_lhs(self, compiler, connection, lhs=None):
         lhs = lhs or self.lhs
-        _, lhs_params = qn.compile(lhs)
+        _, lhs_params = compiler.compile(lhs)
         return self.ip.q_ip, lhs_params
 
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
+    def as_sql(self, compiler, connection):
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
         return f"{lhs} = {rhs}", lhs_params + rhs_params
 
 
@@ -247,9 +286,9 @@ class NetIn(Lookup):
             raise NotSupportedError(f"Don't know the correct query_starter for {_connection.vendor}")
         return self.rhs
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        _, rhs_params = self.process_rhs(qn, connection)
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        _, rhs_params = self.process_rhs(compiler, connection)
         query = self.query_starter
         query += "OR ".join(f"{ip.q_ip} BETWEEN {ip.net_addr} AND {ip.bcast_addr} " for ip in self.ips)
         return query, lhs_params + rhs_params
@@ -258,9 +297,9 @@ class NetIn(Lookup):
 class NetHostContained(NetworkFieldMixin, Lookup):
     lookup_name = "net_host_contained"
 
-    def as_sql(self, qn, connection):
-        _, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
+    def as_sql(self, compiler, connection):
+        _, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
         query = f"{self.ip.q_ip} BETWEEN {rhs} AND {self.ip.bcast_addr}"
         return query, lhs_params + rhs_params
 
@@ -275,12 +314,12 @@ class NetFamily(Lookup):
             self.rhs = 16
         return self.rhs
 
-    def process_lhs(self, qn, connection, lhs=None):
+    def process_lhs(self, compiler, connection, lhs=None):
         lhs = lhs or self.lhs
-        lhs_string, lhs_params = qn.compile(lhs)
+        lhs_string, lhs_params = compiler.compile(lhs)
         return f"LENGTH({lhs_string})", lhs_params
 
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
+    def as_sql(self, compiler, connection):
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
         return f"{lhs} = {rhs}", lhs_params + rhs_params

@@ -1,4 +1,0 @@
-Renamed `example_plugin` to `example_app`.
-Renamed `example_plugin_with_view_override` to `example_app_with_view_override`.
-Replaced all "plugin" terminology within the `examples` directory with "App", except in cases where the terminology is embedded in core code (`settings.PLUGINS`, `plugins:` and `plugins-api` named URLs, etc.)
-Replaced some "plugin" terminology in docstrings, comments, and test code with "app" as appropriate.

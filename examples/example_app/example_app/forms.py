@@ -1,6 +1,13 @@
 from django import forms
 
-from nautobot.apps.forms import BootstrapMixin, BulkEditForm, NautobotModelForm
+from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
+from nautobot.apps.forms import (
+    BootstrapMixin,
+    BulkEditForm,
+    NautobotBulkEditForm,
+    NautobotModelForm,
+    TagsBulkEditFormMixin,
+)
 
 from example_app.models import AnotherExampleModel, ExampleModel
 
@@ -25,15 +32,16 @@ class ExampleModelFilterForm(BootstrapMixin, forms.Form):
 
     model = ExampleModel
     q = forms.CharField(required=False, label="Search")
-    name = forms.CharField(max_length=20, required=False)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     number = forms.IntegerField(required=False)
 
 
-class ExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
+# This is purposefully inheriting from `NautobotBulkEditForm` then TagsBulkEditFormMixin to validate that MRO supports both orders now.
+class ExampleModelBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
     """Bulk edit form for `ExampleModel` objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(max_length=20, required=False)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     number = forms.IntegerField(required=False)
 
     class Meta:
@@ -61,7 +69,7 @@ class AnotherExampleModelFilterForm(BootstrapMixin, forms.Form):
 
     model = AnotherExampleModel
     q = forms.CharField(required=False, label="Search")
-    name = forms.CharField(max_length=20, required=False)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     number = forms.IntegerField(required=False)
 
 
@@ -69,7 +77,7 @@ class AnotherExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
     """Bulk edit form for `ExampleModel` objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=AnotherExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(max_length=20, required=False)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     number = forms.IntegerField(required=False)
 
     class Meta:

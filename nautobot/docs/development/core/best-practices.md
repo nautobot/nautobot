@@ -8,16 +8,18 @@ The below best practices apply to test code as well as feature code, and there a
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
 
-| Feature                  | Full-featured models       | Minimal models             |
-| ------------------------ | -------------------------- | -------------------------- |
-| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
-| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
-| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
-| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
-| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
-| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
-| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
-| API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
+| Feature                  | Full-featured models       | Minimal models                              |
+| ------------------------ | -------------------------- | ------------------------------------------- |
+| Data models              | `PrimaryModel`             | `BaseModel`                                 |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`                             |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin` + `django.forms.ModelForm` |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin` + `BulkEditForm`           |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin` + `django.forms.Form`      |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`                       |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer`                  |
+| List view tables         | `BaseTable`                | `BaseTable`                                 |
+| API ViewSets             | `NautobotModelViewSet`     | `ModelViewSet`                              |
+| UI ViewSets              | `NautobotUIViewSet`        | individual mixins as needed                 |
 
 ## Data Model Best Practices
 
@@ -123,6 +125,10 @@ class ExampleModel(PrimaryModel):
     slug = AutoSlugField(populate_from='name')
 ```
 
+### CharField and SlugField Max Length
+
+When constructing a CharField or SlugField, always utilize the `CHARFIELD_MAX_LENGTH` constant unless your field requires a value greater than `CHARFIELD_MAX_LENGTH`, which is `255`.
+
 ## Getting URL Routes
 
 When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.
@@ -135,9 +141,6 @@ from nautobot.core.utils.lookup import get_route_for_model
 ```
 
 This utility function supports both UI and API views for both Nautobot core apps and Nautobot Apps.
-
-+++ 1.4.3
-    Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
 
 ### UI Routes
 
@@ -232,7 +235,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.core.filters.BaseFilterSet` or `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 
@@ -264,6 +267,7 @@ class UserFilter(NautobotFilterSet):
     - Otherwise, the field **must** be shadowed with a Nautobot `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `name` depending on the value of the incoming argument (e.g. UUID string vs. name string).
         - This provides an advantage over the default `django_filters.ModelMultipleChoiceFilter` which only supports a UUID (`pk`) value as an input.
     - Fields that use `slug` or some other natural key field instead of `name` can set the `to_field_name` argument on `NaturalKeyOrPKMultipleChoiceFilter` accordingly.
+    - If you use `NaturalKeyOrPKMultipleChoiceFilter` for a non-unique field, you should pass in `prefers_id=True` to have the filter prefer the object ID in the Filter Forms over the `to_field_name`, while still allowing the `to_field_name` to be used as a query parameter. This will for example make the UI prefer `locations/?vlans=<uuid>` over `locations/?vlans=<vid>` (`VLAN.vid` is not a globally unique field) while still understanding the latter option as well.
 
 ```python
 # Typical usage
@@ -383,7 +387,7 @@ Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_p
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
 ```
 
-The default `lookup_expr` unless otherwise specified is “exact”, as seen in [django_filters.conf](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10):
+The default `lookup_expr` unless otherwise specified is “exact”, as seen in the [`django_filters.conf`](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10) module:
 
 ```python
   'DEFAULT_LOOKUP_EXPR': 'exact',
@@ -462,8 +466,3 @@ filterset.qs.filter(query).count()  # 339
 - Reversibility may not always necessarily be required, but by properly defining `field_name`, `lookup_expr`, and `exclude` on filter fields, **introspection becomes deterministic and reversible queries can be reliably generated as needed.**
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
-
-## Using NautobotUIViewSet for App Development
-
-+++ 1.4.0
-    Using `NautobotUIViewSet` for [App development](../apps/api/views/nautobotuiviewset.md) is strongly recommended.

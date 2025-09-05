@@ -15,7 +15,7 @@ class TestCreateLocationWithCustomField(Job):
         name = "Location and Custom Field Creation"
         description = "Location with a custom field"
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         with transaction.atomic():
             obj_type = ContentType.objects.get_for_model(Location)
             cf = CustomField(label="cf1", type=CustomFieldTypeChoices.TYPE_TEXT, default="-")

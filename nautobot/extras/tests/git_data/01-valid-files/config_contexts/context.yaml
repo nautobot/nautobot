@@ -1,0 +1,12 @@
+---
+_metadata:
+    name: "Frobozz 1000 NTP servers"
+    weight: 1500
+    description: "NTP servers for Frobozz 1000 devices **only**"
+    is_active: true
+    config_context_schema: "Config Context Schema 1"
+    device_types:
+        - model: "Frobozz 1000"
+ntp-servers:
+    - "172.16.10.22"
+    - "172.16.10.33"

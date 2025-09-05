@@ -1,24 +1,29 @@
 from unittest import mock, skip
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import NoReverseMatch, reverse
+import django_tables2 as tables
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
+from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
+from nautobot.extras import plugins
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
-from nautobot.extras.plugins.validators import wrap_model_clean_methods
+from nautobot.extras.plugins.validators import CustomValidator, wrap_model_clean_methods
+from nautobot.extras.plugins.views import extract_app_data
 from nautobot.extras.registry import DatasourceContent, registry
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.filters import TenantFilterSet
@@ -114,9 +119,8 @@ class AppTest(TestCase):
         """
         from example_app.jobs import ExampleJob
 
-        self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
+        self.assertIn(ExampleJob.class_path, registry.get("jobs", {}))
         self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
-        self.assertIn("example_app.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """
@@ -314,6 +318,61 @@ class AppListViewTest(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
 
+    def test_extract_app_data(self):
+        app_config = apps.get_app_config("example_app")
+        # Without a corresponding entry in marketplace_data
+        self.assertEqual(
+            extract_app_data(app_config, {"apps": []}),
+            {
+                "name": "Example Nautobot App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Nautobot development team",
+                "author_email": "nautobot@example.com",
+                "headline": "For testing purposes only",
+                "description": "For testing purposes only",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
+
+        # With a corresponding entry in marketplace_data
+        mock_marketplace_data = {
+            "apps": [
+                {
+                    "name": "Nautobot Example App",
+                    "use_cases": ["Example", "Development"],
+                    "requires": [],
+                    "docs": "https://example.com/docs/example_app/",
+                    "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                    "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                    "package_name": "example_app",
+                    "author": "Network to Code (NTC)",
+                    "availability": "Open Source",
+                    "icon": "...",
+                },
+            ],
+        }
+        self.assertEqual(
+            extract_app_data(app_config, mock_marketplace_data),
+            {
+                "name": "Nautobot Example App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Network to Code (NTC)",
+                "author_email": "nautobot@example.com",
+                "availability": "Open Source",
+                "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
+
 
 class PluginDetailViewTest(TestCase):
     def test_view_detail_anonymous(self):
@@ -332,6 +391,18 @@ class PluginDetailViewTest(TestCase):
         self.assertIn("Example Nautobot App", response_body, msg=response_body)
         # App description
         self.assertIn("For testing purposes only", response_body, msg=response_body)
+
+
+class MarketplaceViewTest(TestCase):
+    def test_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_authenticated(self):
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        self.assertHttpStatus(response, 200)
 
 
 class AppAPITest(APIViewTestCases.APIViewTestCase):
@@ -420,6 +491,16 @@ class AppAPITest(APIViewTestCases.APIViewTestCase):
         pass
 
 
+class TestUserContextCustomValidator(CustomValidator):
+    model = "dcim.locationtype"
+
+    def clean(self):
+        """
+        Used to validate that the correct user context is available in the custom validator.
+        """
+        self.validation_error(f"TestUserContextCustomValidator: user is {self.context['user']}")
+
+
 class AppCustomValidationTest(TestCase):
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
@@ -427,6 +508,7 @@ class AppCustomValidationTest(TestCase):
         # must manually call the method again to actually perform the action, now that the
         # ContentType table has been created.
         wrap_model_clean_methods()
+        super().setUp()
 
     def test_custom_validator_raises_exception(self):
         location_type = LocationType.objects.get(name="Campus")
@@ -455,6 +537,31 @@ class AppCustomValidationTest(TestCase):
         with self.assertRaises(ValidationError):
             relationship_assoc.clean()
 
+    def test_custom_validator_non_web_request_uses_anonymous_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+            with self.assertRaises(ValidationError) as context:
+                location_type.clean()
+            self.assertEqual(context.exception.message, "TestUserContextCustomValidator: user is AnonymousUser")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
+
+    def test_custom_validator_web_request_uses_real_user(self):
+        location_type = LocationType.objects.get(name="Campus")
+        before = registry["plugin_custom_validators"]["dcim.locationtype"]
+        try:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = [TestUserContextCustomValidator]
+
+            with self.assertRaises(ValidationError) as context:
+                with web_request_context(user=self.user):
+                    location_type.clean()
+            self.assertEqual(context.exception.message, f"TestUserContextCustomValidator: user is {self.user}")
+        finally:
+            registry["plugin_custom_validators"]["dcim.locationtype"] = before
+
 
 class ExampleModelCustomActionViewTest(TestCase):
     """Test for custom action view `all_names` added to Example App"""
@@ -472,7 +579,10 @@ class ExampleModelCustomActionViewTest(TestCase):
     def test_custom_action_view_anonymous(self):
         self.client.logout()
         response = self.client.get(self.custom_view_url)
-        self.assertHttpStatus(response, 302)
+        self.assertHttpStatus(response, 200)
+        # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
+        response_body = response.content.decode(response.charset)
+        self.assertIn("/login/?next=", response_body, msg=response_body)
 
     def test_custom_action_view_without_permission(self):
         with disable_warnings("django.request"):
@@ -482,7 +592,7 @@ class ExampleModelCustomActionViewTest(TestCase):
             self.assertNotIn("/login/", response_body, msg=response_body)
 
     def test_custom_action_view_with_permission(self):
-        self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
         response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
@@ -498,7 +608,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
-            actions=["all_names"],
+            actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -649,6 +759,97 @@ class FilterExtensionTest(TestCase):
         self.assertIn("example_app_description", form.fields.keys())
 
 
+class TableExtensionTest(TestCase):
+    """Tests for adding table extensions."""
+
+    def test_alter_queryset(self):
+        """Test the 'alter_queryset' method of the TableExtension class."""
+        extension = plugins.TableExtension()
+        queryset = object()
+        result = extension.alter_queryset(queryset)
+        self.assertEqual(result, queryset)
+
+    def test__add_columns_into_model_table(self):
+        """Test the '_add_columns_into_model_table' function."""
+        extension = plugins.TableExtension()
+        extension.model = "tenancy.tenant"
+        extension.table_columns = {
+            "tenant_group": tables.Column(verbose_name="Name conflicts with existing column"),
+            "tenant_success": tables.Column(verbose_name="This name should be registered"),
+        }
+        extension.add_to_default_columns = ["tenant_group", "tenant_success"]
+
+        with self.assertLogs("nautobot.extras.plugins", level="WARNING") as logger:
+            plugins._add_columns_into_model_table(extension, "tenant")
+            table = get_table_for_model(extension.model)
+            expected = [
+                "ERROR:nautobot.extras.plugins:tenant: There was a name conflict with existing "
+                "table column `tenant_group`, the custom column was ignored."
+            ]
+            with self.subTest("error is logged"):
+                self.assertEqual(logger.output, expected)
+
+        with self.subTest("column is added to default_columns"):
+            self.assertIn("tenant_success", table.base_columns)
+
+    def test__add_column_to_table_base_columns(self):
+        """Test the '_add_column_to_table_base_columns' function."""
+        table = get_table_for_model("tenancy.tenant")
+
+        with self.subTest("raises TypeError"):
+            column = object()
+            with self.assertRaises(TypeError) as context:
+                plugins._add_column_to_table_base_columns(table, "test_column", column, "my_app")
+                self.assertEqual(
+                    context.exception, "Custom column `test_column` is not an instance of django_tables2.Column."
+                )
+
+        with self.subTest("raises AttributeError"):
+            column = tables.Column()
+            with self.assertRaises(AttributeError) as context:
+                plugins._add_column_to_table_base_columns(table, "pk", column, "my_app")
+                self.assertEqual(
+                    context.exception, "There was a conflict with table column `pk`, the custom column was ignored."
+                )
+
+        with self.subTest("Adds column to base_columns"):
+            column = tables.Column()
+            plugins._add_column_to_table_base_columns(table, "unique_name", column, "my_app")
+            self.assertIn("unique_name", table.base_columns)
+
+    def test__modify_default_table_columns(self):
+        """Test the '_modify_default_table_columns' function."""
+        extension = plugins.TableExtension()
+        extension.model = "tenancy.tenant"
+        extension.add_to_default_columns = ["new_column"]
+        extension.remove_from_default_columns = ["description"]
+
+        table = get_table_for_model(extension.model)
+        table.base_columns["new_column"] = tables.Column()
+
+        plugins._modify_default_table_columns(extension, "my_app")
+
+        with self.subTest("column is added to default_columns"):
+            self.assertIn("new_column", table.Meta.default_columns)
+
+        with self.subTest("column is removed from default_columns"):
+            self.assertNotIn("description", table.Meta.default_columns)
+
+    def test__validate_is_subclass_of_table_extension(self):
+        """Test the '_validate_is_subclass_of_table_extension' function."""
+        with self.assertRaises(TypeError):
+            plugins._validate_is_subclass_of_table_extension(object)
+
+    def test__validate_table_column_name_is_prefixed_with_app_name(self):
+        """Test the '_validate_table_column_name_is_prefixed_with_app_name' function."""
+        with self.assertRaises(ValueError) as context:
+            plugins._validate_table_column_name_is_prefixed_with_app_name("not_prefixed", "prefix")
+            self.assertEqual(
+                context.exception,
+                "Attempted to create a custom table column `not_prefixed` that did not start with `prefix`",
+            )
+
+
 class LoadPluginTest(TestCase):
     """
     Validate that plugin helpers work as intended.
@@ -696,15 +897,49 @@ class TestAppCoreViewOverrides(TestCase):
 
     def test_views_are_overridden(self):
         response = self.client.get(reverse("plugins:example_app:view_to_be_overridden"))
-        self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
+        self.assertEqual("Hello world! I'm an overridden view.", response.content.decode(response.charset))
 
         response = self.client.get(
-            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
+            f"{reverse('plugins:plugin_detail', kwargs={'plugin': 'example_app_with_view_override'})}"
         )
         self.assertIn(
-            (
-                b"plugins:example_app:view_to_be_overridden <code>"
-                b"example_app_with_view_override.views.ViewOverride</code>"
-            ),
-            response.content,
+            "plugins:example_app:view_to_be_overridden <code>example_app_with_view_override.views.ViewOverride</code>",
+            extract_page_body(response.content.decode(response.charset)),
         )
+
+
+class PluginTemplateExtensionsTest(TestCase):
+    """
+    Test that registered TemplateExtensions inject content as expected
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.first()
+        self.user.is_superuser = True
+        self.user.save()
+
+    def test_list_view_buttons(self):
+        response = self.client.get(reverse("dcim:location_list"))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("LOCATION CONTENT - BUTTONS LIST", response_body, msg=response_body)
+
+    def test_detail_view_buttons(self):
+        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("APP INJECTED LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
+
+    def test_detail_view_left_page(self):
+        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("App Injected Content - Left", response_body, msg=response_body)
+
+    def test_detail_view_right_page(self):
+        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("App Injected Content - Right", response_body, msg=response_body)
+
+    def test_detail_view_full_width_page(self):
+        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("App Injected Content - Full Width", response_body, msg=response_body)

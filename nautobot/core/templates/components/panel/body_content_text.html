@@ -1,0 +1,12 @@
+{% load helpers %}
+{% if render_as == 'json' %}
+    <pre>{{ value | render_json }}</pre>
+{% elif render_as == 'yaml' %}
+    <pre>{{ value | render_yaml }}</pre>
+{% elif render_as == 'markdown' %}
+    {{ value | render_markdown }}
+{% elif render_as == 'code' %}
+    <pre>{{ value }}</pre>
+{% else %}
+    {{ value }}
+{% endif %}

@@ -10,31 +10,31 @@ class InstalledAppsTable(tables.Table):
     """
 
     name = tables.Column(linkify=lambda record: reverse("apps:app_detail", kwargs={"app": record["app_label"]}))
-    package_name = tables.Column()
+    package = tables.Column(verbose_name="Package Name")
     author = tables.Column()
     author_email = tables.Column()
-    description = tables.Column()
+    headline = tables.Column()
     version = tables.Column()
     actions = tables.TemplateColumn(
         template_code="""
-            {% if record.actions.home %}
-            <a href="{% url record.actions.home %}" class="btn btn-success btn-xs" title="Home">
+            {% if record.home_url %}
+                <a href="{% url record.home_url %}" class="btn btn-primary btn-xs" title="Home">
             {% else %}
-            <a href="" class="btn btn-success btn-xs disabled" title="No home link provided">
+                <a href="" class="btn btn-primary btn-xs disabled" title="No home link provided">
             {% endif %}
                 <i class="mdi mdi-home"></i>
             </a>
-            {% if record.actions.configure %}
-            <a href="{% url record.actions.configure %}" class="btn btn-warning btn-xs" title="Configure">
+            {% if record.config_url %}
+                <a href="{% url record.config_url %}" class="btn btn-warning btn-xs" title="Configure">
             {% else %}
-            <a href="" class="btn btn-warning btn-xs disabled" title="No configuration link provided">
+                <a href="" class="btn btn-warning btn-xs disabled" title="No configuration link provided">
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
-            {% if record.actions.docs %}
-            <a href="{% url record.actions.docs %}" class="btn btn-info btn-xs" title="Docs">
+            {% if record.docs_url %}
+                <a href="{% url record.docs_url %}" class="btn btn-info btn-xs" title="Docs">
             {% else %}
-            <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
+                <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
             {% endif %}
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>
@@ -47,7 +47,7 @@ class InstalledAppsTable(tables.Table):
         attrs = {
             "class": "table table-hover table-headings",
         }
-        default_columns = ("name", "description", "version", "actions")
+        default_columns = ("name", "headline", "version", "actions")
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,7 +83,9 @@ class InstalledAppsTable(tables.Table):
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -94,7 +96,7 @@ class InstalledAppsTable(tables.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible]
+        return [name for name, column in self.columns.items() if column.visible]
 
     def render_package_name(self, value):
         return format_html(f"<code>{value}</code>")

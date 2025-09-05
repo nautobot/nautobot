@@ -5,49 +5,34 @@ from nautobot.core.testing.integration import SeleniumTestCase
 class AppNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
-    fixtures = ["user-data.json"]
     navbar = {
-        "Example Menu": {
-            "Example Group 1": {
-                "Example Model": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": ["Add"],
-                },
-            },
-        },
         "Circuits": {
             "Circuits": {
                 "Circuits": {
-                    "permission": "circuits.view_circuit",
                     "buttons": ["Add"],
                 },
                 "Circuit Types": {
-                    "permission": "circuits.view_circuittype",
                     "buttons": ["Add"],
                 },
             },
             "Example Circuit Group": {
-                "Example Model": {
-                    "permission": "example_app.view_examplemodel",
+                "Example Models": {
                     "buttons": ["Add"],
                 },
             },
             "Providers": {
                 "Providers": {
-                    "permission": "circuits.view_provider",
                     "buttons": ["Add"],
                 },
             },
         },
         "Apps": {
             "Example Nautobot App": {
-                "Models": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": ["Add a new example model"],
+                "Example Models": {
+                    "buttons": ["Add"],
                 },
-                "Other Models": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": [],
+                "Another Example Models": {
+                    "buttons": ["Add"],
                 },
             },
         },
@@ -75,11 +60,11 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//span[normalize-space()='Example Menu']/.."
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='Example Group 1']")
 
-        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Model']]"
+        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Models']]"
         group.find_by_xpath(item_xpath)
 
     def test_app_navbar_modify_circuits(self):
@@ -96,7 +81,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//*[normalize-space()='Circuits']"
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         for group_name, items in self.navbar["Circuits"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
@@ -128,7 +113,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         tab_xpath = "//*[@id='navbar']//*[normalize-space()='Apps']"
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
-        self.assertTrue(bool(tab["aria-expanded"]))
+        self.assertEqual(tab["aria-expanded"], "true")
 
         for group_name, items in self.navbar["Apps"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
@@ -139,7 +124,7 @@ class AppNavBarTestCase(SeleniumTestCase):
                 for button_name in item_details["buttons"]:
                     button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
                     if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
-                        self.assertIn(button_class, button.get_attribute("class"))
+                        self.assertIn(button_class, button["class"])
                     if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
                         icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])

@@ -9,9 +9,7 @@ at the top of your template file.
 
 ## Object Detail
 
-+++ 1.2.0
-
-The most customizable template is `generic/object_detail.html`, as object detail views have a wide range of specific requirements to be accommodated. It provides the following blocks:
+The most customizable template is `generic/object_retrieve.html`, as object detail views have a wide range of specific requirements to be accommodated. It provides the following blocks:
 
 * `header`: overloading this block allows for changing the entire top row of
   the page, including the title, breadcrumbs, search field, and tabs.
@@ -24,6 +22,9 @@ The most customizable template is `generic/object_detail.html`, as object detail
         * `extra_buttons`: this block enables extending the buttons block
           without losing the predefined buttons. Custom buttons will appear
           between any App-defined buttons and the clone/edit/delete actions.
+          Note that since v2.4.0 you can also define `extra_buttons` in your
+          view's [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition)
+          rather than overriding and extending the template.
     * `masthead`: is the block that contains the title. Overloading it enables
       to change anything about the title block.
     * `title`: is the block contained by `masthead` and wrapped in a heading
@@ -32,12 +33,21 @@ The most customizable template is `generic/object_detail.html`, as object detail
     * `nav_tabs`: are the navigation tabs. If overloaded, custom tabs can be
       rendered instead of the default.
         * `extra_nav_tabs`: this block allows to add new tabs without having to
-          override the default ones.
-* `content`: is the entire content of the page below the `header`.
+          override the default ones. Note that since v2.4.0 you can also define `extra_tabs`
+          in your view's [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition)
+          rather than overriding and extending the template.
+* `content`: is the entire content of the page below the `header`. Note that since v2.4.0,
+  if your view defines [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition),
+  that content will be rendered in place of the below blocks.
     * `content_left_page`: is a half-width column on the left. Multiple panels
       can be rendered in a single block.
     * `content_right_page`: is a half-width column on the right.
     * `content_full_width_page`: is a full-width column.
+    * `advanced_content_left_page`: is a half-width column on the left on the
+      Advanced Tab. This will render below Object Details and Data Provenance.
+    * `advanced_content_right_page`: is half-width column on the right on the Advanced Tab.
+    * `advanced_content_full_width_page`: is a full-width column on the Advanced Tab.
+    * `extra_tab_content`: this block allows content from new tabs and is related to `extra_nav_tabs`.
 
 ## Object List
 
@@ -45,10 +55,16 @@ The base template for listing objects is `generic/object_list.html`, with the fo
 
 * `buttons`: may provide a set of buttons at the top right of the page, to the
   left of the table configuration button.
+* `import_list_element` and `export_list_element` blocks may be overridden individually if the default button behavior is not as desired.
 * `bulk_buttons`: may be a set of buttons at the bottom of the table, to the
   left of potential bulk edit or delete buttons.
 * `header_extra`: may provide extra information to display just above the table,
   to the left.
+
++/- 2.3.0
+    `import_button` and `export_button` were replaced with `import_list_element` and `export_list_element` as these
+    were collapsed into a single dropdown. The use of `import_button` and `export_button` is deprecated and will be
+    removed in 3.0.0.
 
 ## Object Edit
 

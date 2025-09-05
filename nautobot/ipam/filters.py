@@ -1,10 +1,12 @@
 import contextlib
+import uuid
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import django_filters
 import netaddr
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueNumberFilter,
@@ -17,10 +19,10 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface, Location
+from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.ipam import choices
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.ipam import choices, formfields
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 from .models import (
@@ -28,11 +30,13 @@ from .models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -41,6 +45,7 @@ from .models import (
 __all__ = (
     "IPAddressFilterSet",
     "NamespaceFilterSet",
+    "PrefixFilter",
     "PrefixFilterSet",
     "RIRFilterSet",
     "RouteTargetFilterSet",
@@ -49,6 +54,39 @@ __all__ = (
     "VLANGroupFilterSet",
     "VRFFilterSet",
 )
+
+
+class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """
+    Filter that supports filtering a foreign key to Prefix by either its PK or by a literal `prefix` string.
+    """
+
+    field_class = formfields.PrefixFilterFormField
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("to_field_name", "pk")
+        kwargs.setdefault("label", "Prefix (ID or prefix string)")
+        kwargs.setdefault("queryset", Prefix.objects.all())
+        super().__init__(*args, **kwargs)
+
+    def get_filter_predicate(self, v):
+        # Null value filtering
+        if v is None:
+            return {f"{self.field_name}__isnull": True}
+
+        # If value is a model instance, stringify it to a pk.
+        if isinstance(v, Prefix):
+            v = v.pk
+
+        # Try to cast the value to a UUID to distinguish between PKs and prefix strings
+        v = str(v)
+        try:
+            uuid.UUID(v)
+            return {self.field_name: v}
+        except (AttributeError, TypeError, ValueError):
+            # It's a prefix string
+            prefixes_queryset = Prefix.objects.net_equals(v)
+            return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
 
 
 class NamespaceFilterSet(NautobotFilterSet):
@@ -63,7 +101,7 @@ class NamespaceFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -87,16 +125,21 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Device (ID or name)",
     )
-    prefix = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="prefixes",
-        queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
-        label="Prefix (ID or name)",
+    virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualMachine.objects.all(),
+        to_field_name="name",
+        label="Virtual Machine (ID or name)",
     )
+    prefix = PrefixFilter(field_name="prefixes")
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
         label="Namespace (name or ID)",
+    )
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (ID or name)",
     )
 
     class Meta:
@@ -105,6 +148,21 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "vrf__name": "icontains",
+            "device__name": "icontains",
+            "virtual_machine__name": "icontains",
+            "virtual_device_context__name": "icontains",
+            "rd": "icontains",
+        },
+    )
+    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VRF.objects.all(),
+        to_field_name="name",
+        label="VRF (ID or name)",
+    )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -115,18 +173,25 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Virtual Machine (ID or name)",
     )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (ID or name)",
+    )
 
     class Meta:
         model = VRFDeviceAssignment
-        fields = ["id", "vrf", "device", "virtual_machine"]
+        fields = ["id", "name", "rd"]
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
-    prefix = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
-        label="Prefix (ID or name)",
+    q = SearchFilter(
+        filter_predicates={
+            # "prefix__prefix": "iexact",  # TODO?
+            "vrf__name": "icontains",
+        },
     )
+    prefix = PrefixFilter()
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -191,10 +256,7 @@ class PrefixFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    # Prefix doesn't have an appropriate single natural-key field for a NaturalKeyOrPKMultipleChoiceFilter
-    parent = django_filters.ModelMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-    )
+    parent = PrefixFilter()
     prefix = MultiValueCharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -254,15 +316,22 @@ class PrefixFilterSet(
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
+    )
+    cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
+        label="Cloud Network (name or ID)",
     )
 
     class Meta:
@@ -308,7 +377,7 @@ class PrefixFilterSet(
         return prefixes_queryset
 
     def generate_query_filter_present_in_vrf(self, value):
-        if isinstance(value, str):
+        if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
 
         query = Q(vrfs=value) | Q(vrfs__export_targets__in=value.import_targets.all())
@@ -319,6 +388,28 @@ class PrefixFilterSet(
             return queryset.none
         params = self.generate_query_filter_present_in_vrf(value)
         return queryset.filter(params).distinct()
+
+
+class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "location__name": "icontains",
+        },
+    )
+    prefix = PrefixFilter()
+    location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    def _strip_values(self, values):
+        return [value.strip() for value in values if value.strip()]
+
+    class Meta:
+        model = PrefixLocationAssignment
+        fields = ["id", "prefix", "location"]
 
 
 class IPAddressFilterSet(
@@ -400,11 +491,19 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    nat_inside = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        label="NAT (Inside)",
+    )
+    has_nat_inside = RelatedMembershipBooleanFilter(
+        field_name="nat_inside",
+        label="Has NAT Inside",
+    )
     ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
@@ -430,7 +529,7 @@ class IPAddressFilterSet(
             return queryset.none()
 
     def generate_query_filter_present_in_vrf(self, value):
-        if isinstance(value, str):
+        if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
 
         query = Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())
@@ -489,7 +588,7 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
 
 
 class VLANFilterSet(
@@ -518,12 +617,14 @@ class VLANFilterSet(
         label="VLAN Group (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
@@ -534,14 +635,39 @@ class VLANFilterSet(
         fields = ["id", "name", "tags", "vid"]
 
     def get_for_device(self, queryset, name, value):
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
-        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
         devices = Device.objects.select_related("location").filter(**{f"{name}__in": value})
         if not devices.exists():
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
+        for location in Location.objects.filter(pk__in=location_ids):
+            location_ids.extend([ancestor.id for ancestor in location.ancestors()])
         return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
+
+
+class VLANLocationAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "vlan__vid": "iexact",
+            "location__name": "icontains",
+        },
+    )
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="VLAN (VID or ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    class Meta:
+        model = VLANLocationAssignment
+        fields = ["id", "vlan", "location"]
 
 
 class ServiceFilterSet(NautobotFilterSet):

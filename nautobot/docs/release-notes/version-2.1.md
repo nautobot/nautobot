@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD024 -->
-
 # Nautobot v2.1
 
 This document describes all new features and changes in Nautobot 2.1.
@@ -27,12 +25,12 @@ The panels displayed on the Nautobot home page have been modified to enable a mo
 
 #### Job File Outputs ([#3352](https://github.com/nautobot/nautobot/issues/3352), [#4820](https://github.com/nautobot/nautobot/issues/4820))
 
-The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/index.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
+The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/job-patterns.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
 
-The size of files Jobs can create via this method are constrained by the [`JOB_CREATE_FILE_MAX_SIZE`](../user-guide/administration/configuration/optional-settings.md#job_create_file_max_size) settings variable.
+The size of files Jobs can create via this method are constrained by the [`JOB_CREATE_FILE_MAX_SIZE`](../user-guide/administration/configuration/settings.md#job_create_file_max_size) settings variable.
 
 !!! info
-    The specific storage backend used to retain such files is controlled by the [`JOB_FILE_IO_STORAGE`](../user-guide/administration/configuration/optional-settings.md#job_file_io_storage) settings variable. The default value of this setting uses the Nautobot database to store output files, which should work in all deployments but is generally not optimal and better alternatives may exist in your specific deployment. Refer to the documentation link above for more details.
+    The specific storage backend used to retain such files is controlled by the [`JOB_FILE_IO_STORAGE`](../user-guide/administration/configuration/settings.md#job_file_io_storage) settings variable. The default value of this setting uses the Nautobot database to store output files, which should work in all deployments but is generally not optimal and better alternatives may exist in your specific deployment. Refer to the documentation link above for more details.
 
 !!! tip
     Users must have permission to `view` the `extras > file proxy` object type in order to list and download files from the REST API.
@@ -71,27 +69,176 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
-<!-- towncrier release notes start -->
+## v2.1.9 (2024-03-25)
+
+### Security in v2.1.9
+
+- [#5450](https://github.com/nautobot/nautobot/issues/5450) - Updated `django` to `~3.2.25` due to `CVE-2024-27351`.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoint `/extras/job-results/<uuid:pk>/log-table/`; furthermore it will not allow an authenticated user to view log entries for a JobResult they don't otherwise have permission to view. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on the endpoints `/extras/git-repositories/<uuid:pk>/sync/` and `/extras/git-repositories/<uuid:pk>/dry-run/`; a user who has `change` permissions for a subset of Git repositories is no longer permitted to sync or dry-run other repositories for which they lack the appropriate permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on the `/api/dcim/connected-device/?peer_device=...&?peer_interface=...` REST API endpoint; a user who has `view` permissions for a subset of interfaces is no longer permitted to query other interfaces for which they lack permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on all `<app>/<model>/<uuid>/notes/` UI endpoints; a user must now have the appropriate `extras.view_note` permissions to view existing notes. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the REST API endpoints `/api/redoc/`, `/api/swagger/`, `/api/swagger.json`, and `/api/swagger.yaml`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the `/api/graphql` REST API endpoint, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoints `/dcim/racks/<uuid>/dynamic-groups/`, `/dcim/devices/<uuid>/dynamic-groups/`, `/ipam/prefixes/<uuid>/dynamic-groups/`, `/ipam/ip-addresses/<uuid>/dynamic-groups/`, `/virtualization/clusters/<uuid>/dynamic-groups/`, and `/virtualization/virtual-machines/<uuid>/dynamic-groups/`, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoint `/extras/secrets/provider/<str:provider_slug>/form/`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+
+### Added in v2.1.9
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added `nautobot.apps.utils.get_url_for_url_pattern` and `nautobot.apps.utils.get_url_patterns` lookup functions.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added `nautobot.apps.views.GenericView` base class.
+
+### Changed in v2.1.9
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added support for `view_name` and `view_description` optional parameters when instantiating a `nautobot.apps.api.OrderedDefaultRouter`. Specifying these parameters is to be preferred over defining a custom `APIRootView` subclass when defining App API URLs.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication by default on the `nautobot.apps.api.APIRootView` class. As a consequence, viewing the browsable REST API root endpoints (e.g. `/api/`, `/api/circuits/`, `/api/dcim/`, etc.) now requires user authentication.
+
+### Removed in v2.1.9
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Removed the URL endpoints `/api/users/users/my-profile/`, `/api/users/users/session/`, `/api/users/tokens/authenticate/`, and `/api/users/tokens/logout/` as they are unused at this time.
+
+### Fixed in v2.1.9
+
+- [#5413](https://github.com/nautobot/nautobot/issues/5413) - Updated Device "LLDP Neighbors" detail panel to handle LLDP neighbors with MAC address as port-id.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for GraphiQL page `/graphql`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for Admin page `/admin`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for Django Rest Framework (DRF) page `/api/`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Improved footer responsiveness for certain media sizes.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Fixed a 500 error when accessing any of the `/dcim/<port-type>/<uuid>/connect/<termination_b_type>/` view endpoints with an invalid/nonexistent `termination_b_type` string.
+- [#5466](https://github.com/nautobot/nautobot/issues/5466) - Remove duplicated location param in vlan table.
+
+### Dependencies in v2.1.9
+
+- [#5296](https://github.com/nautobot/nautobot/issues/5296) - Fixed bug in `pyproject.toml` that added `coverage` as a Nautobot dependency instead of a development dependency.
+
+### Documentation in v2.1.9
+
+- [#5340](https://github.com/nautobot/nautobot/issues/5340) - Added installation documentation about recommended health-checks for Docker Compose and Kubernetes.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Updated example views in the App developer documentation to include `ObjectPermissionRequiredMixin` or `LoginRequiredMixin` as appropriate best practices.
+
+### Housekeeping in v2.1.9
+
+- [#1746](https://github.com/nautobot/nautobot/issues/1746) - Replaced `OrderedDict` instance in `nautobot/core/api/routers.py#21` with with a plain `dict` instance.
+- [#1746](https://github.com/nautobot/nautobot/issues/1746) - Replaced `OrderedDict` instance in `nautobot/dcim/models/racks.py#275` with a plain `dict` instance.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--pattern` argument to `invoke unittest`.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--parallel-workers` argument to `invoke unittest`.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Updated custom views in the `example_plugin` to use the new `GenericView` base class as a best practice.
+
+## v2.1.8 (2024-03-18)
+
+### Added in v2.1.8
+
+- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added `CELERY_BEAT_HEARTBEAT_FILE` settings variable.
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_minimum` and `validation_maximum` as length constraints on a Custom Field of type `Text`, `URL`, `JSON`, `Markdown`, `Selection`, or `Multiple Selection`.
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_regex` as a constraint on valid choice definitions for a Custom Field of type `Selection` or `Multiple Selection`.
+- [#5400](https://github.com/nautobot/nautobot/issues/5400) - Added power-port/power-outlet types `IEC 60906-1`, `2P+T 10A (NBR 14136)`, and `2P+T 20A (NBR 14136)`.
+- [#5401](https://github.com/nautobot/nautobot/issues/5401) - Added front/rear port types `LX.5`, `LX.5/PC`, `LX.5/UPC`, and `LX.5/APC`.
+- [#5402](https://github.com/nautobot/nautobot/issues/5402) - Added interface types `CXP (100GE)`, `DSFP (100GE)`, `SFP-DD (100GE)`, `QSFP-DD (100GE)`, `QSFP-DD (200GE)`, `CFP2 (400GE)`, `OSFP-RHS (400GE)`, `CDFP (400GE)`, `CPF8 (400GE)`, `SFP+ (32GFC)`, `SFP-DD (64GFC)`, and `SFP+ (64GFC)`.
+- [#5424](https://github.com/nautobot/nautobot/issues/5424) - Added `TemplateExtension.list_buttons()` API, allowing apps to register button content to be injected into object list views.
+
+### Changed in v2.1.8
+
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Changed uses of `functools.lru_cache` to use `django-redis` cache instead.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Standardized cache key strings used with the `django-redis` cache.
+
+### Removed in v2.1.8
+
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Removed the hard-coded 255-character limit on custom fields of type `Text`.
+
+### Fixed in v2.1.8
+
+- [#5247](https://github.com/nautobot/nautobot/issues/5247) - Fixed Job buttons do not respect the `task_queues` of the job class.
+- [#5380](https://github.com/nautobot/nautobot/issues/5380) - Fixed incorrect permission for "Add Tenant" button in the navigation menu.
+- [#5380](https://github.com/nautobot/nautobot/issues/5380) - Added missing `extras.view_scheduledjob` permission to the "Job Approval Queue" navigation menu item.
+- [#5395](https://github.com/nautobot/nautobot/issues/5395) - Fixed incorrect permission for "Roles" link in the navigation menu.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Fixed an issue with stale CustomField, ComputedField, Relationship, and TreeModel caches that caused incorrect data at times.
+
+### Documentation in v2.1.8
+
+- [#5437](https://github.com/nautobot/nautobot/issues/5437) - Added release-note for version 1.6.15.
+- [#5421](https://github.com/nautobot/nautobot/issues/5421) - Added release-notes for versions 1.6.11 through 1.6.14.
+
+### Housekeeping in v2.1.8
+
+- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added health check for Celery Beat based on it touching a file (by default `/tmp/nautobot_celery_beat_heartbeat`) each time its scheduler wakes up.
+- [#3213](https://github.com/nautobot/nautobot/issues/3213) - Removed redundant filter tests for related boolean filters.
+- [#5434](https://github.com/nautobot/nautobot/issues/5434) - Fixed health check for beat container in `docker-compose.yml` under `docker-compose` v1.x.
+
+## v2.1.7 (2024-03-05)
+
+### Fixed in v2.1.7
+
+- [#5387](https://github.com/nautobot/nautobot/issues/5387) - Fixed an error in the Dockerfile that resulted in `pyuwsgi` being installed without SSL support.
+
+## v2.1.6 (2024-03-04)
+
+### Security in v2.1.6
+
+- [#5319](https://github.com/nautobot/nautobot/issues/5319) - Updated `cryptography` to 42.0.4 due to CVE-2024-26130. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added in v2.1.6
+
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Collapse Capable Side Navbar: Side Navbar is now able to be expanded and collapsed
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Expandable Main Content: The Main Content part of the UI grows as the Side Navbar collapses and shrinks as the Side Navbar expands.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Better mobile friendly bottom navbar: This update will switch to vertically aligned bottom nav menu items once a certain media query is hit, making for a better mobile experience.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added automatic Side Navbar collapse for mobile devices.  This is based on media query and will trigger at specific width.
+- [#5329](https://github.com/nautobot/nautobot/issues/5329) - Added caching of `ChangeLoggedModelsQuery().as_queryset()` to improve performance when saving many objects in a change-logged context.
+- [#5361](https://github.com/nautobot/nautobot/issues/5361) - Added `nautobot.core.testing.forms.FormTestCases` base class and added it to `nautobot.apps.testing` as well.
+
+### Changed in v2.1.6
+
+- [#5082](https://github.com/nautobot/nautobot/issues/5082) - Adjusted Edit / Create panels to occupy more page width on medium and large screens.
+
+### Fixed in v2.1.6
+
+- [#4106](https://github.com/nautobot/nautobot/issues/4106) - Fixed inefficient query in VirtualMachine create form.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
+- [#5307](https://github.com/nautobot/nautobot/issues/5307) - Fixed Custom Field form field(s) missing from git repository edit form.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `Tenant` UI detail view breadcrumb with invalid `TenantGroup` filter link.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `TenantGroup` UI detail view with invalid "add tenant" button invalid `query_params` link.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `DeviceForm` invalid `cluster` field `query_params`.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `PrefixForm` invalid `vlan` and `vlan_group` fields `query_params`.
+- [#5311](https://github.com/nautobot/nautobot/issues/5311) - Fixed dependencies in various migration files.
+- [#5332](https://github.com/nautobot/nautobot/issues/5332) - Fixed Docker image missing OS-level dependencies for SSO (SAML) support.
+- [#5334](https://github.com/nautobot/nautobot/issues/5334) - Fixed migration from 1.x failing when specific duplicate prefixes are present.
+- [#5343](https://github.com/nautobot/nautobot/issues/5343) - Fixed incorrect reference for `device.device_role` on the Rack detail view for non-racked device objects.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Fixed intermittent 405 errors when using the Docker image with SAML authentication.
+- [#5346](https://github.com/nautobot/nautobot/issues/5346) - Fixed device LLDP view to work when interface names include a space.
+- [#5365](https://github.com/nautobot/nautobot/issues/5365) - Fixed `invalidate_max_depth_cache` itself calculating `max_depth` on querysets without tree fields.
+
+### Documentation in v2.1.6
+
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Added documentation on `nautobot.apps` import locations.
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Added documentation about the supported public interfaces.
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Removed some incorrect content from the documentation about nav menu changes that were reverted during 2.0 development.
+- [#4511](https://github.com/nautobot/nautobot/issues/4511) - Added documentation on how to correctly implement NautobotUIViewSet with custom views.
+- [#5284](https://github.com/nautobot/nautobot/issues/5284) - Added a quick overview of the most used models.
+- [#5311](https://github.com/nautobot/nautobot/issues/5311) - Added documentation on writing custom migrations.
+- [#5326](https://github.com/nautobot/nautobot/issues/5326) - Fixed simple typo in creating-location-types-and-locations.md.
+- [#5330](https://github.com/nautobot/nautobot/issues/5330) - Updated SSO documentation to include a view for presenting SAML metadata.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the Nautobot installation documentation about the need to do `pip3 install --no-binary=pyuwsgi` in order to have SSL support in `pyuwsgi`.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the SSO documentation about the need to do `pip3 install --no-binary=lxml` to avoid incompatibilities between `lxml` and `xmlsec` packages.
+
 ## v2.1.5 (2024-02-21)
 
-### Security
+### Security in v2.1.5
 
 - [#5303](https://github.com/nautobot/nautobot/pull/5303) - Updated `cryptography` to 42.0.2 due to CVE-2024-0727. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Added
+### Added in v2.1.5
 
 - [#5171](https://github.com/nautobot/nautobot/issues/5171) - Added `latest` and `latest-py<version>` tags to the `nautobot` Docker images published for the latest stable release of Nautobot.
 - [#5210](https://github.com/nautobot/nautobot/issues/5210) - Added `METRICS_AUTHENTICATED` setting to control authentication for the HTTP endpoint `/metrics`.
-- [#5243](https://github.com/nautobot/nautobot/issues/5243) - Added support for setting display_field on DynamicModelChoiceField to nested values in suggested choices list.
+- [#5243](https://github.com/nautobot/nautobot/issues/5243) - Added support for setting `display_field` on DynamicModelChoiceField to nested values in suggested choices list.
 
-### Changed
+### Changed in v2.1.5
 
 - [#5171](https://github.com/nautobot/nautobot/issues/5171) - Changed the tagging of `nautobot-dev` Docker images to reserve the `latest` and `latest-py<version>` tags for the latest stable release of Nautobot, rather than the latest build from the `develop` branch.
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Updated navbar user dropdown with chevron.
 
-### Fixed
+### Fixed in v2.1.5
 
 - [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from `location_id` to `location` in `virtualization/forms.py`.
 - [#5121](https://github.com/nautobot/nautobot/issues/5121) - Fixed an issue where deleting a git repository resulted in a job result stuck in running state.
@@ -100,48 +247,48 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed button spacing when there are multiple buttons in navbar.
 - [#5283](https://github.com/nautobot/nautobot/issues/5283) - Fixed inconsistent ordering of IP addresses in various tables.
 
-### Documentation
+### Documentation in v2.1.5
 
-- [#3349](https://github.com/nautobot/nautobot/issues/3349) - Added annotations to document the importance of keeping the TIME_ZONE setting consistent on Nautobot web servers and Celery Beat servers.
+- [#3349](https://github.com/nautobot/nautobot/issues/3349) - Added annotations to document the importance of keeping the `TIME_ZONE` setting consistent on Nautobot web servers and Celery Beat servers.
 - [#5297](https://github.com/nautobot/nautobot/issues/5297) - Updated the low level application stack diagram to orient user traffic coming from the top.
 
-### Housekeeping
+### Housekeeping in v2.1.5
 
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
 
 ## v2.1.4 (2024-02-08)
 
-### Security
+### Security in v2.1.4
 
 - [#5251](https://github.com/nautobot/nautobot/issues/5251) - Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
 
-### Fixed
+### Fixed in v2.1.4
 
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Fixed `TypeError` and similar exceptions thrown when rendering certain App data tables in v2.1.3.
 
-### Documentation
+### Documentation in v2.1.4
 
 - [#4778](https://github.com/nautobot/nautobot/issues/4778) - Added troubleshooting documentation for PostgreSQL databases with unsupported encoding settings.
 
-### Housekeeping
+### Housekeeping in v2.1.4
 
 - [#5240](https://github.com/nautobot/nautobot/issues/5240) - Changed test config to use `constance.backends.memory.MemoryBackend` to avoid intermittent failures in parallel tests.
 
 ## v2.1.3 (2024-02-05)
 
-### Security
+### Security in v2.1.3
 
 - [#5151](https://github.com/nautobot/nautobot/issues/5151) - Updated `pillow` dependency to 10.2.0 due to CVE-2023-50447.
 
-### Added
+### Added in v2.1.3
 
 - [#4981](https://github.com/nautobot/nautobot/issues/4981) - Add serial types to InterfaceTypeChoices.
 - [#5012](https://github.com/nautobot/nautobot/issues/5012) - Added database indexes to the ObjectChange model to improve performance when filtering by `user_name`, `changed_object`, or `related_object`, and also by `changed_object` in combination with `user` or `user_name`.
-- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via `django-silk`.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added Navbar dropdown arrow rotation on open/close.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added behavior of resetting navbar state when the "home" link is clicked.
 
-### Changed
+### Changed in v2.1.3
 
 - [#5149](https://github.com/nautobot/nautobot/issues/5149) - Updated the Job List to show Job Hook Receiver and Job Button Receiver Jobs, which were previously being hidden from view.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar dropdown link behavior to turn orange when active/clicked; state is saved.
@@ -150,12 +297,12 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar dropdown to use chevron icon instead of carets.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Aligned navbar dropdown icons to the right.
 
-### Removed
+### Removed in v2.1.3
 
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Removed unneeded tooltip of dropdown title.
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Removed navbar dropdown links underlining.
 
-### Fixed
+### Fixed in v2.1.3
 
 - [#3664](https://github.com/nautobot/nautobot/issues/3664) - Fixed AssertionError when querying Date type custom fields in GraphQL.
 - [#4898](https://github.com/nautobot/nautobot/issues/4898) - Improved automatic query optimization when rendering object list views.
@@ -169,14 +316,14 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5178](https://github.com/nautobot/nautobot/issues/5178) - Fixed navbar dropdown links alignment and spacing.
 - [#5198](https://github.com/nautobot/nautobot/issues/5198) - Fixed error in device and rack dropdowns when attempting to add an Interface to an InterfaceRedundancyGroup.
 
-### Dependencies
+### Dependencies in v2.1.3
 
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `MarkupSafe` dependency to 2.1.5.
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mysqlclient` dependency to 2.2.3.
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `python-slugify` dependency to 8.0.3.
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `pyuwsgi` dependency to 2.0.23.
 
-### Housekeeping
+### Housekeeping in v2.1.3
 
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mkdocs-section-index` documentation dependency to 0.3.8.
 - [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `ruff` development dependency to 0.1.15.
@@ -189,30 +336,30 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ## v2.1.2 (2024-01-22)
 
-### Security
+### Security in v2.1.2
 
 - [#5054](https://github.com/nautobot/nautobot/issues/5054) - Added validation of redirect URLs to the "Add a new IP Address" and "Assign an IP Address" views.
 - [#5109](https://github.com/nautobot/nautobot/issues/5109) - Removed `/files/get/` URL endpoint (for viewing FileAttachment files in the browser), as it was unused and could potentially pose security issues.
 - [#5133](https://github.com/nautobot/nautobot/issues/5133) - Fixed an XSS vulnerability ([GHSA-v4xv-795h-rv4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-v4xv-795h-rv4h)) in the `render_markdown()` utility function used to render comments, notes, job log entries, etc.
 
-### Added
+### Added in v2.1.2
 
 - [#3877](https://github.com/nautobot/nautobot/issues/3877) - Added global filtering to Job Result log table, enabling search across all pages.
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Enhanced the `sanitize` function to also handle sanitization of lists and tuples of strings.
 - [#5133](https://github.com/nautobot/nautobot/issues/5133) - Enhanced Markdown-supporting fields (`comments`, `description`, Notes, Job log entries, etc.) to also permit the use of a limited subset of "safe" HTML tags and attributes.
 
-### Changed
+### Changed in v2.1.2
 
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested user has permission to run the requested job.
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested job is installed and enabled.
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether a Celery worker is running when invoked without the `--local` flag.
 - [#5131](https://github.com/nautobot/nautobot/issues/5131) - Improved the performance of the `/api/dcim/locations/` REST API.
 
-### Removed
+### Removed in v2.1.2
 
 - [#5078](https://github.com/nautobot/nautobot/issues/5078) - Removed `nautobot-server startplugin` management command.
 
-### Fixed
+### Fixed in v2.1.2
 
 - [#4075](https://github.com/nautobot/nautobot/issues/4075) - Fixed sorting of Device Bays list view by installed device status.
 - [#4444](https://github.com/nautobot/nautobot/issues/4444) - Fixed Sync Git Repository requires non-matching permissions for UI vs API.
@@ -223,7 +370,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Fixed a bug that caused IPAddress objects to query their parent Prefix and Namespace every time they were instantiated.
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of the IPAddress list view by including the namespace in the table queryset.
 - [#5024](https://github.com/nautobot/nautobot/issues/5024) - Updated bulk-edit and bulk-delete views to auto-hide any "actions" column in the table of objects being edited or deleted.
-- [#5031](https://github.com/nautobot/nautobot/issues/5031) - Updated the default sanitizer pattern to include secret(s) and to be flexible with python dictionaries.
+- [#5031](https://github.com/nautobot/nautobot/issues/5031) - Updated the default sanitizer pattern to include secret(s) and to be flexible with Python dictionaries.
 - [#5043](https://github.com/nautobot/nautobot/issues/5043) - Fixed early return conditional in `ensure_git_repository`.
 - [#5045](https://github.com/nautobot/nautobot/issues/5045) - Adjusted Bootstrap grid breakpoints to account for the space occupied by the sidebar, fixing various page rendering.
 - [#5054](https://github.com/nautobot/nautobot/issues/5054) - Fixed missing search logic on the "Assign an IP Address" view.
@@ -238,17 +385,17 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed incorrect JobResult data when using `nautobot-server runjob --local` or `JobResult.execute_job()`.
 - [#5111](https://github.com/nautobot/nautobot/issues/5111) - Fixed rack group and rack filtering by the location selected in the device bulk edit form.
 
-### Dependencies
+### Dependencies in v2.1.2
 
 - [#5083](https://github.com/nautobot/nautobot/issues/5083) - Updated GitPython to version 3.1.41 to address Windows security vulnerability [GHSA-2mqj-m65w-jghx](https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx).
 - [#5086](https://github.com/nautobot/nautobot/issues/5086) - Updated Jinja2 to version 3.1.3 to address to address XSS security vulnerability [GHSA-h5c8-rqwp-cp95](https://github.com/pallets/jinja/security/advisories/GHSA-h5c8-rqwp-cp95).
 - [#5133](https://github.com/nautobot/nautobot/issues/5133) - Added `nh3` HTML sanitization library as a dependency.
 
-### Documentation
+### Documentation in v2.1.2
 
 - [#5078](https://github.com/nautobot/nautobot/issues/5078) - Added a link to the `cookiecutter-nautobot-app` project in the App developer documentation.
 
-### Housekeeping
+### Housekeeping in v2.1.2
 
 - [#4906](https://github.com/nautobot/nautobot/issues/4906) - Added automatic superuser creation environment variables to docker development environment.
 - [#4906](https://github.com/nautobot/nautobot/issues/4906) - Updated VS Code Dev Containers configuration and documentation.
@@ -259,20 +406,20 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ## v2.1.1 (2024-01-08)
 
-### Added
+### Added in v2.1.1
 
 - [#5046](https://github.com/nautobot/nautobot/issues/5046) - Updated the LocationType clone process to pre-populate the original object's parent, nestable and content type fields.
 
-### Changed
+### Changed in v2.1.1
 
 - [#4992](https://github.com/nautobot/nautobot/issues/4992) - Added change-logging (ObjectChange support) for the ObjectPermission model.
 
-### Removed
+### Removed in v2.1.1
 
 - [#5033](https://github.com/nautobot/nautobot/issues/5033) - Removed alpha UI from the main code base for now (it still exists in a prototype branch) to reduce the burden of maintaining its dependencies in the meantime.
 - [#5035](https://github.com/nautobot/nautobot/issues/5035) - Removed nodesource apt repository from Dockerfile.
 
-### Fixed
+### Fixed in v2.1.1
 
 - [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed an error when attempting to "Save Changes" to an existing GraphQL saved query via the GraphiQL UI.
 - [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed incorrect positioning of the "Save Changes" button in the "Queries" menu in the GraphiQL UI.
@@ -281,14 +428,14 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5005](https://github.com/nautobot/nautobot/issues/5005) - Fixed missing schema field in config context create/edit forms.
 - [#5020](https://github.com/nautobot/nautobot/issues/5020) - Fixed display of secrets when editing a SecretsGroup.
 
-### Documentation
+### Documentation in v2.1.1
 
 - [#5019](https://github.com/nautobot/nautobot/issues/5019) - Updated the documentation on the usage of the `nautobot-server runjob` management command.
 - [#5023](https://github.com/nautobot/nautobot/issues/5023) - Fixed some typos in the 2.1.0 release notes.
 - [#5027](https://github.com/nautobot/nautobot/issues/5027) - Fixed typo in Device Redundancy Group docs.
 - [#5044](https://github.com/nautobot/nautobot/issues/5044) - Updated the documentation on `nautobot_database_ready` signal handlers with a warning.
 
-### Housekeeping
+### Housekeeping in v2.1.1
 
 - [#5039](https://github.com/nautobot/nautobot/issues/5039) - Updated `ruff` development dependency to `~0.1.10`.
 - [#5039](https://github.com/nautobot/nautobot/issues/5039) - Removed `black` and `flake8` as development dependencies as they're fully replaced by `ruff` now.
@@ -304,13 +451,13 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ## v2.1.0 (2023-12-22)
 
-### Security
+### Security in v2.1.0
 
 - [#4988](https://github.com/nautobot/nautobot/issues/4988) - Fixed missing object-level permissions enforcement when running a JobButton ([GHSA-vf5m-xrhm-v999](https://github.com/nautobot/nautobot/security/advisories/GHSA-vf5m-xrhm-v999)).
 - [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed the requirement for users to have both `extras.run_job` and `extras.run_jobbutton` permissions to run a Job via a Job Button. Only `extras.run_job` permission is now required.
 - [#5002](https://github.com/nautobot/nautobot/issues/5002) - Updated `paramiko` to `3.4.0` due to CVE-2023-48795. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Added
+### Added in v2.1.0
 
 - [#2149](https://github.com/nautobot/nautobot/issues/2149) - Added customizable panels on the homepage.
 - [#4708](https://github.com/nautobot/nautobot/issues/4708) - Added VRF to interface bulk edit form.
@@ -324,7 +471,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4984](https://github.com/nautobot/nautobot/issues/4984) - Added `JOB_CREATE_FILE_MAX_SIZE` setting.
 - [#4989](https://github.com/nautobot/nautobot/issues/4989) - Added a link to the Advanced tab on detail views to easily open the object in the API browser.
 
-### Changed
+### Changed in v2.1.0
 
 - [#4884](https://github.com/nautobot/nautobot/issues/4884) - Added Bootstrap tooltips for all HTML elements with a `title` attribute.
 - [#4888](https://github.com/nautobot/nautobot/issues/4888) - Moved username and user actions menu from the top of the nav bar to the bottom.
@@ -335,14 +482,14 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4996](https://github.com/nautobot/nautobot/issues/4996) - Changed the order and help text of fields in the External Integration create and edit forms.
 - [#5003](https://github.com/nautobot/nautobot/issues/5003) - Updated gifs to showcase new Nautobot 2.1 interface.
 
-### Removed
+### Removed in v2.1.0
 
 - [#4757](https://github.com/nautobot/nautobot/issues/4757) - Dropped support for PostgreSQL versions before 12.0.
 - [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed redundant `/extras/job-button/<uuid>/run/` URL endpoint; Job Buttons now use `/extras/jobs/<uuid>/run/` endpoint like any other job.
 
-### Fixed
+### Fixed in v2.1.0
 
-- [#4620](https://github.com/nautobot/nautobot/issues/4620) - Ensure UI build directory is created on init of nautobot-server.
+- [#4620](https://github.com/nautobot/nautobot/issues/4620) - Ensure UI build directory is created on init of `nautobot-server`.
 - [#4627](https://github.com/nautobot/nautobot/issues/4627) - Fixed JSON custom field being returned as a `repr()` string when using GraphQL.
 - [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of custom field choices when editing a CustomField.
 - [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of child groups when editing a DynamicGroup.
@@ -353,14 +500,14 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4968](https://github.com/nautobot/nautobot/issues/4968) - Fixed some cases in which the `ipam.0025` data migration might throw an exception due to invalid data.
 - [#4977](https://github.com/nautobot/nautobot/issues/4977) - Fixed early return conditional in `ensure_git_repository`.
 
-### Documentation
+### Documentation in v2.1.0
 
 - [#4735](https://github.com/nautobot/nautobot/issues/4735) - Documented Django Admin Log Entries in v2.1 Release Overview.
 - [#4736](https://github.com/nautobot/nautobot/issues/4736) - Documented `isnull` filter expression in v2.1 Release Overview.
 - [#4766](https://github.com/nautobot/nautobot/issues/4766) - Updated documentation for registering tab views.
 - [#4984](https://github.com/nautobot/nautobot/issues/4984) - Fixed up docstrings for a number of Job-related classes and methods.
 
-### Housekeeping
+### Housekeeping in v2.1.0
 
 - [#4647](https://github.com/nautobot/nautobot/issues/4647) - Added DeviceFactory.
 - [#4896](https://github.com/nautobot/nautobot/issues/4896) - Added `/theme-preview/` view (only when `settings.DEBUG` is enabled) to preview various UI elements and layouts.
@@ -369,13 +516,13 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ## v2.1.0-beta.1 (2023-11-30)
 
-### Added
+### Added in v2.1.0-beta.1
 
 - [#1905](https://github.com/nautobot/nautobot/issues/1905) - Added the ability to automatically apply `isnull` filters when model field is nullable.
 - [#1905](https://github.com/nautobot/nautobot/issues/1905) - Enhanced `status` filters to support filtering by ID (UUID) as an alternative to filtering by `name`.
 - [#3352](https://github.com/nautobot/nautobot/issues/3352) - Added `Job.create_file()` API and `JOB_FILE_IO_STORAGE` configuration setting.
 - [#3994](https://github.com/nautobot/nautobot/issues/3994) - Added "Data Provenance" section to the Advanced tab in ObjectDetailView to display the user that created and last updated the object.
-- [#4272](https://github.com/nautobot/nautobot/issues/4272) - Added bulk edit and bulk destroy views to Namespaces.
+- [#4272](https://github.com/nautobot/nautobot/issues/4272) - Added Bulk Edit and Bulk Delete functionalities to Namespaces.
 - [#4646](https://github.com/nautobot/nautobot/issues/4646) - Added read-only view in admin panel for Django admin log entries.
 - [#4694](https://github.com/nautobot/nautobot/issues/4694) - Added `ExternalIntegration` model to track connections to systems external to Nautobot.
 - [#4745](https://github.com/nautobot/nautobot/issues/4745) - Added `ExportObjectList` system Job.
@@ -389,21 +536,21 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4820](https://github.com/nautobot/nautobot/issues/4820) - Added listing of related `files` to the `/api/extras/job-results/` REST API.
 - [#4820](https://github.com/nautobot/nautobot/issues/4820) - Added read-only REST API for the FileProxy model (files generated by a Job run), including a `/download/` endpoint for downloading the file content.
 
-### Changed
+### Changed in v2.1.0-beta.1
 
-- [#4677](https://github.com/nautobot/nautobot/issues/4677) - Updated and customized nautobot UI bootstrap theme with LESS variables.
+- [#4677](https://github.com/nautobot/nautobot/issues/4677) - Updated and customized Nautobot UI bootstrap theme with LESS variables.
 - [#4745](https://github.com/nautobot/nautobot/issues/4745) - Changed object export (CSV, YAML, export-template) to run as a background task, avoiding HTTP timeouts when exporting thousands of objects in a single operation.
 - [#4750](https://github.com/nautobot/nautobot/issues/4750) - Refined CSS to Nautobot Bootstrap UI.
 - [#4765](https://github.com/nautobot/nautobot/issues/4765) - Moved navbar to the left.
 - [#4786](https://github.com/nautobot/nautobot/issues/4786) - Lightened table row background color in dark mode.
 - [#4808](https://github.com/nautobot/nautobot/issues/4808) - Make NavItem link text margin-right slightly larger.
 
-### Removed
+### Removed in v2.1.0-beta.1
 
 - [#4765](https://github.com/nautobot/nautobot/issues/4765) - Removed "Import" buttons from navbar dropdown menus.
 - [#4787](https://github.com/nautobot/nautobot/issues/4787) - Removed support for `HIDE_RESTRICTED_UI`. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
-### Fixed
+### Fixed in v2.1.0-beta.1
 
 - [#4646](https://github.com/nautobot/nautobot/issues/4646) - Fixed a bug in `ObjectPermission` where `users.user` permissions could not be created.
 - [#4786](https://github.com/nautobot/nautobot/issues/4786) - Fixed default button background color in dark mode.
@@ -411,7 +558,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4862](https://github.com/nautobot/nautobot/issues/4862) - Fixes issues with uninstalled apps & lingering contenttypes referenced in changelog.
 - [#4882](https://github.com/nautobot/nautobot/issues/4882) - Fixed a regression in the rendering of the Jobs table view.
 
-### Housekeeping
+### Housekeeping in v2.1.0-beta.1
 
 - [#3352](https://github.com/nautobot/nautobot/issues/3352) - Added a shared `media_root` volume to developer Docker Compose environment.
 - [#4781](https://github.com/nautobot/nautobot/issues/4781) - Added Gherkin writeups for "Locations" and "Prefixes" feature workflows.

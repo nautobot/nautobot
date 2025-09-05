@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.2.0a1"
+version = "2.4.18b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 packages = [
     {include = "nautobot"}
@@ -33,62 +33,69 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.9.2,<3.13"
 # Background task processing
-celery = "~5.3.1"
+celery = ">=5.3.6,<5.6.0"
+# Cryptographic recipes and primitives.
+# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+# Added as an explicit dependency to protect against various CVEs in older versions.
+cryptography = "~45.0.6"
 # Fundamental web framework for Nautobot
-Django = "~3.2.24"
+Django = "~4.2.23"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.3.0", optional = true}
+django-auth-ldap = {version = "~5.2.0", optional = true}
 # Base functionality for task scheduling with Celery
-django-celery-beat = "~2.5.0"
+# Not yet upgrading to v2.8.x due to numerous reported issues, including:
+# https://github.com/celery/django-celery-beat/issues/894
+# https://github.com/celery/django-celery-beat/issues/922
+# https://github.com/celery/django-celery-beat/issues/927
+django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
-django-celery-results = "~2.4.0"
+django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.9.1", extras = ["database"]}
+django-constance = "~4.3.2"
 # Permit cross-domain API requests
-django-cors-headers = "~4.2.0"
+django-cors-headers = "~4.7.0"
 # Store files in the database for background tasks
-django-db-file-storage = "~0.5.5"
+django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
-django-extensions = "~3.2.3"
+django-extensions = "~4.1"
 # Advanced query filters
-django-filter = "~23.1"
+django-filter = "~25.1"
 # Health check endpoint
-django-health-check = "~3.17.0"
+django-health-check = "~3.20.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "~2.10.2"
+django-jinja = "~2.11.0"
 # Prometheus metrics for Django
-django-prometheus = "~2.3.1"
+django-prometheus = "~2.4.1"
 # Redis cache for Django used for distributed locking
-django-redis = "~5.3.0"
+django-redis = "~6.0.0"
 # Django silk for request profiling
-django-silk = "~5.1.0"
+django-silk = "~5.4.2"
 # External Storage support (i.e. S3)
-django-storages = {version = "~1.13.2", optional = true}
+django-storages = {version = "~1.14.6", optional = true}
+# Structured logging for Django
+django-structlog = {version = "^9.1.1", extras = ["celery"]}
 # Advanced HTML tables
-django-tables2 = "~2.6.0"
+django-tables2 = "~2.7.5"
 # Tags
-django-taggit = "~4.0.0"
+django-taggit = "~6.1.0"
 # Represent time zones in Django
-# NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
-django-timezone-field = "~5.1"
+django-timezone-field = "~7.1"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.16.1"
+django-tree-queries = "~0.20.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.14.0"
-# Adds JSON schema support to API endpoints for rendering JSON schema forms.
-drf-react-template-framework = "^0.0.17"
+djangorestframework = ">=3.15.2,<3.17.0"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
-emoji = "~2.8.0"
+emoji = "~2.14.1"
 # Git integrations for Python
-GitPython = "~3.1.41"
+GitPython = "~3.1.45"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -96,46 +103,52 @@ graphene-django = "~2.16.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
-Jinja2 = "~3.1.3"
+Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = ">=4.7.0,<4.19.0"
+jsonschema = "^4.7.0"
+# Messaging library for Python - dependency of Celery
+# Included as an explicit dependency for now to require a version with https://github.com/celery/kombu/pull/2007
+# This can be removed once we increate the lower bound of permitted versions of Celery itself above.
+kombu = ">=5.4.2,<5.6.0"
+# Library to access Kubernetes API used to develop K8s integration
+kubernetes = "^33.1.0"
 # Rendering of markdown files to HTML
-Markdown = ">=3.3.7,<3.6.0"
-# Escape text to use HTML and XML
-MarkupSafe = "~2.1.5"
+Markdown = "~3.8.2"
 # MySQL database adapter
-mysqlclient = {version = "~2.2.3", optional = true}
+mysqlclient = {version = "~2.2.7", optional = true}
 # NAPALM automation library
-napalm = {version = "~4.1.0", optional = true}
+napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
-netaddr = "~0.8.0"
+netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.6.0"
+netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.2.15"
+nh3 = "~0.3.0"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "~10.2.0"
+Pillow = "^11.0"
 # Custom prometheus metrics
-prometheus-client = "~0.17.1"
+prometheus-client = "~0.22.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.9"
+psycopg2-binary = "~2.9.10"
 # A Python slugify application that handles unicode.
-python-slugify = "~8.0.3"
+python-slugify = "~8.0.4"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.23"
+pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
-PyYAML = "~6.0"
+PyYAML = "~6.0.2"
 # Social authentication core
-social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnect", "saml"]}
+# Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
+# The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
+social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "~5.2.0"
+social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
-svgwrite = "~1.4.2"
+svgwrite = "~1.4.3"
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
@@ -151,70 +164,81 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~4.3.0"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
+# Currently pinned to 5.2.0 due to https://github.com/django-commons/django-debug-toolbar/issues/2168
+django-debug-toolbar = "~5.2.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
-factory-boy = "~3.3.0"
+factory-boy = "~3.3.3"
+# Factory Boy dependency.
+faker = "^37.6.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.7.0"
+rich = "~14.1.0"
 # Change log management and generation
-towncrier = "~23.11.0"
+towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~4.0.0"
+watchdog = "~6.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.5.3"
+mkdocs = "~1.6.1"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
+# Render custom markdown for version added/changed/remove notes
+markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
+# Image lightboxing in mkdocs
+mkdocs-glightbox = "^0.4.0"
 # Allow Markdown files to include other files
 # 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = "~4.0.4"
+mkdocs-include-markdown-plugin = ">=4.0.4"
+# Use Jinja2 templating in docs - see settings.md
+mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.8"
+mkdocs-material = "~9.6.18"
 # Handle docs redirections
-mkdocs-redirects = "~1.2.1"
+mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.8"
-# Render custom markdown for version added/changed/remove notes
-mkdocs-version-annotations = "~1.0.0"
+mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.24.0"
+mkdocstrings = "~0.30.0"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.8.0"
+mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.0.3"
+pylint = "~3.3.8"
 # Pylint extensions for Django
-pylint-django = "~2.5.3"
+pylint-django = "~2.6.1"
+# Python implementation of markdownlint
+pymarkdownlnt = "~0.9.32"
 # Combination linter and code formatter
-ruff = "~0.2.1"
+ruff = "~0.12.11"
 # YAML linting
-yamllint = "~1.34.0"
+yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
-# Test code coverage measurement
-coverage = "~7.4.1"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
+# Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
+coverage = "<=6.4.0"
+# Testing of data migrations
+django-test-migrations = "~1.4.0"
+# OpenAPI validator to test that our generated schema is valid
+openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = ">=2.28.0,<2.32.0"
+requests = "~2.32.5"
 # Selenium web drivers for live integration testing
-selenium = "~4.17.2"
+selenium = "~4.34.2"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
-tblib = "~3.0.0"
+tblib = "~3.1.0"
+# Time travel for testing, used in ScheduledJob tests etc.
+time-machine = "~2.17.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -225,18 +249,24 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 concurrency = ["multiprocessing", "thread"]
+disable_warnings = ["already-imported"]
+include = [
+    "nautobot/*",
+]
 omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
+relative_files = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
-py-version = "3.8"
+py-version = "3.9"
 ignore-paths = [
-    ".*third_party.*"
+    ".*third_party.*",
+    "nautobot/extras/tests/git_data/02-invalid-files/",
 ]
 jobs = 0
 
@@ -248,86 +278,114 @@ good-names = """_,i,j,k,pk"""
 
 [tool.pylint.message_control]
 # TODO: re-enable and fix these as time permits
-# unused-import is already covered by ruff
-disable=""",
-    abstract-method,
-    arguments-differ,
-    arguments-renamed,
-    attribute-defined-outside-init,
-    broad-except,
-    consider-iterating-dictionary,
-    consider-using-from-import,
-    consider-using-in,
-    consider-using-generator,
-    cyclic-import,
-    duplicate-code,
-    empty-docstring,
-    exec-used,
-    fixme,
-    global-statement,
-    global-variable-not-assigned,
-    hard-coded-auth-user,
-    import-outside-toplevel,
-    invalid-name,
-    keyword-arg-before-vararg,
-    line-too-long,
-    logging-format-interpolation,
-    logging-fstring-interpolation,
-    missing-class-docstring,
-    missing-function-docstring,
-    missing-module-docstring,
-    modelform-uses-exclude,
-    no-else-raise,
-    no-else-return,
-    no-member,
-    not-callable,
-    pointless-statement,
-    pointless-string-statement,
-    protected-access,
-    raise-missing-from,
-    self-assigning-variable,
-    signature-differs,
-    super-init-not-called,
-    super-with-arguments,
-    superfluous-parens,
-    too-few-public-methods,
-    too-many-ancestors,
-    too-many-arguments,
-    too-many-boolean-expressions,
-    too-many-branches,
-    too-many-instance-attributes,
-    too-many-lines,
-    too-many-locals,
-    too-many-nested-blocks,
-    too-many-public-methods,
-    too-many-return-statements,
-    too-many-statements,
-    ungrouped-imports,
-    unnecessary-dunder-call,
-    unspecified-encoding,
-    unused-argument,
-    unused-import,
-    unused-wildcard-import,
-    use-maxsplit-arg,
-    wildcard-import,
-    wrong-import-order,
-    wrong-import-position,
-    """
+disable = [
+    # Warnings
+    "abstract-method",
+    "attribute-defined-outside-init",
+    "broad-except",
+    "fixme",
+    "global-statement",
+    "global-variable-not-assigned",
+    "logging-format-interpolation",
+    "logging-fstring-interpolation",
+    "pointless-statement",
+    "pointless-string-statement",
+    "protected-access",
+    "raise-missing-from",
+    "self-assigning-variable",
+    "signature-differs",
+    "unspecified-encoding",
+    "unused-argument",
+    "unused-import",  # covered by ruff?
+    "unused-wildcard-import",
+    "wildcard-import",
+    # Conventions
+    "consider-iterating-dictionary",
+    "empty-docstring",
+    "import-outside-toplevel",
+    "invalid-name",
+    "keyword-arg-before-vararg",  # https://github.com/pylint-dev/pylint/issues/7396
+    "line-too-long",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "superfluous-parens",
+    "too-many-lines",
+    "ungrouped-imports",
+    "unnecessary-dunder-call",
+    "use-maxsplit-arg",
+    "wrong-import-order",
+    "wrong-import-position",
+    # Refactoring
+    "consider-using-from-import",
+    "consider-using-in",
+    "consider-using-generator",
+    "cyclic-import",
+    "duplicate-code",
+    "no-else-break",
+    "no-else-raise",
+    "no-else-return",
+    "super-with-arguments",
+    "too-few-public-methods",
+    "too-many-ancestors",
+    "too-many-arguments",
+    "too-many-boolean-expressions",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "too-many-nested-blocks",
+    "too-many-positional-arguments",
+    "too-many-public-methods",
+    "too-many-return-statements",
+    "too-many-statements",
+    # Pylint-Django
+    "modelform-uses-exclude",
+]
 
 [tool.pylint.miscellaneous]
 # We don't want to fail on "TODO" comments as there are plenty of those in our code for good reason
-notes = """,
-    FIXME,
-    XXX,
-    """
+notes = ["FIXME", "XXX"]
 
 [tool.pylint.typecheck]
+# Regex patterns describing dynamically defined attributes that cause false reports for "no-member" checker
+generated-members = [
+    ".*Factory\\..*",
+    ".*FactoryOptions\\..*",
+    ".*FilterSet\\._meta",
+    ".*FilterSet\\.base_filters",
+    ".*FilterSet\\.declared_filters",
+    ".*Job\\.request",
+    ".*LazyAttribute\\..*",  # factory attributes
+    ".*Maybe\\..*",  # factory attributes
+    ".*Serializer\\.Meta",
+    ".*Table\\._meta",
+    ".*Table\\.base_columns",
+    ".*Table\\.context",
+]
+extension-pkg-allow-list = [
+    "nh3",
+]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
-signature-mutators=["unittest.mock.patch"]
+signature-mutators = ["unittest.mock.patch"]
+
+[tool.pymarkdown]
+extensions.front-matter.enabled = true  # needed for mkdocs-macros compatibility
+plugins.additional_paths = "scripts/file_relative_links.py"
+plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
+plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
+plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see below
+plugins.proper-names.names = "Celery,Django,Nautobot,Pylint,PyMarkdown,Python,REST API"
+plugins.proper-names.code_blocks = false  # don't check proper nouns inside ```code blocks```
+plugins.proper-names.code_spans = false  # don't check proper nouns inside `code spans`
+plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py39"
+extend-exclude = [
+    # Intentionally malformed files
+    "nautobot/extras/tests/git_data/02-invalid-files/jobs",
+]
 
 [tool.ruff.lint]
 select = [
@@ -336,6 +394,7 @@ select = [
     "F",  # pyflakes
     "I",  # isort
     "PIE",  # flake8-pie
+    "PLE",  # pylint errors
     "RUF",  # ruff itself
     "S",  # flake8-bandit
     "W",  # pycodestyle
@@ -355,7 +414,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.2.md"
+filename = "nautobot/docs/release-notes/version-2.4.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

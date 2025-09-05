@@ -9,7 +9,9 @@ from django_celery_beat.models import (
     PeriodicTask,
     SolarSchedule,
 )
+import social_django.admin  # noqa: F401  # unused-import -- but this import installs the social_django admin
 from social_django.models import Association, Nonce, UserSocialAuth
+import taggit.admin  # noqa: F401  # unused-import -- but this import installs the taggit admin
 from taggit.models import Tag
 
 from nautobot.core.forms import BootstrapMixin

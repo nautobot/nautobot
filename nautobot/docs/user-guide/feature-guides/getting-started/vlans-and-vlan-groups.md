@@ -24,7 +24,7 @@ The following example will show:
 
 !!! note
     This example will require a Location (`Ottawa 1`) within a Parent Location (`Ottawa`) in the `North America` Parent Location in addition to the `Vancouver 1` Location and `Vancouver` Parent Location created prior.
-    Refer back to the [Create a Loaction](creating-devices.md#create-a-location) sections to do so.
+    Refer back to the [Create a Location](creating-devices.md#creating-a-location) sections to do so.
 
 ### Creating the VLANs
 
@@ -71,11 +71,10 @@ you'll see the three VLANs and the Location assignment for each one. Each `vlan 
 
 To assign a VLAN to an Interface:
 
-1. Click on **IPAM** on the left sidebar menu
-2. Select **Devices** to go to the Devices main page
-3. Click on the name of the Device you wish to add a VLAN to (`ang01-edge-01`) in this example
-4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
-5. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
+1. Select **Devices** to go to the Devices main page
+2. Click on the name of the Device you wish to add a VLAN to (`ang01-edge-01`) in this example
+3. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
+4. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
     * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
     * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 

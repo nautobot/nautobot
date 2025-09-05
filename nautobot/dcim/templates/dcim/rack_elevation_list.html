@@ -3,16 +3,19 @@
 {% load static %}
 
 {% block buttons %}
+    <button class="btn btn-default toggle-fullname" selected="selected">
+        <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
+    </button>
     <button class="btn btn-default toggle-images" selected="selected">
-        <span class="mdi mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
+        <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
     </button>
     <div class="btn-group" role="group">
-        <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request face='front' %}" class="btn btn-default{% if rack_face == 'front' %} active{% endif %}">Front</a>
-        <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request face='rear' %}" class="btn btn-default{% if rack_face == 'rear' %} active{% endif %}">Rear</a>
+        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request face='front' %}" class="btn btn-default{% if rack_face == 'front' %} active{% endif %}">Front</a>
+        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request face='rear' %}" class="btn btn-default{% if rack_face == 'rear' %} active{% endif %}">Rear</a>
     </div>
     <div class="btn-group" role="group">
-        <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request reverse=None %}" class="btn btn-default{% if not reverse %} active{% endif %}">Normal</a>
-        <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request reverse='true' %}" class="btn btn-default{% if reverse %} active{% endif %}">Reversed</a>
+        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request reverse=None %}" class="btn btn-default{% if not reverse %} active{% endif %}">Normal</a>
+        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request reverse='true' %}" class="btn btn-default{% if reverse %} active{% endif %}">Reversed</a>
     </div>
 {% endblock %}
 

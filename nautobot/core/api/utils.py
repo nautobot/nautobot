@@ -116,7 +116,7 @@ def get_serializer_for_model(model, prefix=""):
         return dynamic_import(serializer_name)
     except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_label}.{model_name} with prefix '{prefix}'"
+            f"Serializer for {app_label}.{model_name} not found, expected it at {serializer_name}"
         ) from exc
 
 
@@ -129,16 +129,26 @@ def nested_serializers_for_models(models, prefix=""):
 
     Used exclusively in OpenAPI schema generation.
     """
+    from nautobot.core.api.serializers import BaseModelSerializer  # avoid circular import
+
     serializer_classes = []
     for model in models:
         try:
             serializer_classes.append(get_serializer_for_model(model, prefix=prefix))
         except exceptions.SerializerNotFound as exc:
-            logger.error("%s", exc)
+            logger.warning("%s", exc)
             continue
 
     nested_serializer_classes = []
     for serializer_class in serializer_classes:
+        if not issubclass(serializer_class, BaseModelSerializer):
+            logger.warning(
+                "Serializer class %s.%s does not inherit from nautobot.apps.api.BaseModelSerializer. "
+                "This should probably be corrected.",
+                serializer_class.__module__,
+                serializer_class.__name__,
+            )
+            continue
         nested_serializer_name = f"Nested{serializer_class.__name__}"
         if nested_serializer_name in NESTED_SERIALIZER_CACHE:
             nested_serializer_classes.append(NESTED_SERIALIZER_CACHE[nested_serializer_name])
@@ -147,6 +157,7 @@ def nested_serializers_for_models(models, prefix=""):
             class NautobotNestedSerializer(serializer_class):
                 class Meta(serializer_class.Meta):
                     fields = ["id", "object_type", "url"]
+                    exclude = None
 
                 def get_field_names(self, declared_fields, info):
                     """Don't auto-add any other fields to the field_names!"""
@@ -167,13 +178,18 @@ def is_api_request(request):
     return request.path_info.startswith(api_path)
 
 
-def get_view_name(view, suffix=None):
+def get_view_name(view):
     """
     Derive the view name from its associated model, if it has one. Fall back to DRF's built-in `get_view_name`.
     """
-    if hasattr(view, "queryset"):
+    if hasattr(view, "name") and view.name:
+        return view.name
+    elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
-        name = view.queryset.model._meta.verbose_name
+        if hasattr(view, "detail") and view.detail:
+            name = view.queryset.model._meta.verbose_name
+        else:
+            name = view.queryset.model._meta.verbose_name_plural
         name = " ".join([w[0].upper() + w[1:] for w in name.split()])  # Capitalize each word
 
     else:
@@ -183,8 +199,10 @@ def get_view_name(view, suffix=None):
         name = formatting.remove_trailing_string(name, "ViewSet")
         name = formatting.camelcase_to_spaces(name)
 
-    if suffix:
-        name += " " + suffix
+        # Suffix may be set by some Views, such as a ViewSet.
+        suffix = getattr(view, "suffix", None)
+        if suffix:
+            name += " " + suffix
 
     return name
 
@@ -201,68 +219,6 @@ def rest_api_server_error(request, *args, **kwargs):
         "python_version": platform.python_version(),
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-def format_output(field, field_value):
-    """TODO: docstring required."""
-    data = {
-        "field_name": field,  # Form field placeholder
-        "type": "others",  # Param type e.g select field, char field, datetime field etc.
-        "choices": [],  # Param choices for select fields
-        "help_text": None,  # Form field placeholder
-        "label": None,  # Form field placeholder
-        "required": False,  # Form field placeholder
-    }
-    # TODO: fix these local imports if at all possible
-    from rest_framework.fields import CharField, IntegerField
-    from rest_framework.serializers import ListSerializer
-
-    from nautobot.core.api import ChoiceField, WritableNestedSerializer
-
-    kwargs = {}
-    if isinstance(field_value, (WritableNestedSerializer, ListSerializer)):
-        kwargs = {
-            "type": "dynamic-choice-field",
-        }
-        extra_kwargs = {}
-
-        if isinstance(field_value, WritableNestedSerializer):
-            extra_kwargs = {
-                "label": getattr(field_value, "label", None) or field,
-                "required": field_value.required,
-                "help_text": field_value.help_text,
-            }
-        elif isinstance(field_value, ListSerializer):
-            extra_kwargs = {
-                "label": "Tags",
-                "required": False,
-            }
-        kwargs.update(extra_kwargs)
-    elif isinstance(field_value, ChoiceField):
-        kwargs = {
-            "type": "choice-field",
-            "label": getattr(field_value, "label", None) or field,
-            "required": field_value.required,
-            "help_text": field_value.help_text,
-            "choices": field_value.choices.items(),
-        }
-    elif isinstance(field_value, CharField):
-        kwargs = {
-            "type": "char-field",
-            "label": getattr(field_value, "label", None) or field,
-            "required": field_value.required,
-            "help_text": field_value.help_text,
-        }
-    elif isinstance(field_value, IntegerField):
-        kwargs = {
-            "type": "integer-field",
-            "label": getattr(field_value, "label", None) or field,
-            "required": field_value.required,
-            "help_text": field_value.help_text,
-        }
-    data.update(kwargs)
-    return data
 
 
 def get_relation_info_for_nested_serializers(model_class, related_model, field_name):

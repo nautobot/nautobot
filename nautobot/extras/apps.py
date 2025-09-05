@@ -11,7 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class ExtrasConfig(NautobotConfig):
+    default = True
     name = "nautobot.extras"
+    searchable_models = [
+        "contact",
+        "dynamicgroup",
+        "externalintegration",
+        "gitrepository",
+        "team",
+    ]
 
     def ready(self):
         super().ready()
@@ -23,12 +31,11 @@ class ExtrasConfig(NautobotConfig):
         from graphene_django.converter import convert_django_field
 
         from nautobot.core.models.fields import TagsField
-        from nautobot.extras.graphql.types import TagType
 
         @convert_django_field.register(TagsField)
         def convert_field_to_list_tags(field, registry=None):
             """Convert TagsField to List of Tags."""
-            return graphene.List(TagType)
+            return graphene.List("nautobot.extras.graphql.types.TagType")
 
         from nautobot.extras.plugins.validators import wrap_model_clean_methods
 

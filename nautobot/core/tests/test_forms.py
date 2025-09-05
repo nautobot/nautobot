@@ -486,20 +486,23 @@ class NumericArrayFieldTest(TestCase):
         self.field = dcim_forms.DeviceFilterForm().fields["device_redundancy_group_priority"]
 
     def test_valid_input(self):
-        # Mapping of input => expected
-        tests = {
-            None: [],
-            "": [],
-            "80,443-444": [80, 443, 444],
-            "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
-        }
-        for test, expected in tests.items():
+        #  List of (input, expected output) tuples
+        tests = [
+            (None, []),
+            ("", []),
+            ("80,443-444", [80, 443, 444]),
+            ("1024-1028,31337", [1024, 1025, 1026, 1027, 1028, 31337]),
+            (["47-49", "103"], [47, 48, 49, 103]),
+            ([231, 432, 313], [231, 313, 432]),
+        ]
+        for test, expected in tests:
             self.assertEqual(self.field.clean(test), expected)
 
     def test_invalid_input(self):
         tests = [
             "pizza",
             "-41",
+            "[84,52,33]",
         ]
         for test in tests:
             with self.assertRaises(django_forms.ValidationError):
@@ -578,7 +581,7 @@ class JSONFieldTest(testing.TestCase):
         device_content_type = ContentType.objects.get_for_model(dcim_models.Device)
         custom_field.content_types.set([device_content_type])
         # Fetch URL with filter parameter
-        response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
+        response = self.client.get(f"{reverse('dcim:device_list')}?name=Foo%20Device")
         self.assertIn("Foo Device", str(response.content))
 
     def test_prepare_value_with_utf8(self):
@@ -637,11 +640,14 @@ class DynamicFilterFormTest(TestCase):
                 form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -655,9 +661,11 @@ class DynamicFilterFormTest(TestCase):
                     ("contact_email", "Contact E-mail"),
                     ("contact_name", "Contact name"),
                     ("contact_phone", "Contact phone"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
@@ -687,6 +695,7 @@ class DynamicFilterFormTest(TestCase):
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
+                    ("teams", "Teams (name or ID)"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (name or ID)"),
@@ -723,11 +732,14 @@ class DynamicFilterFormTest(TestCase):
                 [
                     (None, "---------"),
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -797,6 +809,7 @@ class DynamicFilterFormTest(TestCase):
                     "data-depth": 0,
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
+                    "data-query-param-exclude_m2m": '["true"]',
                     "display-field": "display",
                     "value-field": "name",
                 },

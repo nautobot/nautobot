@@ -112,7 +112,12 @@ def serialize_object(obj, extra=None, exclude=None):
 
     # Include any tags. Check for tags cached on the instance; fall back to using the manager.
     if is_taggable(obj):
-        tags = getattr(obj, "_tags", []) or obj.tags.all()
+        # Note that when upgrading from Nautobot 1.x to 2.0, this method may be called during data migrations,
+        # specifically ipam_0022 and dcim_0034, to create ObjectChange records.
+        # This can be problematic (see issue #6952) as the Tag records in the DB still have `created` as a `DateField`,
+        # but the 2.x code expects this to be a `DateTimeField` (as it will be after the upgrade completes in full).
+        # We "cleverly" bypass that issue by using `.only("name")` since that's the only actual Tag field we need here.
+        tags = getattr(obj, "_tags", []) or obj.tags.only("name")
         data["tags"] = [tag.name for tag in tags]
 
     # Append any extra data
@@ -150,29 +155,45 @@ def serialize_object_v2(obj):
     return data
 
 
-def find_models_with_matching_fields(app_models, field_names, field_attributes=None):
+def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):
     """
-    Find all models that have fields with the specified names, and return them grouped by app.
+    Find all models that have fields with the specified names and satisfy the additional constraints,
+    and return them grouped by app.
 
     Args:
         app_models (list[BaseModel]): A list of model classes to search through.
         field_names (list[str]): A list of names of fields that must be present in order for the model to be considered
         field_attributes (dict): Optional dictionary of attributes to filter the fields by.
+        additional_constraints (dict): Optional dictionary of `{field: value}` to further filter the models by.
 
     Return:
         (dict): A dictionary where the keys are app labels and the values are sets of model names.
     """
     registry_items = {}
+    field_names = field_names or []
     field_attributes = field_attributes or {}
+    additional_constraints = additional_constraints or {}
     for model_class in app_models:
         app_label, model_name = model_class._meta.label_lower.split(".")
+        valid_model = True
         for field_name in field_names:
             try:
                 field = model_class._meta.get_field(field_name)
-                if all((getattr(field, item, None) == value for item, value in field_attributes.items())):
-                    registry_items.setdefault(app_label, set()).add(model_name)
+                if not all((getattr(field, item, None) == value for item, value in field_attributes.items())):
+                    valid_model = False
+                    break
             except FieldDoesNotExist:
-                pass
+                valid_model = False
+                break
+        if valid_model:
+            if not all(
+                getattr(model_class, additional_field, None) == additional_value
+                for additional_field, additional_value in additional_constraints.items()
+            ):
+                valid_model = False
+        if valid_model:
+            registry_items.setdefault(app_label, set()).add(model_name)
+
     registry_items = {key: sorted(value) for key, value in registry_items.items()}
     return registry_items
 

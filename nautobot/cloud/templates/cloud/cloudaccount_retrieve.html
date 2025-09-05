@@ -1,0 +1,5 @@
+{% extends 'generic/object_retrieve.html' %}
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'cloud:cloudaccount_list' %}?provider={{ object.provider.pk }}">{{ object.provider }}</a></li>
+{% endblock extra_breadcrumbs %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}

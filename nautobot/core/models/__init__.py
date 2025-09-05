@@ -19,6 +19,7 @@ __all__ = (
     "BaseManager",
     "BaseModel",
     "CompositeKeyQuerySetMixin",
+    "ContentTypeRelatedQuerySet",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -46,15 +47,19 @@ class BaseModel(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
-    # Reverse relation so that deleting a BaseModel automatically deletes any ContactAssociations related to it.
-    associated_contacts = GenericRelation(
-        "extras.ContactAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
-    )
-
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
+    is_contact_associable_model = False  # ContactMixin overrides this to default True
+    is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
+    is_metadata_associable_model = True
+    is_saved_view_model = False  # SavedViewMixin overrides this to default True
+    is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
+
+    associated_object_metadata = GenericRelation(
+        "extras.ObjectMetadata",
+        content_type_field="assigned_object_type",
+        object_id_field="assigned_object_id",
+        related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
+    )
 
     class Meta:
         abstract = True
@@ -103,7 +108,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"{cls._meta.label_lower}._content_type"
+        return f"nautobot.{cls._meta.label_lower}._content_type"
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument
@@ -126,6 +131,8 @@ class BaseModel(models.Model):
         """
         self.full_clean()
         self.save(*args, **kwargs)
+
+    validated_save.alters_data = True
 
     def natural_key(self) -> list:
         """
@@ -243,6 +250,8 @@ class BaseModel(models.Model):
         Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
         but instead explicitly discounts the `id` field (only) as a candidate.
         """
+        if cls != cls._meta.concrete_model:
+            return cls._meta.concrete_model.natural_key_field_lookups
         # First, figure out which local fields comprise the natural key:
         natural_key_field_names = []
         if hasattr(cls, "natural_key_field_names"):
@@ -265,7 +274,7 @@ class BaseModel(models.Model):
 
         if not natural_key_field_names:
             raise AttributeError(
-                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "  # pylint: disable=no-member
                 "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
                 "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
                 "or potentially override the default 'natural_key_field_lookups' implementation for this model."
@@ -294,3 +303,24 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
+
+
+class ContentTypeRelatedQuerySet(RestrictedQuerySet):
+    def get_for_model(self, model):
+        """
+        Return all `self.model` instances assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
+
+    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
+    #  of refactoring
+    def get_for_models(self, models_):
+        """
+        Return all `self.model` instances assigned to the given `_models`.
+        """
+        q = models.Q()
+        for model in models_:
+            q |= models.Q(app_label=model._meta.app_label, model=model._meta.model_name)
+        content_types = ContentType.objects.filter(q)
+        return self.filter(content_types__in=content_types)

@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
+LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
+
+
 def generate_restricted_queryset():
     """
     Generate a function to return a restricted queryset compatible with the internal permissions system.
@@ -55,17 +58,17 @@ def generate_null_choices_resolver(name, resolver_name):
 
 def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
-    Generate function to resolve OneToMany filtering.
+    Generate function to resolve filtering of ManyToOne and ManyToMany related objects.
 
     Args:
         schema_type (DjangoObjectType): DjangoObjectType for a given model
         resolver_name (str): name of the resolver
-        field_name (str): name of OneToMany field to filter
+        field_name (str): name of ManyToOneField, ManyToManyRel, or ManyToOneRel field to filter
     """
     filterset_class = schema_type._meta.filterset_class
 
-    def resolve_filter(self, *args, **kwargs):
-        if not filterset_class:
+    def resolve_filter(self, info, **kwargs):
+        if not filterset_class or not kwargs:
             return getattr(self, field_name).all()
 
         # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
@@ -248,6 +251,9 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
+    if schema_type in LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE:
+        return LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type]
+
     search_params = {
         "limit": graphene.Int(),
         "offset": graphene.Int(),
@@ -258,6 +264,8 @@ def generate_list_search_parameters(schema_type):
                 schema_type._meta.filterset_class,
             )
         )
+
+    LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type] = search_params
 
     return search_params
 

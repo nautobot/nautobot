@@ -21,23 +21,23 @@ from nautobot.extras.models import Job, JobResult
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
-    "create_job_result_and_run_job",
-    "create_test_user",
-    "disable_warnings",
-    "extract_form_failures",
-    "extract_page_body",
     "FilterTestCases",
-    "get_deletable_objects",
-    "get_job_class_and_model",
     "JobClassInfo",
     "ModelTestCase",
     "ModelViewTestCase",
     "NautobotTestCaseMixin",
     "NautobotTestClient",
-    "post_data",
-    "run_job_for_testing",
     "TestCase",
     "ViewTestCases",
+    "create_job_result_and_run_job",
+    "create_test_user",
+    "disable_warnings",
+    "extract_form_failures",
+    "extract_page_body",
+    "get_deletable_objects",
+    "get_job_class_and_model",
+    "post_data",
+    "run_job_for_testing",
 )
 
 # Use the proper swappable User model
@@ -68,6 +68,8 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
     # Run the job synchronously in the current thread as if it were being executed by a worker
+    # TODO: in Nautobot core testing, we set `CELERY_TASK_ALWAYS_EAGER = True`, so we *could* use enqueue_job() instead,
+    #       but switching now would be a potentially breaking change for apps...
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,
@@ -102,14 +104,19 @@ def get_job_class_and_model(module, name, source="local"):
         (JobClassInfo): Named 2-tuple of (job_class, job_model)
     """
     job_class = get_job(f"{module}.{name}")
-    job_model = Job.objects.get(module_name=module, job_class_name=name)
+    try:
+        job_model = Job.objects.get(module_name=module, job_class_name=name)
+    except Job.DoesNotExist:
+        raise RuntimeError(
+            f"Job database record for {module}.{name} not found. Known jobs are: {list(Job.objects.all())}"
+        )
     job_model.enabled = True
     job_model.validated_save()
     return JobClassInfo(job_class, job_model)
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
+class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """

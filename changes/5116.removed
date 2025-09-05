@@ -1,1 +1,0 @@
-Removed `logan`-derived application startup logic, simplifying the Nautobot startup code flow.

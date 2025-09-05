@@ -3,6 +3,9 @@
 !!! important "Use a Development Environment, Not Production For App Development"
     You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../../core/getting-started.md).
 
+!!! note
+    The Nautobot organization provides a Python [CookieCutter](https://cookiecutter.readthedocs.io/en/stable/) to help get started with your applications. Get started at [`https://github.com/nautobot/cookiecutter-nautobot-app`](https://github.com/nautobot/cookiecutter-nautobot-app).
+
 ## App Structure
 
 Although the specific structure of an app is largely left to the discretion of its authors, a Nautobot app that makes use of all available app features described in this document could potentially look something like this:
@@ -34,6 +37,7 @@ app_name/
     - navigation.py         # Navigation Menu Items
     - secrets.py            # Secret Providers
     - signals.py            # Signal Handler Functions
+    - table_extensions.py   # Extending Tables
     - template_content.py   # Extending Core Templates
     - templates/
       - app_name/
@@ -51,80 +55,3 @@ The top level is the project root. Immediately within the root should exist seve
 * The app source directory, with the same name as your app.
 
 The app source directory contains all of the actual Python code and other resources used by your app. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `NautobotAppConfig` class.
-
-!!! note
-    The Nautobot organization provides a Python [CookieCutter](https://cookiecutter.readthedocs.io/en/stable/) to help get started with your applications. Get started at [https://github.com/nautobot/cookiecutter-nautobot-app](https://github.com/nautobot/cookiecutter-nautobot-app).
-
-## Create pyproject.toml
-
-## Poetry Init (Recommended)
-
-To get started with a project using [Python Poetry](https://python-poetry.org/) you use the `poetry init` command. This will guide you through the prompts necessary to generate a pyproject.toml with details required for packaging.
-
-```no-highlight
-This command will guide you through creating your pyproject.toml config.
-
-Package name [tmp]:  nautobot-animal-sounds
-Version [0.1.0]:
-Description []:  An example Nautobot app
-Author [, n to skip]:  Bob Jones
-License []:  Apache 2.0
-Compatible Python versions [^3.8]:  ^3.8
-
-Would you like to define your main dependencies interactively? (yes/no) [yes] no
-Would you like to define your development dependencies interactively? (yes/no) [yes] no
-Generated file
-
-[tool.poetry]
-name = "nautobot-animal-sounds"
-version = "0.1.0"
-description = "An example Nautobot app"
-authors = ["Bob Jones"]
-license = "Apache 2.0"
-
-[tool.poetry.dependencies]
-python = "^3.8"
-
-[tool.poetry.dev-dependencies]
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-
-Do you confirm generation? (yes/no) [yes]
-```
-
-## Install the App for Development
-
-The app needs to be installed into the same python environment where Nautobot is, so that we can get access to `nautobot-server` command, and also so that the nautobot-server is aware of the new app.
-
-If you installed Nautobot using Poetry, then go to the root directory of your clone of the Nautobot repository and run `poetry shell` there.  Afterward, return to the root directory of your app to continue development.
-
-Otherwise if using the pip install or Docker workflows, manually activate nautobot using `source /opt/nautobot/bin/activate`.
-
-To install the app for development the following steps should be taken:
-
-* Activate the Nautobot virtual environment (as detailed above)
-* Navigate to the project root, where the `pyproject.toml` file exists for the app
-* Execute the command `poetry install` to install the local package into the Nautobot virtual environment
-
-!!! note
-    Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
-
-!!! important "This should be done in development environment"
-    You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../../core/getting-started.md).
-
-```no-highlight
-poetry install
-```
-
-Once the app has been installed, add it to the configuration for Nautobot:
-
-```python
-PLUGINS = ["animal_sounds"]
-```
-
-## Verify that the App is Installed
-
-After restarting the Nautobot server, the newly installed app should appear in **Apps -> Installed Apps** if everything is configured correctly. You can also click on the app's name in this table to view more detailed information about this app based on its NautobotAppConfig and other contents.

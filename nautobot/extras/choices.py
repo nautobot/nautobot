@@ -25,6 +25,41 @@ class BannerClassChoices(ChoiceSet):
 
 
 #
+# Contact Association
+#
+
+
+class ContactAssociationRoleChoices(ChoiceSet):
+    """Role choices for contact association instances"""
+
+    ROLE_ADMINISTRATIVE = "administrative"
+    ROLE_BILLING = "billing"
+    ROLE_SUPPORT = "support"
+    ROLE_ON_SITE = "on site"
+
+    CHOICES = (
+        (ROLE_ADMINISTRATIVE, "Administrative"),
+        (ROLE_BILLING, "Billing"),
+        (ROLE_SUPPORT, "Support"),
+        (ROLE_ON_SITE, "On Site"),
+    )
+
+
+class ContactAssociationStatusChoices(ChoiceSet):
+    """Status choices for contact association instances"""
+
+    STATUS_PRIMARY = "primary"
+    STATUS_SECONDARY = "secondary"
+    STATUS_ACTIVE = "active"
+
+    CHOICES = (
+        (STATUS_PRIMARY, "Primary"),
+        (STATUS_SECONDARY, "Secondary"),
+        (STATUS_ACTIVE, "Active"),
+    )
+
+
+#
 # CustomFields
 #
 
@@ -64,11 +99,25 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_MARKDOWN, "Markdown"),
     )
 
+    # Types that support validation_minimum/validation_maximum
+    MIN_MAX_TYPES = (
+        TYPE_TEXT,
+        TYPE_INTEGER,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
+    )
+
+    # Types that support validation_regex
     REGEX_TYPES = (
         TYPE_TEXT,
         TYPE_URL,
         TYPE_SELECT,
         TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
     )
 
 
@@ -110,6 +159,18 @@ class CustomLinkButtonClassChoices(ButtonClassChoices):
 #
 # Dynamic Groups
 #
+
+
+class DynamicGroupTypeChoices(ChoiceSet):
+    TYPE_DYNAMIC_FILTER = "dynamic-filter"
+    TYPE_DYNAMIC_SET = "dynamic-set"
+    TYPE_STATIC = "static"
+
+    CHOICES = (
+        (TYPE_DYNAMIC_FILTER, "Filter-defined"),
+        (TYPE_DYNAMIC_SET, "Group of groups"),
+        (TYPE_STATIC, "Static assignment"),
+    )
 
 
 class DynamicGroupOperatorChoices(ChoiceSet):
@@ -168,6 +229,16 @@ class JobExecutionType(ChoiceSet):
     }
 
 
+class JobQueueTypeChoices(ChoiceSet):
+    TYPE_CELERY = "celery"
+    TYPE_KUBERNETES = "kubernetes"
+
+    CHOICES = (
+        (TYPE_CELERY, "Celery"),
+        (TYPE_KUBERNETES, "Kubernetes"),
+    )
+
+
 #
 # Job results
 #
@@ -180,8 +251,10 @@ class JobResultStatusChoices(ChoiceSet):
     """
 
     STATUS_FAILURE = states.FAILURE
+    STATUS_IGNORED = states.IGNORED
     STATUS_PENDING = states.PENDING
     STATUS_RECEIVED = states.RECEIVED
+    STATUS_REJECTED = states.REJECTED
     STATUS_RETRY = states.RETRY
     STATUS_REVOKED = states.REVOKED
     STATUS_STARTED = states.STARTED
@@ -231,14 +304,18 @@ class JobResultStatusChoices(ChoiceSet):
 class LogLevelChoices(ChoiceSet):
     LOG_DEBUG = "debug"
     LOG_INFO = "info"
+    LOG_SUCCESS = "success"
     LOG_WARNING = "warning"
+    LOG_FAILURE = "failure"
     LOG_ERROR = "error"
     LOG_CRITICAL = "critical"
 
     CHOICES = (
         (LOG_DEBUG, "Debug"),
         (LOG_INFO, "Info"),
+        (LOG_SUCCESS, "Success"),
         (LOG_WARNING, "Warning"),
+        (LOG_FAILURE, "Failure"),
         (LOG_ERROR, "Error"),
         (LOG_CRITICAL, "Critical"),
     )
@@ -246,10 +323,43 @@ class LogLevelChoices(ChoiceSet):
     CSS_CLASSES = {
         LOG_DEBUG: "debug",
         LOG_INFO: "info",
+        LOG_SUCCESS: "success",
         LOG_WARNING: "warning",
+        LOG_FAILURE: "failure",
         LOG_ERROR: "error",
         LOG_CRITICAL: "critical",
     }
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
+    """
+    Values for the MetadataType.data_type field.
+
+    Generally equivalent to CustomFieldTypeChoices, but adds TYPE_CONTACT_OR_TEAM.
+    """
+
+    TYPE_CONTACT_TEAM = "contact-or-team"
+    # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+    TYPE_DATETIME = "datetime"
+    TYPE_FLOAT = "float"
+
+    CHOICES = (
+        *CustomFieldTypeChoices.CHOICES,
+        (TYPE_CONTACT_TEAM, "Contact or Team"),
+        # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+        (TYPE_DATETIME, "Date/time"),
+        (TYPE_FLOAT, "Floating point number"),
+    )
+
+    MIN_MAX_TYPES = (
+        *CustomFieldTypeChoices.MIN_MAX_TYPES,
+        TYPE_FLOAT,
+    )
 
 
 #
@@ -373,17 +483,29 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
+    TYPE_AUTHKEY = "authentication-key"
+    TYPE_AUTHPROTOCOL = "authentication-protocol"
     TYPE_KEY = "key"
+    TYPE_NOTES = "notes"
     TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_PRIVALGORITHM = "private-algorithm"
+    TYPE_PRIVKEY = "private-key"
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_URL = "url"
     TYPE_USERNAME = "username"
 
     CHOICES = (
+        (TYPE_AUTHKEY, "Authentication Key"),
+        (TYPE_AUTHPROTOCOL, "Authentication Protocol"),
         (TYPE_KEY, "Key"),
+        (TYPE_NOTES, "Notes"),
         (TYPE_PASSWORD, "Password"),
+        (TYPE_PRIVALGORITHM, "Private Algorithm"),
+        (TYPE_PRIVKEY, "Private Key"),
         (TYPE_SECRET, "Secret"),
         (TYPE_TOKEN, "Token"),
+        (TYPE_URL, "URL"),
         (TYPE_USERNAME, "Username"),
     )
 

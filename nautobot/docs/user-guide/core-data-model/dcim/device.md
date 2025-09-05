@@ -6,9 +6,9 @@ When assigning a multi-U device to a rack, it is considered to be mounted in the
 
 A device is said to be full-depth if its installation on one rack face prevents the installation of any other device on the opposite face within the same rack unit(s). This could be either because the device is physically too deep to allow a device behind it, or because the installation of an opposing device would impede airflow.
 
-Each device must be instantiated from a pre-created device type, and its default components (console ports, power ports, interfaces, etc.) will be created automatically. (The device type associated with a device may be changed after its creation, however its components will not be updated retroactively.)
+Each device must be instantiated from a pre-created device type, and its default components ([console ports](consoleport.md), [power ports](powerport.md), [interfaces](interface.md), etc.) will be created automatically. (The device type associated with a device may be changed after its creation, however its components will not be updated retroactively.)
 
-Each device must be assigned a location, device role, and operational [`status`](../../platform-functionality/status.md), and may optionally be assigned to a rack within a location. A platform, serial number, and asset tag may optionally be assigned to each device.
+Each device must be assigned a [location](location.md), device [role](../../platform-functionality/role.md), and operational [`status`](../../platform-functionality/status.md), and may optionally be assigned to a rack within a location. A platform, serial number, and asset tag may optionally be assigned to each device.
 
 Device names must be unique within a location, unless the device has been assigned to a tenant. Devices may also be unnamed.
 
@@ -21,6 +21,9 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 
 +++ 2.2.0
     The [Software Version](softwareversion.md) model has been introduced to represent the software version that is currently installed on a device. An optional software version field has been added to devices.
+
++++ 2.3.0
+    Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
 
 ## Developer API
 

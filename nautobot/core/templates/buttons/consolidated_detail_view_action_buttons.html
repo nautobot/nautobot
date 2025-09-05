@@ -1,0 +1,13 @@
+{% if detail_view_action_buttons|length > 1 %}
+<div class="btn-group">
+    {% for button in detail_view_action_buttons %}
+        {{ button }}
+        {% if forloop.first %}
+    <ul class="dropdown-menu pull-right" role="menu">
+        {% endif %}
+    {% endfor %}
+    </ul>
+</div>
+{% elif detail_view_action_buttons|length == 1 %}
+    {{ detail_view_action_buttons|first }}
+{% endif %}

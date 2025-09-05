@@ -1,4 +1,9 @@
 /* Layout */
+
+:root {
+    --navbar-transition-duration: 350ms;
+}
+
 * {
     margin: 0;
 }
@@ -18,6 +23,15 @@ body {
     margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
     padding-bottom: 30px;
 }
+#main-content {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+    min-height: calc(100vh - 20px);
+}
+#main-content > .form {
+    margin-top: 20px;
+}
 .footer, .push {
     height: 48px; /* .push must be the same height as .footer */
 }
@@ -25,10 +39,12 @@ body {
     background-color: #f5f5f5;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    margin-left: 20px;
-    margin-right: 20px;
-    overflow: auto;
     white-space: nowrap;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+    overflow: visible;
+    margin: 0;
 }
 .footer .row {
     background-color: #f5f5f5;
@@ -81,6 +97,7 @@ table.attr-table td:nth-child(1) {
 }
 .table-headings th {
     background-color: #f5f5f5;
+    white-space: nowrap;
 }
 td.min-width {
     width: 1%;
@@ -283,6 +300,7 @@ table.report th a {
 }
 .panel table {
     margin-bottom: 0;
+    overflow: hidden;
 }
 .panel .table th {
     border-bottom-width: 1px;
@@ -325,6 +343,15 @@ ul.nav-tabs li a:hover,
     color: inherit;
 }
 ul.software-image-hierarchy {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
+
+ul.tree-hierarchy {
+    list-style-type: none;
+    padding-left: 0px;
+}
+ul.tree-hierarchy ul {
     list-style-type: "↳ ";
     padding-left: 18px;
 }
@@ -488,6 +515,14 @@ h1 .btn-inline {
     position: relative;
     top: 2px;
 }
+.breadcrumb {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+.breadcrumb.collapsed {
+    margin-left: 240px;
+}
 .breadcrumb .mdi::before {
     position: relative;
     top: 4px;
@@ -555,7 +590,8 @@ td span.hover_copy:hover .hover_copy_button {
 .accordion-toggle {
     border: 0;
     color: black;
-    font-size: 24px;
+    font-size: 14px;
+    font-weight: 700;
     padding: 0;
     text-decoration: none;
 }
@@ -566,7 +602,7 @@ td span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
-#accordion-toggle-all {
+.accordion-toggle-all {
     display: inline;
 }
 
@@ -600,6 +636,17 @@ td span.hover_copy:hover .hover_copy_button {
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
     -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
     scrollbar-width: none;  /* Hide scrollbar Firefox */
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+
+.navbar-fixed-left.collapsed {
+    width: 0px;
+}
+
+.navbar-fixed-left.collapsed:hover {
+    cursor: pointer;
 }
 
 .navbar-fixed-left > .container-fluid {
@@ -615,7 +662,12 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-fixed-left .navbar-header > .navbar-brand {
     height: auto;
     margin: 0;
-    padding: 29px 60px 10px 20px;
+    padding: 25px 60px 10px 20px;
+    background-color: transparent;
+}
+
+.navbar-fixed-left .navbar-header > .navbar-brand img {
+    transition: opacity 0.5s ease;
 }
 
 .navbar-fixed-left .navbar-form {
@@ -633,6 +685,12 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-fixed-left .navbar-nav {
     margin: 0;
     width: 100%;
+    display: none; /* Hide menu items by default */
+}
+
+/* When navbar is expanded, show menu items */
+.navbar-fixed-left:not(.collapsed) .navbar-nav {
+    display: block;
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > a {
@@ -757,6 +815,7 @@ td span.hover_copy:hover .hover_copy_button {
     margin-left: 5px;
     margin-right: 5px;
     gap: 5px;
+    text-wrap: nowrap;
 }
 
 .navbar-fixed-left .navbar-nav > li {
@@ -782,6 +841,10 @@ td span.hover_copy:hover .hover_copy_button {
     display: none;
 }
 
+.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+    border-color: transparent;
+}
+
 .navbar-inverse .navbar-nav > li > a {
     color: #999999;
     transition: background-color 200ms ease, color 200ms ease;
@@ -795,10 +858,26 @@ td span.hover_copy:hover .hover_copy_button {
     margin-left: 2px;
 }
 
+.navbar-toggler {
+    position: fixed;
+    left: 225px;
+    top: 25px;
+    z-index: 1035;
+    justify-content: flex-start;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+}
+
 /* Collapse icon on homepage panels */
 .collapse-icon {
     float: right;
     cursor: pointer !important;
+    transition: transform 0.3s ease;
+}
+
+/* Rotates element 180 degrees */
+.rotated180 {
+    transform: rotate(180deg);
 }
 
 /* Draggable homepage panels fade in effect on page load */
@@ -809,6 +888,11 @@ td span.hover_copy:hover .hover_copy_button {
 /* Change cursor when hovering over panel headings on homepage */
 #draggable-homepage-panels .panel-heading {
     cursor: move;
+}
+
+/* Make text in homepage panels selectable */
+#draggable-homepage-panels .list-group-item {
+    user-select: text !important;
 }
 
 /* Make panel being dragged opaque */
@@ -834,6 +918,7 @@ pre:has(code.hljs) {
 }
 pre code.hljs {
     padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+    background-color: #f4f4f4; /* Reset Bootstrap 3 `pre` background-color in case it contains a `code` element already formatted by highlight.js */
 }
 code.hljs {
     padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
@@ -854,7 +939,7 @@ code.hljs {
 .tiles {
     display: grid;
     grid-gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(445px, 1fr));
 }
 @media (max-width: 1007px) {
     .tiles {
@@ -870,6 +955,24 @@ code.hljs {
     display: flex;
     flex-direction: column;
     padding: 20px;
+}
+.tile.clickable {
+    cursor: pointer;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tile.clickable:active,
+.tile.clickable:focus-visible,
+.tile.clickable:hover {
+    border-color: #007dff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+a.tile.clickable,
+a.tile.clickable:hover,
+a.tile.clickable:focus,
+a.tile.clickable:visited {
+    color: inherit;
+    text-decoration: none;
 }
 .tile.disabled {
     background: #f4f4f4;
@@ -891,11 +994,47 @@ code.hljs {
     font-weight: 400;
     margin: 0;
 }
+.tile-header img {
+    float: left;
+    margin-right: 20px;
+}
 .tile-description {
     flex: 1;
 }
 .tile-footer {
     border-top: 1px solid #d8d8d8;
+    column-gap: 10px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding-top: 10px;
 }
+
+/* Buttons inside dropdown menus */
+.dropdown-menu button {
+    background: none;
+    border: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 3px 20px;
+    cursor: pointer;
+    text-wrap: nowrap;
+}
+.dropdown-menu button:focus,
+.dropdown-menu button:hover {
+    color: #ffffff;
+    text-decoration: none;
+    background-color: #646464;
+}
+
+/* Monaco Editor container */
+.editor-container {
+    display: flex;  /* Use flexbox for layout */
+    flex-direction: column;
+    flex: 1;  /* Allow container to grow */
+    min-height: 100px;
+    position: relative;  /* Required for Monaco's absolute positioning */
+    overflow: hidden;  /* Let Monaco handle scrolling */
+}
+

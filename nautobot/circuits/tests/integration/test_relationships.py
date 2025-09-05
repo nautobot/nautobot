@@ -19,30 +19,31 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
-        location_type = LocationType.objects.get(name="Campus")
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
         location_ct = ContentType.objects.get_for_model(Location)
         circuit_termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         provider_ct = ContentType.objects.get_for_model(Provider)
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
         circuit_status = Status.objects.get_for_model(Circuit).first()
         location_status = Status.objects.get_for_model(Location).first()
-        provider1 = Provider.objects.create(
-            name="Test Provider 1",
-        )
-        provider2 = Provider.objects.create(
-            name="Test Provider 2",
-        )
+        providers = [
+            Provider.objects.create(name="A Test Provider 1"),
+            Provider.objects.create(name="A Test Provider 2"),
+            Provider.objects.create(name="A Test Provider 3"),
+            Provider.objects.create(name="A Test Provider 4"),
+            Provider.objects.create(name="A Test Provider 5"),
+        ]
         circuit_type = CircuitType.objects.create(
-            name="Test Circuit Type",
+            name="A Test Circuit Type",
         )
         circuit = Circuit.objects.create(
-            provider=provider1,
-            cid="1234",
+            provider=providers[0],
+            cid="123456789",
             circuit_type=circuit_type,
             status=circuit_status,
         )
         location = Location.objects.create(
-            name="Test Location",
+            name="A Test Location",
             status=location_status,
             location_type=location_type,
         )
@@ -62,19 +63,15 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination_type=provider_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
-        RelationshipAssociation.objects.create(
-            relationship=m2m,
-            source=circuit_termination,
-            destination=provider1,
-        )
-        RelationshipAssociation.objects.create(
-            relationship=m2m,
-            source=circuit_termination,
-            destination=provider2,
-        )
+        for provider in providers:
+            RelationshipAssociation.objects.create(
+                relationship=m2m,
+                source=circuit_termination,
+                destination=provider,
+            )
         o2m = Relationship.objects.create(
             label="Termination 2 Location o2m",
-            key="termination_2_provider_o2m",
+            key="termination_2_location_o2m",
             source_type=circuit_termination_ct,
             destination_type=location_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -115,9 +112,10 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.logout()
         super().tearDown()
 
-    def test_relationships_are_visible(self):
+    # TODO: this really doesn't need to be an integration test, it could *easily* be done as a pure unit test
+    def test_termination_relationships_are_visible(self):
         """
-        Navigate to the circuit created in setUp() and check that the relationships are showing on the page
+        Navigate to the circuit created in setUp() and check that the termination relationships are showing on the page.
         """
         self.browser.visit(self.live_server_url)
 
@@ -128,10 +126,21 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Circuits")[1].click()
 
         # Click on the circuit link (circuit created in setUp)
-        self.browser.links.find_by_partial_text("1234").click()
+        self.browser.links.find_by_partial_text("123456789").click()
 
-        # Verify custom relationships are visible
+        # Verify custom relationships on the circuit terminations are visible
+        # One-to-one relationship
         self.assertTrue(self.browser.is_text_present("Power Panel"))
-        self.assertTrue(self.browser.is_text_present("2 providers"))
-        self.assertTrue(self.browser.is_text_present("1 location"))
-        self.assertTrue(self.browser.is_text_present("1 nonexistentmodel(s)"))
+        self.assertTrue(self.browser.is_text_present("Test Power Panel"))
+        # Many-to-many relationship
+        self.assertTrue(self.browser.is_text_present("Providers"))
+        self.assertTrue(self.browser.is_text_present("A Test Provider 1"))
+        self.assertTrue(self.browser.is_text_present("A Test Provider 2"))
+        self.assertTrue(self.browser.is_text_present("A Test Provider 3"))
+        self.assertTrue(self.browser.is_text_present("2 other providers"))
+        # One-to-many relationship
+        self.assertTrue(self.browser.is_text_present("Locations"))
+        self.assertTrue(self.browser.is_text_present("A Test Location"))
+        # Error handling (#2077)
+        self.assertTrue(self.browser.is_text_present("Termination 2 Nonexistent"))
+        self.assertTrue(self.browser.is_text_present("1 nonexistentmodel object(s)"))

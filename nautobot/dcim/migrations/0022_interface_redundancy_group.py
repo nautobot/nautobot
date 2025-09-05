@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
                 ),
                 ("created", models.DateTimeField(auto_now_add=True, null=True)),
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                ("priority", models.PositiveSmallIntegerField()),
+                ("priority", nautobot.core.models.fields.PositiveSmallIntegerField()),
                 (
                     "interface",
                     models.ForeignKey(

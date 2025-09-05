@@ -47,9 +47,13 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `max_version` | `None` | Maximum version of Nautobot with which the app is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
+| `provides_dynamic_jobs` | `False` | Set to `True` if the app's job code should be reloaded every time a job is run. This is an advanced feature to support dynamically created Python classes |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
 | `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
 | `constance_config` | `{}` | [Django Constance](database-backend-config.md) configuration parameters for settings. |
+
++++ 2.4.11
+    Support for the `provides_dynamic_jobs` attribute was added.
 
 +++ 2.0.0
     Support for the `searchable_models` and `constance_config` attributes were added.
@@ -81,4 +85,4 @@ The following `NautobotAppConfig` attributes can be configured to customize wher
 | `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](platform-features/jobs.md) |
 | `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](ui-extensions/navigation.md) provided by the app |
 | `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](platform-features/secrets-providers.md) in the app |
-| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](ui-extensions/object-detail-views.md) |
+| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](ui-extensions/object-views.md) |

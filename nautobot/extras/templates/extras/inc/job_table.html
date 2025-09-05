@@ -1,6 +1,6 @@
-{% load django_tables2 %}
+{% load querystring from django_tables2 %}
 
-<table id="accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+<table id="job_accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}
         <thead>
             <tr>
@@ -28,7 +28,7 @@
                 </th>
             </tr>
             {% endifchanged %}
-            <tr class="collapseme-{{ row.record.grouping|slugify }}{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %} collapse in" data-parent="#accordion" {{ row.attrs.as_html }}>
+            <tr class="{% cycle 'even' 'odd' %} collapseme-{{ row.record.grouping|slugify }}{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %} collapse in" data-parent="#accordion" {{ row.attrs.as_html }}>
                 {% for column, cell in row.items %}
                     <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
                 {% endfor %}

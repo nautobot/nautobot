@@ -1,0 +1,72 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+                {% block form %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
+                        <div class="panel-body">
+                            {% render_field form.manufacturer %}
+                            {% render_field form.module_family %}
+                            {% render_field form.module_type %}
+                            {% render_field form.serial %}
+                            {% render_field form.asset_tag %}
+                            {% render_field form.role %}
+                            {% render_field form.status %}
+                            {% render_field form.tenant_group %}
+                            {% render_field form.tenant %}
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><strong>Installation</strong></div>
+                        <div class="panel-body">
+                            <ul class="nav nav-tabs" role="tablist">
+                                <li role="presentation"{% if active_parent_tab == 'device' %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
+                                <li role="presentation"{% if active_parent_tab == 'module' %} class="active"{%endif %}><a href="#module" role="tab" data-toggle="tab">Module</a></li>
+                                <li role="presentation"{% if active_parent_tab == 'location' %} class="active"{%endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div class="tab-pane{% if active_parent_tab == 'device' %} active{% endif %}" id="device">
+                                    {% render_field form.parent_module_bay_device_filter %}
+                                    {% render_field form.parent_module_bay_device %}
+                                </div>
+                                <div class="tab-pane{% if active_parent_tab == 'module' %} active{% endif %}" id="module">
+                                    {% render_field form.parent_module_bay_module_filter %}
+                                    {% render_field form.parent_module_bay_module %}
+                                </div>
+                                <div class="tab-pane{% if active_parent_tab == 'location' %} active{% endif %}" id="location">
+                                    {% render_field form.location %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% include 'inc/extras_features_edit_form_fields.html' %}
+                {% endblock %}
+
+                {% block javascript %}
+                <script type="text/javascript">
+
+                    // clear the select2 widgets for the hidden installation section tabs when a selection is made in the active tab
+                    // jQuery required for select2
+                    document.addEventListener("DOMContentLoaded", function() {
+                        $('select#id_parent_module_bay_device').select2();
+                        $('select#id_parent_module_bay_module').select2();
+                        $('select#id_location').select2();
+
+                        $('select#id_parent_module_bay_device').on('select2:select select2:unselect', function (e) {
+                            $('select#id_parent_module_bay_module').val(null).trigger('change');
+                            $('select#id_location').val(null).trigger('change');
+                        });
+
+                        $('select#id_parent_module_bay_module').on('select2:select select2:unselect', function (e) {
+                            $('select#id_parent_module_bay_device').val(null).trigger('change');
+                            $('select#id_location').val(null).trigger('change');
+                        });
+
+                        $('select#id_location').on('select2:select select2:unselect', function (e) {
+                            $('select#id_parent_module_bay_device').val(null).trigger('change');
+                            $('select#id_parent_module_bay_location').val(null).trigger('change');
+                        });
+
+                    });
+                </script>
+                {% endblock %}

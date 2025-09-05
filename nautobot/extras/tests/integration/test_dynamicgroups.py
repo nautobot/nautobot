@@ -74,11 +74,11 @@ class DynamicGroupTestCase(SeleniumTestCase):
 
         # And just a cursory check to make sure that the filter worked.
         group = DynamicGroup.objects.get(name=name)
-        self.assertEqual(group.count, len(devices))
+        self.assertEqual(group.count, Device.objects.filter(status__name="Active").count())
         self.assertEqual(group.filter, {"status": ["Active"]})
 
         # Verify dynamic group shows up on device detail tab
         self.browser.visit(
-            f'{self.live_server_url}{reverse("dcim:device_dynamicgroups", kwargs={"pk": devices[0].pk})}'
+            f"{self.live_server_url}{reverse('dcim:device_dynamicgroups', kwargs={'pk': devices[0].pk})}"
         )
         self.assertTrue(self.browser.is_text_present(name))

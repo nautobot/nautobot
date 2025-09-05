@@ -438,7 +438,12 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0009_circuittermination_location"),
+        ("contenttypes", "0002_remove_content_type_name"),
         ("dcim", "0033_add_tree_managers_and_foreign_keys_pre_data_migration"),
+        ("extras", "0029_dynamicgroup"),
+        ("ipam", "0001_initial_part_1"),
+        ("users", "0001_initial"),
+        ("virtualization", "0001_initial"),
     ]
 
     operations = [

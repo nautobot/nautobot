@@ -66,6 +66,7 @@ def migrate_history(apps, schema_editor):
         for log_entry in LogEntry.objects.filter(content_type=custom_field_type, object_id=custom_field.id).order_by(
             "action_time"
         ):
+            action = None
             if log_entry.action_flag == ADDITION:
                 action = ObjectChangeActionChoices.ACTION_CREATE
             if log_entry.action_flag == CHANGE:
@@ -95,6 +96,8 @@ def migrate_history(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("admin", "0001_initial"),
+        ("contenttypes", "0001_initial"),
         ("extras", "0020_customfield_changelog"),
     ]
 

@@ -1,5 +1,6 @@
 from django.db import models
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.extras.utils import extras_features
@@ -19,8 +20,8 @@ class TenantGroup(TreeModel, OrganizationalModel):
     An arbitrary collection of Tenants.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -42,7 +43,7 @@ class Tenant(PrimaryModel):
     department.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     tenant_group = models.ForeignKey(
         to="tenancy.TenantGroup",
         on_delete=models.SET_NULL,
@@ -50,7 +51,7 @@ class Tenant(PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     comments = models.TextField(blank=True)
 
     clone_fields = [

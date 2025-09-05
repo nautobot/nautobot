@@ -4,17 +4,17 @@ import warnings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.forms import ChoiceField, MultipleChoiceField
 from django.test import override_settings, TestCase
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
-from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
     CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
     JobButtonForm,
     JobEditForm,
@@ -26,6 +26,7 @@ from nautobot.extras.forms import (
     WebhookForm,
 )
 from nautobot.extras.models import (
+    CustomField,
     Job,
     JobButton,
     JobHook,
@@ -389,6 +390,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
             "name": "New VLAN Group",
+            "range": "1-4094",
         }
 
     def test_create_relationship_associations_valid_1(self):
@@ -666,6 +668,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "name": self.vlangroup_1.name,
                 "location": self.location,
+                "range": "1-4094",
                 f"cr_{self.relationship_2.key}__source": self.device_2.pk,
             },
         )
@@ -907,6 +910,19 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
         self.assertEqual(1, ras.count())
 
+    def test_form_save_relationship_with_nullified_fields_is_none(self):
+        """Test save_relationships with nullified_fields=None."""
+        form = LocationBulkEditForm(
+            model=dcim_models.Location,
+            data={
+                "pks": [self.locations[0].pk],
+                "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
+                "add_cr_peer_locations__peer": [self.locations[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.locations[0], nullified_fields=None)
+
     def test_location_form_remove_mtom(self):
         """Test removal of relationship-associations for many-to-many relationships."""
         RelationshipAssociation.objects.create(
@@ -1085,11 +1101,10 @@ class DeprecatedAliasesTestCase(TestCase):
 
     def test_deprecated_form_mixin_classes(self):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
-        from nautobot.extras.forms import (
+        from nautobot.extras.forms import CustomFieldBulkCreateForm
+        from nautobot.extras.forms.mixins import (
             AddRemoveTagsForm,
-            CustomFieldBulkCreateForm,
             CustomFieldBulkEditForm,
-            CustomFieldFilterForm,
             CustomFieldModelForm,
             RelationshipModelForm,
             StatusBulkEditFormMixin,
@@ -1100,7 +1115,6 @@ class DeprecatedAliasesTestCase(TestCase):
             (AddRemoveTagsForm, TagsBulkEditFormMixin),
             (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
             (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
-            (CustomFieldFilterForm, CustomFieldModelFilterFormMixin),
             (CustomFieldModelForm, CustomFieldModelFormMixin),
             (RelationshipModelForm, RelationshipModelFormMixin),
             (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
@@ -1218,3 +1232,20 @@ class CustomFieldModelFormMixinTestCase(TestCase):
 
         custom_field_form = TestForm()
         self.assertIn("_custom_field_data", custom_field_form.fields)
+
+
+class CustomFieldTestCase(TestCase):
+    def test_to_form_field_type_select(self):
+        """Verify that `to_form_field` and `to_filter_form_field` return the correct field types for a select-type CustomField."""
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Custom Field Select",
+        )
+        form = custom_field.to_filter_form_field()
+        self.assertIsInstance(form, MultipleChoiceField)
+
+        form = custom_field.to_form_field(for_filter_form=True)
+        self.assertIsInstance(form, MultipleChoiceField)
+
+        form = custom_field.to_form_field(for_filter_form=False)
+        self.assertIsInstance(form, ChoiceField)

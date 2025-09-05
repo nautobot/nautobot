@@ -12,11 +12,30 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Natural keys](../../../core/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
 | [Object permissions](../../../../user-guide/administration/guides/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../../../core/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
+| [Object Metadata](../../../../user-guide/platform-functionality/objectmetadata.md) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../../../../user-guide/platform-functionality/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
+| [Contacts](../../../../user-guide/core-data-model/extras/contact.md) and [Teams](../../../../user-guide/core-data-model/extras/team.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
+| [Dynamic Groups](../../../../user-guide/platform-functionality/dynamicgroup.md) | ❌ | ❌ | ✅ | ✅ |
+| [Notes](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../../../../user-guide/platform-functionality/relationship.md) | ❌ | ❌ | ✅ | ✅ |
-| [Note](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
+| [Saved Views](../../../../user-guide/platform-functionality/savedview.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../../../../user-guide/platform-functionality/tag.md) | ❌ | ❌ | ❌ | ✅ |
+
++++ 2.2.0 "Support for Contact and Team assignment on all models"
+    Support for Contact and Team assignment to all Nautobot model types was added.
+
++++ 2.3.0 "Support for Object Metadata assignment on all models"
+    Support for assigning Object Metadata was added to `BaseModel` (and therefore also `OrganizationalModel` and `PrimaryModel`) subclasses. If a specific model should not support assignment of metadata to its records (for example, a many-to-many "through" table model such as `CloudNetworkPrefixAssignment`), the model author can define the class attribute `is_metadata_associable_model = False` to opt it out from this feature.
+
++/- 2.3.0 "Support for Contact and Team assignment on OrganizationalModel and PrimaryModel only"
+    Default support for Contact and Team assignment was removed from `django.db.models.Model` and `BaseModel`. The mixin class `ContactMixin` has been added to be used by `BaseModel` subclasses that want to be assignable to Contacts and Teams. All subclasses of `OrganizationalModel` and `PrimaryModel` include this mixin and therefore default to supporting Contact and Team assignment. Models can opt out of this feature by declaring the class attribute `is_contact_associable_model = False`.
+
++++ 2.3.0 "Support for Dynamic Groups and Saved Views on OrganizationalModel and PrimaryModel"
+    Support for Dynamic Groups and Saved Views was added to `OrganizationalModel` and `PrimaryModel`. The mixin classes `DynamicGroupsModelMixin` and `SavedViewMixin` (included in both of those base classes) have been added to be used by `BaseModel` subclasses that want to be assignable to Dynamic Groups and/or to be Saved View capable. Models can opt out of either of these features by declaring `is_dynamic_group_associable_model = False` and/or `is_saved_view_model = False` as applicable.
+
++/- 2.3.0 "Replacement of DynamicGroupMixin with DynamicGroupsModelMixin"
+    In previous Nautobot releases, a model could opt in to support of Dynamic Groups by including the `DynamicGroupMixin` mixin class. This class is now deprecated, and models should use the newly added `DynamicGroupsModelMixin` mixin class in its place.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

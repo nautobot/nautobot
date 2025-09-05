@@ -8,7 +8,7 @@ Locations retain hierarchical nature of Location Types but are more specific. Fo
 Additional information on Location Types is in the [Location Type section of the Nautobot documentation](../../core-data-model/dcim/locationtype.md).
 Additional information on Locations is in the [Location section of the Nautobot documentation](../../core-data-model/dcim/location.md).
 
-In the following exercise, we will create three Location Types and their corresponding locations:
+In the following exercise, we will create four Location Types and their corresponding locations:
 
 Location Types:
 
@@ -87,7 +87,8 @@ North America:
 1. Leave the `Parent` blank; **North America** will be a top-tier Location
 2. Select **Continent** from the Location Type drop-down menu selector
 3. Populate the `Name` to be `North America`
-4. Click on the `Create and Add Another` button
+4. Select `Active` from the Status drop-down menu selector
+5. Click on the `Create and Add Another` button
 
 Canada:
 

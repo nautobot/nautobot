@@ -19,7 +19,7 @@ The following sections will guide you through how to create each object type.
 
 Devices can be organized by functional roles, which are fully customizable by the user.
 
-More information on Device Roles can be found in the [Device Roles](../../core-data-model/dcim/device.md#device-roles) section of the Nautobot documentation.
+More information on Device Roles can be found in the [Device Roles](../../platform-functionality/role.md) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
@@ -28,10 +28,10 @@ To create a new Device, you will need an existing Device Role or need to create 
 
 To create a new Device Role:
 
-1. Click on **Devices** in the left sidebar menu
-2. Find **Device Roles** on the drop-down menu
+1. Click on **Organization** in the left sidebar menu
+2. Find **Roles** on the drop-down menu
 3. Select `+`
-4. In the `Add a new device role` form, populate the `Name`
+4. In the `Add a new role` form, populate the `Name`
 5. Click on Create
 
 ![Create a device role](../images/getting-started-nautobot-ui/3-create-role.png)
@@ -40,7 +40,7 @@ To create a new Device Role:
 
 A Manufacturer represents the "make" of a device; e.g. Cisco or Dell. Each device type must be assigned to a manufacturer.
 
-More information on Manufacturers is in the [Manufacturers](../../core-data-model/dcim/devicetype.md#manufacturers) section of the Nautobot documentation.
+More information on Manufacturers is in the [Manufacturers](../../core-data-model/dcim/manufacturer.md) section of the Nautobot documentation.
 
 To create a new Device Type, you will need an existing Manufacturer or need to create a new Manufacturer instance.
 
@@ -59,7 +59,7 @@ To create a new Manufacturer:
 A device type represents a particular make and model of hardware that exists in the real world.
 Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
-More information on Device Types is in the [Device Types](../../core-data-model/dcim/devicetype.md#device-types_1) section of the Nautobot documentation.
+More information on Device Types is in the [Device Types](../../core-data-model/dcim/devicetype.md) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 
@@ -83,11 +83,11 @@ More information on Location Type is found in the [Locations](../../core-data-mo
 To create a new Location Type:
 
 1. Click on **Organization** in the left sidebar menu
-2. Find **LocationTypes**
+2. Find **Location Types**
 3. Select **+** to go to the `Add a new location type` form
-4. Select a `Parent` LocationType if needed
-5. Populate the LocationType's `Name`
-6. Select the desired `ContentTypes` for this LocationType (in this case `dcim.device`).
+4. Select a `Parent` Location Type if needed
+5. Populate the Location Type's `Name`
+6. Select the desired `Content Types` for this Location Type (in this case `dcim.device`).
 7. Click on `Create` at the bottom of the form
 
 ![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
@@ -105,7 +105,7 @@ To create a new Location:
 1. Click on **Organization** in the left sidebar menu
 2. Find **Locations**
 3. Select **+** to go to the `Add a new location` form
-4. Select a `LocationType`
+4. Select a `Location Type`
 5. Select a `Parent` Location if needed
 6. Populate the Location's `Name`
 7. Set the `Status` to `Active` in the drop-down selector

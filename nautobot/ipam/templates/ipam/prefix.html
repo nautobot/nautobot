@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block breadcrumbs %}
@@ -33,7 +33,7 @@
         </li>
         {% if perms.ipam.view_ipaddress %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
-                <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
+                <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_all_ips.count }}</span></a>
             </li>
         {% endif %}
 {% endblock extra_nav_tabs %}
@@ -68,15 +68,7 @@
                             {{ object.get_type_display }}
                         </td>
                     </tr>
-                    <tr>
-                        <td>Tenant</td>
-                        <td>
-                            {% if object.tenant and object.tenant.tenant_group %}
-                                {{ object.tenant.tenant_group|hyperlinked_object }} /
-                            {% endif %}
-                            {{ object.tenant|hyperlinked_object }}
-                        </td>
-                    </tr>
+                    {% include 'inc/tenant_table_row.html' %}
                     <tr>
                         <td>Locations</td>
                         <td>
@@ -117,6 +109,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-            {% include 'panel_table.html' with table=parent_prefix_table heading='Parent Prefixes' panel_class='default' %}
-            {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="Assigned VRFs" disable_pagination=False %}
+    {% include "utilities/obj_table.html" with table=parent_prefix_table table_template="panel_table.html" heading="Parent Prefixes" %}
+    {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="Assigned VRFs" %}
+    {% include "utilities/obj_table.html" with table=cloud_network_table table_template="panel_table.html" heading="Assigned Cloud Networks" %}
 {% endblock content_right_page %}

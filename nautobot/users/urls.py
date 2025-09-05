@@ -1,8 +1,14 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
+
 from . import views
 
+# TODO: deprecate this app_name and use users
 app_name = "user"
+
+router = NautobotUIViewSetRouter()
+
 urlpatterns = [
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("preferences/", views.UserConfigView.as_view(), name="preferences"),
@@ -17,3 +23,5 @@ urlpatterns = [
     ),
     path("advanced-settings/", views.AdvancedProfileSettingsEditView.as_view(), name="advanced_settings_edit"),
 ]
+
+urlpatterns += router.urls

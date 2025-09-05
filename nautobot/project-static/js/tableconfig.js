@@ -39,7 +39,12 @@ $(document).ready(function() {
             data: JSON.stringify(data),
         }).done(function () {
             // Reload the page
-            window.location.reload(true);
+            if (window.location.href.includes("saved_view=")){
+                var new_url = window.location.href+"&table_changes_pending=true";
+                window.location.assign(new_url);
+            } else {
+                window.location.reload(true);
+            }
         }).fail(function (xhr, status, error) {
             alert("Failed to update user config (" + status + "): " + error);
         });

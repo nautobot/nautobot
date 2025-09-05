@@ -1,1 +1,0 @@
-Changed default Docker HEALTHCHECK to use `nautobot-server health_check` CLI command.

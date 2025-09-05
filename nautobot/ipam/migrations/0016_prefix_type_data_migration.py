@@ -65,6 +65,8 @@ def revert_prefix_type(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0001_initial_part_1"),
         ("ipam", "0015_prefix_add_type"),
     ]
 

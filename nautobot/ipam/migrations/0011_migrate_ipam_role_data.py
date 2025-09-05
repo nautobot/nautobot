@@ -46,6 +46,7 @@ def migrate_data_from_new_role_to_legacy_role(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("extras", "0061_role_and_alter_status"),
         ("ipam", "0010_alter_ipam_role_add_new_role"),
     ]
 

@@ -15,7 +15,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_app:examplemodel_list",
-                        name="Models",
+                        name="Example Models",
                         permissions=["example_app.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -27,8 +27,14 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="plugins:example_app:examplemodel_list",
+                        name="Example Models filtered",
+                        permissions=["example_app.view_examplemodel"],
+                        query_params={"number": "100"},
+                    ),
+                    NavMenuItem(
                         link="plugins:example_app:anotherexamplemodel_list",
-                        name="Other Models",
+                        name="Another Example Models",
                         permissions=["example_app.view_anotherexamplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -53,7 +59,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_app:examplemodel_list",
-                        name="Example Model",
+                        name="Example Models",
                         permissions=["example_app.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -77,7 +83,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_app:examplemodel_list",
-                        name="Example Model",
+                        name="Example Models",
                         permissions=["example_app.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(

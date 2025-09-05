@@ -14,16 +14,16 @@ jobs:
     needs:
       - "ci"
     name: "Publish Python Packages"
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-24.04"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v4"
       - name: "Set up Python"
         uses: "actions/setup-python@v2"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Install Python Packages"
-        run: "pip install poetry"
+        run: "pip install poetry==1.8.5"
       - name: "Configure Poetry"
         run: "poetry config virtualenvs.create false && poetry config installer.parallel false"
       - name: "Install Dependencies (needed for mkdocs)"
@@ -33,7 +33,7 @@ jobs:
       - name: "Run Poetry Build"
         run: "poetry build"
       - name: "Upload binaries to release"
-        uses: "svenstaro/upload-release-action@v2"
+        uses: "svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd" # v2
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           file: "dist/*"
@@ -41,61 +41,61 @@ jobs:
           overwrite: true
           file_glob: true
       - name: "Push to PyPI"
-        uses: "pypa/gh-action-pypi-publish@release/v1"
+        uses: "pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc" # release/v1
         with:
           user: "__token__"
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
     name: "Build & Publish Container Images"
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"
     needs:
       - "ci"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v2"
+        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v2"
+        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
       - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@v2"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "Login to Docker"
-        uses: "docker/login-action@v2"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
       - name: "Docker Metadata"
         id: "dockermeta"
-        uses: "docker/metadata-action@v4"
+        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
-            latest=${{ matrix.python-version == 3.11 }}
+            latest=${{ matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
-        uses: "docker/build-push-action@v4"
+        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
         with:
           push: true
           target: final
@@ -108,26 +108,26 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
-        uses: "docker/metadata-action@v4"
+        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
-            latest=${{ matrix.python-version == 3.11 }}
+            latest=${{ matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
+            type=raw,value=stable,enable=${{ matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
-        uses: "docker/build-push-action@v4"
+        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
         with:
           push: true
           target: final-dev
@@ -140,13 +140,13 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
 
   slack-notify:
     needs:
       - "publish_python"
       - "publish_containers"
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-24.04"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
       SLACK_MESSAGE: >-
@@ -159,7 +159,7 @@ jobs:
         # ENVs cannot be used directly in job.if. This is a workaround to check
         # if SLACK_WEBHOOK_URL is present.
         if: "${{ env.SLACK_WEBHOOK_URL != '' }}"
-        uses: "slackapi/slack-github-action@v1.17.0"
+        uses: "slackapi/slack-github-action@8157a0f4d70c5099e42dcff1258b19bdaabb030b" # v1.17.0
         with:
           payload: |
             {
@@ -177,3 +177,15 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
+
+  deploy-sandbox:
+    if: startsWith(github.event.release.tag_name, 'v2.')
+    needs:
+      - "publish_python"
+      - "publish_containers"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Call deploy sandbox workflow for demo.nautobot.com
+        run: gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=demo
+        env:
+          GH_TOKEN: ${{ secrets.GH_NAUTOBOT_BOT_TOKEN }}

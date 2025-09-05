@@ -1,9 +1,10 @@
-from functools import lru_cache
+from collections import defaultdict
 import logging
 
 from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -12,6 +13,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -24,7 +26,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -104,7 +106,7 @@ class RelationshipModel(models.Model):
 
                 # Determine if the relationship is applicable to this object based on the filter
                 # To resolve the filter we are using the FilterSet for the given model
-                # If there is no match when we query the primary key of the device along with the filter
+                # If there is no match when we query our id along with the filter
                 # Then the relationship is not applicable to this object
                 if getattr(relationship, f"{side}_filter"):
                     filterset = get_filterset_for_model(self._meta.model)
@@ -221,6 +223,86 @@ class RelationshipModel(models.Model):
         """
         return self.get_relationships_data(advanced_ui=True)
 
+    def get_relationships_with_related_objects(self, include_hidden=False, advanced_ui=None):
+        """Alternative version of get_relationships()."""
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+
+        if advanced_ui is not None:
+            src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
+            dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
+
+        resp = {
+            RelationshipSideChoices.SIDE_SOURCE: {},
+            RelationshipSideChoices.SIDE_DESTINATION: {},
+            RelationshipSideChoices.SIDE_PEER: {},
+        }
+
+        for side, relationships in (
+            (RelationshipSideChoices.SIDE_SOURCE, src_relationships),
+            (RelationshipSideChoices.SIDE_DESTINATION, dst_relationships),
+        ):
+            peer_side = RelationshipSideChoices.OPPOSITE[side]
+            for relationship in relationships:
+                if getattr(relationship, f"{side}_hidden") and not include_hidden:
+                    continue
+
+                # Determine if the relationship is applicable to this object based on the filter
+                # To resolve the filter we are using the FilterSet for the given model
+                # If there is no match when we query our id along with the filter
+                # Then the relationship is not applicable to this object
+                if getattr(relationship, f"{side}_filter"):
+                    filterset = get_filterset_for_model(self._meta.model)
+                    if filterset:
+                        filter_params = getattr(relationship, f"{side}_filter")
+                        if not filterset(filter_params, self._meta.model.objects.filter(id=self.id)).qs.exists():
+                            continue
+
+                # Construct the queryset for related objects for this relationship
+                remote_ct = getattr(relationship, f"{peer_side}_type")
+                remote_model = remote_ct.model_class()
+                if remote_model is not None:
+                    if not relationship.symmetric:
+                        query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        # Get the related objects for this relationship on the opposite side.
+                        resp[side][relationship] = remote_model.objects.filter(**query_params).distinct()
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
+                    else:
+                        side_query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        peer_side_query_params = {
+                            f"{side}_for_associations__relationship": relationship,
+                            f"{side}_for_associations__{peer_side}_id": self.pk,
+                        }
+                        # Get the related objects based on the pks we gathered.
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
+                            Q(**side_query_params) | Q(**peer_side_query_params)
+                        ).distinct()
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
+                else:
+                    # Maybe an uninstalled App?
+                    # We can't provide a relevant queryset, but we can provide a descriptive string
+                    if not relationship.symmetric:
+                        count = RelationshipAssociation.objects.filter(
+                            relationship=relationship, **{f"{side}_id": self.pk}
+                        ).count()
+                        resp[side][relationship] = f"{count} {remote_ct} object(s)"
+                    else:
+                        count = (
+                            RelationshipAssociation.objects.filter(relationship=relationship)
+                            .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
+                            .count()
+                        )
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)"
+
+        return resp
+
     @classmethod
     def required_related_objects_errors(
         cls, output_for="ui", initial_data=None, relationships_key_specified=False, instance=None
@@ -242,6 +324,18 @@ class RelationshipModel(models.Model):
 
             if relation.skip_required(cls, opposite_side):
                 continue
+
+            if getattr(relation, f"{relation.required_on}_filter") and instance:
+                filterset = get_filterset_for_model(cls)
+                if filterset:
+                    filter_params = getattr(relation, f"{relation.required_on}_filter")
+                    # If the relationship is required on the model, but the object is not in the filter,
+                    # we should allow the object to be saved, as the object is not part of the relationship.
+                    # Example: We want a Device with a Role of Switch to be required to have a relationship
+                    # with a Device that has a Role of Router. A Device with a Role of Printer should
+                    # be exempt from the requirement.
+                    if not filterset(filter_params, cls.objects.filter(id=instance.id)).qs.exists():
+                        continue
 
             if relation.has_many(opposite_side):
                 num_required_verbose = "at least one"
@@ -329,55 +423,89 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
-    def get_for_model(self, model, hidden=None):
+    def get_for_model(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return querysets or object lists.
 
-        Returns a tuple of source and destination scoped relationship querysets.
+        Returns a tuple of source and destination scoped relationship record querysets/lists.
         """
         return (
-            self.get_for_model_source(model, hidden=hidden),
-            self.get_for_model_destination(model, hidden=hidden),
+            self.get_for_model_source(model, hidden=hidden, get_queryset=get_queryset),
+            self.get_for_model_destination(model, hidden=hidden, get_queryset=get_queryset),
         )
 
-    @lru_cache(maxsize=128)
-    def get_for_model_source(self, model, hidden=None):
+    def get_for_model_source(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the source side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        result = (
-            self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
-        )  # You almost always will want access to the source_type/destination_type
-        if hidden is not None:
-            result = result.filter(source_hidden=hidden)
-        return result
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model_source.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = (
+                self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
+            )  # You almost always will want access to the source_type/destination_type
+            if hidden is not None:
+                queryset = queryset.filter(source_hidden=hidden)
+            cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
+        return queryset
 
-    @lru_cache(maxsize=128)
-    def get_for_model_destination(self, model, hidden=None):
+    get_for_model_source.cache_key_prefix = "nautobot.extras.relationship.get_for_model_source"
+
+    def get_for_model_destination(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the destination side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        result = (
-            self.get_queryset().filter(destination_type=content_type).select_related("source_type", "destination_type")
-        )  # You almost always will want access to the source_type/destination_type
-        if hidden is not None:
-            result = result.filter(destination_hidden=hidden)
-        return result
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model_destination.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        list_cache_key = f"{cache_key}.list"
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = (
+                self.get_queryset()
+                .filter(destination_type=content_type)
+                .select_related("source_type", "destination_type")
+            )  # You almost always will want access to the source_type/destination_type
+            if hidden is not None:
+                queryset = queryset.filter(destination_hidden=hidden)
+            cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
+        return queryset
+
+    get_for_model_destination.cache_key_prefix = "nautobot.extras.relationship.get_for_model_destination"
 
     def get_required_for_model(self, model):
         """
@@ -389,15 +517,51 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)
         )
 
+    def populate_list_caches(self):
+        """Populate all relevant caches for `get_for_model(..., get_queryset=False)` and related lookups."""
+        queryset = self.all().select_related("source_type", "destination_type")
+        listings = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        for rel in queryset:
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"]["None"].append(rel)
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"][str(rel.source_hidden)].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"]["None"].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"][
+                str(rel.destination_hidden)
+            ].append(rel)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            for hidden in ["None", "True", "False"]:
+                cache.set(
+                    f"{self.get_for_model_source.cache_key_prefix}.{label}.{hidden}.list",
+                    listings["source"][label][hidden],
+                )
+                cache.set(
+                    f"{self.get_for_model_destination.cache_key_prefix}.{label}.{hidden}.list",
+                    listings["destination"][label][hidden],
+                )
 
-class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
+
+class Relationship(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
+    label = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
+    )
     key = AutoSlugField(
         populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
         help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     type = models.CharField(
         max_length=50,
         choices=RelationshipTypeChoices,
@@ -425,7 +589,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The source object type to which this relationship applies.",
     )
     source_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Source Label",
         help_text="Label for related destination objects, as displayed on the source object.",
@@ -454,7 +618,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The destination object type to which this relationship applies.",
     )
     destination_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Destination Label",
         help_text="Label for related source objects, as displayed on the destination object.",

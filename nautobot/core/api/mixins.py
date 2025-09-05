@@ -6,7 +6,7 @@ from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist,
 )
-from django.db.models import AutoField
+from django.db.models import AutoField, Model
 from rest_framework.exceptions import ValidationError
 
 from nautobot.core.api.utils import dict_to_filter_params
@@ -70,6 +70,11 @@ class WritableSerializerMixin:
             # Strip the trailing slash and split on slashes, taking the last value as the PK.
             data = data.rstrip("/").split("/")[-1]
 
+        # If we're passing the validated_data from one serializer as input to another serializer,
+        # data might already be a model instance:
+        if isinstance(data, Model):
+            return {"pk": data.pk}
+
         try:
             # The int case here is taking into account for the User model we inherit from django
             pk = int(data) if isinstance(queryset.model._meta.pk, AutoField) else uuid.UUID(str(data))
@@ -104,6 +109,16 @@ class WritableSerializerMixin:
             queryset = self.queryset
         else:
             queryset = self.Meta.model.objects
+
+        # Apply user permission on related objects
+        if (
+            "request" in self.context
+            and self.context["request"]
+            and self.context["request"].user
+            and hasattr(queryset, "restrict")
+        ):
+            queryset = queryset.restrict(self.context["request"].user, "view")
+
         if isinstance(data, list):
             return [self.get_object(data=entry, queryset=queryset) for entry in data]
         return self.get_object(data=data, queryset=queryset)

@@ -1,17 +1,39 @@
 {% extends "base.html" %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
+
+{% block document_title %}{% render_title "plain" %}{% endblock %}
 
 {% block content %}
-    <div class="pull-right noprint">
-        {% if request.user.is_authenticated and table_config_form %}
-            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table">
-                <i class="mdi mdi-cog"></i> Configure</button>
-            </button>
-        {% endif %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            {% render_breadcrumbs %}
+        </div>
     </div>
 
-    <h1>{% block title %}Installed Apps{% endblock %}</h1>
+    <div class="pull-right noprint">
+        <div class="btn-group">
+            <a class="btn btn-default set-apps-display" data-display="tiles" href="" title="Tiles">
+                <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
+            </a>
+            <a class="btn btn-default set-apps-display" data-display="list" href="" title="List">
+                <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
+            </a>
+        </div>
+
+        {% if request.user.is_authenticated and table_config_form %}
+            {% if display == "tiles" %}
+                {% table_config_button table table_name="ObjectTable" disabled=True %}
+            {% else %}
+                {% table_config_button table table_name="ObjectTable" %}
+            {% endif %}
+        {% endif %}
+
+        <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
+    </div>
+
+    <h1>{% block page_heading %}{% render_title %}{% endblock %}</h1>
 
     <div class="row">
         <div class="col-md-12">
@@ -32,4 +54,13 @@
 {% block javascript %}
 {{ block.super }}
 <script src="{% static 'js/tableconfig.js' %}"></script>
+
+<script>
+    // Set display anchor links without losing other potentially active query params such as applied filters.
+    [...document.querySelectorAll('.set-apps-display')].forEach(button => {
+        const queryParams = new URLSearchParams(window.location.search);
+        queryParams.set('display', button.dataset.display);
+        button.setAttribute('href', `?${queryParams.toString()}`);
+    });
+</script>
 {% endblock %}

@@ -1,1 +1,0 @@
-Fixed an exception in `Job.after_return()` if a Job with an optional `FileVar` was executed without supplying a value for that variable.

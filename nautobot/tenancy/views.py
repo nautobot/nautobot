@@ -1,11 +1,14 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.models.querysets import count_related
-from nautobot.core.views import generic
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Device, Location, Rack, RackReservation
+from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
+from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
+from nautobot.tenancy.api import serializers
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 from . import filters, forms, tables
@@ -16,53 +19,51 @@ from .models import Tenant, TenantGroup
 #
 
 
-class TenantGroupListView(generic.ObjectListView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
-    filterset = filters.TenantGroupFilterSet
-    table = tables.TenantGroupTable
-
-
-class TenantGroupView(generic.ObjectView):
+class TenantGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TenantGroupBulkEditForm
+    filterset_class = filters.TenantGroupFilterSet
+    filterset_form_class = forms.TenantGroupFilterForm
+    form_class = forms.TenantGroupForm
     queryset = TenantGroup.objects.all()
+    serializer_class = serializers.TenantGroupSerializer
+    table_class = tables.TenantGroupTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="tenant_table",
+                exclude_columns=["tenant_group"],
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         # Tenants
-        tenants = Tenant.objects.restrict(request.user, "view").filter(
-            tenant_group__in=instance.descendants(include_self=True)
-        )
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            # ObjectsTablePanel usually handles the generation of this table, this is an exception here
+            # Because we are filtering on its tenant_group as well as the tenant group's descendants
+            # i.e. `instance.descendants(include_self=True)`
+            tenants = Tenant.objects.restrict(request.user, "view").filter(
+                tenant_group__in=instance.descendants(include_self=True)
+            )
 
-        tenant_table = tables.TenantTable(tenants)
-        tenant_table.columns.hide("tenant_group")
+            tenant_table = tables.TenantTable(tenants)
+            tenant_table.columns.hide("tenant_group")
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(tenant_table)
-
-        return {
-            "tenant_table": tenant_table,
-        }
-
-
-class TenantGroupEditView(generic.ObjectEditView):
-    queryset = TenantGroup.objects.all()
-    model_form = forms.TenantGroupForm
-
-
-class TenantGroupDeleteView(generic.ObjectDeleteView):
-    queryset = TenantGroup.objects.all()
-
-
-class TenantGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = TenantGroup.objects.all()
-    table = tables.TenantGroupTable
-
-
-class TenantGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
-    table = tables.TenantGroupTable
-    filterset = filters.TenantGroupFilterSet
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(tenant_table)
+            context["tenant_table"] = tenant_table
+        return context
 
 
 #
@@ -70,64 +71,43 @@ class TenantGroupBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class TenantListView(generic.ObjectListView):
+class TenantUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TenantBulkEditForm
+    filterset_class = filters.TenantFilterSet
+    filterset_form_class = forms.TenantFilterForm
+    form_class = forms.TenantForm
     queryset = Tenant.objects.all()
-    filterset = filters.TenantFilterSet
-    filterset_form = forms.TenantFilterForm
-    table = tables.TenantTable
-
-
-class TenantView(generic.ObjectView):
-    queryset = Tenant.objects.select_related("tenant_group")
-
-    def get_extra_context(self, request, instance):
-        stats = {
-            # TODO: Should we include child locations of the filtered locations in the location_count below?
-            "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-        }
-
-        return {
-            "stats": stats,
-        }
-
-
-class TenantEditView(generic.ObjectEditView):
-    queryset = Tenant.objects.all()
-    model_form = forms.TenantForm
-    template_name = "tenancy/tenant_edit.html"
-
-
-class TenantDeleteView(generic.ObjectDeleteView):
-    queryset = Tenant.objects.all()
-
-
-class TenantBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Tenant.objects.all()
-    table = tables.TenantTable
-
-
-class TenantBulkEditView(generic.BulkEditView):
-    queryset = Tenant.objects.select_related("tenant_group")
-    filterset = filters.TenantFilterSet
-    table = tables.TenantTable
-    form = forms.TenantBulkEditForm
-
-
-class TenantBulkDeleteView(generic.BulkDeleteView):
-    queryset = Tenant.objects.select_related("tenant_group")
-    filterset = filters.TenantFilterSet
-    table = tables.TenantTable
+    serializer_class = serializers.TenantSerializer
+    table_class = tables.TenantTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            StatsPanel(
+                label="Stats",
+                filter_name="tenant",
+                related_models=[
+                    Circuit,
+                    Cluster,
+                    Controller,
+                    ControllerManagedDeviceGroup,
+                    Device,
+                    DynamicGroup,
+                    IPAddress,
+                    # TODO: Should we include child locations of the filtered locations in the location_count below?
+                    Location,
+                    Prefix,
+                    Rack,
+                    RackReservation,
+                    VirtualMachine,
+                    VLAN,
+                    VRF,
+                ],
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+            ),
+        )
+    )

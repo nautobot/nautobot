@@ -52,7 +52,7 @@ def migrate_job_data(apps, schema_editor):
 
     # Shouldn't be needed but I've seen cases where it happens - not sure exactly why
     for job_jobresult in JobResult.objects.filter(obj_type__model="jobmodel"):
-        print("Fixing up content type on {job_jobresult}")
+        print(f"Fixing up content type on {job_jobresult}")
         job_jobresult.obj_type = job_ct
         job_jobresult.save()
 
@@ -90,6 +90,7 @@ def reverse_migrate_job_data(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0023_job_model"),
     ]
 

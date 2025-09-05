@@ -1,5 +1,3 @@
-from rest_framework.routers import APIRootView
-
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
@@ -19,16 +17,6 @@ from nautobot.virtualization.models import (
 
 from . import serializers
 
-
-class VirtualizationRootView(APIRootView):
-    """
-    Virtualization API root view
-    """
-
-    def get_view_name(self):
-        return "Virtualization"
-
-
 #
 # Clusters
 #
@@ -47,13 +35,9 @@ class ClusterGroupViewSet(NautobotModelViewSet):
 
 
 class ClusterViewSet(NautobotModelViewSet):
-    queryset = (
-        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "location")
-        .prefetch_related("tags")
-        .annotate(
-            device_count=count_related(Device, "cluster"),
-            virtualmachine_count=count_related(VirtualMachine, "cluster"),
-        )
+    queryset = Cluster.objects.annotate(
+        device_count=count_related(Device, "cluster"),
+        virtualmachine_count=count_related(VirtualMachine, "cluster"),
     )
     serializer_class = serializers.ClusterSerializer
     filterset_class = filters.ClusterFilterSet
@@ -65,27 +49,12 @@ class ClusterViewSet(NautobotModelViewSet):
 
 
 class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
-    queryset = VirtualMachine.objects.select_related(
-        "cluster__location",
-        "platform",
-        "primary_ip4",
-        "primary_ip6",
-        "status",
-        "role",
-        "software_version",
-        "tenant",
-    ).prefetch_related("tags")
+    queryset = VirtualMachine.objects.select_related("cluster__location")
     serializer_class = serializers.VirtualMachineSerializer
     filterset_class = filters.VirtualMachineFilterSet
 
 
 class VMInterfaceViewSet(NotesViewSetMixin, ModelViewSet):
-    queryset = VMInterface.objects.select_related(
-        "virtual_machine",
-        "parent_interface",
-        "bridge",
-        "status",
-        "untagged_vlan",
-    ).prefetch_related("tags", "ip_addresses", "tagged_vlans")
+    queryset = VMInterface.objects.all()
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet

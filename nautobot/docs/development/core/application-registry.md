@@ -50,8 +50,6 @@ Apps may extend this dictionary with additional data sources and/or data types b
 
 ### `homepage_layout`
 
-+++ 1.2.0
-
 A dictionary holding information about the layout of Nautobot's homepage. Each app may register homepage panels and items using objects from the generic app class. Each object has a weight attribute allowing the developer to define the position of the object.
 
 ``` python
@@ -87,9 +85,49 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 }
 ```
 
+### `feature_models`
+
++++ 2.4.14
+
+A dictionary of particular features (e.g. "graphql") mapped to the set of Nautobot model classes which support each such feature. For example:
+
+```python
+>>> from nautobot.extras.registry import registry
+>>> registry["feature_models"]["graphql"]
+[<class 'nautobot.extras.models.change_logging.ObjectChange'>, <class 'nautobot.extras.models.customfields.ComputedField'>, <class 'nautobot.extras.models.customfields.CustomFieldChoice'>, <class 'nautobot.extras.models.roles.Role'>, ...
+```
+
+Useful as an alternative to `model_features` ([below](#model_features)) for cases where direct access to the Django model classes is desired, such as in generating the GraphQL schema.
+
+### `jobs`
+
++++ 2.2.3
+
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/models.md#understanding-job-class-paths). For example:
+
+```python
+{
+    "nautobot.core.jobs.ExportObjectList": <class "nautobot.core.jobs.ExportObjectList">,
+    "nautobot.core.jobs.GitRepositorySync": <class "nautobot.core.jobs.GitRepositorySync">,
+    "nautobot.core.jobs.GitRepositoryDryRun": <class "nautobot.core.jobs.GitRepositoryDryRun">,
+    "nautobot.core.jobs.ImportObjects": <class "nautobot.core.jobs.ImportObjects">,
+    "example_app.jobs.ExampleDryRunJob": <class "example_app.jobs.ExampleDryRunJob">,
+    "example_app.jobs.ExampleJob": <class "example_app.jobs.ExampleJob">,
+    "example_app.jobs.ExampleHiddenJob": <class "example_app.jobs.ExampleHiddenJob">,
+    "example_app.jobs.ExampleLoggingJob": <class "example_app.jobs.ExampleLoggingJob">,
+    "example_app.jobs.ExampleFileInputOutputJob": <class "example_app.jobs.ExampleFileInputOutputJob">,
+    "example_app.jobs.ExampleJobHookReceiver": <class "example_app.jobs.ExampleJobHookReceiver">,
+    "example_app.jobs.ExampleSimpleJobButtonReceiver": <class "example_app.jobs.ExampleSimpleJobButtonReceiver">,
+    "example_app.jobs.ExampleComplexJobButtonReceiver": <class "example_app.jobs.ExampleComplexJobButtonReceiver">
+}
+```
+
+!!! caution
+    This registry entry should be treated as a cache and as an implementation detail; in general you should prefer the use of the `nautobot.apps.get_jobs()` and/or `nautobot.apps.get_job()` APIs in order to retrieve specific Job classes.
+
 ### `model_features`
 
-A dictionary of particular features (e.g. custom fields) mapped to the Nautobot models which support them, arranged by app. For example:
+A dictionary of particular features (e.g. custom fields) mapped to the names of Nautobot models which support them, arranged by app. For example:
 
 ```python
 {
@@ -107,9 +145,9 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 
 For more information visit [model-features](model-features.md).
 
-### `nav_menu`
+In cases where grouping by app is not important, and direct access to the Django model classes is desired, the `feature_models` registry entry ([above](#feature_models)) may be used as an alternative in recent versions of Nautobot.
 
-+++ 1.1.0
+### `nav_menu`
 
 Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other core applications and Apps. The `nav_menu` dict should never be modified directly.
 
@@ -198,7 +236,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../../user-guide/platform-functionality/jobs/index.md#writing-jobs) which should be called at import time by any App that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md) which should be called at import time by any App that provides jobs.
 
 ### `plugin_template_extensions`
 

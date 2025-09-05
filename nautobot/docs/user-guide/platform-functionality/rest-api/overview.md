@@ -69,8 +69,7 @@ Each attribute of the IP address is expressed as an attribute of the JSON object
 
 Comprehensive, interactive documentation of all REST API endpoints is available on a running Nautobot instance at `/api/docs/`. This interface provides a convenient sandbox for researching and experimenting with specific endpoints and request types. The API itself can also be explored using a web browser by navigating to its root at `/api/`.
 
-+++ 1.3.0
-    You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=2.0` or `/api/?api_version=2.0`
+You can view or explore a specific REST API [version](#versioning) by adding the API version as a query parameter, for example `/api/docs/?api_version=2.0` or `/api/?api_version=2.0`
 
 ## Endpoint Hierarchy
 
@@ -102,8 +101,6 @@ See the [filtering documentation](filtering.md) for more details.
 
 ## Versioning
 
-+++ 1.3.0
-
 As of Nautobot 1.3, the REST API supports multiple versions. A REST API client may request a given API version by including a `major.minor` Nautobot version number in its request in one of two ways:
 
 1. A client may include a `version` in its HTTP Accept header, for example `Accept: application/json; version=2.0`
@@ -114,9 +111,6 @@ Generally the former approach is recommended when writing automated API integrat
 ### Default Versions
 
 By default, a REST API request that does not specify an API version number will default to compatibility with the current Nautobot version.
-
-+++ 1.3.0
-    For Nautobot 1.x, the default API behavior is to be compatible with the REST API of Nautobot version 1.2, in other words, for all Nautobot 1.x versions (beginning with Nautobot 1.2.0), `Accept: application/json` is functionally equivalent to `Accept: application/json; version=1.2`.
 
 +/- 2.0.0
     As of Nautobot 2.0, the default API behavior is changed to use the latest available REST API version. In other words, the default REST API version for Nautobot 2.0.y will be `2.0`, for Nautobot 2.1.y will be `2.1`, etc. This means that REST API clients that do not explicitly request a particular REST API version may encounter potentially [breaking changes](#breaking-changes) in the REST API when Nautobot is upgraded to a new minor or major version.
@@ -178,8 +172,6 @@ As an example, let us say that Nautobot 2.1 introduced a new, _non-backwards-com
 | `/api/dcim/racks/`  | `2.1`                 | 2.1-compatible REST API (unchanged from 2.0) |
 
 ### APISelect with versioning capability
-
-+++ 1.3.0
 
 The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now includes an optional `api_version` argument which if set overrides the default API version of the request.
 
@@ -311,7 +303,33 @@ On retrieval, the REST API will include the `object_type` and `object_id` fields
 
 +++ 2.0.0
 
-Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API represents these relationships as nested objects for retrieval, but in order to create, update or delete these relationships, the through table endpoint must be used. Currently, the only through table endpoint available is the [`IPAddress` to `Interface`/`VMInterface` at `/api/ipam/ip-address-to-interface/`](../../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#new-interface-to-ip-address-relationship-endpoint).
+Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API typically provides a separate endpoint for manipulating the contents of each such "through table", for example:
+
+* `/api/dcim/interface-redundancy-group-associations/`
+* `/api/dcim/device-types-to-software-image-files/`
+* `/api/extras/contact-associations/`
+* `/api/extras/job-queue-assignments/`
+* `/api/extras/secrets-groups-associations/`
+* `/api/extras/static-group-associations/`
+* `/api/ipam/ip-address-to-interface/`
+* `/api/ipam/prefix-location-assignments/`
+* `/api/ipam/vlan-location-assignments/`
+* `/api/ipam/vrf-device-assignments/`
+* `/api/ipam/vrf-prefix-assignments/`
+* etc.
+
+In many (but not necessarily all) cases, as a convenience for users, the REST API for objects involved in a many-to-many relationship may also represent -- as a **read-only** field -- the objects on the other side of the relationship (bypassing the through table itself). For example, the `/api/ipam/vrfs/` REST API may include fields for each VRF record such as `prefixes` (the set of `Prefix` objects related to a given `VRF` by the `VRFPrefixAssignment` through table) and `devices` (the set of `Device` objects related to a given `VRF` by the `VRFDeviceAssignment` through table).
+
+!!! warning "Many-to-many at scale"
+    When Nautobot contains a substantial number of related records, the inclusion of many-to-many related objects in the REST API may impose a significant amount of performance overhead in terms of processing time and memory usage. For example, if you have many VRFs, each of which is associated to 1000 Prefixes, listing VRFs in the REST API would also by default retrieve, serialize, and list the 1000 Prefix records _per VRF retrieved_.
+
+To address the aforementioned performance/scalability concern, Nautobot supports the REST API query parameter `exclude_m2m`. When this parameter is specified (for example `GET /api/ipam/vrfs/?exclude_m2m=true`), many-to-many related objects will **not** be included in the REST API response, and in most cases will not even be retrieved from the database.
+
++++ 2.4.0 "Added support for the `exclude_m2m` query parameter"
+
+In a future Nautobot major release, a change in the REST API may make `exclude_m2m=true` the default behavior.
+
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
 
 ## Pagination
 
@@ -351,7 +369,7 @@ Vary: Accept
 }
 ```
 
-The default page is determined by the [`PAGINATE_COUNT`](../../administration/configuration/optional-settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
+The default page is determined by the [`PAGINATE_COUNT`](../../administration/configuration/settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
 ```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
@@ -368,7 +386,7 @@ The response will return devices 1 through 100. The URL provided in the `next` a
 }
 ```
 
-The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../../administration/configuration/optional-settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
+The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../../administration/configuration/settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
 
 !!! warning
     Disabling the page size limit introduces a potential for very resource-intensive requests, since one API request can effectively retrieve an entire table from the database.
@@ -738,8 +756,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
 
 ### Retrieving Object Relationships and Relationship Associations
 
-+++ 1.4.0
-
 Objects that are associated with another object by a custom [Relationship](../relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
 ```no-highlight
@@ -796,12 +812,16 @@ GET /api/dcim/locations/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationsh
 
 In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-locations` Relationship to this Site.
 
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
+
 ### Including Config Contexts
 
 When retrieving Devices and Virtual Machines via the REST API, it is possible to also retrive the rendered [configuration context data](../../core-data-model/extras/configcontext.md) for each such object if desired. Because rendering this data can be time consuming, it is _not_ included in the REST API responses by default. If you wish to include config context data in the response, you must opt in by specifying the query parameter `include=config_context` as a part of your request.
 
 +/- 2.0.0
     In Nautobot 1.x, the rendered configuration context was included by default in the REST API response unless specifically excluded with the query parameter `exclude=config_context`. This behavior has been reversed in Nautobot 2.0 and the `exclude` query parameter is no longer supported.
+
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
 
 ### Creating a New Object
 
@@ -943,8 +963,6 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
     The Nautobot REST API support the use of either `PUT` or `PATCH` to modify an existing object. The difference is that a `PUT` request requires the user to specify a _complete_ representation of the object being modified, whereas a `PATCH` request need include only the attributes that are being updated. For most purposes, using `PATCH` is recommended.
 
 #### Updating Relationship Associations
-
-+++ 1.4.0
 
 It is possible to modify the objects associated via Relationship with an object as part of a REST API `PATCH` request by specifying the `"relationships"` key, any or all of the relevant Relationships, and the list of desired related objects for each such Relationship. Since nested serializers are used for the related objects, they can be identified by ID (primary key) or by one or more attributes in a dictionary. For example, either of the following requests would be valid:
 

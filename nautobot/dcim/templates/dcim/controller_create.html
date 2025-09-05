@@ -1,0 +1,65 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Controller</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.location %}
+            {% render_field form.platform %}
+            {% render_field form.capabilities %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Integration</strong></div>
+        <div class="panel-body">
+        {% render_field form.external_integration %}
+        {% with controllerdevice_tab_active=form.initial.controller_device %}
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation"{% if controllerdevice_tab_active %} class="active"{% endif %}><a href="#controllerdevice" role="tab" data-toggle="tab">Controller Device</a></li>
+                <li role="presentation"{% if not controllerdevice_tab_active %} class="active"{% endif %}><a href="#controller_device_redundancy_group" role="tab" data-toggle="tab">Controller Device Redundancy Group</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane{% if not controllerdevice_tab_active %} active{% endif %}" id="controller_device_redundancy_group">
+                    {% render_field form.controller_device_redundancy_group %}
+                </div>
+                <div class="tab-pane{% if controllerdevice_tab_active %} active{% endif %}" id="controllerdevice">
+                    {% render_field form.controller_device %}
+                </div>
+            </div>
+        {% endwith %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+<script type="text/javascript">
+    const controllerDevice = $('#id_controller_device');
+    const controllerDeviceRedundancyGroup = $('#id_controller_device_redundancy_group');
+
+    const controllerUpdated = function() {
+        if (controllerDevice.val()) {
+            controllerDeviceRedundancyGroup.val('');
+            controllerDeviceRedundancyGroup.trigger('change');
+        }
+    };
+
+    const controllerDeviceRedundancyGroupUpdated = function() {
+        if (controllerDeviceRedundancyGroup.val()) {
+            controllerDevice.val('');
+            controllerDevice.trigger('change');
+        }
+    };
+
+    controllerDevice.on('select2:select', controllerUpdated);
+    controllerDevice.on('select2:unselect', controllerUpdated);
+    controllerDeviceRedundancyGroup.on('select2:select', controllerDeviceRedundancyGroupUpdated);
+    controllerDeviceRedundancyGroup.on('select2:unselect', controllerDeviceRedundancyGroupUpdated);
+</script>
+{% endblock %}

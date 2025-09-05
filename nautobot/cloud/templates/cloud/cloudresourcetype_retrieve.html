@@ -1,0 +1,4 @@
+{% extends 'generic/object_retrieve.html' %}
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'cloud:cloudresourcetype_list' %}?provider={{ object.provider.pk }}">{{ object.provider }}</a></li>
+{% endblock extra_breadcrumbs %}

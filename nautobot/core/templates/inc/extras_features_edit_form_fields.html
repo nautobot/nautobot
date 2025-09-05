@@ -24,6 +24,14 @@
         </div>
     </div>
 {% endif %}
+{% if form.dynamic_groups and perms.extras.add_staticgroupassociation %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Static Assignment to Dynamic Groups</strong></div>
+        <div class="panel-body">
+            {% render_field form.dynamic_groups %}
+        </div>
+    </div>
+{% endif %}
 {% if form.tags %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Tags</strong></div>

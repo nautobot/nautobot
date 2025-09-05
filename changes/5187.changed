@@ -1,3 +1,0 @@
-Removed "Add Contact" button from the standard buttons in the detail views.
-Renamed "Assign Contact/Team" UI buttons text from "Create", "Create and Add Another" to "Assign" and "Assign and Add Another".
-Split out Contact/Team icons into a separate column and renamed the columns to "Type" and "Name" on AssociatedContactsTable.

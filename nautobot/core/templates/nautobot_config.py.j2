@@ -37,9 +37,19 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 # CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
+# Celery Beat heartbeat file path - will be touched by Beat each time it wakes up as a proof-of-health.
+# CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
+#     "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
+#     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
+# )
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
+
+# Optional configuration dict for Celery to use custom SSL certificates to connect to Redis.
+#
+# CELERY_BROKER_USE_SSL = None
 
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
@@ -76,19 +86,21 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #                                   #
 #####################################
 
-# Specify one or more name and email address tuples representing Nautobot administrators.
+# Specify one or more (name, email address) tuples representing Nautobot administrators.
 # These people will be notified of application errors (assuming correct email settings are provided).
 #
-# ADMINS = [
-#     ['John Doe', 'jdoe@example.com'],
-# ]
+# ADMINS = []
 
 # FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
 # If running Nautobot under a single domain, you may not need to set this variable;
 # if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
+# You also want to set this variable if you are facing CSRF validation issues such as 
+# 'CSRF failure has occured' or 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
 # https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
 #
 # CSRF_TRUSTED_ORIGINS = []
+# if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
+#    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Date/time formatting. See the following link for supported formats:
 # https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date
@@ -96,7 +108,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 # SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
 # TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
-# SHORT_TIME_FORMAT = os.getenv("NAUTOBOT_SHORT_TIME_FORMAT", "H:i:s")
 # DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 # SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
 
@@ -152,6 +163,19 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     },
 # }
 
+# Enable the following to setup structlog logging for Nautobot.
+# Configures defined loggers to use structlog and overwrites all formatters and handlers.
+#
+# from nautobot.core.settings_funcs import setup_structlog_logging
+# setup_structlog_logging(
+#     LOGGING,
+#     INSTALLED_APPS,
+#     MIDDLEWARE,
+#     log_level="DEBUG" if DEBUG else "INFO",
+#     debug_db=False,  # Set to True to log all database queries
+#     plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+# )
+
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed.
 #
 # MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
@@ -190,6 +214,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #                                                                 #
 ###################################################################
 
+# Allow users to enable request profiling via django-silk for admins to inspect.
+# if "NAUTOBOT_ALLOW_REQUEST_PROFILING" in os.environ and os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"] != "":
+#     ALLOW_REQUEST_PROFILING = is_truthy(os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"])
+
 # URL schemes that are allowed within links in Nautobot
 #
 # ALLOWED_URL_SCHEMES = (
@@ -211,9 +239,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 
 # Banners (HTML is permitted) to display at the top and/or bottom of all Nautobot pages, and on the login page itself.
 #
-# BANNER_BOTTOM = ""
-# BANNER_LOGIN = ""
-# BANNER_TOP = ""
+# if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
+#     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
+# if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
+#     BANNER_LOGIN = os.environ["NAUTOBOT_BANNER_LOGIN"]
+# if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
+#     BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
 
 # Branding logo locations. The logo takes the place of the Nautobot logo in the top right of the nav bar.
 # The filepath should be relative to the `MEDIA_ROOT`.
@@ -234,6 +265,8 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
 #     ),  # bullet image used for various view headers
 #     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
+#     "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+#     "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 # }
 
 # Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
@@ -266,6 +299,15 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 # CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
+# How many tasks a worker is allowed to reserve for its own consumption and execution.
+# If set to zero (not recommended) a single worker can reserve all tasks even if other workers are free.
+# For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+# Conversely, for long running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to 1
+# so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+# until the long-running task completes.
+# https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits
+# CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER", "4"))
+
 # Ports for prometheus metric HTTP server running on the celery worker.
 # Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
 # sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
@@ -278,10 +320,17 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #         int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
 #     ]
 
+# If enabled stdout and stderr of running jobs will be redirected to the task logger.
+# CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
 
-# Number of days to retain changelog entries. Set to 0 to retain changes indefinitely.
+# The log level of log messages generated by redirected job stdout and stderr.
+# Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+# CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
+
+# Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 #
-# CHANGELOG_RETENTION = 90
+# if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
+#     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
 
 # If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
@@ -303,11 +352,20 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     r'^(https?://)?(\w+\.)?example\.com$',
 # ]
 
+# UUID uniquely but anonymously identifying this Nautobot deployment.
+#
+# if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
+#     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
+
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to True to use the device name alone as the natural key for Device objects.
 # Set this to False to use the sequence (name, tenant, location) as the natural key instead.
 #
-# DEVICE_NAME_AS_NATURAL_KEY = False
+# if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
+#     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+
+# Event Brokers
+# EVENT_BROKERS = {}
 
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
@@ -362,7 +420,8 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Set this to True to use the location name alone as the natural key for Location objects.
 # Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) as the natural key instead.
 #
-# LOCATION_NAME_AS_NATURAL_KEY = False
+# if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
+#     LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 #
@@ -372,9 +431,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 
-# Maximum number of objects that the UI and API will retrieve in a single request.
+# Maximum number of objects that the UI and API will retrieve in a single request. Default is 1000
 #
-# MAX_PAGE_SIZE = 1000
+# if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE"] != "":
+#     MAX_PAGE_SIZE = int(os.environ["NAUTOBOT_MAX_PAGE_SIZE"])
 
 # Expose Prometheus monitoring metrics at the HTTP endpoint '/metrics'
 #
@@ -383,6 +443,11 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Require API Authentication to HTTP endpoint '/metrics'
 #
 # METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+
+# Disable app metrics for specific apps
+#
+# if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+#     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
 
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
@@ -398,13 +463,26 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # NAPALM_ARGS = {}
 
-# Default number of objects to display per page of the UI and REST API.
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+# if (
+#     "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+#     and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+# ):
+#     NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+#         os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+#     )
+
+# Default number of objects to display per page of the UI and REST API. Default is 50
 #
-# PAGINATE_COUNT = 50
+# if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
+#     PAGINATE_COUNT = int(os.environ["NAUTOBOT_PAGINATE_COUNT"])
 
 # Options given in the web UI for the number of objects to display per page.
+# Default is [25, 50, 100, 250, 500, 1000]
 #
-# PER_PAGE_DEFAULTS = [25, 50, 100, 250, 500, 1000]
+# if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"] != "":
+#     PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(",")]
 
 # Enable installed plugins. Add the name of each plugin to the list.
 #
@@ -420,14 +498,34 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #     }
 # }
 
-# Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address?
+# Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 #
-# PREFER_IPV4 = False
+# if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
+#     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
-# Default height and width in pixels of a single rack unit in rendered rack elevations.
+# Publish a simple "no-index" robots.txt for Nautobot?
+# PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
+
+# Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 230
 #
-# RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = 22
-# RACK_ELEVATION_DEFAULT_UNIT_WIDTH = 220
+# if (
+#     "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT" in os.environ
+#     and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"] != ""
+# ):
+#     RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"])
+# if (
+#     "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH" in os.environ
+#     and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"] != ""
+# ):
+#     RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
+
+# Enable two-digit format for the rack unit numbering in rack elevations.
+#
+# if (
+#     "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+#      and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+# ):
+#     RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
 
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
@@ -435,9 +533,12 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 
 # How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
+# Defaults to disabled (no URL) and check every 24 hours when enabled
 #
-# RELEASE_CHECK_TIMEOUT = 24 * 3600
-# RELEASE_CHECK_URL = None
+# if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"] != "":
+#     RELEASE_CHECK_TIMEOUT = int(os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"])
+# if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
+#     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
 # Remote auth backend settings
 #
@@ -463,7 +564,7 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG.
 # These default to None and {} respectively.
 #
-# STORAGE_BACKEND = 'storages.backends.s3boto3.S3Boto3Storage'
+# STORAGE_BACKEND = 'storages.backends.s3.S3Storage'
 # STORAGE_CONFIG = {
 #     'AWS_ACCESS_KEY_ID': 'Key ID',
 #     'AWS_SECRET_ACCESS_KEY': 'Secret',
@@ -475,12 +576,11 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
-# Custom message to display on 4xx and 5xx error pages. Markdown is supported.
+# Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
+# Default message directs the user to #nautobot on NTC's Slack community.
 #
-# SUPPORT_MESSAGE = (
-#     "If further assistance is required, please join the `#nautobot` channel "
-#     "on [Network to Code's Slack community](https://slack.networktocode.com) and post your question."
-# )
+# if "NAUTOBOT_SUPPORT_MESSAGE" in os.environ and os.environ["NAUTOBOT_SUPPORT_MESSAGE"] != "":
+#     SUPPORT_MESSAGE = os.environ["NAUTOBOT_SUPPORT_MESSAGE"]
 
 # UI_RACK_VIEW_TRUNCATE_FUNCTION
 #

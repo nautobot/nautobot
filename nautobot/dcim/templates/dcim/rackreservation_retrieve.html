@@ -1,0 +1,11 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block extra_breadcrumbs %}
+                <li>{{ object.rack|hyperlinked_object }}</li>
+{% endblock extra_breadcrumbs %}
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% versioned_static 'js/rack_elevations.js' %}"></script>
+{% endblock javascript %}

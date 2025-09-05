@@ -1,0 +1,165 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+                <li><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
+{% endblock extra_breadcrumbs %}
+
+{% block extra_buttons %}
+        {% if perms.dcim.change_moduletype %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="module-type-add-components-button">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    {% if perms.dcim.add_consoleporttemplate %}
+                        <li><a href="{% url 'dcim:consoleporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleports">Console Ports</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_consoleserverporttemplate %}
+                        <li><a href="{% url 'dcim:consoleserverporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleserverports">Console Server Ports</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_powerporttemplate %}
+                        <li><a href="{% url 'dcim:powerporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=powerports">Power Ports</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_poweroutlettemplate %}
+                        <li><a href="{% url 'dcim:poweroutlettemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=poweroutlets">Power Outlets</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_interfacetemplate %}
+                        <li><a href="{% url 'dcim:interfacetemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=interfaces">Interfaces</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_frontporttemplate %}
+                        <li><a href="{% url 'dcim:frontporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=frontports">Front Ports</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_rearporttemplate %}
+                        <li><a href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=rearports">Rear Ports</a></li>
+                    {% endif %}
+                    {% if perms.dcim.add_modulebaytemplate %}
+                        <li><a href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=modulebays">Module Bays</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+{% endblock extra_buttons %}
+
+{% block extra_nav_tabs %}
+        <li role="presentation" {% if request.GET.tab == 'interfaces' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-toggle="tab">
+                Interfaces {% badge interface_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'frontports' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-toggle="tab">
+                Front Ports {% badge front_port_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'rearports' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-toggle="tab">
+                Rear Ports {% badge rear_port_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'consoleports' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-toggle="tab">
+                Console Ports {% badge consoleport_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'consoleserverports' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-toggle="tab">
+                Console Server Ports {% badge consoleserverport_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'powerports' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-toggle="tab">
+                Power Ports {% badge powerport_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation" {% if request.GET.tab == 'poweroutlets' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-toggle="tab">
+                Power Outlets {% badge poweroutlet_table.rows|length %}
+            </a>
+        </li>
+        <li role="presentation"{% if request.GET.tab == 'modulebays' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-toggle="tab">
+                Module Bays {% badge modulebay_table.rows|length %}
+            </a>
+        </li>
+{% endblock extra_nav_tabs %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Chassis</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Manufacturer</td>
+                        <td><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
+                    </tr>
+                    <tr>
+                        <td>Model Name</td>
+                        <td>
+                            {{ object.model }}<br/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Family</td>
+                        <td>
+                            {{ object.module_family|hyperlinked_object }}<br/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Part Number</td>
+                        <td>{{ object.part_number|placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Module Instances</td>
+                        <td><a href="{% url 'dcim:module_list' %}?module_type={{ object.pk }}">{{ instance_count }}</a></td>
+                    </tr>
+                </table>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Comments</strong>
+    </div>
+    <div class="panel-body rendered-markdown">
+        {% if object.comments %}
+            {{ object.comments|render_markdown }}
+        {% else %}
+            <span class="text-muted">None</span>
+        {% endif %}
+    </div>
+</div>
+{% endblock content_right_page %}
+
+
+
+{% block extra_tab_content %}
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'interfaces' %}active{% else %}fade{% endif %}" id="interfaces">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=interface_table title='Interfaces' tab='interfaces' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'frontports' %}active{% else %}fade{% endif %}" id="frontports">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=front_port_table title='Front Ports' tab='frontports' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'rearports' %}active{% else %}fade{% endif %}" id="rearports">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=rear_port_table title='Rear Ports' tab='rearports' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'consoleports' %}active{% else %}fade{% endif %}" id="consoleports">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=consoleport_table title='Console Ports' tab='consoleports' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'consoleserverports' %}active{% else %}fade{% endif %}" id="consoleserverports">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=consoleserverport_table title='Console Server Ports' tab='consoleserverports' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'powerports' %}active{% else %}fade{% endif %}" id="powerports">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=powerport_table title='Power Ports' tab='powerports' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'poweroutlets' %}active{% else %}fade{% endif %}" id="poweroutlets">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=poweroutlet_table title='Power Outlets' tab='poweroutlets' %}
+                </div>
+                <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'modulebays' %}active{% else %}fade{% endif %}" id="modulebays">
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=modulebay_table title='Module Bays' tab='modulebays' %}
+                </div>
+            </div>
+{% endblock extra_tab_content %}

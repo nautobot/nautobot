@@ -1,0 +1,110 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% block breadcrumbs %}
+                {% if object.parent_device %}
+                    <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
+                    <li>{{ object.parent_device|hyperlinked_object }}</li>
+                    {% if device_breadcrumb_url %}
+                        <li><a href="{% url device_breadcrumb_url pk=object.parent_device.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li><a href="{% url 'dcim:module_list' %}">Modules</a></li>
+                    <li>{{ object.parent_module|hyperlinked_object }}</li>
+                    {% if module_breadcrumb_url %}
+                        <li><a href="{% url module_breadcrumb_url pk=object.parent_module.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
+                    {% endif %}
+                {% endif %}
+                <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
+{% endblock breadcrumbs %}
+{% block content_left_page %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Module Bay</strong>
+                        </div>
+                        <table class="table table-hover panel-body attr-table">
+                            <tr>
+                                {% if object.parent_device %}
+                                    <td>Parent Device</td>
+                                    <td>
+                                        {{ object.parent_device|hyperlinked_object }}
+                                    </td>
+                                {% else %}
+                                    <td>Parent Module</td>
+                                    <td>
+                                        {{ object.parent_module|hyperlinked_object }}
+                                    </td>
+                                {% endif %}
+                            </tr>
+                            <tr>
+                                <td>Family</td>
+                                <td>
+                                    {{ object.module_family|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Name</td>
+                                <td>{{ object.name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Position</td>
+                                <td>{{ object.position }}</td>
+                            </tr>
+                            <tr>
+                                <td>Label</td>
+                                <td>{{ object.label|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Description</td>
+                                <td>{{ object.description|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Requires first-party modules</td>
+                                <td>{{ object.requires_first_party_modules|render_boolean }}</td>
+                            </tr>
+                        </table>
+                    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% if object.installed_module %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Installed Module</strong>
+                        </div>
+                        <table class="table table-hover panel-body attr-table">
+                            <tr>
+                                <td>Module</td>
+                                <td>
+                                    {{ object.installed_module|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Module Type</td>
+                                <td>
+                                    {{ object.installed_module.module_type|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Status</td>
+                                <td>{{ object.installed_module.status|hyperlinked_object_with_color }}</td>
+                            </tr>
+                            <tr>
+                                <td>Role</td>
+                                <td>{{ object.installed_module.role|hyperlinked_object_with_color }}</td>
+                            </tr>
+                            <tr>
+                                <td>Serial</td>
+                                <td>{{ object.installed_module.serial|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Asset Tag</td>
+                                <td>{{ object.installed_module.asset_tag|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Tenant</td>
+                                <td>{{ object.installed_module.tenant|hyperlinked_object }}</td>
+                            </tr>
+                        </table>
+                    </div>
+    {% endif %}
+{% endblock content_right_page %}

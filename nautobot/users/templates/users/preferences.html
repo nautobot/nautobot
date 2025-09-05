@@ -1,5 +1,6 @@
 {% extends 'users/base.html' %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% block title %}User Preferences{% endblock %}
 
@@ -32,4 +33,25 @@
     {% else %}
         <h3 class="text-muted text-center">No preferences found</h3>
     {% endif %}
+
+    <form action="" method="post" class="form form-horizontal" style="margin-top: 30px;">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="panel panel-danger">
+                <div class="panel-heading"><strong>Errors</strong></div>
+                <div class="panel-body">
+                    {{ form.non_field_errors }}
+                </div>
+            </div>
+        {% endif %}
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Preference Settings</strong></div>
+            <div class="panel-body">
+                {% render_field form.timezone %}
+            </div>
+        </div>
+        <div class="text-right">
+            <button type="submit" name="_update_preference_form" class="btn btn-primary">Update</button>
+        </div>
+    </form>
 {% endblock %}

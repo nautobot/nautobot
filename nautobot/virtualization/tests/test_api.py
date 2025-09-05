@@ -4,7 +4,7 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType, SoftwareVersion
-from nautobot.extras.models import ConfigContextSchema, Status
+from nautobot.extras.models import ConfigContextSchema, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import (
     Cluster,
@@ -239,7 +239,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
-        self.add_permissions("virtualization.change_virtualmachine")
+        self.add_permissions("virtualization.change_virtualmachine", "extras.view_configcontextschema")
 
         patch_data = {"local_config_context_schema": str(schema.pk)}
 
@@ -289,11 +289,15 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
         cls.interface_status = Status.objects.get_for_model(VMInterface).first()
-
+        cls.interface_role = Role.objects.get_for_model(VMInterface).first()
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=cls.interface_status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachine, name="Interface 1", status=cls.interface_status, role=cls.interface_role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=cls.interface_status),
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=cls.interface_status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachine, name="Interface 3", status=cls.interface_status, role=cls.interface_role
+            ),
         )
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
@@ -342,7 +346,12 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
-        self.add_permissions("virtualization.add_vminterface")
+        self.add_permissions(
+            "virtualization.add_vminterface",
+            "virtualization.view_virtualmachine",
+            "extras.view_status",
+            "ipam.view_vlan",
+        )
 
         # This will fail.
         url = self._get_list_url()
@@ -357,7 +366,13 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        self.add_permissions("virtualization.add_vminterface", "virtualization.change_vminterface")
+        self.add_permissions(
+            "virtualization.add_vminterface",
+            "virtualization.change_vminterface",
+            "virtualization.view_virtualmachine",
+            "extras.view_status",
+            "ipam.view_vlan",
+        )
         vlan = VLAN.objects.get(name="VLAN 1")
         virtualmachine = VirtualMachine.objects.first()
         with self.subTest("On create, assert 400 status."):
@@ -380,6 +395,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 name="VMInterface 1",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 status=self.interface_status,
+                role=self.interface_role,
             )
             interface.tagged_vlans.add(vlan)
             payload = {"mode": None, "tagged_vlans": [vlan.pk]}

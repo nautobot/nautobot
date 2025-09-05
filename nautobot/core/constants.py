@@ -64,7 +64,6 @@ HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
 # at present we just copy nh3.ALLOWED_ATTRIBUTES but we can modify this later as desired and appropriate
 HTML_ALLOWED_ATTRIBUTES = deepcopy(nh3.ALLOWED_ATTRIBUTES)
 
-
 #
 # Reserved Names
 #
@@ -103,3 +102,105 @@ COMPOSITE_KEY_SEPARATOR = ";"
 
 # For the natural slug separator, it's much simpler and we can just go with "_".
 NATURAL_SLUG_SEPARATOR = "_"
+
+# For config settings that contain a list of things.
+# As environment variables only allow string types, these need to be split into the final list.
+CONFIG_SETTING_SEPARATOR = ","
+
+CHARFIELD_MAX_LENGTH = 255
+
+# Default values for pagination settings.
+MAX_PAGE_SIZE_DEFAULT = 1000
+PAGINATE_COUNT_DEFAULT = 50
+
+# Models excluded from the global search list
+GLOBAL_SEARCH_EXCLUDE_LIST = [
+    "anotherexamplemodel",
+    "cablepath",
+    "circuittermination",
+    "circuittype",
+    "clustergroup",
+    "clustertype",
+    "computedfield",
+    "configcontext",
+    "configcontextschema",
+    "consoleport",
+    "consoleporttemplate",
+    "consoleserverport",
+    "consoleserverporttemplate",
+    "contactassociation",
+    "controllermanageddevicegroup",
+    "customfield",
+    "customfieldchoice",
+    "customlink",
+    "devicebay",
+    "devicebaytemplate",
+    "devicetypetosoftwareimagefile",
+    "dynamicgroupmembership",
+    "exporttemplate",
+    "fileattachment",
+    "fileproxy",
+    "frontport",
+    "frontporttemplate",
+    "graphqlquery",
+    "healthchecktestmodel",
+    "imageattachment",
+    "interface",
+    "interfaceredundancygroup",
+    "interfaceredundancygroupassociation",
+    "interfacetemplate",
+    "interfacevdcassignment",
+    "inventoryitem",
+    "ipaddresstointerface",
+    "job",
+    "jobbutton",
+    "jobhook",
+    "joblogentry",
+    "jobqueue",
+    "jobqueueassignment",
+    "jobresult",
+    "locationtype",
+    "manufacturer",
+    "metadatachoice",
+    "metadatatype",
+    "modulebay",
+    "modulebaytemplate",
+    "note",
+    "objectchange",
+    "objectmetadata",
+    "platform",
+    "poweroutlet",
+    "poweroutlettemplate",
+    "powerpanel",
+    "powerport",
+    "powerporttemplate",
+    "prefixlocationassignment",
+    "rackreservation",
+    "rearport",
+    "rearporttemplate",
+    "relationship",
+    "relationshipassociation",
+    "rir",
+    "role",
+    "routetarget",
+    "savedview",
+    "scheduledjob",
+    "scheduledjobs",
+    "secret",
+    "secretsgroup",
+    "secretsgroupassociation",
+    "service",
+    "softwareimagefile",
+    "staticgroupassociation",
+    "status",
+    "tag",
+    "taggeditem",
+    "tenantgroup",
+    "usersavedviewassociation",
+    "vlangroup",
+    "vlanlocationassignment",
+    "vminterface",
+    "vrfdeviceassignment",
+    "vrfprefixassignment",
+    "webhook",
+]

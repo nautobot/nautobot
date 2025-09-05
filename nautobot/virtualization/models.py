@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -21,8 +22,8 @@ __all__ = (
     "Cluster",
     "ClusterGroup",
     "ClusterType",
-    "VirtualMachine",
     "VMInterface",
+    "VirtualMachine",
 )
 
 
@@ -40,8 +41,8 @@ class ClusterType(OrganizationalModel):
     A type of Cluster.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -64,8 +65,8 @@ class ClusterGroup(OrganizationalModel):
     An organizational group of Clusters.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -82,7 +83,6 @@ class ClusterGroup(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -93,7 +93,7 @@ class Cluster(PrimaryModel):
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     cluster_type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
     cluster_group = models.ForeignKey(
         to=ClusterGroup,
@@ -168,7 +168,6 @@ class Cluster(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -198,7 +197,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     primary_ip4 = models.ForeignKey(
@@ -345,11 +344,15 @@ class VMInterface(PrimaryModel, BaseInterface):
         on_delete=models.CASCADE,
         related_name="interfaces",
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(
-        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
+        target_field="name",
+        naturalize_function=naturalize_interface,
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        db_index=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     untagged_vlan = models.ForeignKey(
         to="ipam.VLAN",
         on_delete=models.SET_NULL,
@@ -441,6 +444,8 @@ class VMInterface(PrimaryModel, BaseInterface):
                 instance.validated_save()
         return len(ip_addresses)
 
+    add_ip_addresses.alters_data = True
+
     def remove_ip_addresses(self, ip_addresses):
         """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
 
@@ -459,6 +464,8 @@ class VMInterface(PrimaryModel, BaseInterface):
                 deleted_count, _ = qs.delete()
                 count += deleted_count
         return count
+
+    remove_ip_addresses.alters_data = True
 
     @property
     def parent(self):

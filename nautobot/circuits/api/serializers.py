@@ -57,6 +57,7 @@ class CircuitTerminationSerializer(
     NautobotModelSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    TaggedModelSerializerMixin,
 ):
     class Meta:
         model = CircuitTermination

@@ -1,5 +1,6 @@
 from django.core.paginator import Page, Paginator
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import config
 
 
@@ -8,11 +9,11 @@ class EnhancedPaginator(Paginator):
         try:
             per_page = int(per_page)
             if per_page < 1:
-                per_page = config.get_settings_or_config("PAGINATE_COUNT")
+                per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         except ValueError:
-            per_page = config.get_settings_or_config("PAGINATE_COUNT")
+            per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
-        max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE")
+        max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
         if max_page_size:
             per_page = min(per_page, max_page_size)
 
@@ -41,13 +42,14 @@ class EnhancedPage(Page):
         return page_list
 
 
-def get_paginate_count(request):
+def get_paginate_count(request, saved_view=None):
     """
     Determine the length of a page, using the following in order:
 
         1. per_page URL query parameter
-        2. Saved user preference
-        3. PAGINATE_COUNT global setting.
+        2. Saved view config
+        3. Saved user preference
+        4. PAGINATE_COUNT global setting.
     """
     if "per_page" in request.GET:
         try:
@@ -58,6 +60,13 @@ def get_paginate_count(request):
         except ValueError:
             pass
 
+    if saved_view is not None:
+        per_page = saved_view.config.get("pagination_count", None)
+        if per_page:
+            return per_page
+
     if request.user.is_authenticated:
-        return request.user.get_config("pagination.per_page", config.get_settings_or_config("PAGINATE_COUNT"))
-    return config.get_settings_or_config("PAGINATE_COUNT")
+        return request.user.get_config(
+            "pagination.per_page", config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+        )
+    return config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)

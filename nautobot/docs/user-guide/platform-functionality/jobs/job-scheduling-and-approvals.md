@@ -1,7 +1,5 @@
 # Job Scheduling and Approvals
 
-+++ 1.2.0
-
 Oftentimes jobs will need to be run at a later date or periodically, or require approval from someone before they can be started. To this end, Nautobot offers facilities for scheduling and approving jobs.
 
 ## Job Scheduling
@@ -11,7 +9,7 @@ Jobs can be scheduled to be run immediately, at some point in the future, or at 
 Jobs can be scheduled through the UI or the API.
 
 !!! warning
-    A Job **must** be [enabled](./index.md#enabling-jobs-for-running) and cannot have [has_sensitive_variables](./index.md#hassensitivevariables) set to `True` in order to be scheduled. If these requirements are not met, a warning banner will appear on the run Job view with the reason why Job Scheduling is not an option.
+    A Job **must** be [enabled](./managing-jobs.md#enabling-and-disabling-jobs) and cannot have [has_sensitive_variables](../../../development/jobs/job-structure.md#class-metadata-attributes) set to `True` in order to be scheduled. If these requirements are not met, a warning banner will appear on the run Job view with the reason why Job Scheduling is not an option.
 
 ### Scheduling via the UI
 
@@ -51,15 +49,12 @@ Jobs that have `approval_required` set to `True` on their `Meta` object require 
 
 Scheduled jobs can be approved or denied via the UI and API by any user that has the `extras.approve_job` permission for the job in question, as well as the appropriate `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions.
 
-+/- 1.3.0
-    The `extras.approve_job` permission is now required for job approvers.
-
 !!! note
     Jobs that are past their scheduled run date can still be approved, but the approver will be asked to confirm the operation.
 
 ### Approval via the UI
 
-The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be  asked for confirmation if a job is being approved that is past its scheduled date and time.
+The queue of jobs that need approval can be found under `Jobs > Job Approval Queue`. This view lists all currently requested jobs that need approval before they are run. To approve a job, select it and click the button to approve. Please note that you will be asked for confirmation if a job is being approved that is past its scheduled date and time.
 
 If the approver is unsure what a job would do, a dry run can also be started via that same view.
 

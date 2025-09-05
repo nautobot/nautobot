@@ -4,7 +4,7 @@ from nautobot.apps.api import OrderedDefaultRouter
 
 from example_app.api.views import AnotherExampleModelViewSet, ExampleModelViewSet, ExampleModelWebhook
 
-router = OrderedDefaultRouter()
+router = OrderedDefaultRouter(view_name="Example App")
 router.register("models", ExampleModelViewSet)
 router.register("other-models", AnotherExampleModelViewSet)
 

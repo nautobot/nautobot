@@ -18,7 +18,7 @@ On CentOS:
 sudo dnf install -y openldap-devel
 ```
 
-### Install django-auth-ldap
+### Install `django-auth-ldap`
 
 !!! warning
     This and all remaining steps in this document should all be performed as the `nautobot` user!
@@ -117,7 +117,7 @@ AUTH_LDAP_CONNECTION_OPTIONS = {
 }
 ```
 
-Additional ldap connection options can be found in the [python-ldap documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
+Additional LDAP connection options can be found in the [`python-ldap` documentation](https://www.python-ldap.org/en/python-ldap-3.3.0/reference/ldap.html?highlight=cacert#options).
 
 ### User Authentication
 
@@ -255,7 +255,7 @@ AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {
@@ -279,8 +279,8 @@ LOGGING = {
 }
 ```
 
-Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the nautobot service and attempt to log into the site to trigger log entries to this file.
+Ensure the file and path specified in logfile exist and are writable and executable by the application service account. Restart the `nautobot` service and attempt to log into the site to trigger log entries to this file.
 
 ---
 
-Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) next.

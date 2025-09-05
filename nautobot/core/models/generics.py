@@ -4,14 +4,21 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import TagsField
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.models.relationships import RelationshipModel
 
 logger = logging.getLogger(__name__)
 
 
 class OrganizationalModel(
-    BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin
+    ChangeLoggedModel,
+    ContactMixin,
+    CustomFieldModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
 ):
     """
     Base abstract model for all organizational models.
@@ -27,7 +34,16 @@ class OrganizationalModel(
         abstract = True
 
 
-class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, DynamicGroupMixin, NotesMixin):
+class PrimaryModel(
+    ChangeLoggedModel,
+    ContactMixin,
+    CustomFieldModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     Base abstract model for all primary models.
 

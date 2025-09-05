@@ -1,5 +1,9 @@
+import contextlib
+import datetime
+import logging
 import os
 import platform
+import posixpath
 import re
 import sys
 import time
@@ -7,19 +11,21 @@ import time
 from db_file_storage.views import get_file
 from django.apps import apps
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import resolve, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
+from django.views.static import serve
 from graphene_django.views import GraphQLView
 from packaging import version
 from prometheus_client import (
@@ -31,25 +37,29 @@ from prometheus_client import (
 )
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
+import redis.exceptions
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
 from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
+from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
 
+logger = logging.getLogger(__name__)
+
 
 class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"
-    use_new_ui = True
 
     def render_additional_content(self, request, context, details):
         # Collect all custom data using callback functions.
@@ -60,7 +70,7 @@ class HomeView(AccessMixin, TemplateView):
                 context[key] = data
 
         # Create standalone template
-        path = f'{details["template_path"]}{details["custom_template"]}'
+        path = f"{details['template_path']}{details['custom_template']}"
         if os.path.isfile(path):
             with open(path, "r") as f:
                 html = f.read()
@@ -125,6 +135,142 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
+class MediaView(AccessMixin, View):
+    """
+    Serves media files while enforcing login restrictions.
+
+    This view wraps Django's `serve()` function to ensure that access to media files (with the exception of
+    branding files defined in `settings.BRANDING_FILEPATHS`) is restricted to authenticated users.
+    """
+
+    def get(self, request, path):
+        if request.user.is_authenticated:
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+        # Unauthenticated users can access BRANDING_FILEPATHS only
+        if posixpath.normpath(path).lstrip("/") in settings.BRANDING_FILEPATHS.values():
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+        return self.handle_no_permission()
+
+
+class WorkerStatusView(UserPassesTestMixin, TemplateView):
+    template_name = "utilities/worker_status.html"
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request, *args, **kwargs):
+        from nautobot.extras.models import JobResult
+        from nautobot.extras.tables import JobResultTable
+
+        # Sort queues but move the default queue to the front so that it appears first
+        def sort_queues(queue):
+            return (queue != settings.CELERY_TASK_DEFAULT_QUEUE, queue)  # False sorts before true in Python sorted
+
+        # Sort workers on hostname first, then worker name -- celery worker names are in the form name@hostname (celery@worker.example.com)
+        def sort_workers(worker):
+            return list(reversed(worker.split("@")))
+
+        # Use a long timeout to retrieve the initial list of workers
+        max_timeout = 60
+        timeout = request.GET.get("timeout", "5")
+        if not timeout.isdigit():
+            timeout = 5
+        elif int(timeout) > max_timeout:
+            timeout = max_timeout
+        else:
+            timeout = int(timeout)
+
+        celery_inspect = app.control.inspect(timeout=timeout)
+
+        try:
+            # stats() returns a dict of {worker_name: stats_dict}
+            worker_stats = celery_inspect.stats()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                worker_stats = celery_inspect.stats()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                worker_stats = None
+
+        active_tasks = reserved_tasks = active_queues = {}
+        if worker_stats:
+            # Set explicit list of workers to speed up subsequent queries
+            celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
+
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+                active_tasks = celery_inspect.active() or {}
+
+                # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+                reserved_tasks = celery_inspect.reserved() or {}
+
+                # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
+                active_queues = celery_inspect.active_queues() or {}
+        else:
+            # No workers were found
+            worker_stats = {}
+
+        workers = []
+        for worker_name in sorted(worker_stats, key=sort_workers):
+            worker_details = worker_stats[worker_name]
+            active_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in active_tasks.get(worker_name, [])]
+            ).only("name", "date_created")
+            reserved_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in reserved_tasks.get(worker_name, [])]
+            ).only("name", "date_created")
+            running_tasks_table = JobResultTable(
+                active_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
+            pending_tasks_table = JobResultTable(
+                reserved_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
+
+            # Sort the worker's queue list
+            queues = sorted([queue["name"] for queue in active_queues.get(worker_name, [])], key=sort_queues)
+
+            workers.append(
+                {
+                    "hostname": worker_name,
+                    "running_tasks_table": running_tasks_table,
+                    "pending_tasks_table": pending_tasks_table,
+                    "queues": queues,
+                    "uptime": worker_details["uptime"],
+                }
+            )
+
+        # Count the number of workers per queue
+        queue_worker_count = {
+            settings.CELERY_TASK_DEFAULT_QUEUE: set(),
+        }
+        for worker_name, task_queue_list in active_queues.items():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                queue_worker_count.setdefault(queue, set())
+                queue_worker_count[queue].add(worker_name)
+
+        # Sort the queue_worker_count dictionary by queue name, then by worker hostname/name
+        # Then make the default queue the first entry
+        queue_worker_count = {
+            queue_name: sorted(queue_worker_count[queue_name], key=sort_workers)
+            for queue_name in sorted(queue_worker_count, key=sort_queues)
+        }
+
+        context = {
+            "worker_status": {
+                "max_timeout": max_timeout,
+                "queue_worker_count": queue_worker_count,
+                "timeout": timeout,
+                "workers": workers,
+            },
+        }
+
+        return self.render_to_response(context)
+
+
 class ThemePreviewView(LoginRequiredMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
 
@@ -132,6 +278,8 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
         return {
             "content_type": ContentType.objects.get_for_model(Status),
             "object": Status.objects.first(),
+            "verbose_name": Status.objects.all().model._meta.verbose_name,
+            "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
         }
 
 
@@ -177,28 +325,31 @@ class SearchView(AccessMixin, View):
                 # corresponding to that URL, and finally the queryset, filterset, and table classes needed
                 # to find and display the model search results.
                 url = get_route_for_model(f"{label}.{modelname}", "list")
-                view_func = resolve(reverse(url)).func
-                # For a UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-                queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-                # For a UIViewSet, .table_class, for an ObjectListView, .table.
-                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
+                try:
+                    view_func = resolve(reverse(url)).func
+                    # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                    view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                    queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                    # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                    filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                    # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                    table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-                # Construct the results table for this object type
-                filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
-                table = table(filtered_queryset, orderable=False)
-                table.paginate(per_page=SEARCH_MAX_RESULTS)
+                    # Construct the results table for this object type
+                    filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
+                    table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
+                    table.paginate(per_page=SEARCH_MAX_RESULTS)
 
-                if table.page:
-                    results.append(
-                        {
-                            "name": queryset.model._meta.verbose_name_plural,
-                            "table": table,
-                            "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
-                        }
-                    )
+                    if table.page:
+                        results.append(
+                            {
+                                "name": queryset.model._meta.verbose_name_plural,
+                                "table": table,
+                                "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
+                            }
+                        )
+                except NoReverseMatch:
+                    messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
 
         return render(
             request,
@@ -210,7 +361,7 @@ class SearchView(AccessMixin, View):
         )
 
 
-class StaticMediaFailureView(View):
+class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.
     """
@@ -265,12 +416,8 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
     def render_graphiql(self, request, **data):
-        if not request.user.is_authenticated:
-            graphql_url = reverse("graphql")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={graphql_url}")
         query_name = request.GET.get("name")
         if query_name:
             data["obj"] = GraphQLQuery.objects.get(name=query_name)
@@ -354,3 +501,49 @@ def get_file_with_authorization(request, *args, **kwargs):
     get_object_or_404(queryset, file=request.GET.get("name"))
 
     return get_file(request, *args, **kwargs)
+
+
+class AboutView(AccessMixin, TemplateView):
+    """
+    Nautobot About View which displays general information about Nautobot and contact details
+    for Network to Code.
+    """
+
+    template_name = "about.html"
+
+    def get(self, request, *args, **kwargs):
+        # Redirect user to login page if not authenticated
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        # Check whether a new release is available. (Only for staff/superusers.)
+        new_release = None
+        if request.user.is_staff or request.user.is_superuser:
+            latest_release, release_url = get_latest_release()
+            if isinstance(latest_release, version.Version):
+                current_version = version.parse(settings.VERSION)
+                if latest_release > current_version:
+                    new_release = {
+                        "version": str(latest_release),
+                        "url": release_url,
+                    }
+
+        # Support contract state
+        support_expiration_date = get_settings_or_config("NTC_SUPPORT_CONTRACT_EXPIRATION_DATE")
+        support_contract_active = support_expiration_date and support_expiration_date >= datetime.date.today()
+
+        context = self.get_context_data()
+        context.update(
+            {
+                "new_release": new_release,
+                "support_contract_active": support_contract_active,
+                "support_expiration_date": support_expiration_date,
+            }
+        )
+
+        return self.render_to_response(context)
+
+
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
+    """Render a Jinja template with context data."""
+
+    template_name = "utilities/render_jinja2.html"

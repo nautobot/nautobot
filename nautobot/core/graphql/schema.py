@@ -1,11 +1,14 @@
 """Schema module for GraphQL."""
+
 from collections import OrderedDict
 import logging
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
-from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
+from django.db.models import ManyToManyField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
 
@@ -32,6 +35,8 @@ from nautobot.dcim.graphql.types import (
     FrontPortType,
     InterfaceType,
     LocationType,
+    ModuleBayType,
+    ModuleType,
     PlatformType,
     PowerFeedType,
     PowerOutletType,
@@ -40,11 +45,11 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, JobType, ScheduledJobType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
-from nautobot.ipam.graphql.types import IPAddressType, PrefixType
+from nautobot.ipam.graphql.types import IPAddressType, PrefixType, VLANType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger(__name__)
@@ -59,6 +64,8 @@ registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.frontport"] = FrontPortType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.modulebay"] = ModuleBayType
+registry["graphql_types"]["dcim.module"] = ModuleType
 registry["graphql_types"]["dcim.platform"] = PlatformType
 registry["graphql_types"]["dcim.powerfeed"] = PowerFeedType
 registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
@@ -66,10 +73,14 @@ registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
-registry["graphql_types"]["extras.tag"] = TagType
+registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.job"] = JobType
+registry["graphql_types"]["extras.scheduledjob"] = ScheduledJobType
+registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
+registry["graphql_types"]["ipam.vlan"] = VLANType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 
@@ -84,6 +95,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
+    CustomFieldTypeChoices.TYPE_MULTISELECT: graphene.List(graphene.String),
 }
 
 
@@ -123,6 +135,11 @@ def extend_schema_type(schema_type):
     # Config Context
     #
     schema_type = extend_schema_type_config_context(schema_type, model)
+
+    #
+    # Global features (contacts, teams, dynamic groups)
+    #
+    schema_type = extend_schema_type_global_features(schema_type, model)
 
     #
     # Relationships
@@ -196,9 +213,10 @@ def extend_schema_type_filter(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
-        # Check attribute is a ManyToOne field
-        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat is as a list
-        if not isinstance(field, ManyToOneRel) or isinstance(field, OneToOneRel):
+        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)):
+            continue
+        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
+        if isinstance(field, OneToOneRel):
             continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:
@@ -225,12 +243,12 @@ def extend_schema_type_custom_field(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
 
-    cfs = CustomField.objects.get_for_model(model)
+    custom_fields = CustomField.objects.get_for_model(model, get_queryset=False)
     prefix = ""
     if settings.GRAPHQL_CUSTOM_FIELD_PREFIX and isinstance(settings.GRAPHQL_CUSTOM_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
-    for field in cfs:
+    for field in custom_fields:
         # Since we guaranteed cf.key's uniqueness in CustomField data migration
         # We can safely field_key this in our GraphQL without duplication
         # For new CustomField instances, we also make sure that duplicate key does not exist.
@@ -263,6 +281,7 @@ def extend_schema_type_custom_field(schema_type, model):
 
 def extend_schema_type_computed_field(schema_type, model):
     """Extend schema_type object to had attribute and resolver around computed_fields.
+
     Each computed field will be defined as a first level attribute.
 
     Args:
@@ -273,12 +292,12 @@ def extend_schema_type_computed_field(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
 
-    cfs = ComputedField.objects.get_for_model(model)
+    computed_fields = ComputedField.objects.get_for_model(model, get_queryset=False)
     prefix = ""
     if settings.GRAPHQL_COMPUTED_FIELD_PREFIX and isinstance(settings.GRAPHQL_COMPUTED_FIELD_PREFIX, str):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
-    for field in cfs:
+    for field in computed_fields:
         field_name = f"{prefix}{field.key}"
         try:
             check_if_key_is_graphql_safe("Computed Field", field.key)
@@ -361,14 +380,33 @@ def extend_schema_type_config_context(schema_type, model):
     return schema_type
 
 
-def extend_schema_type_relationships(schema_type, model):
-    """Extend the schema type with attributes and resolvers corresponding
-    to the relationships associated with this model."""
+def extend_schema_type_global_features(schema_type, model):
+    """
+    Extend schema_type object to have attributes and resolvers for global features (dynamic groups, etc.).
+    """
+    # associated_contacts and associated_object_metadata are handled elsewhere by extend_schema_type_filter()
+    if getattr(model, "is_dynamic_group_associable_model", False):
 
-    ct = ContentType.objects.get_for_model(model)
+        def resolve_dynamic_groups(self, args):
+            return self.dynamic_groups
+
+        setattr(schema_type, "resolve_dynamic_groups", resolve_dynamic_groups)
+        schema_type._meta.fields["dynamic_groups"] = graphene.Field.mounted(graphene.List(DynamicGroupType))
+
+    return schema_type
+
+
+def extend_schema_type_relationships(schema_type, model):
+    """
+    Extend the schema type with attributes and resolvers for the relationships associated with this model.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+    """
     relationships_by_side = {
-        "source": Relationship.objects.filter(source_type=ct),
-        "destination": Relationship.objects.filter(destination_type=ct),
+        "source": Relationship.objects.get_for_model_source(model, get_queryset=False),
+        "destination": Relationship.objects.get_for_model_destination(model, get_queryset=False),
     }
 
     prefix = ""
@@ -466,30 +504,16 @@ def generate_query_mixin():
 
     logger.debug("Generating dynamic schemas for all models in the models_features graphql registry")
     #  - Ensure an attribute/schematype with the same name doesn't already exist
-    registered_models = registry.get("model_features", {}).get("graphql", {})
-    for app_name, models in registered_models.items():
-        for model_name in models:
-            try:
-                # Find the model class based on the content type
-                ct = ContentType.objects.get(app_label=app_name, model=model_name)
-                model = ct.model_class()
-            except ContentType.DoesNotExist:
-                logger.warning(
-                    'Unable to generate a schema type for the model "%s.%s" in GraphQL, '
-                    "as this model doesn't have an associated ContentType. Please create the Object manually.",
-                    app_name,
-                    model_name,
-                )
-                continue
+    registered_models = registry.get("feature_models", {}).get("graphql", [])
+    for model in registered_models:
+        type_identifier = model._meta.label_lower
 
-            type_identifier = f"{app_name}.{model_name}"
+        if type_identifier in registry["graphql_types"].keys():
+            # Skip models that have been added statically
+            continue
 
-            if type_identifier in registry["graphql_types"].keys():
-                # Skip models that have been added statically
-                continue
-
-            schema_type = generate_schema_type(app_name=app_name, model=model)
-            registry["graphql_types"][type_identifier] = schema_type
+        schema_type = generate_schema_type(app_name=model._meta.app_label, model=model)
+        registry["graphql_types"][type_identifier] = schema_type
 
     logger.debug("Adding plugins' statically defined graphql schema types")
     # After checking for conflict
@@ -509,6 +533,15 @@ def generate_query_mixin():
             registry["graphql_types"][type_identifier] = schema_type
 
     logger.debug("Extending all registered schema types with dynamic attributes")
+
+    # Precache all content-types as we'll need them for filtering and the like
+    for content_type in ContentType.objects.all():
+        ContentType.objects._add_to_cache(ContentType.objects.db, content_type)
+
+    CustomField.objects.populate_list_caches()
+    ComputedField.objects.populate_list_caches()
+    Relationship.objects.populate_list_caches()
+
     for schema_type in registry["graphql_types"].values():
         if already_present(schema_type._meta.model):
             continue

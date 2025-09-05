@@ -8,7 +8,7 @@ class TestLogRedaction(Job):
     class Meta:
         description = "Test redaction of logs"
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         logger.debug("The secret is supersecret123")
         logger.info("The secret is supersecret123")
         logger.warning("The secret is supersecret123")

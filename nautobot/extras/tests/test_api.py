@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import tempfile
 from unittest import mock, skip
 import uuid
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -15,9 +16,12 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceType,
     Location,
@@ -30,8 +34,11 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -58,19 +65,27 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.models.jobs import JobButton, JobHook
@@ -78,6 +93,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 User = get_user_model()
@@ -180,20 +196,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    create_data = [
-        {
-            "name": "Config Context 4",
-            "data": {"more_foo": True},
-        },
-        {
-            "name": "Config Context 5",
-            "data": {"more_bar": False},
-        },
-        {
-            "name": "Config Context 6",
-            "data": {"more_baz": None},
-        },
-    ]
     bulk_update_data = {
         "description": "New description",
     }
@@ -204,6 +206,21 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
+        cls.create_data = [
+            {
+                "name": "Config Context 4",
+                "data": {"more_foo": True},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(Device)],
+            },
+            {
+                "name": "Config Context 5",
+                "data": {"more_bar": False},
+            },
+            {
+                "name": "Config Context 6",
+                "data": {"more_baz": None},
+            },
+        ]
 
     def test_render_configcontext_for_object(self):
         """
@@ -275,7 +292,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         schema = ConfigContextSchema.objects.create(
             name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
-        self.add_permissions("extras.add_configcontext")
+        self.add_permissions("extras.add_configcontext", "extras.view_configcontextschema")
 
         data = {
             "name": "Config Context with schema",
@@ -392,6 +409,11 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Contacts associated with ObjectMetadata objects are protected, create some deletable contacts
+        Contact.objects.create(name="Deletable contact 1")
+        Contact.objects.create(name="Deletable contact 2")
+        Contact.objects.create(name="Deletable contact 3")
+
         cls.create_data = [
             {
                 "name": "Contact 1",
@@ -408,11 +430,9 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Contact 3",
                 "phone": "555-0123",
-                "email": "",
             },
             {
                 "name": "Contact 4",
-                "phone": "",
                 "email": "contact4@example.com",
             },
         ]
@@ -769,7 +789,7 @@ class DynamicGroupTestMixin:
 
         # Then the DynamicGroups.
         cls.content_type = ContentType.objects.get_for_model(Device)
-        cls.groups = cls.groups = [
+        cls.groups = [
             DynamicGroup.objects.create(
                 name="API DynamicGroup 1",
                 content_type=cls.content_type,
@@ -790,34 +810,82 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    choices_fields = ["content_type"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 1"]},
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "content_type": "dcim.device",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 2"]},
-        },
-    ]
+    choices_fields = ["content_type", "group_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "name": "API DynamicGroup 4",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 1"]},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(DynamicGroup)],
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "API DynamicGroup 5",
+                "content_type": "dcim.device",
+                "group_type": "dynamic-filter",
+                "filter": {"has_interfaces": False},
+            },
+            {
+                "name": "API DynamicGroup 6",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 2"]},
+            },
+            {
+                "name": "API DynamicGroup 7",
+                "content_type": "dcim.device",
+                "group_type": "static",
+            },
+        ]
+        cls.update_data = {
+            "name": "A new name",
+            "tags": [],
+            "tenant": Tenant.objects.last().pk,
+            "description": "a new description",
+        }
+
+    def test_changing_content_type_not_allowed(self):
+        self.add_permissions("extras.change_dynamicgroup")
+        data = {
+            "content_type": "circuits.circuittermination",
+        }
+        response = self.client.patch(self._get_detail_url(self.groups[0]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = DynamicGroup.objects.first()
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
         member_count = instance.members.count()
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, len(response.json()["results"]))
+
+    def test_get_members_with_constrained_permission(self):
+        """Test that the `/members/` API endpoint enforces permissions on the member model."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        obj1 = instance.members.first()
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk__in": [obj1.pk]},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
 
 class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
@@ -1140,6 +1208,10 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
+        self.assertIsInstance(response.data["job_result"], dict)
 
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
@@ -1173,6 +1245,8 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             "query": '{ devices(role: "edge") { id, name, role { name } } }',
         },
     ]
+
+    choices_fields = ["owner_content_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1274,37 +1348,6 @@ class JobTest(
 
     model = Job
     choices_fields = None
-    update_data = {
-        # source, module_name, job_class_name, installed are NOT editable
-        "grouping_override": True,
-        "grouping": "Overridden grouping",
-        "name_override": True,
-        "name": "Overridden name",
-        "description_override": True,
-        "description": "This is an overridden description.",
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "dryrun_default_override": True,
-        "dryrun_default": True,
-        "hidden_override": True,
-        "hidden": True,
-        "soft_time_limit_override": True,
-        "soft_time_limit": 350.1,
-        "time_limit_override": True,
-        "time_limit": 650,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-        "task_queues": ["default", "priority"],
-        "task_queues_override": True,
-    }
-    bulk_update_data = {
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-    }
 
     def setUp(self):
         super().setUp()
@@ -1315,11 +1358,79 @@ class JobTest(
         self.job_model.enabled = True
         self.job_model.validated_save()
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.update_data = {
+            # source, module_name, job_class_name, installed are NOT editable
+            "grouping_override": True,
+            "grouping": "Overridden grouping",
+            "name_override": True,
+            "name": "Overridden name",
+            "description_override": True,
+            "description": "This is an overridden description.",
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
+            "hidden_override": True,
+            "hidden": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350.1,
+            "time_limit_override": True,
+            "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+        }
+        cls.bulk_update_data = {
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+        }
+
     run_success_response_status = status.HTTP_201_CREATED
 
     def get_run_url(self, class_path="api_test_job.APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instance = get_deletable_objects(self.model, queryset).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Exclude system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instances = get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
+
+    def test_delete_system_jobs_fail(self):
+        self.add_permissions("extras.delete_job")
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        url = self._get_detail_url(instance)
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+        self.user.is_superuser = True
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
@@ -1418,7 +1529,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         obj_perm = ObjectPermission(
             name="Test permission",
-            constraints={"module_name__in": ["pass", "fail"]},
+            constraints={"module_name__in": ["pass_job", "fail"]},
             actions=["run"],
         )
         obj_perm.save()
@@ -1432,10 +1543,10 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
         # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("pass.TestPass")
+        url = self.get_run_url("pass_job.TestPassJob")
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1469,6 +1580,7 @@ class JobTest(
             name="No such job",
             installed=False,
             enabled=True,
+            default_job_queue=JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY),
         )
         job_model.validated_save()
 
@@ -1483,6 +1595,11 @@ class JobTest(
         """Job run cannot be requested if Celery is not running."""
         mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
+        class_path = "api_test_job.APITestJob"
+        job_model = Job.objects.get_for_class_path(class_path)
+        # Make sure no queues are associated with it so it is using the celery default queue.
+        # And the error message is deterministic on line 1573
+        job_model.job_queues.set([])
         device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
@@ -1499,7 +1616,8 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+            response.data["detail"],
+            f"Unable to process request: No celery workers running on queue {job_model.default_job_queue.name}.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1521,7 +1639,7 @@ class JobTest(
             "schedule": {
                 "name": "test",
                 "interval": "future",
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
             },
         }
 
@@ -1584,7 +1702,7 @@ class JobTest(
         # Assert that we have an immediate ScheduledJob and that it matches the job_model.
         schedule = ScheduledJob.objects.last()
         self.assertIsNotNone(schedule)
-        self.assertEqual(schedule.interval, JobExecutionType.TYPE_IMMEDIATELY)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_FUTURE)
         self.assertEqual(schedule.approval_required, self.job_model.approval_required)
         self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
 
@@ -1607,6 +1725,7 @@ class JobTest(
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
         deserialized_data = self.job_class.deserialize_data(job_data)
+        self.job_model.job_queues.set([])
 
         self.assertEqual(
             deserialized_data,
@@ -1620,7 +1739,7 @@ class JobTest(
         # Ensure the enqueue_job args deserialize to the same as originally inputted
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "job_queue": self.job_model.default_job_queue,
             **self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
@@ -1643,7 +1762,7 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.job_model.name)
+        job_result = JobResult.objects.filter(name=self.job_model.name).latest()
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -1651,6 +1770,36 @@ class JobTest(
         data_job_result = response.data["job_result"]
         expected_data_job_result = JobResultSerializer(job_result, context={"request": response.wsgi_request}).data
         self.assertEqual(data_job_result, expected_data_job_result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_with_both_task_queue_and_job_queue_specified(self, mock_get_worker_count):
+        """Test job run response contains nested job result."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = Role.objects.get_for_model(Device).first()
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": {"name": device_role.name},
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(
+            url,
+            {
+                "data": job_data,
+                "task_queue": "default",
+                "job_queue": "default",
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "task_queue and job_queue are both specified. Please specify only one or another.", str(response.content)
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1718,7 +1867,7 @@ class JobTest(
             "var2": "Ground control to Major Tom",
             "var23": "Commencing countdown, engines on",
             "var1": test_file,
-            "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
+            "_schedule_start_time": str(now() + timedelta(minutes=1)),
             "_schedule_interval": "future",
             "_schedule_name": "test",
         }
@@ -1737,7 +1886,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1768,7 +1917,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
 
-        job_model = Job.objects.get(job_class_name="ExampleJob")
+        job_model = Job.objects.get(job_class_name="TestHasSensitiveVariables")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1776,7 +1925,7 @@ class JobTest(
         data = {
             "data": {},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1852,7 +2001,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "start_time": str(now() - timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1871,7 +2020,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "hourly",
                 "name": "test",
             },
@@ -1975,23 +2124,27 @@ class JobTest(
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
-
+        jq, _ = JobQueue.objects.get_or_create(
+            name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        self.job_model.job_queues.set([jq])
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+    def test_run_job_with_default_queue_with_empty_job_model_job_queues(self, _):
         self.add_permissions("extras.run_job")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         data = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "task_queue": job_model.default_job_queue.name,
         }
 
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model.job_queues.set([])
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("pass.TestPass")
+        url = self.get_run_url("pass_job.TestPassJob")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -2024,46 +2177,56 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        jhr_log = Job.objects.get(job_class_name="TestJobHookReceiverLog")
+        jhr_log.enabled = True
+        jhr_log.save()
+        jhr_change = Job.objects.get(job_class_name="TestJobHookReceiverChange")
+        jhr_change.enabled = True
+        jhr_change.save()
+        jhr_fail = Job.objects.get(job_class_name="TestJobHookReceiverFail")
+        jhr_fail.enabled = True
+        jhr_fail.save()
+
         cls.create_data = [
             {
                 "name": "JobHook4",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+                "job": jhr_log.pk,
                 "enabled": False,
             },
             {
                 "name": "JobHook5",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange").pk,
+                "job": jhr_change.pk,
                 "enabled": False,
             },
             {
                 "name": "JobHook6",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverFail").pk,
+                "job": jhr_fail.pk,
                 "enabled": False,
             },
         ]
         cls.job_hooks = (
             JobHook(
                 name="JobHook1",
+                job=jhr_log,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
                 type_delete=True,
             ),
             JobHook(
                 name="JobHook2",
+                job=jhr_change,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverChange"),
                 type_delete=True,
             ),
             JobHook(
                 name="JobHook3",
+                job=jhr_fail,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverFail"),
                 type_delete=True,
             ),
         )
@@ -2085,7 +2248,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.add_jobhook")
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertContains(
             response,
@@ -2101,7 +2264,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             "type_delete": True,
         }
 
-        self.add_permissions("extras.change_jobhook")
+        self.add_permissions("extras.change_jobhook", "extras.view_job")
         job_hook2 = JobHook.objects.get(name="JobHook2")
         response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
         self.assertContains(
@@ -2117,18 +2280,25 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        jbr_simple = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        jbr_simple.enabled = True
+        jbr_simple.save()
+        jbr_complex = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        jbr_complex.enabled = True
+        jbr_complex.save()
+
         cls.create_data = [
             {
                 "name": "JobButton4",
                 "text": "JobButton4",
                 "content_types": ["dcim.location"],
-                "job": Job.objects.get(job_class_name="TestJobButtonReceiverSimple").pk,
+                "job": jbr_simple.pk,
             },
             {
                 "name": "JobButton5",
                 "text": "JobButton5",
                 "content_types": ["circuits.circuit"],
-                "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+                "job": jbr_complex.pk,
             },
         ]
         location_type = ContentType.objects.get_for_model(Location)
@@ -2137,7 +2307,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         location_jb = JobButton(
             name="api-test-location",
             text="API job button location text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=jbr_simple,
             weight=100,
             confirmation=True,
         )
@@ -2147,7 +2317,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         device_jb = JobButton.objects.create(
             name="api-test-device",
             text="API job button device text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=jbr_simple,
             weight=100,
             confirmation=True,
         )
@@ -2157,7 +2327,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         complex_jb = JobButton.objects.create(
             name="api-test-complex",
             text="API job button complex text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            job=jbr_complex,
             weight=100,
             confirmation=True,
         )
@@ -2229,7 +2399,166 @@ class JobLogEntryTest(
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.count())
+        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+
+
+class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
+    model = JobQueue
+    choices_fields = ["queue_type"]
+
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
+            {
+                "name": "Test API Job Queue 1",
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+                "description": "Job Queue 1 for API Testing",
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "Test API Job Queue 2",
+                "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+                "description": "Job Queue 2 for API Testing",
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "Test API Job Queue 3",
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+                "description": "Job Queue 3 for API Testing",
+                "tenant": Tenant.objects.last().pk,
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(JobQueue)],
+            },
+        ]
+
+
+class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = JobQueueAssignment
+
+    def setUp(self):
+        super().setUp()
+        jobs = Job.objects.all()[:3]
+        job_queues = JobQueue.objects.all()[:3]
+        JobQueueAssignment.objects.all().delete()
+        JobQueueAssignment.objects.create(job=jobs[0], job_queue=job_queues[0])
+        JobQueueAssignment.objects.create(job=jobs[1], job_queue=job_queues[1])
+        JobQueueAssignment.objects.create(job=jobs[2], job_queue=job_queues[2])
+        self.create_data = [
+            {
+                "job": jobs[0].pk,
+                "job_queue": job_queues[1].pk,
+            },
+            {
+                "job": jobs[1].pk,
+                "job_queue": job_queues[2].pk,
+            },
+            {
+                "job": jobs[0].pk,
+                "job_queue": job_queues[2].pk,
+            },
+        ]
+
+
+class SavedViewTest(APIViewTestCases.APIViewTestCase):
+    model = SavedView
+
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 1",
+                "view": "circuits:circuit_list",
+                "config": {
+                    "filter_params": {"circuit_type": ["#047c4c", "#06cc23"], "status": ["Active", "Decommissioned"]}
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 2",
+                "view": "dcim:device_list",
+                "config": {
+                    "filter_params": {
+                        "location": ["Campus-01", "Building-02", "Aisle-06"],
+                        "role": ["PossibleDangerous", "NervousDangerous"],
+                        "status": ["Active", "ExtremeOriginal"],
+                    }
+                },
+                "is_global_default": False,
+                "is_shared": False,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 3",
+                "view": "dcim:location_list",
+                "config": {
+                    "filter_params": {
+                        "location_type": ["Campus", "Building", "Elevator"],
+                        "parent": ["Campus-01", "Building-02"],
+                        "q": "building-02",
+                    },
+                    "pagination_count": 50,
+                    "sort_order": [],
+                    "table_config": {
+                        "LocationTable": {
+                            "columns": ["name", "status", "location_type", "description", "parent", "tenant"]
+                        }
+                    },
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+        ]
+
+
+class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = UserSavedViewAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.saved_view_views_distinct = SavedView.objects.values("view").distinct()
+        cls.users = User.objects.all()
+
+        cls.create_data = []
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[:3]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            cls.create_data.append(
+                {
+                    "user": cls.users[i].pk,
+                    "saved_view": sv.pk,
+                    "view_name": sv.view,
+                }
+            )
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            UserSavedViewAssociation.objects.create(
+                user=cls.users[i],
+                saved_view=sv,
+                view_name=sv.view,
+            )
+
+    def test_creating_invalid_user_to_saved_view(self):
+        # Add object-level permission
+        duplicate_view_name = self.saved_view_views_distinct[0]["view"]
+        saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
+        user = self.users[0]
+        UserSavedViewAssociation.objects.create(
+            saved_view=saved_view,
+            user=user,
+            view_name=saved_view.view,
+        )
+        duplicate_user_to_savedview_create_data = {
+            "user": user.pk,
+            "saved_view": saved_view.pk,
+            "view_name": duplicate_view_name,
+        }
+        self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
+        response = self.client.post(
+            self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
 
 
 class ScheduledJobTest(
@@ -2242,10 +2571,10 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2254,43 +2583,37 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             approval_required=True,
-            start_time=now(),
+            start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="34 12 * * *",
+            enabled=False,
             user=user,
             approval_required=True,
             start_time=now(),
         )
-
-    # TODO: Unskip after resolving #2908, #2909
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_ascending_ordered(self):
-        pass
-
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_descending_ordered(self):
-        pass
 
 
 class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.additional_user = User.objects.create(username="user1", is_active=True)
-        cls.job_model = Job.objects.get_for_class_path("pass.TestPass")
+        cls.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test pass",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
@@ -2304,6 +2627,7 @@ class JobApprovalTest(APITestCase):
             name="test dryrun",
             task="dry_run.TestDryRun",
             job_model=cls.dryrun_job_model,
+            kwargs={"value": 1},
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2342,7 +2666,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2365,7 +2689,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2382,7 +2706,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="pass.TestPass",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2443,6 +2767,8 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        # The below fails because JobResult.task_kwargs doesn't get set until *after* the task begins executing.
+        # self.assertEqual(response.data["task_kwargs"], {"dryrun": True, "value": 1}, response.data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_not_supported(self):
@@ -2450,6 +2776,170 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataType
+    choices_fields = ["data_type"]
+    create_data = [
+        {
+            "name": "System of Record",
+            "description": "The SoR that this record or field originates from",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_TEXT,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Last Synced",
+            "description": "The last time this record or field was synced from the SoR",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Data Owner",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+            "content_types": ["extras.customfield"],
+        },
+    ]
+    update_data = {
+        "name": "Something new",
+        "description": "A new name for existing metadata.",
+        "content_types": ["dcim.interface", "ipam.vrf"],
+    }
+
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
+
+class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataChoice
+
+    update_data = {
+        "value": "Something new",
+        "weight": 0,
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+        ]
+
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "ServiceNow",
+                "weight": 200,
+            },
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "IPFabric",
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "red",
+                "weight": 250,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "green",
+                "weight": 250,
+            },
+        ]
+
+
+class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
+    model = ObjectMetadata
+    choices_fields = ["assigned_object_type"]
+    # ObjectMetadata records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectMetadatas is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
+    @classmethod
+    def setUpTestData(cls):
+        # Delete existing metadata objects to avoid conflicts with generate_test_data randomness.
+        ObjectMetadata.objects.all().delete()
+        mdts = [
+            MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(
+                name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+            ),
+        ]
+        mdts[0].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[1].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[2].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hey",
+            scoped_fields=["parent", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hello",
+            scoped_fields=["namespace"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[2],
+            contact=Contact.objects.first(),
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).last().pk,
+        )
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "scoped_fields": ["location_type"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "scoped_fields": ["name"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": [],
+                "contact": Contact.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": ["interfaces"],
+                "team": Team.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).last().pk,
+            },
+        ]
+        cls.update_data = {
+            "scoped_fields": ["pk"],
+        }
+
+    def get_deletable_object(self):
+        # TODO: CSV round-trip doesn't work for empty scoped_fields values at present. :-(
+        instance = get_deletable_objects(self.model, self._get_queryset().exclude(scoped_fields=[])).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
+        return instance
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
@@ -2517,6 +3007,10 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
     model = ObjectChange
+
+    # ObjectChange records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectChanges is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
 
     @classmethod
     def setUpTestData(cls):
@@ -2746,7 +3240,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             location=existing_location_2,
         )
 
-        self.add_permissions("dcim.view_location", "dcim.add_location", "extras.add_relationshipassociation")
+        self.add_permissions(
+            "dcim.view_location",
+            "dcim.view_locationtype",
+            "dcim.view_device",
+            "dcim.add_location",
+            "extras.view_relationship",
+            "extras.add_relationshipassociation",
+            "extras.view_status",
+        )
         response = self.client.post(
             reverse("dcim-api:location-list"),
             data={
@@ -2829,6 +3331,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         IPAddress.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
+        ControllerManagedDeviceGroup.objects.all().delete()
         VLAN.objects.all().delete()
 
         # Parameterized tests (for creating and updating single objects):
@@ -2851,6 +3354,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
@@ -3068,7 +3572,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             ),
         ]
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "dcim.view_device", "dcim.view_location", "extras.view_relationship"
+        )
 
         for side, field_error_name, data in associations:
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
@@ -3089,7 +3595,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             "destination_id": self.devices[2].pk,
         }
 
-        self.add_permissions("extras.add_relationshipassociation")
+        self.add_permissions(
+            "extras.add_relationshipassociation", "extras.view_relationship", "dcim.view_device", "dcim.view_location"
+        )
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
@@ -3140,8 +3648,11 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         Check that relationship-associations can be updated via the 'relationships' field.
         """
         self.add_permissions(
+            "dcim.view_device",
             "dcim.view_location",
             "dcim.change_location",
+            "extras.view_relationship",
+            "extras.view_relationshipassociation",
             "extras.add_relationshipassociation",
             "extras.delete_relationshipassociation",
         )
@@ -3471,6 +3982,177 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = StaticGroupAssociation
+    choices_fields = ["associated_object_type"]
+
+    # StaticGroupAssociation records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for StaticGroupAssociation is *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.dg1 = DynamicGroup.objects.create(
+            name="Locations",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg2 = DynamicGroup.objects.create(
+            name="Devices",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg3 = DynamicGroup.objects.create(
+            name="VLANs",
+            content_type=ContentType.objects.get_for_model(VLAN),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        location_pks = list(Location.objects.values_list("pk", flat=True)[:4])
+        device_pks = list(Device.objects.values_list("pk", flat=True)[:4])
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[0],
+        )
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[1],
+        )
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg2,
+            associated_object_type=ContentType.objects.get_for_model(Device),
+            associated_object_id=device_pks[0],
+        )
+
+        cls.create_data = [
+            {
+                "dynamic_group": cls.dg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[2],
+            },
+            {
+                "dynamic_group": cls.dg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[3],
+            },
+            {
+                "dynamic_group": cls.dg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[2],
+            },
+            {
+                "dynamic_group": cls.dg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[3],
+            },
+        ]
+        # TODO: this isn't really valid since we're changing the associated_object_type but not the associated_object_id
+        # Should we disallow bulk-updates of StaticGroupAssociation? Or maybe skip the bulk-update tests at least?
+        cls.bulk_update_data = {
+            "dynamic_group": cls.dg3.pk,
+            "associated_object_type": "ipam.vlan",
+        }
+
+    def test_content_type_mismatch(self):
+        self.add_permissions("extras.add_staticgroupassociation")
+        data = {
+            "dynamic_group": self.dg1.pk,
+            "associated_object_type": "ipam.ipaddress",
+            "associated_object_id": IPAddress.objects.first().pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_omits_hidden_by_default(self):
+        """Test that the list view defaults to omitting associations of non-static groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        found_sga2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+            elif record["id"] == str(sga2.id):
+                found_sga2 = True
+        self.assertTrue(found_sga1)
+        self.assertFalse(found_sga2)
+
+    def test_list_hidden_with_filter(self):
+        """Test that the list view can show hidden associations with the appropriate filter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_list_url()}?dynamic_group={sga1.dynamic_group.pk}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+        self.assertTrue(found_sga1)
+
+    def test_changes_to_hidden_groups_not_permitted(self):
+        """Test that the REST API cannot create/update/delete hidden associations."""
+        self.add_permissions(
+            "extras.view_staticgroupassociation",
+            "extras.add_staticgroupassociation",
+            "extras.delete_staticgroupassociation",
+            "extras.change_staticgroupassociation",
+        )
+
+        with self.subTest("create hidden association"):
+            dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            self.assertIsNotNone(dg)
+            create_data = {
+                "dynamic_group": str(dg.pk),
+                "associated_object_type": f"{dg.content_type.app_label}.{dg.content_type.model}",
+                "associated_object_id": "00000000-0000-0000-0000-000000000000",
+            }
+            response = self.client.post(
+                f"{self._get_list_url()}?dynamic_group={dg.pk}", create_data, format="json", **self.header
+            )
+            self.assertHttpStatus(response, [status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN])
+
+        with self.subTest("update hidden association"):
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
+            update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
+            response = self.client.patch(url, update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            sga.refresh_from_db()
+            self.assertNotEqual(sga.associated_object_id, "00000000-0000-0000-0000-000000000000")
+
+        with self.subTest("delete hidden association"):
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
+            response = self.client.delete(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())
+
+
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
     bulk_update_data = {
@@ -3522,14 +4204,14 @@ class TagTest(APIViewTestCases.APIViewTestCase):
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
-        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
-        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        # Manufacturer is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
+        data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
         tag = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
-        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+        self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -3595,6 +4277,11 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Teams associated with ObjectMetadata objects are protected, create some deletable teams
+        Team.objects.create(name="Deletable team 1")
+        Team.objects.create(name="Deletable team 2")
+        Team.objects.create(name="Deletable team 3")
+
         cls.create_data = [
             {
                 "name": "Team 1",
@@ -3611,11 +4298,9 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Team 3",
                 "phone": "555-0123",
-                "email": "",
             },
             {
                 "name": "Team 4",
-                "phone": "",
                 "email": "team4@example.com",
                 "address": "Rainbow Bridge, Central NJ",
             },

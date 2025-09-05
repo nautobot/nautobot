@@ -3,14 +3,19 @@ from nautobot.extras.models import Tag
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 
-class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = TenantGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):
         cls.form_data = {
             "name": "Tenant Group X",
             "description": "A new tenant group",
+        }
+
+        cls.bulk_edit_data = {
+            "description": "New description",
         }
 
 

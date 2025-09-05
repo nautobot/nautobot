@@ -1,5 +1,4 @@
 ---
-version: "3.4"
 services:
   nautobot:
     depends_on:
@@ -21,10 +20,10 @@ services:
       - ./mysql-unittests.sql:/docker-entrypoint-initdb.d/mysql-unittests.sql
       - mysqldata_nautobot:/var/lib/mysql
     healthcheck:
-      test: mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"
-      start_period: 5s
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 50
+      start_period: 30s
+      retries: 3
+      test: 'mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"'
 volumes:
   mysqldata_nautobot:

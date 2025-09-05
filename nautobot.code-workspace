@@ -7,7 +7,8 @@
 	"extensions": {
 		"recommendations": [
 			"ms-python.python",
-			"charliermarsh.ruff"
+			"charliermarsh.ruff",
+			"rioj7.command-variable"
 		]
 	},
 	"settings": {
@@ -19,12 +20,53 @@
 			"editor.formatOnSave": true
 		}
 	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Inject debugpy docker settings on startup",
+				"command": "poetry run inv vscode",
+				"type": "shell",
+				"presentation": {
+					"reveal": "silent",
+					"close": true,
+					"echo": false,
+					"clear": true,
+				},
+				"runOptions": {
+					"runOn": "folderOpen"
+				}
+			}
+		]
+	},
 	"launch": {
 		"version": "0.2.0",
+		"inputs": [
+			{
+				"id": "celeryport",
+				"type": "command",
+				"command": "extension.commandvariable.file.content",
+				"args": {
+					"fileName": "${workspaceFolder}/.service_ports.json",
+					"json": "content.celery_worker['6898']",
+					"default": "6898",
+				}
+			},
+			{
+				"id": "nautobotport",
+				"type": "command",
+				"command": "extension.commandvariable.file.content",
+				"args": {
+					"fileName": "${workspaceFolder}/.service_ports.json",
+					"json": "content.nautobot['6899']",
+					"default": "6899",
+				}
+			}
+		],
 		"configurations": [
 			{
 				"name": "Python: Nautobot (Local)",
-				"type": "python",
+				"type": "debugpy",
 				"request": "launch",
 				"program": "/usr/local/bin/nautobot-server",
 				"console": "integratedTerminal",
@@ -41,30 +83,34 @@
 			},
 			{
 				"name": "Python: Nautobot (Remote)",
-				"type": "python",
+				"type": "debugpy",
 				"request": "attach",
 				"connect": {
 					"host": "127.0.0.1",
-					"port": 6899
+					"port": "${input:nautobotport}"
 				},
-				"pathMappings": [{
-					"localRoot": "${workspaceFolder}",
-					"remoteRoot": "/source"
-				}],
-				"django": true
+				"django": true,
+				"pathMappings": [
+					{
+						"localRoot": "${workspaceFolder}",
+						"remoteRoot": "/source"
+					}
+				],
 			},
 			{
 				"name": "Python: Nautobot-Celery (Remote)",
-					"type": "python",
-					"request": "attach",
+				"type": "debugpy",
+				"request": "attach",
 				"connect": {
 					"host": "127.0.0.1",
-					"port": 6898
+					"port": "${input:celeryport}"
 				},
-				"pathMappings": [{
-					"localRoot": "${workspaceFolder}",
-					"remoteRoot": "/source"
-				}],
+				"pathMappings": [
+					{
+						"localRoot": "${workspaceFolder}",
+						"remoteRoot": "/source"
+					}
+				],
 				"django": true
 			}
 		]

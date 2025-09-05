@@ -1,13 +1,12 @@
-from collections import OrderedDict
-
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField, PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -47,13 +46,13 @@ class RackGroup(TreeModel, OrganizationalModel):
     Racks can be grouped as subsets within a Location.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
         related_name="rack_groups",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -78,11 +77,11 @@ class RackGroup(TreeModel, OrganizationalModel):
         # Parent RackGroup (if any) must belong to the same or ancestor Location
         if (
             self.parent is not None
-            and self.parent.location is not None
-            and self.parent.location not in self.location.ancestors(include_self=True)
+            and self.parent.location is not None  # pylint: disable=no-member
+            and self.parent.location not in self.location.ancestors(include_self=True)  # pylint: disable=no-member
         ):
             raise ValidationError(
-                {
+                {  # pylint: disable=no-member  # false positive on parent.location
                     "location": f'Location "{self.location}" is not descended from '
                     f'parent rack group "{self.parent}" location "{self.parent.location}".'
                 }
@@ -92,7 +91,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -105,8 +103,8 @@ class Rack(PrimaryModel):
     Each Rack is assigned to a Location and (optionally) a RackGroup.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     facility_id = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
@@ -136,9 +134,9 @@ class Rack(PrimaryModel):
         blank=True,
         null=True,
     )
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,
         unique=True,
@@ -274,7 +272,7 @@ class Rack(PrimaryModel):
             contains a height attribute for the device
         """
 
-        elevation = OrderedDict()
+        elevation = {}
         for u in self.units:
             elevation[u] = {
                 "id": u,
@@ -298,7 +296,7 @@ class Rack(PrimaryModel):
             # Determine which devices the user has permission to view
             permitted_device_ids = []
             if user is not None:
-                permitted_device_ids = self.devices.restrict(user, "view").values_list("pk", flat=True)
+                permitted_device_ids = self.devices.restrict(user, "view").values_list("pk", flat=True)  # pylint: disable=no-member
 
             for device in queryset:
                 if expand_devices:
@@ -393,9 +391,9 @@ class Rack(PrimaryModel):
             Defaults to True, showing device full name and hiding truncated.
         """
         if unit_width is None:
-            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
+            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230)
         if unit_height is None:
-            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22)
         elevation = RackElevationSVG(
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
@@ -428,6 +426,7 @@ class Rack(PrimaryModel):
         Returns:
             UtilizationData: (numerator, denominator)
         """
+
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
@@ -437,13 +436,15 @@ class Rack(PrimaryModel):
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
             _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
         )
-        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
+        direct_allocated_draw = int(
+            pf_powerports.aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"] or 0
+        )
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
-        allocated_draw_total = (
+        allocated_draw_total = int(
             PowerPort.objects.filter(
                 _cable_peer_type=ContentType.objects.get_for_model(PowerOutlet),
                 _cable_peer_id__in=poweroutlets.values_list("id", flat=True),
-            ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
+            ).aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"]
             or 0
         )
         allocated_draw_total += direct_allocated_draw
@@ -473,7 +474,7 @@ class RackReservation(PrimaryModel):
         null=True,
     )
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         ordering = ["created"]

@@ -4,6 +4,7 @@ from importlib import import_module
 import inspect
 from logging import getLogger
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.urls import get_resolver, URLPattern
@@ -30,7 +31,6 @@ logger = getLogger(__name__)
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
-registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 registry["app_metrics"] = []
 
@@ -44,6 +44,8 @@ class NautobotAppConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
+
+    default = True
 
     # Plugin metadata
     author = ""
@@ -79,6 +81,9 @@ class NautobotAppConfig(NautobotConfig):
     config_view_name = None
     docs_view_name = None
 
+    # Dynamic jobs. Set to True if the app's job code should be reloaded at runtime
+    provides_dynamic_jobs = False
+
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
     banner_function = "banner.banner"
@@ -92,6 +97,7 @@ class NautobotAppConfig(NautobotConfig):
     metrics = "metrics.metrics"
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
+    table_extensions = "table_extensions.table_extensions"
     template_extensions = "template_content.template_extensions"
     override_views = "views.override_views"
 
@@ -140,14 +146,14 @@ class NautobotAppConfig(NautobotConfig):
             register_graphql_types(graphql_types)
 
         # Import jobs (if present)
+        # Note that we do *not* auto-call `register_jobs()` - the App is responsible for doing so when imported.
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
-            register_jobs(jobs)
             self.features["jobs"] = jobs
 
         # Import metrics (if present)
         metrics = import_object(f"{self.__module__}.{self.metrics}")
-        if metrics is not None:
+        if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
             register_metrics(metrics)
             self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
             # Inject the metrics to discover into the signal handler.
@@ -204,10 +210,14 @@ class NautobotAppConfig(NautobotConfig):
         override_views = import_object(f"{self.__module__}.{self.override_views}")
         if override_views is not None:
             for qualified_view_name, view in override_views.items():
+                view_class_name = view.view_class.__name__ if hasattr(view, "view_class") else view.cls.__name__
                 self.features.setdefault("overridden_views", []).append(
-                    (qualified_view_name, f"{view.__module__}.{view.__name__}")
+                    (qualified_view_name, f"{view.__module__}.{view_class_name}")
                 )
             register_override_views(override_views, self.name)
+
+        # Register tables extensions (if any).
+        self._register_table_extensions()
 
     @classmethod
     def validate(cls, user_config, nautobot_version):
@@ -260,6 +270,13 @@ class NautobotAppConfig(NautobotConfig):
             if setting not in user_config and setting not in cls.constance_config:
                 user_config[setting] = value
 
+    def _register_table_extensions(self):
+        """Register tables extensions (if any)."""
+        table_extensions = import_object(f"{self.__module__}.{self.table_extensions}")
+        if table_extensions is not None:
+            register_table_extensions(table_extensions, self.name)
+            self.features["table_extensions"] = get_table_extension_features(table_extensions)
+
 
 @class_deprecated_in_favor_of(NautobotAppConfig)
 class PluginConfig(NautobotAppConfig):
@@ -273,21 +290,34 @@ class PluginConfig(NautobotAppConfig):
 
 class TemplateExtension:
     """
-    This class is used to register plugin content to be injected into core Nautobot templates. It contains methods
-    that are overridden by plugin authors to return template content.
+    This class is used to register App content to be injected into core Nautobot templates.
 
-    The `model` attribute on the class defines the which model detail page this class renders content for. It
-    should be set as a string in the form `<app_label>.<model_name>`. `render()` provides the following context data:
+    It contains methods and attributes that may be overridden by App authors to return template content.
 
-    * object - The object being viewed
-    * request - The current request
-    * settings - Global Nautobot settings
-    * config - Plugin-specific configuration parameters
+    The `model` attribute on the class defines the which model detail/list pages this class renders content for.
+    It should be set as a string in the form `<app_label>.<model_name>`.
     """
 
-    model = None
+    model: str = None
+    """The model (as a string in the form `<app_label>.<model>`) that this TemplateExtension subclass applies to."""
+    object_detail_buttons = None
+    """List of Button instances to add to the specified model's detail view."""
+    object_detail_tabs = None
+    """List of Tab instances to add to the specified model's detail view."""
+    object_detail_panels = None
+    """List of Panel instances to add to the specified model's detail view."""
 
     def __init__(self, context):
+        """
+        Called automatically to instantiate a TemplateExtension with render context before calling `left_page()`, etc.
+
+        The provided context typically includes the following keys:
+
+        * object - The object being viewed
+        * request - The current request
+        * settings - Global Nautobot settings
+        * config - App-specific configuration parameters
+        """
         self.context = context
 
     def render(self, template_name, extra_context=None):
@@ -304,28 +334,55 @@ class TemplateExtension:
 
     def left_page(self):
         """
-        Content that will be rendered on the left of the detail page view. Content should be returned as an
-        HTML string. Note that content does not need to be marked as safe because this is automatically handled.
+        (Deprecated) Provide content that will be rendered on the left of the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
+        instead of implementing a `.left_page()` method.
+
+        Content should be returned as an HTML string.
+        Note that content does not need to be marked as safe because this is automatically handled.
         """
         raise NotImplementedError
 
     def right_page(self):
         """
-        Content that will be rendered on the right of the detail page view. Content should be returned as an
-        HTML string. Note that content does not need to be marked as safe because this is automatically handled.
+        (Deprecated) Provide content that will be rendered on the right of the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
+        instead of implementing a `.right_page()` method.
+
+        Content should be returned as an HTML string.
+        Note that content does not need to be marked as safe because this is automatically handled.
         """
         raise NotImplementedError
 
     def full_width_page(self):
         """
-        Content that will be rendered within the full width of the detail page view. Content should be returned as an
-        HTML string. Note that content does not need to be marked as safe because this is automatically handled.
+        (Deprecated) Provide content that will be rendered within the full width of the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
+        instead of implementing a `.full_width_page()` method.
+
+        Content should be returned as an HTML string.
+        Note that content does not need to be marked as safe because this is automatically handled.
         """
         raise NotImplementedError
 
     def buttons(self):
         """
-        Buttons that will be rendered and added to the existing list of buttons on the detail page view. Content
+        (Deprecated) Provide content that will be added to the existing list of buttons on the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead register `Button` instances in `object_detail_buttons`,
+        instead of implementing a `.buttons()` method.
+
+        Content should be returned as an HTML string.
+        Note that content does not need to be marked as safe because this is automatically handled.
+        """
+        raise NotImplementedError
+
+    def list_buttons(self):
+        """
+        Buttons that will be rendered and added to the existing list of buttons on the list page view. Content
         should be returned as an HTML string. Note that content does not need to be marked as safe because this is
         automatically handled.
         """
@@ -333,7 +390,10 @@ class TemplateExtension:
 
     def detail_tabs(self):
         """
-        Tabs that will be rendered and added to the existing list of tabs on the detail page view.
+        (Deprecated) Provide a dict of tabs and associated views that will be added to the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead implement the `object_detail_tabs` attribute instead.
+
         Tabs will be ordered by their position in the list.
 
         Content should be returned as a list of dicts in the following format:
@@ -414,24 +474,6 @@ def register_graphql_types(class_list):
         registry["plugin_graphql_types"].append(item)
 
 
-def register_jobs(class_list):
-    """
-    Register a list of Job classes
-    """
-    from nautobot.extras.jobs import Job
-
-    for job in class_list:
-        if not inspect.isclass(job):
-            raise TypeError(f"Job class {job} was passed as an instance!")
-        if not issubclass(job, Job):
-            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
-
-        registry["plugin_jobs"].append(job)
-
-    # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
-    # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
-
-
 def register_metrics(function_list):
     """
     Register a list of metric functions
@@ -500,6 +542,171 @@ def register_filter_extensions(filter_extensions, plugin_name):
 
 
 #
+# Table Extensions
+#
+
+
+class TableExtension:
+    """Template class for extending Tables.
+
+    An app can override the default columns for a table by either:
+    - Extending the original default columns to include custom columns.
+        - add_to_default_columns = ("my_app_name_new_column",)
+    - Removing native columns from the default columns.
+        - remove_from_default_columns = ("tenant",)
+    """
+
+    model = None
+    suffix = None
+    table_columns = {}
+    add_to_default_columns = ()
+    remove_from_default_columns = ()
+
+    @classmethod
+    def alter_queryset(cls, queryset):
+        """Alter the View class QuerySet.
+
+        This is a good place to add `prefetch_related` to the view queryset.
+        example:
+            return queryset.prefetch_related("my_model_set")
+        """
+        return queryset
+
+    @classmethod
+    def _get_table_columns_registrations(cls):
+        """Return a list of register labels fro each column."""
+        if not cls.table_columns:
+            return []
+        return [f"{cls.model} -> {column_name}" for column_name in cls.table_columns]
+
+    @classmethod
+    def _get_add_to_default_columns_registrations(cls):
+        """Return a list of register labels for each column added to defaults."""
+        if not cls.add_to_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.add_to_default_columns}"]
+
+    @classmethod
+    def _get_remove_from_default_columns_registrations(cls):
+        """Return a list of register labels for each column removed from defaults."""
+        if not cls.remove_from_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.remove_from_default_columns}"]
+
+
+def get_table_extension_features(table_extensions):
+    """Return a dictionary of TableExtension features for the App detail view."""
+    return {
+        "columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_table_columns_registrations()
+        ],
+        "add_to_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_add_to_default_columns_registrations()
+        ],
+        "remove_from_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_remove_from_default_columns_registrations()
+        ],
+    }
+
+
+def register_table_extensions(table_extensions, app_name):
+    """Register a list of TableExtension classes."""
+    for table_extension in table_extensions:
+        _validate_is_subclass_of_table_extension(table_extension)
+        _add_columns_into_model_table(table_extension, app_name)
+        _modify_default_table_columns(table_extension, app_name)
+        _alter_table_view_queryset(table_extension, app_name)
+
+
+def _add_columns_into_model_table(table_extension, app_name):
+    """Inject each new column into the Model Table."""
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    if not isinstance(table_extension.table_columns, dict):
+        error = f"{app_name} TableExtension: 'table_columns' attribute must be of type 'dict'."
+        logger.error(error)
+        return
+
+    table = get_table_for_model(table_extension.model, suffix=table_extension.suffix)
+    for name, column in table_extension.table_columns.items():
+        _validate_table_column_name_is_prefixed_with_app_name(name, app_name)
+        _add_column_to_table_base_columns(table, name, column, app_name)
+
+
+def _add_column_to_table_base_columns(table, column_name, column, app_name):
+    """Attach a column to an existing table."""
+    import django_tables2
+
+    if not isinstance(column, django_tables2.Column):
+        raise TypeError(f"Custom column `{column_name}` is not an instance of django_tables2.Column.")
+
+    if column_name in table.base_columns:
+        logger.error(
+            f"{app_name}: There was a name conflict with existing table column `{column_name}`, the custom column was ignored."
+        )
+    else:
+        table.base_columns[column_name] = column
+
+
+def _alter_table_view_queryset(table_extension, app_name):
+    """Replace the model view queryset with an optimized queryset from the app."""
+    from nautobot.core.utils.lookup import get_view_for_model
+
+    # TODO: Investigate if there is a more targeted way to patch only the list view queryset
+    # when targeting a subclass of `NautobotUIViewSet`.
+    view = get_view_for_model(table_extension.model, view_type="List")
+    view.queryset = table_extension.alter_queryset(view.queryset)
+
+
+def _modify_default_table_columns(table_extension, app_name):
+    """Add or remove columns from the table default columns."""
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    table = get_table_for_model(table_extension.model, suffix=table_extension.suffix)
+    message = (
+        f"{app_name}: Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
+    )
+
+    for column_name in table_extension.add_to_default_columns:
+        if not getattr(table.Meta, "default_columns", None):
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot add column: {column_name}."
+            )
+            continue
+        if column_name in table.base_columns:
+            table.Meta.default_columns = (*table.Meta.default_columns, column_name)
+        else:
+            logger.debug(message.format(action="add", column_name=column_name, preposition="to"))
+
+    for column_name in table_extension.remove_from_default_columns:
+        if not getattr(table.Meta, "default_columns", None):
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot remove column: {column_name}."
+            )
+            continue
+        if column_name in table.Meta.default_columns:
+            table.Meta.default_columns = tuple(name for name in table.Meta.default_columns if name != column_name)
+        else:
+            logger.debug(message.format(action="remove", column_name=column_name, preposition="from"))
+
+
+def _validate_is_subclass_of_table_extension(table_extension):
+    if not issubclass(table_extension, TableExtension):
+        raise TypeError(f"{table_extension} is not a subclass of nautobot.apps.filters.TableExtension!")
+
+
+def _validate_table_column_name_is_prefixed_with_app_name(name, app_name):
+    if not name.startswith(f"{app_name}_"):
+        raise ValueError(f"Attempted to create a custom table column `{name}` that did not start with `{app_name}`")
+
+
+#
 # Navigation menu links
 #
 
@@ -524,6 +731,31 @@ def register_plugin_menu_items(section_name, menu_items):
 #
 
 
+class CustomValidatorContext(dict):
+    def __init__(self, obj):
+        """
+        If there is an active change context, meaning we are in a web request context,
+        we have access to the current user object. Otherwise, we are likely running inside
+        a management command or other non-web or non-Job context, and we should use an AnonymousUser.
+        This ensures people's custom validators don't outright break when running in non-web
+        contexts, and should generally provide a sane default, given validation based on the
+        user is commonly going to be least-privelege based, and thus the AnonymousUser will
+        cause such validation logic to fail closed.
+        """
+        from django.contrib.auth.models import AnonymousUser
+
+        from nautobot.extras.signals import change_context_state
+
+        change_context = change_context_state.get()
+        user = None
+        if change_context:
+            user = change_context.get_user()
+        if user is None:
+            user = AnonymousUser()
+
+        super().__init__(object=obj, user=user)
+
+
 class CustomValidator:
     """
     This class is used to register plugin custom model validators which act on specified models. It contains the clean
@@ -538,7 +770,7 @@ class CustomValidator:
     model = None
 
     def __init__(self, obj):
-        self.context = {"object": obj}
+        self.context = CustomValidatorContext(obj)
 
     def validation_error(self, message):
         """

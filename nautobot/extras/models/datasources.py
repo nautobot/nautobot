@@ -1,21 +1,32 @@
 """Models for representing external data sources."""
-from importlib.util import find_spec
+
+from contextlib import contextmanager
+import logging
 import os
+import shutil
+import tempfile
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import URLValidator
 from django.db import connection, models
 
-from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
+from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.extras.utils import extras_features
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
     "config_context_owners",
     "export_template_owners",
+    "graphql_query_owners",
+    "graphql",
     "job_results",
     "webhooks",
 )
@@ -23,7 +34,7 @@ class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
 
     name = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         unique=True,
     )
     slug = AutoSlugField(
@@ -32,15 +43,16 @@ class GitRepository(PrimaryModel):
         slugify_function=slugify_dashes_to_underscores,
     )
 
-    remote_url = models.URLField(
-        max_length=255,
+    remote_url = LaxURLField(
+        max_length=CHARFIELD_MAX_LENGTH,
         # For the moment we don't support ssh:// and git:// URLs
         help_text="Only HTTP and HTTPS URLs are presently supported",
-        validators=[URLValidator(schemes=["http", "https"])],
+        validators=[EnhancedURLValidator(schemes=["http", "https"])],
     )
     branch = models.CharField(
-        max_length=64,
+        max_length=CHARFIELD_MAX_LENGTH,
         default="main",
+        help_text="Branch, tag, or commit",
     )
 
     current_head = models.CharField(
@@ -88,19 +100,13 @@ class GitRepository(PrimaryModel):
 
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
-                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
-                f"requested slug is {self.slug}"
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, requested slug is {self.slug}"
             )
 
         if not self.present_in_database:
-            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
-            # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
-            # Because we add GIT_ROOT to the end of sys.path, trying to import this repository will instead
-            # import the earlier-found Python module in its place, which would be undesirable.
-            if find_spec(self.slug) is not None:
-                raise ValidationError(
-                    f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
-                )
+            permitted, reason = check_name_safe_to_import_privately(self.slug)
+            if not permitted:
+                raise ValidationError({"slug": f"Please choose a different slug; {self.slug!r} is {reason}"})
 
         if self.provided_contents:
             q = models.Q()
@@ -115,18 +121,28 @@ class GitRepository(PrimaryModel):
                     "provides contents overlapping with this repository."
                 )
 
+        # Changing branch or remote_url invalidates current_head
+        if self.present_in_database:
+            past = GitRepository.objects.get(id=self.id)
+            if self.remote_url != past.remote_url or self.branch != past.branch:
+                self.current_head = ""
+
     def get_latest_sync(self):
         """
-        Return a `JobResult` for the latest sync operation.
+        Return a `JobResult` for the latest sync operation if one has occurred.
 
         Returns:
-            JobResult
+            Returns a `JobResult` if the repo has been synced before, otherwise returns None.
         """
         from nautobot.extras.models import JobResult
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
         prefix = "nautobot.core.jobs.GitRepository"
-        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+
+        if JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).exists():
+            return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+        else:
+            return None
 
     def to_csv(self):
         return (
@@ -161,3 +177,91 @@ class GitRepository(PrimaryModel):
         if dry_run:
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
+
+    sync.alters_data = True
+
+    @contextmanager
+    def clone_to_directory_context(self, path=None, branch=None, head=None, depth=0):
+        """
+        Context manager to perform a (shallow or full) clone of the Git repository in a temporary directory.
+
+        Args:
+            path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
+
+        Returns:
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
+        """
+
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
+        path_name = None
+        try:
+            path_name = self.clone_to_directory(path=path, branch=branch, head=head, depth=depth)
+            yield path_name
+        finally:
+            # Cleanup the temporary directory
+            if path_name:
+                self.cleanup_cloned_directory(path_name)
+
+    clone_to_directory_context.alters_data = True
+
+    def clone_to_directory(self, path=None, branch=None, head=None, depth=0):
+        """
+        Perform a (shallow or full) clone of the Git repository in a temporary directory.
+
+        Args:
+            path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
+
+        Returns:
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
+        """
+        from nautobot.extras.datasources import get_repo_access_url
+
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
+        try:
+            path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)
+        except PermissionError as e:
+            logger.error(f"Failed to create temporary directory at {path}: {e}")
+            raise e
+
+        if not branch:
+            branch = self.branch
+
+        try:
+            remote_url = get_repo_access_url(self)
+            repo_helper = GitRepo(path_name, remote_url, depth=depth, branch=branch)
+            if head:
+                repo_helper.checkout(branch, head)
+        except Exception as e:
+            logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
+            raise e
+
+        logger.info(f"Cloned repository {self.name} to {path_name}")
+        return path_name
+
+    clone_to_directory.alters_data = True
+
+    def cleanup_cloned_directory(self, path):
+        """
+        Cleanup the cloned directory.
+
+        Args:
+            path (str): The absolute directory path to cleanup.
+        """
+
+        try:
+            shutil.rmtree(path)
+        except OSError as os_error:
+            # log error if the cleanup fails
+            logger.error(f"Failed to cleanup temporary directory at {path}: {os_error}")
+
+    cleanup_cloned_directory.alters_data = True

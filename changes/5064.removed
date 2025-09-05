@@ -1,1 +1,0 @@
-Removed the requirement for `ViewTestCases` subclasses to define `csv_data` for testing bulk-import views, as this functionality is now covered by a generic system Job.

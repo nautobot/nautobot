@@ -51,8 +51,7 @@ def flatten_iterable(iterable):
     """
     for i in iterable:
         if hasattr(i, "__iter__") and not isinstance(i, str):
-            for j in flatten_iterable(i):
-                yield j
+            yield from flatten_iterable(i)
         else:
             yield i
 
@@ -91,6 +90,19 @@ def merge_dicts_without_collision(d1, d2):
         if d1[k] != d2[k]:
             raise ValueError(f'Conflicting values for key "{k}": ({d1[k]!r}, {d2[k]!r})')
     return {**d1, **d2}
+
+
+def validate_jinja2(template_code):
+    """
+    Parse a Jinja2 template to validate its syntax. Returns True if the template is valid.
+
+    Raises:
+        jinja2.TemplateSyntaxError: If the template is syntactically invalid.
+    """
+    rendering_engine = engines["jinja"]
+    rendering_engine.env.parse(template_code)
+
+    return True
 
 
 def render_jinja2(template_code, context):

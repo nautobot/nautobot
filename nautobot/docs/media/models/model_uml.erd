@@ -1,0 +1,168 @@
+<diagram version="1" name="small.erd.erd" time="202402132248">
+	<entities>
+		<data-source id="postgres-jdbc-188a1a6270f-4bcf5c704150fa3e">
+			<entity id="1" name="circuits_circuit" fq-name="public.circuits_circuit" order="0" x="1760" y="1000">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="2" name="circuits_circuittermination" fq-name="public.circuits_circuittermination" order="1" x="1780" y="1560">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="3" name="circuits_circuittype" fq-name="public.circuits_circuittype" order="2" x="1480" y="1200">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="4" name="circuits_provider" fq-name="public.circuits_provider" order="3" x="1780" y="680">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="5" name="circuits_providernetwork" fq-name="public.circuits_providernetwork" order="4" x="1780" y="440">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="6" name="dcim_cable" fq-name="public.dcim_cable" order="5" x="1480" y="1380">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="7" name="dcim_device" fq-name="public.dcim_device" order="6" x="900" y="440">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="8" name="dcim_devicetype" fq-name="public.dcim_devicetype" order="7" x="540" y="440">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="9" name="dcim_interface" fq-name="public.dcim_interface" order="8" x="1221" y="1100">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="10" name="dcim_location" fq-name="public.dcim_location" order="9" x="1480" y="660">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="11" name="dcim_locationtype" fq-name="public.dcim_locationtype" order="10" x="1480" y="440">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="12" name="dcim_manufacturer" fq-name="public.dcim_manufacturer" order="11" x="540" y="760">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="13" name="dcim_platform" fq-name="public.dcim_platform" order="12" x="540" y="940">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="14" name="ipam_ipaddress" fq-name="public.ipam_ipaddress" order="13" x="793" y="1420">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="15" name="ipam_ipaddresstointerface" fq-name="public.ipam_ipaddresstointerface" order="14" x="540" y="1200">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="16" name="ipam_namespace" fq-name="public.ipam_namespace" order="15" x="973" y="1117">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="17" name="ipam_prefix" fq-name="public.ipam_prefix" order="16" x="540" y="1520">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="18" name="ipam_vlan" fq-name="public.ipam_vlan" order="17" x="976" y="1656">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="19" name="ipam_vlangroup" fq-name="public.ipam_vlangroup" order="18" x="1221" y="1660">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="20" name="ipam_vrf" fq-name="public.ipam_vrf" order="19" x="969" y="1329">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+			<entity id="21" name="dcim_interface_tagged_vlans" fq-name="public.dcim_interface_tagged_vlans" order="20" x="1222" y="1842">
+				<path name="public"/>
+				<path name="nautobot"/>
+			</entity>
+		</data-source>
+	</entities>
+	<relations>
+		<relation name="circuits_circuitterm_circuit_id_257e87e7_fk_circuits_" fq-name="public.circuits_circuittermination.circuits_circuitterm_circuit_id_257e87e7_fk_circuits_" type="fk" pk-ref="1" fk-ref="2"/>
+		<relation name="circuits_circuit_circuit_termination__498b110c_fk_circuits_" fq-name="public.circuits_circuit.circuits_circuit_circuit_termination__498b110c_fk_circuits_" type="fk" pk-ref="2" fk-ref="1"/>
+		<relation name="circuits_circuit_circuit_termination__ef74b54e_fk_circuits_" fq-name="public.circuits_circuit.circuits_circuit_circuit_termination__ef74b54e_fk_circuits_" type="fk" pk-ref="2" fk-ref="1"/>
+		<relation name="circuits_circuit_circuit_type_id_8b659c7a_fk_circuits_" fq-name="public.circuits_circuit.circuits_circuit_circuit_type_id_8b659c7a_fk_circuits_" type="fk" pk-ref="3" fk-ref="1"/>
+		<relation name="circuits_circuit_provider_id_d9195418_fk_circuits_provider_id" fq-name="public.circuits_circuit.circuits_circuit_provider_id_d9195418_fk_circuits_provider_id" type="fk" pk-ref="4" fk-ref="1"/>
+		<relation name="circuits_providernet_provider_id_7992236c_fk_circuits_" fq-name="public.circuits_providernetwork.circuits_providernet_provider_id_7992236c_fk_circuits_" type="fk" pk-ref="4" fk-ref="5"/>
+		<relation name="circuits_circuitterm_provider_network_id_b0c660f1_fk_circuits_" fq-name="public.circuits_circuittermination.circuits_circuitterm_provider_network_id_b0c660f1_fk_circuits_" type="fk" pk-ref="5" fk-ref="2"/>
+		<relation name="circuits_circuittermination_cable_id_35e9f703_fk_dcim_cable_id" fq-name="public.circuits_circuittermination.circuits_circuittermination_cable_id_35e9f703_fk_dcim_cable_id" type="fk" pk-ref="6" fk-ref="2"/>
+		<relation name="dcim_interface_cable_id_1b264edb_fk_dcim_cable_id" fq-name="public.dcim_interface.dcim_interface_cable_id_1b264edb_fk_dcim_cable_id" type="fk" pk-ref="6" fk-ref="9"/>
+		<relation name="dcim_cable__termination_a_device_id_e59cde1c_fk_dcim_device_id" fq-name="public.dcim_cable.dcim_cable__termination_a_device_id_e59cde1c_fk_dcim_device_id" type="fk" pk-ref="7" fk-ref="6"/>
+		<relation name="dcim_cable__termination_b_device_id_a9073762_fk_dcim_device_id" fq-name="public.dcim_cable.dcim_cable__termination_b_device_id_a9073762_fk_dcim_device_id" type="fk" pk-ref="7" fk-ref="6"/>
+		<relation name="dcim_interface_device_id_359c6115_fk_dcim_device_id" fq-name="public.dcim_interface.dcim_interface_device_id_359c6115_fk_dcim_device_id" type="fk" pk-ref="7" fk-ref="9"/>
+		<relation name="dcim_device_device_type_id_d61b4086_fk_dcim_devicetype_id" fq-name="public.dcim_device.dcim_device_device_type_id_d61b4086_fk_dcim_devicetype_id" type="fk" pk-ref="8" fk-ref="7"/>
+		<relation name="dcim_interface_bridge_id_f2a8df85_fk_dcim_interface_id" fq-name="public.dcim_interface.dcim_interface_bridge_id_f2a8df85_fk_dcim_interface_id" type="fk" pk-ref="9" fk-ref="9">
+			<bend type="rel" x="1436" y="1410"/>
+			<bend type="rel" x="1479" y="1388"/>
+			<bend type="rel" x="1479" y="1345"/>
+			<bend type="rel" x="1436" y="1324"/>
+		</relation>
+		<relation name="dcim_interface_lag_id_ea1a1d12_fk_dcim_interface_id" fq-name="public.dcim_interface.dcim_interface_lag_id_ea1a1d12_fk_dcim_interface_id" type="fk" pk-ref="9" fk-ref="9">
+			<bend type="abs" x="1463" y="1383"/>
+		</relation>
+		<relation name="dcim_interface_parent_interface_id_dc46b61a_fk_dcim_inte" fq-name="public.dcim_interface.dcim_interface_parent_interface_id_dc46b61a_fk_dcim_inte" type="fk" pk-ref="9" fk-ref="9">
+			<bend type="abs" x="1443" y="1392"/>
+			<bend type="abs" x="1452" y="1370"/>
+			<bend type="abs" x="1436" y="1333"/>
+		</relation>
+		<relation name="ipam_ipaddresstointe_interface_id_035d6540_fk_dcim_inte" fq-name="public.ipam_ipaddresstointerface.ipam_ipaddresstointe_interface_id_035d6540_fk_dcim_inte" type="fk" pk-ref="9" fk-ref="15"/>
+		<relation name="dcim_interface_tagge_interface_id_5870c9e9_fk_dcim_inte" fq-name="public.dcim_interface_tagged_vlans.dcim_interface_tagge_interface_id_5870c9e9_fk_dcim_inte" type="fk" pk-ref="9" fk-ref="21">
+			<bend type="abs" x="1440" y="1838"/>
+		</relation>
+		<relation name="circuits_circuitterm_location_id_9896bd96_fk_dcim_loca" fq-name="public.circuits_circuittermination.circuits_circuitterm_location_id_9896bd96_fk_dcim_loca" type="fk" pk-ref="10" fk-ref="2"/>
+		<relation name="dcim_device_location_id_11a7bedb_fk_dcim_location_id" fq-name="public.dcim_device.dcim_device_location_id_11a7bedb_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="7"/>
+		<relation name="dcim_location_parent_id_d77f3318_fk_dcim_location_id" fq-name="public.dcim_location.dcim_location_parent_id_d77f3318_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="10">
+			<bend type="rel" x="1685" y="938"/>
+			<bend type="rel" x="1727" y="917"/>
+			<bend type="rel" x="1727" y="876"/>
+			<bend type="rel" x="1685" y="856"/>
+		</relation>
+		<relation name="ipam_namespace_location_id_0ee18237_fk_dcim_location_id" fq-name="public.ipam_namespace.ipam_namespace_location_id_0ee18237_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="16"/>
+		<relation name="ipam_prefix_location_id_9a5c5f60_fk_dcim_location_id" fq-name="public.ipam_prefix.ipam_prefix_location_id_9a5c5f60_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="17"/>
+		<relation name="ipam_vlan_location_id_07dd65e4_fk_dcim_location_id" fq-name="public.ipam_vlan.ipam_vlan_location_id_07dd65e4_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="18"/>
+		<relation name="ipam_vlangroup_location_id_f239af79_fk_dcim_location_id" fq-name="public.ipam_vlangroup.ipam_vlangroup_location_id_f239af79_fk_dcim_location_id" type="fk" pk-ref="10" fk-ref="19"/>
+		<relation name="dcim_location_location_type_id_511a9421_fk_dcim_locationtype_id" fq-name="public.dcim_location.dcim_location_location_type_id_511a9421_fk_dcim_locationtype_id" type="fk" pk-ref="11" fk-ref="10"/>
+		<relation name="dcim_locationtype_parent_id_023ca1c8_fk_dcim_locationtype_id" fq-name="public.dcim_locationtype.dcim_locationtype_parent_id_023ca1c8_fk_dcim_locationtype_id" type="fk" pk-ref="11" fk-ref="11">
+			<bend type="rel" x="1685" y="578"/>
+			<bend type="rel" x="1727" y="557"/>
+			<bend type="rel" x="1727" y="516"/>
+			<bend type="rel" x="1685" y="496"/>
+		</relation>
+		<relation name="dcim_devicetype_manufacturer_id_a3e8029e_fk_dcim_manu" fq-name="public.dcim_devicetype.dcim_devicetype_manufacturer_id_a3e8029e_fk_dcim_manu" type="fk" pk-ref="12" fk-ref="8"/>
+		<relation name="dcim_platform_manufacturer_id_83f72d3d_fk_dcim_manufacturer_id" fq-name="public.dcim_platform.dcim_platform_manufacturer_id_83f72d3d_fk_dcim_manufacturer_id" type="fk" pk-ref="12" fk-ref="13"/>
+		<relation name="dcim_device_platform_id_468138f1_fk_dcim_platform_id" fq-name="public.dcim_device.dcim_device_platform_id_468138f1_fk_dcim_platform_id" type="fk" pk-ref="13" fk-ref="7"/>
+		<relation name="dcim_device_primary_ip4_id_2ccd943a_fk_ipam_ipaddress_id" fq-name="public.dcim_device.dcim_device_primary_ip4_id_2ccd943a_fk_ipam_ipaddress_id" type="fk" pk-ref="14" fk-ref="7"/>
+		<relation name="dcim_device_primary_ip6_id_d180fe91_fk_ipam_ipaddress_id" fq-name="public.dcim_device.dcim_device_primary_ip6_id_d180fe91_fk_ipam_ipaddress_id" type="fk" pk-ref="14" fk-ref="7"/>
+		<relation name="ipam_ipaddress_nat_inside_id_a45fb7c5_fk_ipam_ipaddress_id" fq-name="public.ipam_ipaddress.ipam_ipaddress_nat_inside_id_a45fb7c5_fk_ipam_ipaddress_id" type="fk" pk-ref="14" fk-ref="14">
+			<bend type="rel" x="998" y="1628"/>
+			<bend type="rel" x="1040" y="1607"/>
+			<bend type="rel" x="1040" y="1566"/>
+			<bend type="rel" x="998" y="1546"/>
+		</relation>
+		<relation name="ipam_ipaddresstointe_ip_address_id_7437efa0_fk_ipam_ipad" fq-name="public.ipam_ipaddresstointerface.ipam_ipaddresstointe_ip_address_id_7437efa0_fk_ipam_ipad" type="fk" pk-ref="14" fk-ref="15"/>
+		<relation name="ipam_prefix_namespace_id_aaf034e9_fk_ipam_namespace_id" fq-name="public.ipam_prefix.ipam_prefix_namespace_id_aaf034e9_fk_ipam_namespace_id" type="fk" pk-ref="16" fk-ref="17"/>
+		<relation name="ipam_vrf_namespace_id_8835a4df_fk_ipam_namespace_id" fq-name="public.ipam_vrf.ipam_vrf_namespace_id_8835a4df_fk_ipam_namespace_id" type="fk" pk-ref="16" fk-ref="20"/>
+		<relation name="ipam_ipaddress_parent_id_085a7a43_fk_ipam_prefix_id" fq-name="public.ipam_ipaddress.ipam_ipaddress_parent_id_085a7a43_fk_ipam_prefix_id" type="fk" pk-ref="17" fk-ref="14"/>
+		<relation name="ipam_prefix_parent_id_93c2aef8_fk_ipam_prefix_id" fq-name="public.ipam_prefix.ipam_prefix_parent_id_93c2aef8_fk_ipam_prefix_id" type="fk" pk-ref="17" fk-ref="17">
+			<bend type="rel" x="745" y="1768"/>
+			<bend type="rel" x="787" y="1747"/>
+			<bend type="rel" x="787" y="1706"/>
+			<bend type="rel" x="745" y="1686"/>
+		</relation>
+		<relation name="dcim_interface_untagged_vlan_id_838dc7be_fk_ipam_vlan_id" fq-name="public.dcim_interface.dcim_interface_untagged_vlan_id_838dc7be_fk_ipam_vlan_id" type="fk" pk-ref="18" fk-ref="9"/>
+		<relation name="ipam_prefix_vlan_id_1db91bff_fk_ipam_vlan_id" fq-name="public.ipam_prefix.ipam_prefix_vlan_id_1db91bff_fk_ipam_vlan_id" type="fk" pk-ref="18" fk-ref="17"/>
+		<relation name="dcim_interface_tagged_vlans_vlan_id_e027005c_fk_ipam_vlan_id" fq-name="public.dcim_interface_tagged_vlans.dcim_interface_tagged_vlans_vlan_id_e027005c_fk_ipam_vlan_id" type="fk" pk-ref="18" fk-ref="21"/>
+		<relation name="ipam_vlan_vlan_group_id_a59c4d3f_fk_ipam_vlangroup_id" fq-name="public.ipam_vlan.ipam_vlan_vlan_group_id_a59c4d3f_fk_ipam_vlangroup_id" type="fk" pk-ref="19" fk-ref="18"/>
+		<relation name="dcim_interface_vrf_id_a92e59b2_fk_ipam_vrf_id" fq-name="public.dcim_interface.dcim_interface_vrf_id_a92e59b2_fk_ipam_vrf_id" type="fk" pk-ref="20" fk-ref="9"/>
+	</relations>
+</diagram>
