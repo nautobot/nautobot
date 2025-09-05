@@ -1,4 +1,5 @@
 import contextlib
+import inspect
 import re
 from typing import Optional, Sequence
 from unittest import mock, skipIf
@@ -775,6 +776,29 @@ class ViewTestCases:
                 response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
+        def test_model_properties_on_field_are_not_orderable(self):
+            """
+            Check for table columns that are property-based and not orderable.
+            """
+            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not table_class:
+                return
+
+            queryset = self._get_queryset()
+            table = table_class(queryset)
+            model_cls = table._meta.model
+
+            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
+
+            for name, column in table.base_columns.items():
+                if hasattr(column, "order_by") and column.order_by:
+                    continue
+                if name in property_fields and name != "pk":
+                    self.assertTrue(
+                        column.orderable is False,
+                        f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
+                    )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
