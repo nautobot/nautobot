@@ -1358,7 +1358,7 @@ def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
 @register.tag(name="captureas")
 def do_captureas(parser, token):
     try:
-        tag_name, args = token.contents.split(None, 1)
+        _, args = token.contents.split(None, 1)
     except ValueError:
         raise template.TemplateSyntaxError("'captureas' node requires a variable name.")
     nodelist = parser.parse(("endcaptureas",))

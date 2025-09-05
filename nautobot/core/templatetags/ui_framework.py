@@ -57,20 +57,20 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
     - There is no UI Component Framework breadcrumbs and no other block overrides. Output: default breadcrumbs will be rendered.
     - UI Component Framework breadcrumbs are defined in the view. No breadcrumbs block overrides. Output: UI Component Framework breadcrumbs will be rendered.
     """
-    render_breadcrumbs = partial(
+    render_template = partial(
         render_component_template,
         "components/breadcrumbs.html",
         context,
     )
 
     if strip_spaces_between_tags(legacy_default_breadcrumbs) != strip_spaces_between_tags(legacy_block_breadcrumbs):
-        return render_breadcrumbs(legacy_breadcrumbs=legacy_block_breadcrumbs)
+        return render_template(legacy_breadcrumbs=legacy_block_breadcrumbs)
 
     breadcrumbs_obj = context.get("breadcrumbs")
     if breadcrumbs_obj is not None and isinstance(breadcrumbs_obj, Breadcrumbs):
         return breadcrumbs_obj.render(context)
 
-    return render_breadcrumbs(legacy_breadcrumbs=legacy_default_breadcrumbs)
+    return render_template(legacy_breadcrumbs=legacy_default_breadcrumbs)
 
 
 @register.simple_tag(takes_context=True)

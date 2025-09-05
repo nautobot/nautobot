@@ -173,7 +173,7 @@ class TitlesTestCase(TestCase):
 
     def test_get_extra_context_is_used_during_render(self):
         """Test that get_extra_context is being used to extend the context."""
-        context = Context({})
+        context = Context({"view_action": "list"})
 
         class TitlesSubClass(Titles):
             def get_extra_context(self, context: Context) -> dict:
