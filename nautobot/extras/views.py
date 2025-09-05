@@ -2194,12 +2194,16 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
             )
             snapshots = instance.get_snapshots()
 
-            context["diff_added"] = snapshots["differences"]["added"]
-            context["diff_removed"] = snapshots["differences"]["removed"]
-            context["next_change"] = instance.get_next_change(request.user)
-            context["prev_change"] = instance.get_prev_change(request.user)
-            context["related_changes_table"] = related_changes_table
-            context["related_changes_count"] = related_changes.count()
+            context.update(
+                {
+                    "diff_added": snapshots["differences"]["added"],
+                    "diff_removed": snapshots["differences"]["removed"],
+                    "next_change": instance.get_next_change(request.user),
+                    "prev_change": instance.get_prev_change(request.user),
+                    "related_changes_table": related_changes_table,
+                    "related_changes_count": related_changes.count(),
+                }
+            )
 
         return context
 
