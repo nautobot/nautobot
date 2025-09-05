@@ -839,7 +839,7 @@ def render_job_label(status):
         status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
 
     Returns:
-        str: Safe HTML string for a styled label.
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
     """
     mapping = {
         "FAILURE": ("danger", "Failed"),
@@ -849,7 +849,11 @@ def render_job_label(status):
     }
 
     css_class, text = mapping.get(status, ("default", "N/A"))
-    return format_html('<label class="label label-{}">{}</label>', css_class, text)
+    return format_html(
+        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
+        css_class,
+        text,
+    )
 
 
 def render_job_files(files_manager):
