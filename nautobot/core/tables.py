@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -80,14 +80,14 @@ class BaseTable(django_tables2.Table):
                 reverse_lookup="static_group_associations__associated_object_id",
             )
 
-        for cf in models.CustomField.objects.get_for_model(model):
+        for cf in models.CustomField.objects.get_for_model(model, get_queryset=False):
             name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.get_for_model(model):
+        for cpf in models.ComputedField.objects.get_for_model(model, get_queryset=False):
             self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.get_for_model_source(model):
+        for relationship in models.Relationship.objects.get_for_model_source(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
@@ -97,7 +97,7 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.get_for_model_destination(model):
+        for relationship in models.Relationship.objects.get_for_model_destination(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
@@ -333,6 +333,29 @@ class BaseTable(django_tables2.Table):
             # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
 
+    def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
+        """Conditionally prefetch the specified database column if the related table field is visible.
+
+        Args:
+            table_field (str): Name of the field on the table to check for visibility. Also used as the prefetch field
+                               if neither db_column nor prefetch is specified.
+            db_column (str): Optionally specify the db column to prefetch. Mutually exclusive with prefetch.
+            prefetch (Prefetch): Optionally specify a prefetch object. Mutually exclusive with db_column.
+        """
+        if db_column and prefetch:
+            raise ValueError(
+                "BaseTable.add_conditional_prefetch called with both db_column and prefetch, this is not allowed."
+            )
+        if not db_column:
+            db_column = table_field
+        if table_field in self.columns and self.columns[table_field].visible and isinstance(self.data.data, QuerySet):
+            if prefetch:
+                self.data = TableData.from_data(self.data.data.prefetch_related(prefetch))
+            else:
+                self.data = TableData.from_data(self.data.data.prefetch_related(db_column))
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
 
 #
 # Table columns
@@ -353,7 +376,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
 class BooleanColumn(django_tables2.Column):

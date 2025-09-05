@@ -171,6 +171,8 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"content_type__n": "dcim.location"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConfigContextTestCase(FilterTestCases.FilterTestCase):
@@ -650,6 +652,8 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": ContentType.objects.get(model="location").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"content_type__n": ContentType.objects.get(model="location").pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class FileProxyTestCase(FilterTestCases.FilterTestCase):
@@ -865,6 +869,8 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"content_type__n": "dcim.location"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type_id_and_object_id(self):
         params = {
@@ -981,6 +987,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     filterset = JobResultFilterSet
     generic_filter_tests = (
         ("date_created",),
+        ("date_started",),
         ("date_done",),
         ("job_model", "job_model__id"),
         ("job_model", "job_model__name"),
@@ -1091,6 +1098,8 @@ class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_content_types(self):
         params = {"content_types": ["dcim.devicetype"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"content_types__n": ["dcim.devicetype"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_enabled(self):
         params = {"enabled": True}

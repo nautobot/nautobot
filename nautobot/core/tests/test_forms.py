@@ -581,7 +581,7 @@ class JSONFieldTest(testing.TestCase):
         device_content_type = ContentType.objects.get_for_model(dcim_models.Device)
         custom_field.content_types.set([device_content_type])
         # Fetch URL with filter parameter
-        response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
+        response = self.client.get(f"{reverse('dcim:device_list')}?name=Foo%20Device")
         self.assertIn("Foo Device", str(response.content))
 
     def test_prepare_value_with_utf8(self):
