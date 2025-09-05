@@ -22,8 +22,6 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (sortParam === "-" + columnName) {
                 // If the column is already sorted in descending order, reset to default
                 searchParams.delete("sort");
-                window.location.replace(window.location.pathname); // Reload the page with the default view without adding a new entry to history
-                return;
             } else {
                 // If no sort or default state, set to ascending
                 searchParams.set("sort", columnName);
