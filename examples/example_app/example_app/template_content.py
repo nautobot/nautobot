@@ -183,6 +183,8 @@ class TenantContent(TemplateExtension):
         def get_data(self, context):
             instance = get_obj_from_context(context)
             # ruff: noqa: E731
+            # pylint: disable=unnecessary-lambda-assignment
+            # lambda here it's intetional
             data_series = lambda: queryset_to_nested_dict_records_as_series(
                 Tenant.objects.annotate(
                     Circuits=count_related(Circuit, "tenant"),
