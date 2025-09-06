@@ -5,12 +5,16 @@ from nautobot.apps.ui import (
     Button,
     ButtonColorChoices,
     DistinctViewTab,
+    EChartsPanel,
+    EChartsTypeChoices,
     ObjectFieldsPanel,
     ObjectTextPanel,
     SectionChoices,
     Tab,
     TemplateExtension,
 )
+
+from .echarts_data import tenant_related_objects_data
 
 
 class CircuitContent(TemplateExtension):
@@ -165,6 +169,37 @@ class LocationContent(TemplateExtension):
         return "LOCATION CONTENT - BUTTONS LIST"
 
 
+class TenantContent(TemplateExtension):
+    model = "tenancy.tenant"
+
+    object_detail_panels = [
+        EChartsPanel(
+            section=SectionChoices.FULL_WIDTH,
+            weight=100,
+            label="EChart - Stats",
+            chart_kwargs={
+                "chart_type": EChartsTypeChoices.PIE,
+                "header": "Stats by Tenant",
+                "description": "Example chart with using context and queryset.",
+                "legend": {"orient": "vertical", "right": 10, "top": "center"},
+                "data": tenant_related_objects_data,
+                "additional_config": {
+                    "series": [
+                        {
+                            "avoidLabelOverlap": False,
+                            "radius": ["40%", "70%"],
+                            "itemStyle": {"borderRadius": 10, "borderColor": "#fff", "borderWidth": 2},
+                            "label": {"show": False, "position": "center"},
+                            "emphasis": {"label": {"show": True, "fontSize": 40, "fontWeight": "bold"}},
+                            "labelLine": {"show": False},
+                        }
+                    ]
+                },
+            },
+        )
+    ]
+
+
 class ExampleModelContent(TemplateExtension):
     """
     You can also use an app to extend other apps's views, or even (in this case) its *own* views.
@@ -224,4 +259,4 @@ class ExampleModelContent(TemplateExtension):
 
 
 # Don't forget to register your template extensions!
-template_extensions = [ExampleModelContent, LocationContent, CircuitContent, DeviceContent]
+template_extensions = [ExampleModelContent, LocationContent, CircuitContent, DeviceContent, TenantContent]

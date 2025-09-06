@@ -8,6 +8,9 @@ window.bootstrap = bootstrap;
 import ClipboardJS from 'clipboard';
 window.ClipboardJS = ClipboardJS;
 
+import * as echarts from 'echarts';
+window.echarts = echarts;
+
 import flatpickr from 'flatpickr';
 window.flatpickr = flatpickr;
 

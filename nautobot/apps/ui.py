@@ -9,7 +9,12 @@ from nautobot.core.ui.breadcrumbs import (
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
-from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.choices import EChartsTypeChoices, LayoutChoices, SectionChoices
+from nautobot.core.ui.echarts import (
+    EChartsBase,
+    queryset_to_nested_dict_keys_as_series,
+    queryset_to_nested_dict_records_as_series,
+)
 from nautobot.core.ui.homepage import (
     HomePageBase,
     HomePageGroup,
@@ -32,6 +37,7 @@ from nautobot.core.ui.object_detail import (
     DataTablePanel,
     DistinctViewTab,
     DropdownButton,
+    EChartsPanel,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -60,6 +66,9 @@ __all__ = (
     "DataTablePanel",
     "DistinctViewTab",
     "DropdownButton",
+    "EChartsBase",
+    "EChartsPanel",
+    "EChartsTypeChoices",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
@@ -89,5 +98,7 @@ __all__ = (
     "TextPanel",
     "Titles",
     "ViewNameBreadcrumbItem",
+    "queryset_to_nested_dict_keys_as_series",
+    "queryset_to_nested_dict_records_as_series",
     "render_component_template",
 )

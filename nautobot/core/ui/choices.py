@@ -2,6 +2,8 @@
 
 from nautobot.core.choices import ChoiceSet
 
+from .constants import UI_COLORS
+
 
 class LayoutChoices(ChoiceSet):
     """Page (or more properly tab) column layout choices.
@@ -42,3 +44,59 @@ class SectionChoices(ChoiceSet):
         (RIGHT_HALF, "Right half of page"),
         (FULL_WIDTH, "Full width of page"),
     )
+
+
+class EChartsTypeChoices(ChoiceSet):
+    """Available chart types for ECharts.
+
+    Attributes:
+        BAR (str): Bar chart (value: bar)
+        LINE (str): Line chart (value: line)
+        PIE (str): Pie chart (value: pie)
+    """
+
+    BAR = "bar"
+    LINE = "line"
+    PIE = "pie"
+
+    CHOICES = (
+        (BAR, "Bar chart"),
+        (LINE, "Line chart"),
+        (PIE, "Pie chart"),
+    )
+
+
+class EChartsTypeTheme(ChoiceSet):
+    """Available chart theme for ECharts.
+
+    Attributes:
+        LIGHT (str): Light theme (value: light)
+        DARK (str): Dark theme (value: dark)
+    """
+
+    LIGHT = "default"
+    DARK = "dark"
+
+    DEFAULT = LIGHT
+
+    CHOICES = (
+        (LIGHT, "Default theme"),
+        (DARK, "Dark theme"),
+    )
+
+    COLORS = {
+        LIGHT: [
+            UI_COLORS["blue"]["light"],
+            UI_COLORS["orange"]["light"],
+            UI_COLORS["green"]["light"],
+            UI_COLORS["red"]["light"],
+            UI_COLORS["gray"]["light"],
+        ],
+        DARK: [
+            UI_COLORS["blue"]["dark"],
+            UI_COLORS["orange"]["dark"],
+            UI_COLORS["green"]["dark"],
+            UI_COLORS["red"]["dark"],
+            UI_COLORS["gray"]["dark"],
+        ],
+    }

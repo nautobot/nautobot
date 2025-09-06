@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Any
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -38,6 +39,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.echarts import EChartsBase
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -1185,6 +1187,81 @@ class KeyValueTablePanel(Panel):
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
         return result
+
+
+class EChartsPanel(Panel, EChartsBase):
+    """A panel that renders ECharts charts using the EChartsBase class."""
+
+    def __init__(
+        self,
+        *,
+        chart_kwargs=None,
+        width="100%",
+        height="32rem",
+        chart_container_id=None,
+        body_wrapper_template_path="components/echarts.html",
+        **kwargs,
+    ):
+        """
+        Initialize an ECharts panel.
+
+        Args:
+            chart_kwargs (dict): Kwargs to pass to EChartsBase constructor.
+            width (str): CSS width for the chart container (default: "100%").
+            height (str): CSS height for the chart container (default: "32rem").
+            chart_container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
+        """
+        self.width = width
+        self.height = height
+        self.chart_container_id = chart_container_id
+
+        super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
+        EChartsBase.__init__(self, **chart_kwargs)
+
+    def get_data(self, context: Context) -> dict[str, Any] | None:
+        """Get the data for chart.
+
+        Args:
+            context (Context): The template or request context.
+
+        Returns:
+            dict[str, Any] | None:
+                - A dictionary in internal chart format, e.g.:
+                    {"x": [...], "series": [{"name": str, "data": [...]}]}
+                - A nested dictionary of series, e.g.:
+                    {"Series1": {"x1": val1, "x2": val2}, ...}
+                - `None` if no data is set.
+        """
+        if callable(self.data):
+            return self.data(context)  # pylint: disable=not-callable
+        return self.data
+
+    def should_render(self, context: Context):
+        """Determine if the panel should be rendered."""
+        if not super().should_render(context):
+            return False
+
+        # Check permissions if specified
+        if self.permission:
+            request = context.get("request")
+            if request and hasattr(request, "user"):
+                return request.user.has_perm(self.permission)
+
+        return True
+
+    def get_extra_context(self, context: Context):
+        """Add chart-specific context variables."""
+        self.data = self.get_data(context)
+        chart_config = self.get_config()
+        return {
+            **super().get_extra_context(context),
+            "chart": self,
+            "chart_config": chart_config,
+            "chart_width": self.width,
+            "chart_height": self.height,
+            "chart_container_id": self.chart_container_id
+            or f"{slugify(f'echart-{self.header}')}-{uuid.uuid4().hex[:8]}",
+        }
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):
