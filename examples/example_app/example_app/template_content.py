@@ -176,7 +176,7 @@ class TenantContent(TemplateExtension):
         EChartsPanel(
             section=SectionChoices.FULL_WIDTH,
             weight=100,
-            label="EChart - Stats",
+            label="EChart - Tenant Stats",
             chart_kwargs={
                 "chart_type": EChartsTypeChoices.PIE,
                 "header": "Stats by Tenant",
