@@ -4246,30 +4246,44 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
             vc_form = forms.VirtualChassisForm(instance=instance)
             vc_form.fields["master"].queryset = members_queryset
 
-            context.update(
-                {
-                    "formset": formset,
-                    "vc_form": vc_form,
-                    "return_url": self.get_return_url(request, instance),
-                }
-            )
+            context["formset"] = formset
+            context["vc_form"] = vc_form
+            context["return_url"] = self.get_return_url(request, instance)
 
         return context
 
-    def form_save(self, form, **kwargs):
-        obj = super().form_save(form, **kwargs)
-
+    def get_form_class(self):
         if self.action == "update":
-            context = self.get_extra_context(self.request, obj)
-            formset = context.get("formset")
+            return forms.VirtualChassisForm
+        return super().get_form_class()
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        if self.action == "update" and "master" in form.fields:
+            instance = self.get_object()
+            members_qs = instance.members.select_related("rack").order_by("vc_position")
+            form.fields["master"].queryset = members_qs
+        return form
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)  # saves `master` too
+        if self.action == "update":
+            # Handle the members formset like you already do
+            VCMemberFormSet = modelformset_factory(
+                model=Device,
+                form=forms.DeviceVCMembershipForm,
+                formset=forms.BaseVCMemberFormSet,
+                extra=0,
+            )
+            members_queryset = obj.members.select_related("rack").order_by("vc_position")
+
+            formset = VCMemberFormSet(self.request.POST, queryset=members_queryset)
 
             if formset.is_valid():
                 with transaction.atomic():
-                    members = formset.save(commit=False)
-                    # Nullify the vc_position of each member first to allow reordering without raising an IntegrityError on
-                    # duplicate positions. Then save each member instance.
-                    Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
-                    for member in members:
+                    vc_members = formset.save(commit=False)
+                    Device.objects.filter(pk__in=[m.pk for m in vc_members]).update(vc_position=None)
+                    for member in vc_members:
                         member.save()
             else:
                 raise ValidationError(formset.errors)
