@@ -163,7 +163,7 @@ class TitlesTestCase(TestCase):
         """Test rendering when no view_action is provided."""
         context = Context({"verbose_name_plural": "devices"})
         result = self.titles.render(context)
-        self.assertEqual(result, "Devices")  # Should use list_action as default
+        self.assertEqual(result, "Devices")  # Should use * action as default
 
     def test_get_extra_context(self):
         """Test that get_extra_context returns empty dict by default."""
