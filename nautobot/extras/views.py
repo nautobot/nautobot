@@ -2161,6 +2161,7 @@ class JobResultUIViewSet(
                 weight=200,
                 section=object_detail.SectionChoices.FULL_WIDTH,
                 body_content_template_path="extras/inc/log_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
             ),
         ],
         extra_buttons=(
