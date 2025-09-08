@@ -907,6 +907,7 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
+    duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def __init__(self, *args, **kwargs):
@@ -1070,7 +1071,7 @@ class ObjectMetadataTable(BaseTable):
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
-    value = tables.Column(empty_values=[])
+    value = tables.Column(empty_values=[], order_by=("_value",))
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
