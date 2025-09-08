@@ -18,6 +18,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     FrontPort,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
@@ -107,6 +108,24 @@ class DynamicGroupTestBase(TestCase):
             ),
         ]
 
+        cls.inventory_items = [
+            InventoryItem.objects.create(
+                name="device-location-1-item-1",
+                serial="location-1-item-1",
+                device=cls.devices[0],
+            ),
+            InventoryItem.objects.create(
+                name="device-location-1-item-2",
+                serial="location-1-item-2",
+                device=cls.devices[0],
+            ),
+            InventoryItem.objects.create(
+                name="device-location-2-item-1",
+                serial="location-2-item-1",
+                device=cls.devices[1],
+            ),
+        ]
+
         cls.groups = [
             DynamicGroup.objects.create(
                 name="Parent",
@@ -152,7 +171,13 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="MultiValueCharFilter",
                 description="A group with a multivaluechar filter",
-                filter={"name": ["device-1", "device-2", "device-3"]},
+                filter={"name": ["device-location-1", "device-location-2", "device-location-3"]},
+                content_type=cls.device_ct,
+            ),
+            DynamicGroup.objects.create(
+                name="SearchFilter",
+                description="A group with a search filter",
+                filter={"q": "location-1"},
                 content_type=cls.device_ct,
             ),
         ]
@@ -165,6 +190,8 @@ class DynamicGroupTestBase(TestCase):
         cls.third_child = cls.groups[3]
         cls.nested_child = cls.groups[4]
         cls.no_match_filter = cls.groups[5]
+        cls.multivaluechar_filter = cls.groups[6]
+        cls.search_filter = cls.groups[7]
         cls.invalid_filter = DynamicGroup.objects.create(
             name="Invalid Filter",
             description="A group with a filter that's invalid",
@@ -288,6 +315,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         self.assertIn(device1, group.members)
         self.assertNotIn(device2, group.members)
+
+        group = self.search_filter
+        self.assertIn(device1, group.members)
 
     def test_static_member_operations(self):
         sg = DynamicGroup.objects.create(
@@ -437,17 +467,24 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_count(self):
         """Test `DynamicGroup.count`."""
-        expected = {
-            self.parent.count: 2,
-            self.first_child.count: 1,
-            self.second_child.count: 1,
-            self.third_child.count: 2,
-            self.nested_child.count: 2,
-            self.no_match_filter.count: 0,
-            self.invalid_filter.count: 0,
-        }
-        for grp, cnt in expected.items():
-            self.assertEqual(grp, cnt)
+        expected = [
+            (self.parent, 1),
+            (self.first_child, 1),
+            (self.second_child, 1),
+            (self.third_child, 2),
+            (self.nested_child, 2),
+            (self.no_match_filter, 0),
+            (self.multivaluechar_filter, 3),
+            (self.search_filter, 1),
+            (self.invalid_filter, 0),
+        ]
+        for grp, cnt in expected:
+            with self.subTest(grp.name):
+                self.assertEqual(grp.count, cnt, list(grp.members.values_list("name", flat=True)))
+                self.assertEqual(grp.members.count(), cnt, list(grp.members.values_list("name", flat=True)))
+                # https://github.com/nautobot/nautobot/issues/7631
+                members = grp.update_cached_members()
+                self.assertEqual(members.count(), cnt, list(members.values_list("name", flat=True)))
 
     def test_model(self):
         """Test `DynamicGroup.model`."""
@@ -635,9 +672,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         group1 = self.first_child  # Filter has `location`
         self.assertEqual(group1.get_initial(), group1.filter)
         # Test if MultiValueCharField is properly pre-populated
-        group2 = self.groups[6]  # Filter has `name`
+        group2 = self.multivaluechar_filter  # Filter has `name`
         initial = group2.get_initial()
-        expected = {"name": ["device-1", "device-2", "device-3"]}
+        expected = {"name": ["device-location-1", "device-location-2", "device-location-3"]}
         self.assertEqual(initial, expected)
 
     def test_set_filter(self):
@@ -1152,7 +1189,11 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+        self.assertQuerysetEqualAndNotEmpty(
+            qs,
+            [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
+            ordered=False,
+        )
 
     def test_dynamic_groups_cached(self):
         for group in self.groups:
@@ -1160,21 +1201,35 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups_cached
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+        self.assertQuerysetEqualAndNotEmpty(
+            qs,
+            [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
+            ordered=False,
+        )
 
     def test_dynamic_groups_list(self):
         for group in self.groups:
             group.update_cached_members()
         with self.assertNumQueries(1):
             groups = self.devices[0].dynamic_groups_list
-        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
+        self.assertEqual(
+            set(groups),
+            set(
+                [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter]
+            ),
+        )
 
     def test_dynamic_groups_list_cached(self):
         for group in self.groups:
             group.update_cached_members()
         with self.assertNumQueries(1):
             groups = self.devices[0].dynamic_groups_list_cached
-        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
+        self.assertEqual(
+            set(groups),
+            set(
+                [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter]
+            ),
+        )
 
 
 class DynamicGroupFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCase):

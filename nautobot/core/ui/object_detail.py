@@ -971,6 +971,7 @@ class KeyValueTablePanel(Panel):
         context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
+        key_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
         **kwargs,
     ):
@@ -989,6 +990,8 @@ class KeyValueTablePanel(Panel):
 
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+                For example: {'content_types': 'Content Type'}.
         """
         if data and context_data_key:
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
@@ -996,6 +999,7 @@ class KeyValueTablePanel(Panel):
         self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
+        self.key_transforms = key_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
@@ -1301,6 +1305,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
+
+        if key in self.key_transforms:
+            return self.key_transforms[key]
+
         instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
