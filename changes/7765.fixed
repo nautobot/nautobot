@@ -1,0 +1,2 @@
+Fixed column ordering issue by disabling `orderable` for `PowerFeedTable.occupied_positions`, `PowerFeedTable.phase_designation`, and `JobResultTable.duration`.
+Fixed `ObjectMetadataTable.value` column ordering issue by adding missing `order_by` attribute.
