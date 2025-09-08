@@ -1175,6 +1175,7 @@ class GraphQLQueryUIViewSet(
                 weight=100,
                 section=object_detail.SectionChoices.RIGHT_HALF,
                 body_content_template_path="extras/inc/graphqlquery_execute.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
             ),
         )
     )
