@@ -217,8 +217,8 @@ ruff = "~0.12.11"
 yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
-# Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
-coverage = "<=6.4.0"
+# Test code coverage measurement
+coverage = "~7.10.6"
 # Testing of data migrations
 django-test-migrations = "~1.4.0"
 # OpenAPI validator to test that our generated schema is valid
