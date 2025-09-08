@@ -80,8 +80,8 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from ..core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
-from ..core.ui.titles import Titles
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (

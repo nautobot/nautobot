@@ -1918,13 +1918,13 @@ class DeviceComponentPageMixin:
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device),
+                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
                 InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device
+                    instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
                 ),
                 ViewNameBreadcrumbItem(
                     view_name_key="device_breadcrumb_url",
-                    should_render=lambda c: c["object"].device and c.get("device_breadcrumb_url"),
+                    should_render=lambda c: c["object"].device is not None and c.get("device_breadcrumb_url"),
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
                     label=lambda c: c["object"]._meta.verbose_name_plural,
                 ),
