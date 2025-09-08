@@ -41,8 +41,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.core.ui.breadcrumbs import Breadcrumbs
-from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -50,7 +48,12 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import (
+    BulkEditAndBulkDeleteModelMixin,
+    ComponentsMixin,
+    GetReturnURLMixin,
+    ObjectPermissionRequiredMixin,
+)
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -73,7 +76,7 @@ class GenericView(LoginRequiredMixin, View):
     """
 
 
-class ObjectView(ObjectPermissionRequiredMixin, View):
+class ObjectView(ObjectPermissionRequiredMixin, ComponentsMixin, View):
     """
     Retrieve a single object for display.
 
@@ -84,8 +87,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     queryset: ClassVar[Optional[QuerySet]] = None  # TODO: required, declared Optional only to avoid breaking change
     template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
-    breadcrumbs = Breadcrumbs()
-    view_titles = Titles()
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -119,15 +120,16 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        model = self.queryset.model
         content_type = ContentType.objects.get_for_model(self.queryset.model)
         context = {
             "object": instance,
             "content_type": content_type,
-            "verbose_name": self.queryset.model._meta.verbose_name,
-            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "verbose_name": model._meta.verbose_name,
+            "verbose_name_plural": model._meta.verbose_name_plural,
             "object_detail_content": self.object_detail_content,
-            "breadcrumbs": self.breadcrumbs,
-            "view_titles": self.view_titles,
+            "breadcrumbs": self.get_breadcrumbs(model, action=""),
+            "view_titles": self.get_view_titles(model, action=""),
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -135,7 +137,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         return render(request, self.get_template_name(), context)
 
 
-class ObjectListView(ObjectPermissionRequiredMixin, View):
+class ObjectListView(ObjectPermissionRequiredMixin, ComponentsMixin, View):
     """
     List a series of objects.
 
@@ -164,8 +166,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
         "clear_view",  # indicator for if the clear view button is clicked or not
     )
-    breadcrumbs = Breadcrumbs()
-    view_titles = Titles()
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -393,8 +393,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "model": model,
             "verbose_name_plural": model._meta.verbose_name_plural,
             "view_action": "list",
-            "breadcrumbs": self.breadcrumbs,
-            "view_titles": self.view_titles,
+            "breadcrumbs": self.get_breadcrumbs(model),
+            "view_titles": self.get_view_titles(model),
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be
