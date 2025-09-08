@@ -668,15 +668,9 @@ class RackUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=500,
-                table_class=tables.RackReservationTable,
+                table_class=tables.RackReservationDetailTable,
                 table_filter="rack",
                 include_columns=["tenant"],
-                exclude_columns=[
-                    "reservation",
-                    "location",
-                    "rack",
-                    "user",
-                ],
             ),
             object_detail.Panel(
                 section=SectionChoices.RIGHT_HALF,
@@ -727,9 +721,6 @@ class RackUIViewSet(NautobotUIViewSet):
 
             context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
             context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
         return context
 
 

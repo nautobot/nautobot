@@ -17,6 +17,7 @@ from .template_code import RACKGROUP_ELEVATIONS, TREE_LINK, UTILIZATION_GRAPH
 __all__ = (
     "RackDetailTable",
     "RackGroupTable",
+    "RackReservationDetailTable",
     "RackReservationTable",
     "RackTable",
 )
@@ -146,7 +147,7 @@ class RackReservationTable(BaseTable):
     location = tables.Column(accessor=Accessor("rack__location"), linkify=True)
     tenant = TenantColumn()
     rack = tables.Column(linkify=True)
-    unit_list = tables.Column(orderable=False, verbose_name="Units", linkify=True)
+    unit_list = tables.Column(orderable=False, verbose_name="Units")
     tags = TagColumn(url_name="dcim:rackreservation_list")
     actions = ButtonsColumn(RackReservation)
 
@@ -172,6 +173,24 @@ class RackReservationTable(BaseTable):
             "rack",
             "unit_list",
             "user",
+            "description",
+            "actions",
+        )
+
+
+class RackReservationDetailTable(RackReservationTable):
+    unit_list = tables.Column(orderable=False, verbose_name="Units", linkify=True)
+    description = tables.TemplateColumn(
+        template_code="{{ record.description }}<br /><small>{{ record.user }} &middot; {{ record.created }}</small>"
+    )
+
+    class Meta(RackReservationTable.Meta):
+        model = RackReservation
+        fields = RackReservationTable.Meta.fields
+
+        default_columns = (
+            "pk",
+            "unit_list",
             "description",
             "actions",
         )

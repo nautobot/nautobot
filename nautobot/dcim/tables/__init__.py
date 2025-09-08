@@ -64,6 +64,7 @@ from .power import PowerFeedDetailTable, PowerFeedTable, PowerPanelTable
 from .racks import (
     RackDetailTable,
     RackGroupTable,
+    RackReservationDetailTable,
     RackReservationTable,
     RackTable,
 )
@@ -123,6 +124,7 @@ __all__ = (
     "PowerPortTemplateTable",
     "RackDetailTable",
     "RackGroupTable",
+    "RackReservationDetailTable",
     "RackReservationTable",
     "RackTable",
     "RearPortTable",
