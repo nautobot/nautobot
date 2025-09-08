@@ -61,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -656,6 +656,44 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
     action_buttons = ("add",)
+
+    class FilterBaseTextPanel(object_detail.BaseTextPanel):
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type == "dynamic-filter":
+                return obj.filter
+            return helpers.HTML_NONE
+
+    class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type != "static":
+                if obj.group_type == "dynamic-set":
+                    self.body_wrapper_template_path = "extras/inc/filter_query_body_wrapper.html"
+                return pretty_print_query(obj.generate_query())
+            return helpers.HTML_NONE
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "description", "content_type", "group_type", "tenant"],
+            ),
+            FilterBaseTextPanel(
+                label="Filter",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_as=ObjectTextPanel.RenderOptions.JSON,
+            ),
+            FilterQueryLogicBaseTextPanel(
+                label="Filter Query Logic",
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+        ]
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
