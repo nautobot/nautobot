@@ -86,17 +86,17 @@ class EChartsTypeTheme(ChoiceSet):
 
     COLORS = {
         LIGHT: [
-            UI_COLORS["blue"]["light"],
-            UI_COLORS["orange"]["light"],
-            UI_COLORS["green"]["light"],
-            UI_COLORS["red"]["light"],
-            UI_COLORS["gray"]["light"],
+            UI_COLORS["blue-0"]["light"],
+            UI_COLORS["orange-0"]["light"],
+            UI_COLORS["green-0"]["light"],
+            UI_COLORS["red-0"]["light"],
+            UI_COLORS["gray-0"]["light"],
         ],
         DARK: [
-            UI_COLORS["blue"]["dark"],
-            UI_COLORS["orange"]["dark"],
-            UI_COLORS["green"]["dark"],
-            UI_COLORS["red"]["dark"],
-            UI_COLORS["gray"]["dark"],
+            UI_COLORS["blue-0"]["dark"],
+            UI_COLORS["orange-0"]["dark"],
+            UI_COLORS["green-0"]["dark"],
+            UI_COLORS["red-0"]["dark"],
+            UI_COLORS["gray-0"]["dark"],
         ],
     }

@@ -75,24 +75,29 @@ The `data` argument can be provided in **several formats**:
     ```no-highlight
     def tenant_related_objects_data(context):
         instance = get_obj_from_context(context)
-        data_series = queryset_to_nested_dict_records_as_series(
-            Tenant.objects.annotate(
-                Circuits=count_related(Circuit, "tenant"),
-                Clusters=count_related(Cluster, "tenant"),
-            ).filter(pk=instance.id),
-            record_key="name",
-            value_keys=[
-                "Circuits",
-                "Clusters",
-            ],
-        )
-        return data_series
+        data_series = {
+            "Circuits": instance.circuits.count(),
+            "Clusters": instance.clusters.count(),
+            "Controllers": instance.controllers.count(),
+            "ControllerManagedDeviceGroups": instance.controller_managed_device_groups.count(),
+            "Devices": instance.devices.count(),
+            "DynamicGroups": instance.dynamic_groups.count(),
+            "IpAddresses": instance.ip_addresses.count(),
+            "Locations": instance.locations.count(),
+            "Prefixes": instance.prefixes.count(),
+            "Racks": instance.racks.count(),
+            "RackReservations": instance.rack_reservations.count(),
+            "VirtualMachines": instance.virtual_machines.count(),
+            "VLANs": instance.vlans.count(),
+            "VRFs": instance.vrfs.count(),
+        }
+        return {instance.name: data_series}
 
     object_detail_panels = [
         EChartsPanel(
             section=SectionChoices.FULL_WIDTH,
             weight=100,
-            label="EChart - Stats",
+            label="EChart - Tenant Stats",
             chart_kwargs={
                 "chart_type": EChartsTypeChoices.PIE,
                 "header": "Stats by Tenant",
