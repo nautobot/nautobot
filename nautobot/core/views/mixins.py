@@ -286,26 +286,6 @@ class NautobotViewSetMixin(GenericViewSet, ComponentsMixin, AccessMixin, GetRetu
     # custom view attributes used for permission checks and handling
     custom_view_base_action = None
     custom_view_additional_permissions = None
-    # view_titles = None
-    # breadcrumbs = None
-    #
-    # def get_view_titles(self, model=None, action="list"):
-    #     if model and self.view_titles is None:
-    #         view_class = lookup.get_view_for_model(model, action)
-    #         if view_class:
-    #             view_titles = getattr(view_class, "view_titles", None)
-    #             return self.instantiate_if_needed(view_titles, Titles)
-    #
-    #     return self.instantiate_if_needed(self.view_titles, Titles)
-    #
-    # def get_breadcrumbs(self, model=None, action="list"):
-    #     if model and self.breadcrumbs is None:
-    #         view_class = lookup.get_view_for_model(model, action)
-    #         if view_class:
-    #             breadcrumbs = getattr(view_class, "breadcrumbs", None)
-    #             return self.instantiate_if_needed(breadcrumbs, Breadcrumbs)
-    #
-    #     return self.instantiate_if_needed(self.breadcrumbs, Breadcrumbs)
 
     @staticmethod
     def instantiate_if_needed(attr, default_cls):
