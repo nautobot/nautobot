@@ -1,21 +1,24 @@
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.functional import cached_property
+from django.utils.html import format_html, format_html_join, mark_safe
+from django.utils.http import urlencode
+from rest_framework.decorators import action
 
 from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.templatetags.helpers import add_html_id, HTML_NONE, hyperlinked_object
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
+from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
-from nautobot.extras.views import ObjectConfigContextView
-from nautobot.ipam.models import IPAddress, Service
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
+from nautobot.extras.models import ConfigContext
+from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.api import serializers
 
 from . import filters, forms, tables
@@ -242,6 +245,56 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 #
 
 
+def render_ip_with_nat(ip):
+    if ip is None:
+        return HTML_NONE
+
+    if ip.nat_inside is not None:
+        nat = format_html("(NAT for {})", hyperlinked_object(ip.nat_inside))
+    elif ip.nat_outside_list.exists():
+        nat = format_html(
+            "<br>NAT:<ul>{}</ul>",
+            format_html_join("\n", "<li>{}</li>", [[hyperlinked_object(nato)] for nato in ip.nat_outside_list.all()]),
+        )
+    else:
+        nat = ""
+
+    # TODO: replace auto-added "copy" button for this entire string with a button that just copies the host address
+    return format_html(
+        "{display} ({namespace}) {nat}",
+        display=add_html_id(hyperlinked_object(ip), f"ipv{ip.ip_version}"),
+        namespace=hyperlinked_object(ip.parent.namespace if ip.parent else None),
+        nat=nat,
+    )
+
+
+def render_software_version_and_image_files(virtual_machine, software_version, context):
+    display = hyperlinked_object(software_version)
+    overridden_software_image_files = virtual_machine.software_image_files.all()
+    display += format_html(
+        '<ul class="software-image-hierarchy">{}</ul>',
+        format_html_join(
+            "\n",
+            "<li>{}{}</li>",
+            [
+                [
+                    hyperlinked_object(img, "image_file_name"),
+                    " (overridden)" if overridden_software_image_files.exists() else "",
+                ]
+                for img in software_version.software_image_files.restrict(context["request"].user, "view")
+            ],
+        ),
+    )
+    if overridden_software_image_files.exists():
+        display += format_html(
+            "<strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
+            format_html_join(
+                "\n", "<li>{}</li>", [[hyperlinked_object(img)] for img in overridden_software_image_files.all()]
+            ),
+        )
+    return display
+
+
 class VirtualMachineUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VirtualMachineBulkEditForm
     filterset_class = filters.VirtualMachineFilterSet
@@ -251,60 +304,158 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualMachineDetailTable
     queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
+    class VirtualMachineFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "software_version":
+                return render_software_version_and_image_files(
+                    object_detail.get_obj_from_context(context, self.context_object_key), value, context
+                )
 
-        if self.action == "retrieve":
-            # Interfaces
-            vminterfaces = (
-                VMInterface.objects.restrict(request.user, "view")
-                .filter(virtual_machine=instance)
-                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-            )
-            vminterface_table = tables.VirtualMachineVMInterfaceTable(vminterfaces, user=request.user, orderable=False)
-            if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
-                "virtualization.delete_vminterface"
-            ):
-                vminterface_table.columns.show("pk")
+            return super().render_value(key, value, context)
 
-            # Services
-            services = (
-                Service.objects.restrict(request.user, "view")
-                .filter(virtual_machine=instance)
-                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-            )
+    class VirtualMachineClusterPanel(object_detail.ObjectFieldsPanel):
+        def get_data(self, context):
+            instance = object_detail.get_obj_from_context(context, self.context_object_key)
+            data = {"cluster": instance.cluster, "cluster_type": instance.cluster.cluster_type}
+            return data
 
-            # VRF assignments
-            vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-            vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
-
-            # Software images
-            if instance.software_version is not None:
-                software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-            else:
-                software_version_images = []
-
-            context.update(
-                {
-                    "vminterface_table": vminterface_table,
-                    "services": services,
-                    "software_version_images": software_version_images,
-                    "vrf_table": vrf_table,
-                }
+    class VirtualMachineAddInterfacesButton(object_detail.Button):
+        def get_link(self, context):
+            instance = object_detail.get_obj_from_context(context, self.context_object_key)
+            return (
+                super().get_link(context)
+                + "?"
+                + urlencode({"virtual_machine": instance.pk, "return_url": instance.get_absolute_url()})
             )
 
-        return context
+    class VirtualMachineConfigContextTab(object_detail.DistinctViewTab):
+        def should_render(self, context):
+            return context["request"].user.has_perms(["extras.view_configcontext"])
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            VirtualMachineFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=(
+                    "name",
+                    "status",
+                    "role",
+                    "platform",
+                    "tenant",
+                    "primary_ip4",
+                    "primary_ip6",
+                    "software_version",
+                ),
+                value_transforms={
+                    "primary_ip4": [render_ip_with_nat],
+                    "primary_ip6": [render_ip_with_nat],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Assigned VRFs",  # TODO: why does `label` get added to the table_title instead of overwriting
+                table_class=VRFDeviceAssignmentTable,
+                table_filter="virtual_machine",
+                exclude_columns=["related_object_type", "related_object_name"],
+            ),
+            VirtualMachineClusterPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Cluster",
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=300,
+                section=SectionChoices.RIGHT_HALF,
+                label="Resources",
+                fields=(
+                    "vcpus",
+                    "memory",
+                    "disk",
+                ),
+                key_transforms={
+                    "vcpus": mark_safe('<span class="mdi mdi-gauge"></span> Virtual CPUs'),
+                    "memory": mark_safe('<span class="mdi mdi-chip"></span> Memory'),
+                    "disk": mark_safe('<span class="mdi mdi-harddisk"></span> Disk Space'),
+                },
+                value_transforms={
+                    "memory": [lambda value: f"{value} MB" if value else HTML_NONE],
+                    "disk": [lambda value: f"{value} GB" if value else HTML_NONE],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=400,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=ServiceTable,
+                table_filter="virtual_machine",
+                exclude_columns=["parent"],
+                include_columns=["ip_addresses"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Interfaces",
+                table_class=tables.VirtualMachineVMInterfaceTable,
+                table_filter="virtual_machine",
+                header_extra_content_template_path="virtualization/inc/virtualmachine_vminterface_filter.html",
+            ),
+        ),
+        extra_buttons=(
+            VirtualMachineAddInterfacesButton(
+                weight=100,
+                color=ButtonActionColorChoices.ADD,
+                link_name="virtualization:vminterface_add",
+                label="Add Interfaces",
+                icon="mdi-plus-thick",
+                required_permissions=["virtualization.add_vminterface"],
+                link_includes_pk=False,
+            ),
+        ),
+        extra_tabs=(
+            VirtualMachineConfigContextTab(
+                weight=1000,
+                tab_id="config-context",
+                label="Config Context",
+                url_name="virtualization:virtualmachine_configcontext",
+            ),
+        ),
+    )
 
-class VirtualMachineConfigContextView(ObjectConfigContextView):
-    base_template = "virtualization/virtualmachine.html"
+    @action(
+        detail=True,
+        url_path="config-context",
+        url_name="configcontext",
+        custom_view_additional_permissions=["extras.view_configcontext"],
+    )
+    def config_context(self, request, pk):
+        instance = self.get_object()
 
-    @cached_property
-    def queryset(self):  # pylint: disable=method-hidden
-        """
-        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
-        """
-        return VirtualMachine.objects.annotate_config_context_data()
+        # Determine user's preferred output format
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            format_ = request.GET.get("data_format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontext.format", format_, commit=True)
+        elif request.user.is_authenticated:
+            format_ = request.user.get_config("extras.configcontext.format", "json")
+        else:
+            format_ = "json"
+
+        context = {
+            "object": instance,
+            "content_type": ContentType.objects.get_for_model(self.queryset.model),
+            "verbose_name": self.queryset.model._meta.verbose_name,
+            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
+            **common_detail_view_context(request, instance),
+            "rendered_context": instance.get_config_context(),
+            "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
+            "format": format_,
+            "base_template": "virtualization/virtualmachine.html",
+            "active_tab": "config-context",
+        }
+
+        return render(request, "extras/object_configcontext.html", context)
 
 
 #

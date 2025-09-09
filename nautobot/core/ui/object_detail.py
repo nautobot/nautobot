@@ -46,6 +46,7 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -1095,6 +1096,8 @@ class KeyValueTablePanel(Panel):
                 display = hyperlinked_object_with_color(value)
             elif isinstance(value, Tenant) and value.tenant_group is not None:
                 display = format_html("{} / {}", hyperlinked_object(value.tenant_group), hyperlinked_object(value))
+            elif isinstance(value, Cluster) and value.cluster_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.cluster_group), hyperlinked_object(value))
             # TODO: render location hierarchy for Location objects
             else:
                 display = hyperlinked_object(value)
