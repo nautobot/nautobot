@@ -1,0 +1,2 @@
+Fixed a bug in which IPv4 /31 Prefix records might be assigned the wrong `parent` Prefix.
+Fixed a bug in which IPv6 records such as `::1/128` might be assigned the wrong `parent` Prefix.
