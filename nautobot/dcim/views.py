@@ -91,7 +91,7 @@ from nautobot.wireless.tables import (
     RadioProfileTable,
 )
 
-from ..core.ui.titles import Titles
+from nautobot.core.ui.titles import Titles
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
