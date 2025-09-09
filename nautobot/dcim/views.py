@@ -592,6 +592,10 @@ class RackElevationListView(generic.ObjectListView):
     filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
+    view_titles = Titles(titles={"list": "Rack Elevation"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:rack_elevation_list", label="Rack Elevation")]}
+    )
 
     def extra_context(self):
         racks = self.queryset
@@ -1915,6 +1919,15 @@ class DevicePageMixin:
 
 
 class DeviceComponentPageMixin:
+    """
+    This class hold the breadcrumbs paths for Device Components Pages like console ports.
+    Depending on whether the component is associated with a device or a module, the appropriate breadcrumb path will be rendered.
+
+    For example:
+    - Console Port assigned to the module: Modules / <Module name and link to details> / Console Ports (dcim/modules/<id>/console-ports/) / <Console Port name>
+    - Console Port assigned to the device: Devices / <Device name and link to details> / Console Ports (dcim/devices/<id>/console-ports/) / <Console Port name>
+    """
+
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
@@ -4178,6 +4191,10 @@ class ConsoleConnectionsListView(ConnectionsListView):
     table = tables.ConsoleConnectionTable
     template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Console Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:console_connections_list", label="Console Connections")]}
+    )
 
     def extra_context(self):
         return {
@@ -4194,6 +4211,10 @@ class PowerConnectionsListView(ConnectionsListView):
     table = tables.PowerConnectionTable
     template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Power Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:power_connections_list", label="Power Connections")]}
+    )
 
     def extra_context(self):
         return {
@@ -4210,6 +4231,12 @@ class InterfaceConnectionsListView(ConnectionsListView):
     table = tables.InterfaceConnectionTable
     template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Interface Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "list": [ViewNameBreadcrumbItem(view_name="dcim:interface_connections_list", label="Interface Connections")]
+        }
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
