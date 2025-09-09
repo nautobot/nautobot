@@ -50,6 +50,7 @@ from nautobot.core.ui.bulk_buttons import (
     BulkRenameButton,
 )
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -91,7 +92,6 @@ from nautobot.wireless.tables import (
     RadioProfileTable,
 )
 
-from nautobot.core.ui.titles import Titles
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices

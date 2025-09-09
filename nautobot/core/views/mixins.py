@@ -239,17 +239,21 @@ class ComponentsMixin:
     ) -> ComponentType:
         local = getattr(self, attr_name, None)
         if local is not None:
-            return self._instantiate_if_needed(local)
+            return self._instantiate_if_needed(local, default_cls)
 
         if model is not None:
             view_class = lookup.get_view_for_model(model, action)
-            view_component = getattr(view_class, attr_name, default_cls)
-            return self._instantiate_if_needed(view_component)
+            view_component = getattr(view_class, attr_name, None)
+            return self._instantiate_if_needed(view_component, default_cls)
 
         return default_cls()
 
     @staticmethod
-    def _instantiate_if_needed(attr: Union[Type[ComponentType], ComponentType]) -> ComponentType:
+    def _instantiate_if_needed(
+        attr: Union[Type[ComponentType], ComponentType], default_cls: Type[ComponentType]
+    ) -> ComponentType:
+        if attr is None:
+            return default_cls()
         if isinstance(attr, type):
             return attr()
         return attr

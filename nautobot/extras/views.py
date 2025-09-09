@@ -36,8 +36,10 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -80,8 +82,6 @@ from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
-from nautobot.core.ui.titles import Titles
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
