@@ -220,14 +220,86 @@ class GetReturnURLMixin:
 ComponentType = TypeVar("ComponentType")
 
 
-class ComponentsMixin:
+class UIComponentsMixin:
+    """
+    Mixin that resolves UI components (e.g., breadcrumbs, titles) either from:
+    1) the current view class (preferred),
+    2) a related view class for a given model (via `lookup.get_view_for_model()`),
+    3) or a default component class.
+
+    The public helpers (`get_view_titles()`, `get_breadcrumbs()`) return concrete
+    component *instances* ready to use in renderers/templates.
+
+    It should be used in views that use the `nautobot.apps.views.GenericView` and standard Nautobot templates.
+
+    Example usage:
+    ```
+    def get(self, request, *args, **kwargs):
+        context = {
+            ...
+            "breadcrumbs": self.get_breadcrumbs(model),
+        }
+        context["title"] = self.get_view_titles(model).render(context)
+
+        return render(
+            request,
+            "extras/plugins_list.html",
+            context,
+        )
+    ```
+
+    Attributes:
+        breadcrumbs (ClassVar[Optional[Breadcrumbs]]): Optional component declared on the view class. May be:
+              - `None` (no local definition, fall back),
+              - a component *class* (will be instantiated),
+              - or a pre-instantiated component (returned as-is).
+        view_titles (ClassVar[Optional[Titles]]): Same contract as `breadcrumbs`,
+            but for titles.
+    """
+
     breadcrumbs: ClassVar[Optional[Breadcrumbs]] = None
     view_titles: ClassVar[Optional[Titles]] = None
 
     def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, action: str = "List") -> Titles:
+        """
+        Resolve and return the `Titles` component instance.
+
+        Resolution order:
+          1) If `self.view_titles` is set on the current view, use it.
+          2) Else, if `model` is provided, copy the `view_titles` from the view
+             class associated with that model via `lookup.get_view_for_model(model, action)`.
+          3) Else, instantiate and return the default `Titles()`.
+
+        Args:
+            model: A Django model **class**, **instance**, dotted name string, or `None`.
+                Passed to `lookup.get_view_for_model()` to find the related view class.
+                If `None`, only local/default resolution is used.
+            action: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+
+        Returns:
+            Titles: A concrete `Titles` component instance ready to use.
+        """
         return self._resolve_component("view_titles", Titles, model, action)
 
     def get_breadcrumbs(self, model: Union[None, str, Type[Model], Model] = None, action: str = "List") -> Breadcrumbs:
+        """
+        Resolve and return the `Breadcrumbs` component instance.
+
+        Resolution order mirrors `get_view_titles()`:
+         1) Use `self.breadcrumbs` if set locally.
+         2) Else, if `model` is provided, copy the `breadcrumbs` from the view
+             class associated with that model via `lookup.get_view_for_model(model, action)`.
+         3) Else return a new default `Breadcrumbs()`.
+
+        Args:
+           model: A Django model **class**, **instance**, dotted name string, or `None`.
+                Passed to `lookup.get_view_for_model()` to find the related view class.
+                If `None`, only local/default resolution is used.
+           action: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+
+        Returns:
+           Breadcrumbs: A concrete `Breadcrumbs` component instance.
+        """
         return self._resolve_component("breadcrumbs", Breadcrumbs, model, action)
 
     def _resolve_component(
@@ -237,6 +309,21 @@ class ComponentsMixin:
         model: Union[None, str, Type[Model], Model] = None,
         action: str = "List",
     ) -> ComponentType:
+        """
+        Resolve a UI component by name.
+
+        Return local view’s attribute defined via `attr_name` or
+        the `attr_name` defined on the view class for model via lookup.get_view_for_model(model, action) or
+        instantiates `default_cls`.
+
+        Args:
+            attr_name (str): Attribute to resolve (e.g., "breadcrumbs").
+            default_cls: Default Breadcrumbs/Title class to instantiate if not found.
+            model (Union[None, str, Type[Model], Model]): Django model (class/instance/dotted string) to locate a related view class.
+            action (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
+        Returns:
+            Breadcrumbs/Title instance.
+        """
         local = getattr(self, attr_name, None)
         if local is not None:
             return self._instantiate_if_needed(local, default_cls)
@@ -252,6 +339,19 @@ class ComponentsMixin:
     def _instantiate_if_needed(
         attr: Union[Type[ComponentType], ComponentType], default_cls: Type[ComponentType]
     ) -> ComponentType:
+        """
+        Normalize a value into a component instance.
+
+        If attr is None - return default_cls().
+        If attr is a class - instantiate it.
+        Otherwise, return as is.
+
+        Args:
+            attr: None, a Breadcrumbs/Title class or an instance.
+            default_cls: Fallback class to instantiate when attr is None.
+        Returns:
+            Breadcrumbs/Title instance.
+        """
         if attr is None:
             return default_cls()
         if isinstance(attr, type):
@@ -260,9 +360,9 @@ class ComponentsMixin:
 
 
 @extend_schema(exclude=True)
-class NautobotViewSetMixin(GenericViewSet, ComponentsMixin, AccessMixin, GetReturnURLMixin, FormView):
+class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetReturnURLMixin, FormView):
     """
-    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
+    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to achieve the desired behavior pattern for NautobotUIViewSet
     """
 
     renderer_classes = [NautobotHTMLRenderer]
