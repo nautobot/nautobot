@@ -441,12 +441,13 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED or not cache.get(METRICS_CACHE_KEY):
+        cached_lines = cache.get(METRICS_CACHE_KEY)
+        if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED or not cached_lines:
             # If caching is disabled or no cache is found, generate metrics
             for metric_generator in registry["app_metrics"]:
                 yield from metric_generator()
         else:
-            self.local_cache = cache.get(METRICS_CACHE_KEY)
+            self.local_cache = cached_lines
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
@@ -552,8 +553,9 @@ def generate_latest_with_cache(registry=REGISTRY):
         # the time to generate the output, the cache is expired and we miss some metrics.
         if hasattr(collector, "local_cache") and collector.local_cache:
             output.extend(collector.local_cache)
+            del collector.local_cache
 
-    if not cache.get(METRICS_CACHE_KEY):
+    if cached_lines and not cache.get(METRICS_CACHE_KEY):
         # No cache found, generate metrics
         cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
 
