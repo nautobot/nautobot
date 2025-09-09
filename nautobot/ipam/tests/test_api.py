@@ -413,6 +413,11 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         }
         cls.choices_fields = ["type"]
 
+        # Generic `test_update_object()` will grab and update the first Prefix
+        first_pfx = Prefix.objects.first()
+        cls.update_data = cls.create_data[0].copy()
+        cls.update_data["namespace"] = first_pfx.namespace.pk  # can't change network and namespace in the same update
+
     def test_legacy_api_behavior(self):
         """
         Tests for the 2.0/2.1 REST API of Prefixes.
