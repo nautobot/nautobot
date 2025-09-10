@@ -41,6 +41,12 @@ invoke ruff || EXIT=1
 echo "Check static analysis via pylint..."
 invoke pylint || EXIT=1
 
+echo "Check JavaScript files code style via ESLint..."
+invoke eslint || EXIT=1
+
+echo "Check JavaScript files code style via Prettier..."
+invoke prettier --check || EXIT=1
+
 if [ $EXIT != 0 ]; then
 	printf "${RED}COMMIT FAILED${NOCOLOR}\n"
 fi

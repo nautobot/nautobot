@@ -718,6 +718,35 @@ def loaddata(context, filepath="db_output.json"):
     run_command(context, command)
 
 
+@task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
+def npm(context, command):
+    """Execute any given npm command inside `project-static` directory."""
+    run_command(context, f"npm --prefix nautobot/project-static {command}")
+
+
+@task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
+def ui_build(context, watch=False):
+    """Build Nautobot UI from source."""
+    command = "run build"
+    if watch:
+        command += ":watch"
+    npm(context, command)
+
+
+@task
+def ui_code_check(context, watch=False):
+    """Check Nautobot UI source code style and formatting."""
+    command = "run code:check"
+    npm(context, command)
+
+
+@task
+def ui_code_format(context, watch=False):
+    """Format Nautobot UI source code."""
+    command = "run code:format"
+    npm(context, command)
+
+
 @task()
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
@@ -875,6 +904,24 @@ def markdownlint(context, fix=False):
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
     run_command(context, command)
+
+
+@task(help={"fix": "Automatically apply linting recommendations. May not be able to fix all linting issues."})
+def eslint(context, fix=False):
+    """Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag."""
+    command = "run eslint"
+    if fix:
+        command += ":fix"
+    npm(context, command)
+
+
+@task(help={"check": "Only validate code formatting. Do not apply automatic formatting to source files."})
+def prettier(context, check=False):
+    """Run Prettier to perform JavaScript code formatting. Optionally, only validate the formatting with `--check` flag."""
+    command = "run prettier"
+    if check:
+        command += ":check"
+    npm(context, command)
 
 
 @task
@@ -1049,6 +1096,8 @@ def lint(context):
     yamllint(context)
     ruff(context)
     pylint(context)
+    eslint(context)
+    prettier(context, check=True)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

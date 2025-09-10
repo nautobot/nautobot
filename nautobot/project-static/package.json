@@ -2,11 +2,14 @@
   "name": "nautobot",
   "scripts": {
     "build": "webpack build --mode=production",
-    "code-check": "run-s lint format-check",
-    "lint": "eslint src",
-    "format": "prettier src --write",
-    "format-check": "prettier src --check",
-    "prebuild": "npm run code-check"
+    "build:watch": "npm run build -- --watch",
+    "code:check": "run-s eslint prettier:check",
+    "code:format": "run-s eslint:fix prettier",
+    "eslint": "eslint src",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prebuild": "npm run code:check",
+    "prettier": "prettier src --write",
+    "prettier:check": "prettier src --check"
   },
   "dependencies": {
     "@graphiql/plugin-explorer": "0.1.15",
