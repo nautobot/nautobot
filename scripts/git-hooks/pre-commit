@@ -45,7 +45,7 @@ echo "Check JavaScript files code style via ESLint..."
 invoke eslint || EXIT=1
 
 echo "Check JavaScript files code style via Prettier..."
-invoke prettier --check || EXIT=1
+invoke prettier || EXIT=1
 
 if [ $EXIT != 0 ]; then
 	printf "${RED}COMMIT FAILED${NOCOLOR}\n"

@@ -915,12 +915,12 @@ def eslint(context, fix=False):
     npm(context, command)
 
 
-@task(help={"check": "Only validate code formatting. Do not apply automatic formatting to source files."})
-def prettier(context, check=False):
-    """Run Prettier to perform JavaScript code formatting. Optionally, only validate the formatting with `--check` flag."""
+@task(help={"fix": "Automatically apply recommended formatting."})
+def prettier(context, fix=False):
+    """Run Prettier to perform JavaScript code formatting. By default only validate the formatting, optionally apply it with `--fix` flag."""
     command = "run prettier"
-    if check:
-        command += ":check"
+    if fix:
+        command += ":fix"
     npm(context, command)
 
 
@@ -1097,7 +1097,7 @@ def lint(context):
     ruff(context)
     pylint(context)
     eslint(context)
-    prettier(context, check=True)
+    prettier(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

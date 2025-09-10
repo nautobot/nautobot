@@ -27,7 +27,7 @@ invoke markdownlint
 invoke ruff
 invoke pylint
 invoke eslint
-invoke prettier --check
+invoke prettier
 ```
 
 or, as a single command:

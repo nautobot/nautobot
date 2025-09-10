@@ -3,13 +3,13 @@
   "scripts": {
     "build": "webpack build --mode=production",
     "build:watch": "npm run build -- --watch",
-    "code:check": "run-s eslint prettier:check",
-    "code:format": "run-s eslint:fix prettier",
+    "code:check": "run-s eslint prettier",
+    "code:format": "run-s eslint:fix prettier:fix",
     "eslint": "eslint src",
     "eslint:fix": "npm run eslint -- --fix",
     "prebuild": "npm run code:check",
-    "prettier": "prettier src --write",
-    "prettier:check": "prettier src --check"
+    "prettier": "prettier src --check",
+    "prettier:fix": "prettier src --write"
   },
   "dependencies": {
     "@graphiql/plugin-explorer": "0.1.15",
