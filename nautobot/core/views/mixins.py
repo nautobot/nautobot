@@ -257,7 +257,7 @@ class UIComponentsMixin:
     breadcrumbs: ClassVar[Optional[Breadcrumbs]] = None
     view_titles: ClassVar[Optional[Titles]] = None
 
-    def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, action: str = "List") -> Titles:
+    def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
         """
         Resolve and return the `Titles` component instance.
 
@@ -271,14 +271,16 @@ class UIComponentsMixin:
             model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-            action: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+            view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
             Titles: A concrete `Titles` component instance ready to use.
         """
-        return self._resolve_component("view_titles", Titles, model, action)
+        return self._resolve_component("view_titles", Titles, model, view_type)
 
-    def get_breadcrumbs(self, model: Union[None, str, Type[Model], Model] = None, action: str = "List") -> Breadcrumbs:
+    def get_breadcrumbs(
+        self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
+    ) -> Breadcrumbs:
         """
         Resolve and return the `Breadcrumbs` component instance.
 
@@ -292,32 +294,32 @@ class UIComponentsMixin:
            model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-           action: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+           view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
            Breadcrumbs: A concrete `Breadcrumbs` component instance.
         """
-        return self._resolve_component("breadcrumbs", Breadcrumbs, model, action)
+        return self._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
 
     def _resolve_component(
         self,
         attr_name: str,
         default_cls: Type[Union[Breadcrumbs, Titles]],
         model: Union[None, str, Type[Model], Model] = None,
-        action: str = "List",
+        view_type: str = "List",
     ) -> Union[Breadcrumbs, Titles]:
         """
         Resolve a UI component by name.
 
         Return local view’s attribute defined via `attr_name` or
-        the `attr_name` defined on the view class for model via lookup.get_view_for_model(model, action) or
+        the `attr_name` defined on the view class for model via lookup.get_view_for_model(model, view_type) or
         instantiates `default_cls`.
 
         Args:
             attr_name (str): Attribute to resolve (e.g., "breadcrumbs").
             default_cls: Default Breadcrumbs/Title class to instantiate if not found.
             model (Union[None, str, Type[Model], Model]): Django model (class/instance/dotted string) to locate a related view class.
-            action (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
+            view_type (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
         Returns:
             Breadcrumbs/Title instance.
         """
@@ -326,7 +328,7 @@ class UIComponentsMixin:
             return self._instantiate_if_needed(local, default_cls)
 
         if model is not None:
-            view_class = lookup.get_view_for_model(model, action)
+            view_class = lookup.get_view_for_model(model, view_type)
             view_component = getattr(view_class, attr_name, None)
             return self._instantiate_if_needed(view_component, default_cls)
 
