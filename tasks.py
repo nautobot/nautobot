@@ -734,14 +734,14 @@ def ui_build(context, watch=False):
 
 
 @task
-def ui_code_check(context, watch=False):
+def ui_code_check(context):
     """Check Nautobot UI source code style and formatting."""
     command = "run code:check"
     npm(context, command)
 
 
 @task
-def ui_code_format(context, watch=False):
+def ui_code_format(context):
     """Format Nautobot UI source code."""
     command = "run code:format"
     npm(context, command)
