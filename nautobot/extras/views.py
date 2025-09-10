@@ -2328,8 +2328,8 @@ class ObjectChangeLogView(generic.GenericView, UIComponentsMixin):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
-                "breadcrumbs": self.get_breadcrumbs(obj, action=""),
-                "view_titles": self.get_view_titles(obj, action=""),
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
             },
         )
@@ -2507,8 +2507,8 @@ class ObjectNotesView(generic.GenericView, UIComponentsMixin):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
-                "breadcrumbs": self.get_breadcrumbs(obj, action=""),
-                "view_titles": self.get_view_titles(obj, action=""),
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
             },
         )

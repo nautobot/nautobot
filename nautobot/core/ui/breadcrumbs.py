@@ -192,9 +192,12 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
 
     def get_label(self, context: Context) -> str:
         if self.label_from_view_name:
-            model = get_model_for_view_name(self.get_view_name(context))
-            if model is not None:
-                return model._meta.verbose_name_plural
+            try:
+                model = get_model_for_view_name(self.get_view_name(context))
+                if model is not None:
+                    return model._meta.verbose_name_plural
+            except ValueError as err:
+                logger.error(err)
         return super().get_label(context)
 
     def get_view_name(self, context: Context) -> Optional[str]:
@@ -401,6 +404,7 @@ class Breadcrumbs:
         # Default breadcrumb if view defines `list_url` in the Context
         ViewNameBreadcrumbItem(
             view_name_key="list_url",
+            label_key="title",
             label_from_view_name=True,
             should_render=lambda context: context.get("list_url") is not None,
         ),

@@ -70,7 +70,11 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
         context,
     )
 
-    if strip_spaces_between_tags(legacy_default_breadcrumbs) != strip_spaces_between_tags(legacy_block_breadcrumbs):
+    if (
+        legacy_block_breadcrumbs
+        and strip_spaces_between_tags(legacy_default_breadcrumbs).strip()
+        != strip_spaces_between_tags(legacy_block_breadcrumbs).strip()
+    ):
         return render_template(legacy_breadcrumbs=legacy_block_breadcrumbs)
 
     breadcrumbs_obj = context.get("breadcrumbs")
