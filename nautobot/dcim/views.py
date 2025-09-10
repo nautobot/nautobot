@@ -2021,14 +2021,17 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
-                if instance.parent_bay is not None:
-                    parent = instance.parent_bay.device
-                    display = f"{helpers.hyperlinked_object(parent)} / {instance.parent_bay}"
-                    if parent.position is not None:
-                        display += f" (U{parent.position} / {parent.get_face_display()})"
-                    return display
+                try:
+                    if instance.parent_bay is not None:
+                        parent = instance.parent_bay.device
+                        display = format_html("{} / {}", helpers.hyperlinked_object(parent), instance.parent_bay)
+                        if parent.position is not None:
+                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
+                        return display
+                except DeviceBay.DoesNotExist:
+                    pass
                 if instance.rack is not None and value is not None:
-                    return f"U{value} / {instance.get_face_display()}"
+                    return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
                     return mark_safe('<span class="label label-warning">Not racked</span>')
                 return helpers.HTML_NONE
@@ -2040,7 +2043,7 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                     instance.device_redundancy_group_priority,
                 )
             if key == "device_type":
-                return f"{helpers.hyperlinked_object(value)} ({value.u_height}U)"
+                return format_html("{} ({}U)", helpers.hyperlinked_object(value), value.u_height)
             if key == "software_version":
                 instance = get_obj_from_context(context, self.context_object_key)
                 return render_software_version_and_image_files(instance, value, context)
@@ -2051,13 +2054,14 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
             data = super().get_data(context)
             if "device_type" in data:
                 data["device_family"] = data["device_type"].device_family
+                # TODO: resort data so that device_family is before device_type?
             if "controller_managed_device_group" in data:
                 data["managed_by_controller"] = data["controller_managed_device_group"].controller
             return data
 
     class DeviceVirtualChassisMembersTablePanel(object_detail.ObjectsTablePanel):
         def should_render(self, context):
-            instance = get_obj_from_context(context, self.context_object_key)
+            instance = get_obj_from_context(context)
             return instance.virtual_chassis is not None
 
     object_detail_content = DeviceDetailContent(
@@ -2150,13 +2154,13 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 fields=["location", "rack", "position", "tenant", "device_type", "serial", "asset_tag"],
             ),
             DeviceVirtualChassisMembersTablePanel(
-                weight=200,
+                weight=110,
                 section=SectionChoices.LEFT_HALF,
                 context_table_key="vc_members_table",
                 table_title="Virtual Chassis",
             ),
             DeviceFieldsPanel(
-                weight=300,
+                weight=120,
                 section=SectionChoices.LEFT_HALF,
                 label="Management",
                 fields=[
