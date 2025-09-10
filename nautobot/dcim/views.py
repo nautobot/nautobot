@@ -4271,6 +4271,15 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                     Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
                     for member in members:
                         member.save()
+                    master_pk = self.request.POST.get("master")
+                    if master_pk:
+                        master = Device.objects.filter(pk=master_pk).first()
+                        if master:
+                            if master.virtual_chassis_id != obj.pk:
+                                master.virtual_chassis = obj
+                                master.save()
+                            obj.master = master
+                            obj.save()
             else:
                 raise ValidationError(formset.errors)
 
