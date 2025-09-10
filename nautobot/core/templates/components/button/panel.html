@@ -1,0 +1,11 @@
+<div class="btn-group" role="group">
+{% for child in children %}
+    <a href="{{ child.link }}"
+       class="btn btn-default{% if child.attributes.class %} {{ child.attributes.class }}{% endif %}"
+       {% for key, value in child.attributes.items %}{% if key != 'class' %} {{ key }}="{{ value }}" {% endif %}{% endfor %}
+    >
+      {% if child.icon %}<span class="mdi {{ child.icon }}" aria-hidden="true"></span>{% endif %}
+      {{ child.label }}
+    </a>
+{% endfor %}
+</div>

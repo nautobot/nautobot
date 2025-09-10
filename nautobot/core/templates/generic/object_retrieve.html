@@ -46,7 +46,7 @@
     <div class="pull-right noprint">
     {% block buttons %}
         {% plugin_buttons object %}
-        {% render_detail_view_extra_buttons %}
+        {% render_detail_view_extras "extra_buttons" %}
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}
@@ -66,6 +66,7 @@
     <div class="pull-right noprint">
         {% custom_links object %}
         {% job_buttons object %}
+        {% render_detail_view_extras "extra_panel_buttons" %}
         {% block panel_buttons %}{% endblock panel_buttons %}
     </div>
 

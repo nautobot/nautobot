@@ -37,7 +37,7 @@ from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
-from . import filters, forms, tables
+from . import filters, forms, prefix_ui, tables
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -336,6 +336,101 @@ class PrefixView(generic.ObjectView):
         "namespace",
     ).prefetch_related("locations")
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            prefix_ui.PrefixObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Prefix",
+                fields=[
+                    "namespace",
+                    "ip_version",
+                    "status",
+                    "role",
+                    "type",
+                    "tenant",
+                    "locations",
+                    "vlan",
+                    "rir",
+                    "date_allocated",
+                    "description",
+                    "utilization",
+                ],
+                ignore_nonexistent_fields=True,  # utilization it's not a field
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                context_table_key="parent_prefix_table",
+                table_title="Parent Prefixes",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                context_table_key="vrf_table",
+                table_title="Assigned VRFs",
+                related_field_name="vrfs",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                context_table_key="cloud_network_table",
+                table_title="Assigned Cloud Networks",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+        ],
+        extra_tabs=[
+            prefix_ui.ChildPrefixDistinctViewTab(
+                weight=800,
+                tab_id="prefixes",
+                label="Child Prefixes",
+                url_name="ipam:prefix_prefixes",
+            ),
+            prefix_ui.IPAddressDistinctViewTab(
+                weight=900,
+                tab_id="ip-addresses",
+                label="IP Addresses",
+                url_name="ipam:prefix_ipaddresses",
+            ),
+        ],
+        extra_buttons=[
+            prefix_ui.AddChildPrefixButton(
+                weight=100,
+                label="Add Child Prefix",
+                link_name="ipam:prefix_add",
+                color=ButtonActionColorChoices.SUBMIT,
+                icon="mdi-plus-thick",
+                required_permissions=["ipam.add_prefix"],
+            ),
+            prefix_ui.AddIPAddressButton(
+                weight=200,
+                label="Add an IP Address",
+                link_name="ipam:ipaddress_add",
+                color=ButtonActionColorChoices.SUBMIT,
+                icon="mdi-plus-thick",
+                required_permissions=["ipam.add_ipaddress"],
+            ),
+        ],
+        extra_panel_buttons=[
+            object_detail.PanelButton(
+                weight=300,
+                label="Availability",
+                children=[
+                    prefix_ui.ToggleAvailableButton(show=True, weight=400),
+                    prefix_ui.ToggleAvailableButton(show=False, weight=500),
+                ],
+            )
+        ],
+    )
+
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = instance.ancestors().restrict(request.user, "view")
@@ -347,14 +442,6 @@ class PrefixView(generic.ObjectView):
         cloud_networks = instance.cloud_networks.restrict(request.user, "view")
         cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
         cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(parent_prefix_table)
-        RequestConfig(request, paginate).configure(vrf_table)
-        RequestConfig(request, paginate).configure(cloud_network_table)
 
         if instance.parent != instance.get_parent():
             messages.warning(
