@@ -36,8 +36,10 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -59,6 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
+    UIComponentsMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
@@ -982,6 +985,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1015,6 +1020,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 
@@ -2271,7 +2279,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(generic.GenericView):
+class ObjectChangeLogView(generic.GenericView, UIComponentsMixin):
     """
     Present a history of changes made to a particular object.
 
@@ -2320,6 +2328,9 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
             },
         )
 
@@ -2413,6 +2424,20 @@ class NoteUIViewSet(
     serializer_class = serializers.NoteSerializer
     table_class = tables.NoteTable
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Note),
+                ModelBreadcrumbItem(
+                    model=lambda c: c["object"].assigned_object,
+                    action="notes",
+                    reverse_kwargs=lambda c: {"pk": c["object"].assigned_object.pk},
+                    label=lambda c: c["object"].assigned_object,
+                    should_render=lambda c: c["object"].assigned_object,
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -2436,7 +2461,7 @@ class NoteUIViewSet(
         return obj
 
 
-class ObjectNotesView(generic.GenericView):
+class ObjectNotesView(generic.GenericView, UIComponentsMixin):
     """
     Present a list of notes associated to a particular object.
 
@@ -2482,6 +2507,9 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
             },
         )
 
