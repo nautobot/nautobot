@@ -1183,6 +1183,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         exclude_fields=(),
         context_object_key=None,
         ignore_nonexistent_fields=False,
+        include_properties=(),
         label=None,
         **kwargs,
     ):
@@ -1197,6 +1198,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
                 exist on the provided object; otherwise an exception will be raised at render time.
+            include_properties (list): A list of property names to include in addition to the model fields.
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
         """
@@ -1204,6 +1206,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
+        self.include_properties = include_properties
         super().__init__(data=None, label=label, **kwargs)
 
     def render_label(self, context: Context):
@@ -1276,6 +1279,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 fields.append(field.name)
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
+
+        for included_property in self.include_properties:
+            if (
+                included_property not in fields
+                and hasattr(instance.__class__, included_property)
+                and isinstance(getattr(instance.__class__, included_property), property)
+            ):
+                fields.append(included_property)
 
         data = {}
 
