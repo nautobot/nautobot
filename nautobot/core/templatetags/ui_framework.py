@@ -3,7 +3,6 @@ import logging
 
 from django import template
 from django.utils.html import format_html_join, strip_spaces_between_tags
-from django.utils.safestring import mark_safe
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
@@ -41,7 +40,7 @@ def render_title(context, mode="plain"):
     But in some newer views we want to have simple way to render title, only by defining `view_titles` within a view class.
     """
     if title := context.get("title"):
-        return mark_safe(title)
+        return title
 
     title_obj = context.get("view_titles")
     if title_obj is not None and isinstance(title_obj, Titles):

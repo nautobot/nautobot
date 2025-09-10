@@ -311,7 +311,7 @@ class UIComponentsMixin:
         """
         Resolve a UI component by name.
 
-        Return local view’s attribute defined via `attr_name` or
+        Return local view's attribute defined via `attr_name` or
         the `attr_name` defined on the view class for model via lookup.get_view_for_model(model, view_type) or
         instantiates `default_cls`.
 
