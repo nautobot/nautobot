@@ -1099,97 +1099,6 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
-class GitRepositoryListView(generic.ObjectListView):
-    queryset = GitRepository.objects.all()
-    filterset = filters.GitRepositoryFilterSet
-    filterset_form = forms.GitRepositoryFilterForm
-    table = tables.GitRepositoryTable
-    template_name = "extras/gitrepository_list.html"
-
-    def extra_context(self):
-        # Get the newest results for each repository name
-        results = {
-            r.task_kwargs["repository"]: r
-            for r in JobResult.objects.filter(
-                task_name__startswith="nautobot.core.jobs.GitRepository",
-                task_kwargs__repository__isnull=False,
-                status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .order_by("date_done")
-            .defer("result")
-        }
-        return {
-            "job_results": results,
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryView(generic.ObjectView):
-    queryset = GitRepository.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class GitRepositoryEditView(generic.ObjectEditView):
-    queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryForm
-    template_name = "extras/gitrepository_object_edit.html"
-
-    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
-    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
-    # again, this will be moved to the API calls, so just something to keep in mind.
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.user = request.user
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def get_return_url(self, request, obj=None, default_return_url=None):
-        if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
-        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
-
-
-class GitRepositoryDeleteView(generic.ObjectDeleteView):
-    queryset = GitRepository.objects.all()
-
-
-class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-
-
-class GitRepositoryBulkEditView(generic.BulkEditView):
-    queryset = GitRepository.objects.select_related("secrets_group")
-    filterset = filters.GitRepositoryFilterSet
-    table = tables.GitRepositoryBulkTable
-    form = forms.GitRepositoryBulkEditForm
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-    filterset = filters.GitRepositoryFilterSet
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
@@ -1214,39 +1123,87 @@ def check_and_call_git_repository_function(request, pk, func):
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
-
-
-class GitRepositoryDryRunView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
-
-
-class GitRepositoryResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
+class GitRepositoryUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.GitRepositoryBulkEditForm
+    filterset_form_class = forms.GitRepositoryFilterForm
     queryset = GitRepository.objects.all()
-    template_name = "extras/gitrepository_result.html"
+    form_class = forms.GitRepositoryForm
+    filterset_class = filters.GitRepositoryFilterSet
+    serializer_class = serializers.GitRepositorySerializer
+    table_class = tables.GitRepositoryTable
 
-    def get_required_permission(self):
-        return "extras.view_gitrepository"
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        context["datasource_contents"] = get_datasource_contents("extras.gitrepository")
 
-    def get_extra_context(self, request, instance):
+        if self.action in ("list", "bulk_update", "bulk_destroy"):
+            results = {
+                r.task_kwargs["repository"]: r
+                for r in JobResult.objects.filter(
+                    task_name__startswith="nautobot.core.jobs.GitRepository",
+                    task_kwargs__repository__isnull=False,
+                    status__in=JobResultStatusChoices.READY_STATES,
+                )
+                .order_by("date_done")
+                .defer("result")
+            }
+            context["job_results"] = results
+
+        return context
+
+    def form_valid(self, form):
+        if hasattr(form, "instance") and form.instance is not None:
+            form.instance.user = self.request.user
+            form.instance.request = self.request
+        return super().form_valid(form)
+
+    def get_return_url(self, request, obj=None, default_return_url=None):
+        # Only redirect to result if object exists and action is not deletion
+        if request.method == "POST" and obj is not None and self.action != "destroy":
+            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
+
+    @action(
+        detail=True,
+        url_path="result",
+        url_name="result",
+        custom_view_base_action="view",
+    )
+    def result(self, request, pk=None):
+        instance = self.get_object()
         job_result = instance.get_latest_sync()
 
-        if job_result is None:
-            job_result = {}
-
-        return {
-            "result": job_result,
+        context = {
+            "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
+            "verbose_name": instance._meta.verbose_name,
         }
+
+        return render(request, "extras/gitrepository_result.html", context)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="sync",
+        url_name="sync",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def sync(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="dry-run",
+        url_name="dryrun",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def dry_run(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
 #
