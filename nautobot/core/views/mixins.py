@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar, Optional, Type, TypeVar, Union
+from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -217,9 +217,6 @@ class GetReturnURLMixin:
         return reverse("home")
 
 
-ComponentType = TypeVar("ComponentType")
-
-
 class UIComponentsMixin:
     """
     Mixin that resolves UI components (e.g., breadcrumbs, titles) either from:
@@ -305,10 +302,10 @@ class UIComponentsMixin:
     def _resolve_component(
         self,
         attr_name: str,
-        default_cls: Type[ComponentType],
+        default_cls: Type[Union[Breadcrumbs, Titles]],
         model: Union[None, str, Type[Model], Model] = None,
         action: str = "List",
-    ) -> ComponentType:
+    ) -> Union[Breadcrumbs, Titles]:
         """
         Resolve a UI component by name.
 
@@ -337,8 +334,9 @@ class UIComponentsMixin:
 
     @staticmethod
     def _instantiate_if_needed(
-        attr: Union[Type[ComponentType], ComponentType], default_cls: Type[ComponentType]
-    ) -> ComponentType:
+        attr: Union[None, Type[Union[Breadcrumbs, Titles]], Breadcrumbs, Titles],
+        default_cls: Type[Union[Breadcrumbs, Titles]],
+    ) -> Union[Breadcrumbs, Titles]:
         """
         Normalize a value into a component instance.
 
