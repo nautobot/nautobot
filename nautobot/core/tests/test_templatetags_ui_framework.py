@@ -1,4 +1,3 @@
-
 from django.template import Context
 
 from nautobot.core.templatetags import ui_framework
