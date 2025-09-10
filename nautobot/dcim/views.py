@@ -20,7 +20,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -72,12 +72,19 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
+from nautobot.ipam.tables import (
+    InterfaceIPAddressTable,
+    InterfaceVLANTable,
+    ServiceTable,
+    VRFDeviceAssignmentTable,
+    VRFTable,
+)
+from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
@@ -2010,6 +2017,49 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 )
             )
 
+    class DeviceFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "position":
+                instance = get_obj_from_context(context, self.context_object_key)
+                if instance.parent_bay is not None:
+                    parent = instance.parent_bay.device
+                    display = f"{helpers.hyperlinked_object(parent)} / {instance.parent_bay}"
+                    if parent.position is not None:
+                        display += f" (U{parent.position} / {parent.get_face_display()})"
+                    return display
+                if instance.rack is not None and value is not None:
+                    return f"U{value} / {instance.get_face_display()}"
+                if instance.rack is not None and instance.device_type.u_height:
+                    return mark_safe('<span class="label label-warning">Not racked</span>')
+                return helpers.HTML_NONE
+            if key == "device_redundancy_group" and value is not None:
+                instance = get_obj_from_context(context, self.context_object_key)
+                return format_html(
+                    '{} <span class="badge badge-default">Priority: {}</span>',
+                    helpers.hyperlinked_object(value),
+                    instance.device_redundancy_group_priority,
+                )
+            if key == "device_type":
+                return f"{helpers.hyperlinked_object(value)} ({value.u_height}U)"
+            if key == "software_version":
+                instance = get_obj_from_context(context, self.context_object_key)
+                return render_software_version_and_image_files(instance, value, context)
+
+            return super().render_value(key, value, context)
+
+        def get_data(self, context):
+            data = super().get_data(context)
+            if "device_type" in data:
+                data["device_family"] = data["device_type"].device_family
+            if "controller_managed_device_group" in data:
+                data["managed_by_controller"] = data["controller_managed_device_group"].controller
+            return data
+
+    class DeviceVirtualChassisMembersTablePanel(object_detail.ObjectsTablePanel):
+        def should_render(self, context):
+            instance = get_obj_from_context(context, self.context_object_key)
+            return instance.virtual_chassis is not None
+
     object_detail_content = DeviceDetailContent(
         extra_buttons=(
             object_detail.DropdownButton(
@@ -2093,65 +2143,80 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 ),
             ),
         ),
-        panels=(),  # not yet ported over due to complexity of this template
-        # TODO
-        #     ObjectFieldsPanel(
-        #         weight=100,
-        #         section=SectionChoices.LEFT_HALF,
-        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
-        #         # TODO add device_type.device_family, device_type.u_height,
-        #     ),
-        #     TODO: Virtual Chassis panel
-        #     ObjectFieldsPanel(
-        #         weight=110,
-        #         section=SectionChoices.LEFT_HALF,
-        #         label="Virtual Chassis",
-        #     ),
-        #     ObjectFieldsPanel(
-        #         weight=120,
-        #         section=SectionChoices.LEFT_HALF,
-        #         label="Management",
-        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
-        #     ),
-        #     TODO: power utilization panel
-        #     ObjectsTablePanel(
-        #       weight=100,
-        #       section=SectionChoices.RIGHT_HALF,
-        #       table_title="Power Utilization",
-        #       table_class=???,
-        #       table_filter="device",
-        #     ),
-        #     ObjectsTablePanel(
-        #         weight=100,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_title="Assigned VRFs",
-        #         table_class=VRFDeviceAssignmentTable,
-        #         table_filter="device",
-        #         exclude_columns=["virtual_machine", "device"],
-        #     ),
-        #     TODO: services panel
-        #     ObjectsTablePanel(
-        #         weight=200,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_class=???,
-        #         table_filter="device",
-        #     ),
-        #     TODO: images panel
-        #     ObjectsTablePanel(
-        #         weight=300,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_class=???,
-        #         table_filter="device",
-        #     ),
-        #     ObjectsTablePanel(
-        #         weight=100,
-        #         section=SectionChoices.FULL_WIDTH,
-        #         table_class=tables.VirtualDeviceContextTable,
-        #         table_filter="device",
-        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
-        #         exclude_columns=["device"],
-        #     ),
-        # ),
+        panels=(
+            DeviceFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["location", "rack", "position", "tenant", "device_type", "serial", "asset_tag"],
+            ),
+            DeviceVirtualChassisMembersTablePanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                context_table_key="vc_members_table",
+                table_title="Virtual Chassis",
+            ),
+            DeviceFieldsPanel(
+                weight=300,
+                section=SectionChoices.LEFT_HALF,
+                label="Management",
+                fields=[
+                    "role",
+                    "platform",
+                    "status",
+                    "primary_ip4",
+                    "primary_ip6",
+                    "secrets_group",
+                    "device_redundancy_group",
+                    "controller_managed_device_group",
+                    "cluster",
+                    "software_version",
+                ],
+                value_transforms={
+                    "primary_ip4": [render_ip_with_nat],
+                    "primary_ip6": [render_ip_with_nat],
+                },
+            ),
+            #     TODO: power utilization panel
+            #     ObjectsTablePanel(
+            #       weight=100,
+            #       section=SectionChoices.RIGHT_HALF,
+            #       table_title="Power Utilization",
+            #       table_class=???,
+            #       table_filter="device",
+            #     ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Assigned VRFs",
+                table_class=VRFDeviceAssignmentTable,
+                table_filter="device",
+                exclude_columns=["related_object_type", "related_object_name"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Services",
+                table_class=ServiceTable,
+                table_filter="device",
+                exclude_columns=["parent"],
+                include_columns=["ip_addresses"],
+            ),
+            #     TODO: images panel
+            #     ObjectsTablePanel(
+            #         weight=300,
+            #         section=SectionChoices.RIGHT_HALF,
+            #         table_class=???,
+            #         table_filter="device",
+            #     ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Virtual Device Contexts",
+                table_class=tables.VirtualDeviceContextTable,
+                table_filter="device",
+                exclude_columns=["device"],
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
@@ -2162,8 +2227,9 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 .filter(virtual_chassis=instance.virtual_chassis)
                 .order_by("vc_position")
             )
+            vc_members_table = tables.VirtualChassisMembersTable(vc_members)
         else:
-            vc_members = []
+            vc_members_table = None
 
         # Services
         services = Service.objects.restrict(request.user, "view").filter(device=instance)
@@ -2205,7 +2271,7 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
             **super().get_extra_context(request, instance),
             "services": services,
             "software_version_images": software_version_images,
-            "vc_members": vc_members,
+            "vc_members_table": vc_members_table,
             "vrf_table": vrf_table,
             "active_tab": "device",
             "modulebay_count": modulebay_count,

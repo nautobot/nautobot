@@ -43,6 +43,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_mo
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
+from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
@@ -1094,10 +1095,12 @@ class KeyValueTablePanel(Panel):
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
                 display = hyperlinked_object_with_color(value)
-            elif isinstance(value, Tenant) and value.tenant_group is not None:
-                display = format_html("{} / {}", hyperlinked_object(value.tenant_group), hyperlinked_object(value))
             elif isinstance(value, Cluster) and value.cluster_group is not None:
                 display = format_html("{} / {}", hyperlinked_object(value.cluster_group), hyperlinked_object(value))
+            elif isinstance(value, Rack) and value.rack_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.rack_group), hyperlinked_object(value))
+            elif isinstance(value, Tenant) and value.tenant_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.tenant_group), hyperlinked_object(value))
             # TODO: render location hierarchy for Location objects
             else:
                 display = hyperlinked_object(value)

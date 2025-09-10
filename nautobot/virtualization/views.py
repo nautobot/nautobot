@@ -3,12 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.html import format_html, format_html_join, mark_safe
+from django.utils.html import mark_safe
 from django.utils.http import urlencode
 from rest_framework.decorators import action
 
 from nautobot.core.choices import ButtonActionColorChoices
-from nautobot.core.templatetags.helpers import add_html_id, HTML_NONE, hyperlinked_object
+from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
@@ -17,8 +17,10 @@ from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
+from nautobot.dcim.utils import render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
+from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.api import serializers
 
 from . import filters, forms, tables
@@ -245,56 +247,6 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 #
 
 
-def render_ip_with_nat(ip):
-    if ip is None:
-        return HTML_NONE
-
-    if ip.nat_inside is not None:
-        nat = format_html("(NAT for {})", hyperlinked_object(ip.nat_inside))
-    elif ip.nat_outside_list.exists():
-        nat = format_html(
-            "<br>NAT:<ul>{}</ul>",
-            format_html_join("\n", "<li>{}</li>", [[hyperlinked_object(nato)] for nato in ip.nat_outside_list.all()]),
-        )
-    else:
-        nat = ""
-
-    # TODO: replace auto-added "copy" button for this entire string with a button that just copies the host address
-    return format_html(
-        "{display} ({namespace}) {nat}",
-        display=add_html_id(hyperlinked_object(ip), f"ipv{ip.ip_version}"),
-        namespace=hyperlinked_object(ip.parent.namespace if ip.parent else None),
-        nat=nat,
-    )
-
-
-def render_software_version_and_image_files(virtual_machine, software_version, context):
-    display = hyperlinked_object(software_version)
-    overridden_software_image_files = virtual_machine.software_image_files.all()
-    display += format_html(
-        '<ul class="software-image-hierarchy">{}</ul>',
-        format_html_join(
-            "\n",
-            "<li>{}{}</li>",
-            [
-                [
-                    hyperlinked_object(img, "image_file_name"),
-                    " (overridden)" if overridden_software_image_files.exists() else "",
-                ]
-                for img in software_version.software_image_files.restrict(context["request"].user, "view")
-            ],
-        ),
-    )
-    if overridden_software_image_files.exists():
-        display += format_html(
-            "<strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
-            format_html_join(
-                "\n", "<li>{}</li>", [[hyperlinked_object(img)] for img in overridden_software_image_files.all()]
-            ),
-        )
-    return display
-
-
 class VirtualMachineUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VirtualMachineBulkEditForm
     filterset_class = filters.VirtualMachineFilterSet
@@ -387,6 +339,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 weight=400,
                 section=SectionChoices.RIGHT_HALF,
+                table_title="Services",
                 table_class=ServiceTable,
                 table_filter="virtual_machine",
                 exclude_columns=["parent"],
