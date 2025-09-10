@@ -3,6 +3,7 @@ import logging
 
 from django import template
 from django.utils.html import format_html_join, strip_spaces_between_tags
+from django.utils.safestring import mark_safe
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
@@ -33,12 +34,18 @@ def render_components(context, components):
 
 @register.simple_tag(takes_context=True)
 def render_title(context, mode="plain"):
+    """
+    Render the title passed in the context. Due to backwards compatibility in most of the Generic views,
+    we're either passing `title` to the template or render `title` defined in `view_titles`.
+
+    But in some newer views we want to have simple way to render title, only by defining `view_titles` within a view class.
+    """
+    if title := context.get("title"):
+        return mark_safe(title)
+
     title_obj = context.get("view_titles")
     if title_obj is not None and isinstance(title_obj, Titles):
         return title_obj.render(context, mode=mode)
-
-    if fallback_title := context.get("title"):
-        return fallback_title
 
     return ""
 

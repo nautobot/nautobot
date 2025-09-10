@@ -128,7 +128,7 @@ class ObjectView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
             "verbose_name": model._meta.verbose_name,
             "verbose_name_plural": model._meta.verbose_name_plural,
             "object_detail_content": self.object_detail_content,
-            "breadcrumbs": self.get_breadcrumbs(model, action=""),
+            "breadcrumbs": self.get_breadcrumbs(model, view_type=""),
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -136,7 +136,7 @@ class ObjectView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
         # Some of the legacy views overriding title in `get_extra_context` method.
         # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
         if context.get("title") is None:
-            context["title"] = self.get_view_titles(model, action="").render(context)
+            context["title"] = self.get_view_titles(model, view_type="").render(context)
 
         return render(request, self.get_template_name(), context)
 
