@@ -410,6 +410,11 @@ def get_saved_views_for_user(user, list_url):
     return shared_saved_views
 
 
+def is_metrics_experimental_caching_enabled():
+    """Return True if METRICS_EXPERIMENTAL_CACHING_DURATION is set to a positive integer."""
+    return settings.METRICS_EXPERIMENTAL_CACHING_DURATION > 0
+
+
 def generate_latest_with_cache(registry=REGISTRY):
     """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics for 5 minutes."""
 

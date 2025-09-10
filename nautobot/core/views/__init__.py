@@ -52,7 +52,11 @@ from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.views.utils import generate_latest_with_cache, METRICS_CACHE_KEY
+from nautobot.core.views.utils import (
+    generate_latest_with_cache,
+    is_metrics_experimental_caching_enabled,
+    METRICS_CACHE_KEY,
+)
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
@@ -438,7 +442,7 @@ class NautobotAppMetricsCollector(Collector):
         """Collect metrics from plugins."""
         start = time.time()
         cached_lines = cache.get(METRICS_CACHE_KEY)
-        if not settings.METRICS_EXPERIMENTAL_CACHING_ENABLED or not cached_lines:
+        if not is_metrics_experimental_caching_enabled() or not cached_lines:
             # If caching is disabled or no cache is found, generate metrics
             for metric_generator in registry["app_metrics"]:
                 yield from metric_generator()
@@ -493,7 +497,7 @@ class NautobotMetricsView(APIView):
             # Collector already registered, we are running without multiprocessing
             pass
 
-        if settings.METRICS_EXPERIMENTAL_CACHING_ENABLED:
+        if is_metrics_experimental_caching_enabled():
             # Use the vendored version of generate_latest with Caching support
             metrics_page = generate_latest_with_cache(prometheus_registry)
         else:
