@@ -1,0 +1,3 @@
+Updated Devices, Prefixes, Plugins, Circuits views to use UI Component Framework Breadcrumbs.
+Updated `ObjectView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context.
+Updated `ObjectListView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context along with `verbose_name_plural` and `view_action`.
