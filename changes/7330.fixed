@@ -1,0 +1,2 @@
+Fixed a `FieldError` exception when sorting tree-model (Location, LocationType, RackGroup, etc.) tables by a custom field column.
+Fixed removal of list-view filters when reverting the table sorting to default.
