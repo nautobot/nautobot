@@ -72,7 +72,7 @@ class ObjectDetailContent:
     """
 
     def __init__(
-        self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_panel_buttons=None, extra_tabs=None
+        self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None
     ):
         """
         Create an ObjectDetailContent with a "main" tab and all standard "extras" tabs (advanced, contacts, etc.).
@@ -83,7 +83,6 @@ class ObjectDetailContent:
             layout (str): One of the `LayoutChoices` values, indicating the layout of the "main" tab for this view.
             extra_buttons (list): Optional list of `Button` instances. Standard detail-view "actions" dropdown
                 (clone, edit, delete) does not need to be specified as it will be automatically included.
-            extra_panel_buttons (list): Optional list of panel `Button` instaces.
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
@@ -101,22 +100,12 @@ class ObjectDetailContent:
         if extra_tabs is not None:
             tabs.extend(extra_tabs)
         self.extra_buttons = extra_buttons or []
-        self.extra_panel_buttons = extra_panel_buttons or []
         self.tabs = tabs
 
     @property
     def extra_buttons(self):
         """The extra buttons defined for this detail view, ordered by their `weight`."""
         return sorted(self._extra_buttons, key=lambda button: button.weight)
-
-    @property
-    def extra_panel_buttons(self):
-        """The extra panel buttons defined for this detail view, ordered by their `weight`."""
-        return sorted(self._extra_panel_buttons, key=lambda button: button.weight)
-
-    @extra_panel_buttons.setter
-    def extra_panel_buttons(self, value):
-        self._extra_panel_buttons = value
 
     @extra_buttons.setter
     def extra_buttons(self, value):
@@ -326,20 +315,6 @@ class FormButton(Button):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
-        }
-
-
-class PanelButton(Button):
-    """A Button container that renders its children inline as a Bootstrap btn-group."""
-
-    def __init__(self, children: list[Button], template_path="components/button/panel.html", **kwargs):
-        self.children = children
-        super().__init__(template_path=template_path, **kwargs)
-
-    def get_extra_context(self, context: Context):
-        return {
-            **super().get_extra_context(context),
-            "children": [child.get_extra_context(context) for child in self.children if child.should_render(context)],
         }
 
 

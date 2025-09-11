@@ -419,16 +419,6 @@ class PrefixView(generic.ObjectView):
                 required_permissions=["ipam.add_ipaddress"],
             ),
         ],
-        extra_panel_buttons=[
-            object_detail.PanelButton(
-                weight=300,
-                label="Availability",
-                children=[
-                    prefix_ui.ToggleAvailableButton(show=True, weight=400),
-                    prefix_ui.ToggleAvailableButton(show=False, weight=500),
-                ],
-            )
-        ],
     )
 
     def get_extra_context(self, request, instance):

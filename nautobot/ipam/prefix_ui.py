@@ -50,44 +50,6 @@ class IPAddressDistinctViewTab(DistinctViewTab):
         )
 
 
-class ToggleAvailableButton(Button):
-    """Button for toggling show/hide available prefixes."""
-
-    def __init__(self, show: bool, **kwargs):
-        label = "Show available" if show else "Hide available"
-        icon = "mdi-eye-outline" if show else "mdi-eye-off-outline"
-        super().__init__(label=label, icon=icon, **kwargs)
-        self.show = show
-
-    def should_render(self, context: Context):
-        if not super().should_render(context):
-            return False
-        return context.get("show_available", False)
-
-    def get_link(self, context):
-        request = context["request"]
-        return f"{request.path}{helpers.legacy_querystring(request, show_available=str(self.show).lower())}"
-
-    def get_extra_context(self, context):
-        ctx = super().get_extra_context(context)
-        show_available = context.get("show_available")
-        is_active = (show_available is True and self.show) or (show_available is False and not self.show)
-
-        # merge classes (do not overwrite the whole attributes dict)
-        attrs = dict(ctx.get("attributes") or {})
-        existing_classes = (attrs.get("class") or "").strip()
-        extra = "active disabled" if is_active else ""
-        combined = " ".join(filter(None, [existing_classes, extra]))
-        if combined:
-            attrs["class"] = combined
-        else:
-            # ensure 'class' key exists only when needed (template prepends 'btn btn-default' anyway)
-            attrs.pop("class", None)
-
-        ctx["attributes"] = attrs
-        return ctx
-
-
 class AddChildPrefixButton(Button):
     """Custom button to add a child prefix inside a Prefix detail view."""
 

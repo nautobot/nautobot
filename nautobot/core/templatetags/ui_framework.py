@@ -49,16 +49,14 @@ def render_breadcrumbs(context):
 
 
 @register.simple_tag(takes_context=True)
-def render_detail_view_extras(context, attr="extra_buttons"):
+def render_detail_view_extra_buttons(context):
     """
-    Render the given attribute (extra_buttons, extra_panel_buttons, etc.)
-    from the context's object_detail_content, or as fallback, from the base detail view.
+    Render the "extra_buttons" from the context's object_detail_content, or as fallback, from the base detail view.
 
     This makes it possible for "extra" tabs (such as Changelog and Notes, and any added by App TemplateExtensions)
-    to automatically still render any `extra_buttons` or `extra_panel_buttons` defined by the base detail view, without the tab-specific views
+    to automatically still render any `extra_buttons` defined by the base detail view, without the tab-specific views
     needing to explicitly inherit from the base view.
     """
-
     object_detail_content = context.get("object_detail_content")
     if object_detail_content is None:
         obj = get_obj_from_context(context)
@@ -74,9 +72,6 @@ def render_detail_view_extras(context, attr="extra_buttons"):
             )
             return ""
         object_detail_content = getattr(base_detail_view, "object_detail_content", None)
-
-    if object_detail_content is not None:
-        components = getattr(object_detail_content, attr, None)
-        if components:
-            return render_components(context, components)
+    if object_detail_content is not None and object_detail_content.extra_buttons:
+        return render_components(context, object_detail_content.extra_buttons)
     return ""
