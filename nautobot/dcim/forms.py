@@ -2528,8 +2528,8 @@ class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
             self.fields["clusters"].help_text = help_text
 
         cluster_add_url = (
-            f'{reverse("virtualization:cluster_add")}?return_url='
-            f'{reverse("dcim:device_add_to_clusters", kwargs={"pk": device.pk})}'
+            f"{reverse('virtualization:cluster_add')}?return_url="
+            f"{reverse('dcim:device_add_to_clusters', kwargs={'pk': device.pk})}"
         )
         cluster_add_link = f'<a href="{cluster_add_url}">Create a new cluster</a>'
 
