@@ -150,7 +150,6 @@ class IRegex(StringMatchMixin, lookups.IRegex):
 
 class NetworkFieldMixin:
     def get_prep_lookup(self):
-        self.alias = self.lhs.alias
         field_name = self.lhs.field.name
         if field_name not in ["host", "network"]:
             raise NotSupportedError(f"Lookup only provided on the host and network fields, not {field_name}.")
@@ -158,9 +157,13 @@ class NetworkFieldMixin:
             raise NotSupportedError(f"Lookup for network field does not include the {self.lookup_name} lookup.")
         if field_name == "host" and self.lookup_name not in ["net_host", "net_host_contained", "net_in"]:
             raise NotSupportedError(f"Lookup for host field does not include the {self.lookup_name} lookup.")
-        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
-        return str(self.ip.ip)
+        return str(netaddr.IPNetwork(self.rhs).ip)
 
+    def process_lhs(self, compiler, connection):
+        self.alias = self.lhs.alias
+        self.ip = get_ip_info(self.lhs.field.name, self.rhs, alias=self.lhs.alias)
+        return super().process_lhs(compiler, connection)
+    
     def process_rhs(self, compiler, connection):
         sql, params = super().process_rhs(compiler, connection)
         params[0] = self.ip.rhs
