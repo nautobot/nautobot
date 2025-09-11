@@ -4222,7 +4222,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         # Now edit the VC and set the master to the existing member
-        post_data = {
+        post_payload = {
             "name": vc.name,
             "domain": vc.domain,
             "master": str(member.pk),
@@ -4234,7 +4234,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         url = reverse("dcim:virtualchassis_edit", kwargs={"pk": vc.pk})
-        self.client.post(url, data=post_data, follow=True)
+        self.client.post(url, data=post_payload, follow=True)
 
         vc.refresh_from_db()
         self.assertEqual(vc.master, member)
