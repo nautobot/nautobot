@@ -4182,10 +4182,11 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VirtualChassisBulkEditForm
     filterset_class = filters.VirtualChassisFilterSet
     filterset_form_class = forms.VirtualChassisFilterForm
-    form_class = forms.VirtualChassisCreateForm
     serializer_class = serializers.VirtualChassisSerializer
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
+    create_form_class = forms.VirtualChassisCreateForm
+    update_form_class = forms.VirtualChassisForm
 
     class MembersObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
@@ -4271,15 +4272,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
                     Device.objects.filter(pk__in=[m.pk for m in members]).update(vc_position=None)
                     for member in members:
                         member.save()
-                    master_pk = self.request.POST.get("master")
-                    if master_pk:
-                        master = Device.objects.filter(pk=master_pk).first()
-                        if master:
-                            if master.virtual_chassis_id != obj.pk:
-                                master.virtual_chassis = obj
-                                master.save()
-                            obj.master = master
-                            obj.save()
             else:
                 raise ValidationError(formset.errors)
 
