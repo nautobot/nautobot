@@ -137,7 +137,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "provider_network",
                     "cloud_network",
                     "port_speed",
-                    "upstream_speed",
                 ],
             ),
         )
@@ -208,7 +207,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "pp_info",
                     "description",
                 ),
-                hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
+                hide_if_unset=("location", "provider_network", "cloud_network"),
                 ignore_nonexistent_fields=True,  # ip_addresses may be undefined
                 header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
                 **kwargs,
