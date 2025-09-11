@@ -26,7 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.apps.ui import BaseTextPanel
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -2129,18 +2129,149 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)
+
+        obj = context.get("object")
+        if obj:
+            try:
+                return reverse(self.link_name, kwargs={"pk": obj.pk})
+            except Exception:
+                return None
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
 class JobResultUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
+    queryset = JobResult.objects.all()
+    serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
     filterset_form_class = forms.JobResultFilterForm
-    serializer_class = serializers.JobResultSerializer
     table_class = tables.JobResultTable
-    queryset = JobResult.objects.all()
     action_buttons = ()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Summary of Results",
+                weight=100,
+                fields=[
+                    "job_description",
+                    "status",
+                    "date_created",
+                    "date_started",
+                    "user",
+                    "duration",
+                    "result",
+                    "files",
+                ],
+                value_transforms={
+                    "status": [helpers.render_job_label],
+                    "files": [helpers.render_job_files],
+                },
+            ),
+            object_detail.Panel(
+                weight=200,
+                section=object_detail.SectionChoices.FULL_WIDTH,
+                body_content_template_path="extras/inc/log_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        ],
+        extra_buttons=(
+            JobResultButton(
+                weight=100,
+                label="Re-Run",
+                color=ButtonColorChoices.GREEN,
+                icon="mdi-repeat",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    + f"?kwargs_from_job_result={ctx['object'].pk}"
+                )
+                if ctx["object"].job_model and ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=110,
+                label="Run",
+                color=ButtonColorChoices.BLUE,
+                icon="mdi-play",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                if ctx["object"].job_model and not ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=120,
+                label="Export",
+                color=ButtonColorChoices.GREEN,
+                icon="mdi-database-export",
+                link_name=lambda ctx: (
+                    reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+        ),
+    )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(tab for tab in object_detail_content.tabs if tab.label == "Advanced")
+    advanced_tab.panels = (
+        *advanced_tab.panels,
+        object_detail.ObjectTextPanel(
+            label="Job Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=300,
+            object_field="task_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Positional Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=400,
+            object_field="task_args",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Celery Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=500,
+            object_field="celery_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectFieldsPanel(
+            label="Worker",
+            section=SectionChoices.RIGHT_HALF,
+            weight=100,
+            fields=[
+                "worker",
+                "queue",
+                "task_name",
+                "meta",
+            ],
+        ),
+        object_detail.ObjectTextPanel(
+            label="Traceback",
+            section=SectionChoices.RIGHT_HALF,
+            weight=200,
+            object_field="traceback",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2158,14 +2289,6 @@ class JobResultUIViewSet(
             )
 
         return context
-
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related("job_model", "user")
-
-        if not self.detail:
-            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
-
-        return queryset
 
     @action(
         detail=True,
