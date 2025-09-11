@@ -71,9 +71,7 @@ class ObjectDetailContent:
     A legacy `ObjectView` can similarly define its own `object_detail_content` attribute as well.
     """
 
-    def __init__(
-        self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None
-    ):
+    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None):
         """
         Create an ObjectDetailContent with a "main" tab and all standard "extras" tabs (advanced, contacts, etc.).
 

@@ -14,9 +14,11 @@
 {% endif %}
 
 <div class="pull-right noprint">
+    {% block panel_buttons %}
+        {% include 'ipam/inc/toggle_available.html' %}
+    {% endblock panel_buttons %}
     {% if request.user.is_authenticated and show_table_config_button %}
         {% table_config_button_small body_content_table %}
     {% endif %}
 </div>
-
 {% table_config_form body_content_table %}

@@ -317,15 +317,14 @@ class RIRUIViewSet(NautobotUIViewSet):
 #
 
 
-class PrefixListView(generic.ObjectListView):
-    filterset = filters.PrefixFilterSet
-    filterset_form = forms.PrefixFilterForm
-    table = tables.PrefixDetailTable
-    template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.all()
+class PrefixUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PrefixBulkEditForm
+    filterset_class = filters.PrefixFilterSet
+    filterset_form_class = forms.PrefixFilterForm
+    form_class = forms.PrefixForm
+    serializer_class = serializers.PrefixSerializer
+    table_class = tables.PrefixDetailTable
 
-
-class PrefixView(generic.ObjectView):
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -361,8 +360,11 @@ class PrefixView(generic.ObjectView):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                context_table_key="parent_prefix_table",
+                table_class=tables.PrefixTable,
+                table_attribute="default_ancestors",
                 table_title="Parent Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="prefixes",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,
@@ -370,7 +372,8 @@ class PrefixView(generic.ObjectView):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
-                context_table_key="vrf_table",
+                table_class=tables.VRFPrefixAssignmentTable,
+                table_attribute="vrf_assignments",
                 table_title="Assigned VRFs",
                 related_field_name="vrfs",
                 add_button_route=None,
@@ -380,8 +383,11 @@ class PrefixView(generic.ObjectView):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=300,
-                context_table_key="cloud_network_table",
+                table_class=CloudNetworkTable,
+                table_attribute="cloud_networks",
                 table_title="Assigned Cloud Networks",
+                exclude_columns=["actions", "assigned_prefix_count", "circuit_count", "cloud_service_count"],
+                related_field_name="cloud_networks",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,
@@ -393,17 +399,35 @@ class PrefixView(generic.ObjectView):
                 tab_id="prefixes",
                 label="Child Prefixes",
                 url_name="ipam:prefix_prefixes",
+                panels=(
+                    prefix_ui.PrefixChildTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="prefix_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                    ),
+                ),
             ),
             prefix_ui.IPAddressDistinctViewTab(
                 weight=900,
                 tab_id="ip-addresses",
                 label="IP Addresses",
-                url_name="ipam:prefix_ipaddresses",
+                url_name="ipam:prefix_ip_addresses",
+                panels=[
+                    prefix_ui.IPAddressTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="ip_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                    ),
+                ],
             ),
         ],
         extra_buttons=[
             prefix_ui.AddChildPrefixButton(
-                weight=100,
+                weight=200,
                 label="Add Child Prefix",
                 link_name="ipam:prefix_add",
                 color=ButtonActionColorChoices.SUBMIT,
@@ -411,7 +435,7 @@ class PrefixView(generic.ObjectView):
                 required_permissions=["ipam.add_prefix"],
             ),
             prefix_ui.AddIPAddressButton(
-                weight=200,
+                weight=300,
                 label="Add an IP Address",
                 link_name="ipam:ipaddress_add",
                 color=ButtonActionColorChoices.SUBMIT,
@@ -422,45 +446,32 @@ class PrefixView(generic.ObjectView):
     )
 
     def get_extra_context(self, request, instance):
-        # Parent prefixes table
-        parent_prefixes = instance.ancestors().restrict(request.user, "view")
-        parent_prefix_table = tables.PrefixTable(parent_prefixes, exclude=["namespace"])
-
-        vrfs = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
-
-        cloud_networks = instance.cloud_networks.restrict(request.user, "view")
-        cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
-        cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
-
-        if instance.parent != instance.get_parent():
-            messages.warning(
-                request,
-                format_html(
-                    "The <code>parent</code> field on this record appears to be set incorrectly. "
-                    'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
-                    reverse(
-                        "extras:job_run_by_class_path",
-                        kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+        try:
+            if instance.parent != instance.get_parent():
+                messages.warning(
+                    request,
+                    format_html(
+                        "The <code>parent</code> field on this record appears to be set incorrectly. "
+                        'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                        reverse(
+                            "extras:job_run_by_class_path",
+                            kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                        ),
+                        "Check/Fix IPAM Parents",
                     ),
-                    "Check/Fix IPAM Parents",
-                ),
-            )
+                )
+        except (AttributeError, ValueError):
+            pass
+        return super().get_extra_context(request, instance)
 
-        return {
-            "vrf_table": vrf_table,
-            "parent_prefix_table": parent_prefix_table,
-            "cloud_network_table": cloud_network_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PrefixPrefixesView(generic.ObjectView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_prefixes.html"
-
-    def get_extra_context(self, request, instance):
-        # Child prefixes table
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
+    def prefixes(self, request, *args, **kwargs):
+        instance = self.get_object()
         child_prefixes = instance.descendants().restrict(request.user, "view")
 
         # Add available prefixes to the table if requested
@@ -491,23 +502,28 @@ class PrefixPrefixesView(generic.ObjectView):
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&within={instance.prefix}"
 
-        return {
-            "first_available_prefix": instance.get_first_available_prefix(),
-            "base_tree_depth": instance.ancestors().count(),
-            "prefix_table": prefix_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "prefixes",
-            "show_available": request.GET.get("show_available", "true") == "true",
-        }
+        return Response(
+            {
+                "first_available_prefix": instance.get_first_available_prefix(),
+                "base_tree_depth": instance.ancestors().count(),
+                "prefix_table": prefix_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "prefixes",
+                "show_available": request.GET.get("show_available", "true") == "true",
+            }
+        )
 
-
-class PrefixIPAddressesView(generic.ObjectView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_ipaddresses.html"
-
-    def get_extra_context(self, request, instance):
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ip_addresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
+    def ip_addresses(self, request, *args, **kwargs):
         # Find all IPAddresses belonging to this Prefix
+        instance = self.get_object()
         ipaddresses = instance.get_all_ips().restrict(request.user, "view")
 
         # Add available IP addresses to the table if requested
@@ -536,43 +552,16 @@ class PrefixIPAddressesView(generic.ObjectView):
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&parent={instance.prefix}"
 
-        return {
-            "first_available_ip": instance.get_first_available_ip(),
-            "ip_table": ip_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "ip-addresses",
-            "show_available": request.GET.get("show_available", "true") == "true",
-        }
-
-
-class PrefixEditView(generic.ObjectEditView):
-    queryset = Prefix.objects.all()
-    model_form = forms.PrefixForm
-    template_name = "ipam/prefix_edit.html"
-
-
-class PrefixDeleteView(generic.ObjectDeleteView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_delete.html"
-
-
-class PrefixBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Prefix.objects.all()
-    table = tables.PrefixTable
-
-
-class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.all()
-    filterset = filters.PrefixFilterSet
-    table = tables.PrefixTable
-    form = forms.PrefixBulkEditForm
-
-
-class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.all()
-    filterset = filters.PrefixFilterSet
-    table = tables.PrefixTable
+        return Response(
+            {
+                "first_available_ip": instance.get_first_available_ip(),
+                "ip_table": ip_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "ip-addresses",
+                "show_available": request.GET.get("show_available", "true") == "true",
+            }
+        )
 
 
 #

@@ -6,7 +6,13 @@ from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags import helpers
-from nautobot.core.ui.object_detail import Button, DistinctViewTab, KeyValueTablePanel, ObjectFieldsPanel
+from nautobot.core.ui.object_detail import (
+    Button,
+    DistinctViewTab,
+    KeyValueTablePanel,
+    ObjectFieldsPanel,
+    ObjectsTablePanel,
+)
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
@@ -50,6 +56,20 @@ class IPAddressDistinctViewTab(DistinctViewTab):
         )
 
 
+class PrefixChildTablePanel(ObjectsTablePanel):
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("active_tab") == "prefixes"
+
+
+class IPAddressTablePanel(ObjectsTablePanel):
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("active_tab") == "ip-addresses"
+
+
 class AddChildPrefixButton(Button):
     """Custom button to add a child prefix inside a Prefix detail view."""
 
@@ -67,7 +87,7 @@ class AddChildPrefixButton(Button):
             return None
 
         params = {
-            "prefix": first_available_prefix,
+            "prefix": str(first_available_prefix),
             "namespace": getattr(obj.namespace, "pk", None),
             "tenant_group": getattr(getattr(obj.tenant, "tenant_group", None), "pk", None),
             "tenant": getattr(obj.tenant, "pk", None),
@@ -75,7 +95,7 @@ class AddChildPrefixButton(Button):
         if obj.locations.exists():
             params["locations"] = [loc.pk for loc in obj.locations.all()]
 
-        return f"{reverse(self.link_name)}?{urlencode(params, doseq=True)}"
+        return f"{reverse(self.link_name)}?{urlencode(params)}"
 
 
 class AddIPAddressButton(Button):
@@ -106,11 +126,28 @@ class AddIPAddressButton(Button):
 class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     """A table panel for displaying key-value pairs of prefix-related attributes, along with any override values defined on the prefix object."""
 
+    def render_locations_list(self, value):
+        """Renders a <ul> HTML list of locations with hyperlinks, or a placeholder if none exist."""
+        if not value or not value.exists():
+            return helpers.placeholder(None)
 
-class PrefixObjectFieldsPanel(ObjectFieldsPanel):  # , PrefixKeyValueOverrideValueTablePanel):
+        items = format_html_join("\n", "<li>{}</li>", ((helpers.hyperlinked_object(q),) for q in value.all()))
+        return format_html("<ul>{}</ul>", items)
+
+    def render_utilization(self, value):
+        """Renders a utilization graph, or a placeholder if none exist."""
+        if value is None:
+            return helpers.placeholder(None)
+        return render_to_string(
+            "utilities/templatetags/utilization_graph.html",
+            helpers.utilization_graph(value),
+        )
+
+
+class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTablePanel):
     """
     ObjectFieldsPanel that renders its fields in a 3-column layout.
-    Inherits behavior from ObjectFieldsPanel but overrides rendering with JobKeyValueOverrideValueTablePanel.
+    Inherits behavior from ObjectFieldsPanel but overrides rendering with PrefixKeyValueOverrideValueTablePanel.
     """
 
     def get_data(self, context):
@@ -126,24 +163,11 @@ class PrefixObjectFieldsPanel(ObjectFieldsPanel):  # , PrefixKeyValueOverrideVal
 
         return data
 
-    def render_locations_list(self, value):
-        """Renders a <ul> HTML list of job queues with hyperlinks, or a placeholder if none exist."""
-        if not value or not value.exists():
-            return helpers.placeholder(None)
-
-        items = format_html_join("\n", "<li>{}</li>", ((helpers.hyperlinked_object(q),) for q in value.all()))
-        return format_html("<ul>{}</ul>", items)
-
     def render_value(self, key, value, context):
         if key == "ip_version":
             return f"IPv{value}"
         if key == "utilization":
-            if value is None:
-                return helpers.placeholder(None)
-            return render_to_string(
-                "utilities/templatetags/utilization_graph.html",
-                helpers.utilization_graph(value),
-            )
+            return self.render_utilization(value)
         if key == "locations":
             return self.render_locations_list(value)
 

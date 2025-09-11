@@ -882,6 +882,14 @@ class Prefix(PrimaryModel):
             )
         self.locations.set([value])
 
+    @property
+    def default_ancestors(self):
+        return self.ancestors()
+
+    @property
+    def default_descendants(self):
+        return self.descendants()
+
     def reparent_subnets(self):
         """
         Handle changes to the parentage of other Prefixes as a consequence of this Prefix's creation or update.

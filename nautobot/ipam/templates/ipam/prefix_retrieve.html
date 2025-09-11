@@ -1,0 +1,11 @@
+
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'ipam:namespace_list' %}">Namespaces</a></li>
+    <li>{{ object.namespace | hyperlinked_object }}</li>
+    <li><a href="{% url list_url %}?namespace={{ object.namespace.pk }}">{{ verbose_name_plural|bettertitle }}</a></li>
+    {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+    <li>{{ object|hyperlinked_object }}</li>
+{% endblock breadcrumbs %}
