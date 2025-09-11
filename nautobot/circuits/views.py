@@ -59,6 +59,10 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
     def render_key(self, key, value, context):
         if key == "connected_endpoint":
             return "IP Addressing"
+
+        if key == "port_speed":
+            return "Speed"
+
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
@@ -81,6 +85,10 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
                 "{} ({})",
                 ((helpers.hyperlinked_object(ip), getattr(ip, "vrf", None) or "Global") for ip in ip_addresses.all()),
             )
+
+        if key == "port_speed":
+            return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
+
         return super().render_value(key, value, context)
 
 
@@ -119,7 +127,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "cloud_network",
                     "cable",
                     "port_speed",
-                    "upstream_speed",
                     "connected_endpoint",
                     "xconnect_id",
                     "pp_info",
@@ -132,10 +139,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "port_speed",
                     "upstream_speed",
                 ],
-                value_transforms={
-                    "port_speed": [helpers.humanize_speed],
-                    "upstream_speed": [helpers.humanize_speed],
-                },
             ),
         )
     )
@@ -200,16 +203,11 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "provider_network",
                     "cloud_network",
                     "port_speed",
-                    "upstream_speed",
                     "ip_addresses",
                     "xconnect_id",
                     "pp_info",
                     "description",
                 ),
-                value_transforms={
-                    "port_speed": [helpers.humanize_speed, helpers.placeholder],
-                    "upstream_speed": [helpers.humanize_speed],
-                },
                 hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
                 ignore_nonexistent_fields=True,  # ip_addresses may be undefined
                 header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
@@ -257,6 +255,10 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 )
             if key == "ip_addresses":
                 return "IP Addressing"
+
+            if key == "port_speed":
+                return "Speed"
+
             return super().render_key(key, value, context)
 
         def render_value(self, key, value, context):
@@ -269,6 +271,10 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 if not context["termination"].location:
                     return ""
                 return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+            if key == "port_speed":
+                return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
+
             return super().render_value(key, value, context)
 
         def queryset_list_url_filter(self, key, value, context):
