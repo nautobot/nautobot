@@ -9,7 +9,7 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Variables:</td>
-                        <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea></td>
+                        <td><textarea id="query_variables" class="form-control" style="height:86px">{{ object.variables|render_json:False }}</textarea></td>
                     </tr>
                 </table>
             {% endif %}
@@ -57,10 +57,12 @@
         });
     };
 
-    textarea = document.querySelector("#query_variables");
-    textarea.addEventListener('input', autoResize, false);
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    window.addEventListener("load", () => {
+        textarea = document.querySelector("#query_variables");
+        textarea.addEventListener('input', autoResize, false);
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
 
     function autoResize() {
         this.style.height = 'auto';
