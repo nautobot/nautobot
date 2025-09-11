@@ -1,0 +1,1 @@
+Added usage of `{% render_title %}` and `{% render_breadcrumbs %}` in `object_list.html` and `object_retrieve.html` templates.
