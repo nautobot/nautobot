@@ -25,7 +25,6 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
@@ -38,7 +37,6 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
@@ -161,12 +159,12 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=["template"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Template",
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 object_field="template",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ),
     )
@@ -677,9 +675,9 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CustomLinkSerializer
     table_class = tables.CustomLinkTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Custom Link",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -1041,26 +1039,26 @@ class ExportTemplateUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ExportTemplateSerializer
     table_class = tables.ExportTemplateTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Details",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=["name", "owner", "description"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Template",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 fields=["content_type", "mime_type", "file_extension"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Code Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="template_code",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ]
     )
@@ -2113,9 +2111,9 @@ class JobHookUIViewSet(NautobotUIViewSet):
     table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2211,9 +2209,9 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2534,9 +2532,9 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     table_class = tables.RelationshipTable
     queryset = Relationship.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Relationship",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -2552,13 +2550,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
                     "destination_filter",
                 ],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Source Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 fields=["source_type", "source_label", "source_hidden", "source_filter"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Destination Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
@@ -2764,7 +2762,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.SecretsGroupTable
     queryset = SecretsGroup.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
                 label="Secrets Group Details",
@@ -2956,33 +2954,33 @@ class WebhookUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.WebhookSerializer
     table_class = tables.WebhookTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Webhook",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="HTTP",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
                 value_transforms={"additional_headers": [helpers.pre_tag]},
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Security",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("secret", "ssl_verification", "ca_file_path"),
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Body Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="body_template",
-                render_as=BaseTextPanel.RenderOptions.CODE,
+                render_as=object_detail.BaseTextPanel.RenderOptions.CODE,
             ),
         ]
     )
