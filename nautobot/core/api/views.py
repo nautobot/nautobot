@@ -30,6 +30,7 @@ from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
 import redis.exceptions
 from rest_framework import routers, serializers as drf_serializers, status
+from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ParseError, PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -198,7 +199,8 @@ class BulkRenameModelMixin:
 
         return renamed_objects
 
-    def _bulk_rename(self, request, *args, **kwargs):
+    @action(detail=False, methods=["post"])
+    def bulk_rename(self, request, *args, **kwargs):
         serializer = self.bulk_operation_serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
