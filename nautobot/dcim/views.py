@@ -693,6 +693,7 @@ class RackUIViewSet(NautobotUIViewSet):
                     "actions",
                 ],
                 include_columns=["parent_device"],
+                extra_params={"position__isnull": True},
             ),
         )
     )
