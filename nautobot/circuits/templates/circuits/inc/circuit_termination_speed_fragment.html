@@ -3,5 +3,5 @@
     <i class="mdi mdi-arrow-down-bold" title="Downstream"></i> {{ termination.port_speed|humanize_speed }} &nbsp;
     <i class="mdi mdi-arrow-up-bold" title="Upstream"></i> {{ termination.upstream_speed|humanize_speed }}
 {% else %}
-    {{ termination.port_speed|humanize_speed|placehoder }}
+    {{ termination.port_speed|humanize_speed|placeholder }}
 {% endif %}
