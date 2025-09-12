@@ -99,6 +99,17 @@ class FilterTestCases:
             self.assertIsNotNone(self.filterset)
             return self.filterset.declared_filters["q"].filter_predicates
 
+        def test_no_distinct_on_empty_filter_params(self):
+            """Verify that an empty filterset doesn't cause a `SELECT DISTINCT`."""
+            self.assertIsNotNone(self.filterset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
+            self.assertTrue(filterset.is_valid())
+            self.assertNotIn(
+                "SELECT DISTINCT",
+                str(filterset.qs.query),
+                "Filter set with empty parameter added `DISTINCT` to select query. This needs to be avoided because it incurs heavy performance penalties.",
+            )
+
         def test_id(self):
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
             self.assertIsNotNone(self.filterset)
