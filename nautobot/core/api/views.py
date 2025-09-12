@@ -174,7 +174,24 @@ class BulkDestroyModelMixin:
 
 
 class BulkRenameModelMixin:
-    bulk_operation_serializer_class = BulkRenameSerializer
+    """
+    Support bulk renaming of objects using a custom POST action. Accepts a list of object IDs along with a `find` and
+    `replace` string to apply to each object's `name` field.
+
+    POST /api/dcim/console-port-templates/bulk_rename/
+        {
+            "ids": [
+                "35451444-0ca5-4ca4-86bc-d299d522f2e1",
+                "0084d9c8-a02c-4578-847b-ecb99f17f060"
+            ],
+            "find": "old-name",
+            "replace": "new-name",
+            "use_regex": false
+        }
+
+    """
+
+    bulk_rename_serializer_class = BulkRenameSerializer
 
     def perform_bulk_rename(self, queryset, find: str, replace: str, use_regex: bool = False):
         renamed_objects = []
@@ -190,18 +207,16 @@ class BulkRenameModelMixin:
                     new_name = original_name
 
                 if new_name != original_name:
-                    obj.name = new_name
-                    obj.save()
-                    renamed_objects.append(obj)
-
-        if queryset.filter(pk__in=[obj.pk for obj in renamed_objects]).count() != len(renamed_objects):
-            raise ObjectDoesNotExist
+                    serializer = self.get_serializer(obj, data={"name": new_name}, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    self.perform_update(serializer)
+                    renamed_objects.append(serializer.instance)
 
         return renamed_objects
 
     @action(detail=False, methods=["post"])
     def bulk_rename(self, request, *args, **kwargs):
-        serializer = self.bulk_operation_serializer_class(data=request.data)
+        serializer = self.bulk_rename_serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         validated = serializer.validated_data
