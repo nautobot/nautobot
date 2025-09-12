@@ -1,0 +1,1 @@
+Changed certain filter fields to prevent unnecessary SELECT DISTINCT queries.
