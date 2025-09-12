@@ -99,7 +99,7 @@ class FilterTestCases:
             self.assertIsNotNone(self.filterset)
             return self.filterset.declared_filters["q"].filter_predicates
 
-        def test_smoke(self):
+        def test_no_distinct_on_empty_filter_params(self):
             self.assertIsNotNone(self.filterset)
             filterset = self.filterset({}, self.queryset)
             self.assertTrue(filterset.is_valid())
