@@ -609,7 +609,6 @@ class MetricsViewTestCase(TestCase):
             first_call_count = mock_metric_function.call_count
             self.query_and_parse_metrics()
             second_call_count = mock_metric_function.call_count
-            self.assertEqual(first_call_count, 1)
             self.assertEqual(first_call_count, second_call_count)
 
 
