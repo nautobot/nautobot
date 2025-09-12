@@ -132,9 +132,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "port_speed",
                     "upstream_speed",
                 ],
-                exclude_fields=[
-                    "circuit",
-                ],
                 value_transforms={
                     "port_speed": [helpers.humanize_speed],
                     "upstream_speed": [helpers.humanize_speed],

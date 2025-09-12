@@ -1116,16 +1116,10 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     queryset = VLAN.objects.all()
 
     class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def get_data(self, context):
-            instance = get_obj_from_context(context, self.context_object_key)
-            data = super().get_data(context)
-            data["locations"] = instance.locations.all()
-            return data
-
         def render_value(self, key, value, context):
-            instance = get_obj_from_context(context)
             if key == "locations":
-                return helpers.render_m2m(value, f"/dcim/locations/?vlans={instance.pk}", key)
+                instance = get_obj_from_context(context)
+                return helpers.render_m2m(value.all(), f"/dcim/locations/?vlans={instance.pk}", key)
             return super().render_value(key, value, context)
 
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
@@ -1152,6 +1146,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                additional_fields=["locations"],
             ),
             PrefixObjectsTablePanel(
                 weight=100,
