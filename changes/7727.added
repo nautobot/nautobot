@@ -1,1 +1,1 @@
-EXPERIMENTAL: Enable caching of metrics for the specified number of seconds. This is an experimental feature and may be removed or changed in future releases.
+EXPERIMENTAL: Enabled caching of App-generated Prometheus metrics. This is an experimental feature and may be removed or changed in future releases.
