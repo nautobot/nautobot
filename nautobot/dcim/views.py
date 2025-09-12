@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
@@ -2050,19 +2051,70 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
 
             return super().render_value(key, value, context)
 
-        def get_data(self, context):
-            data = super().get_data(context)
-            if "device_type" in data:
-                data["device_family"] = data["device_type"].device_family
-                # TODO: resort data so that device_family is before device_type?
-            if "controller_managed_device_group" in data:
-                data["managed_by_controller"] = data["controller_managed_device_group"].controller
-            return data
-
     class DeviceVirtualChassisMembersTablePanel(object_detail.ObjectsTablePanel):
         def should_render(self, context):
             instance = get_obj_from_context(context)
             return instance.virtual_chassis is not None
+
+    class DevicePowerUtilizationPanel(object_detail.Panel):
+        def should_render(self, context):
+            instance = get_obj_from_context(context)
+            return instance.all_power_ports.exists() and instance.all_power_outlets.exists()
+
+        def render_body_content(self, context):
+            instance = get_obj_from_context(context)
+            header = mark_safe("""\
+<tr>
+    <th>Input</th>
+    <th>Outlets</th>
+    <th>Allocated</th>
+    <th>Available</th>
+    <th>Utilization</th>
+</tr>""")
+            body = mark_safe("")
+            for powerport in instance.all_power_ports.all():
+                utilization = powerport.get_power_draw()
+                powerfeed = powerport.connected_endpoint
+                if powerfeed is not None and powerfeed.available_power:
+                    available_power = powerfeed.available_power
+                    utilization_data = Context(
+                        helpers.utilization_graph_raw_data(utilization["allocated"], powerfeed.available_power)
+                    )
+                    utilization_graph = object_detail.render_component_template(
+                        "utilities/templatetags/utilization_graph.html", utilization_data
+                    )
+                else:
+                    available_power = helpers.HTML_NONE
+                    utilization_graph = helpers.HTML_NONE
+                body += format_html(
+                    "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    helpers.hyperlinked_object(powerport),
+                    utilization["outlet_count"],
+                    utilization["allocated"],
+                    available_power,
+                    utilization_graph,
+                )
+                for leg in utilization["legs"]:
+                    if powerfeed is not None and powerfeed.available_power:
+                        available_power = powerfeed.available_power / 3
+                        utilization_data = Context(
+                            helpers.utilization_graph_raw_data(leg["allocated"], powerfeed.available_power / 3)
+                        )
+                        utilization_graph = object_detail.render_component_template(
+                            "utilities/templatetags/utilization_graph.html", utilization_data
+                        )
+                    else:
+                        available_power = helpers.HTML_NONE
+                        utilization_graph = helpers.HTML_NONE
+                    body += format_html(
+                        """<tr><td style="padding-left: 20px">{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>""",
+                        f"Leg {leg['name']}",
+                        leg["outlet_count"],
+                        leg["allocated"],
+                        available_power,
+                        utilization_graph,
+                    )
+            return header + body
 
     object_detail_content = DeviceDetailContent(
         extra_buttons=(
@@ -2151,7 +2203,17 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
             DeviceFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=["location", "rack", "position", "tenant", "device_type", "serial", "asset_tag"],
+                fields=[
+                    "location",
+                    "rack",
+                    "position",
+                    "tenant",
+                    "device_type__device_family",
+                    "device_type",
+                    "serial",
+                    "asset_tag",
+                ],
+                key_transforms={"device_type__device_family": "Device Family"},
             ),
             DeviceVirtualChassisMembersTablePanel(
                 weight=110,
@@ -2172,22 +2234,23 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                     "secrets_group",
                     "device_redundancy_group",
                     "controller_managed_device_group",
+                    "controller_managed_device_group__controller",
                     "cluster",
                     "software_version",
                 ],
+                key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
                 value_transforms={
                     "primary_ip4": [render_ip_with_nat],
                     "primary_ip6": [render_ip_with_nat],
                 },
+                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
             ),
-            #     TODO: power utilization panel
-            #     ObjectsTablePanel(
-            #       weight=100,
-            #       section=SectionChoices.RIGHT_HALF,
-            #       table_title="Power Utilization",
-            #       table_class=???,
-            #       table_filter="device",
-            #     ),
+            DevicePowerUtilizationPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Power Utilization",
+                body_wrapper_template_path="components/panel/body_wrapper_generic_table.html",
+            ),
             object_detail.ObjectsTablePanel(
                 weight=200,
                 section=SectionChoices.RIGHT_HALF,

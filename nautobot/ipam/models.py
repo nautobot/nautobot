@@ -350,6 +350,7 @@ class VRFDeviceAssignment(BaseModel):
     is_metadata_associable_model = False
 
     class Meta:
+        verbose_name = "VRF-device assignment"
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
@@ -404,6 +405,7 @@ class VRFPrefixAssignment(BaseModel):
     is_metadata_associable_model = False
 
     class Meta:
+        verbose_name = "VRF-prefix assignment"
         unique_together = ["vrf", "prefix"]
 
     def __str__(self):

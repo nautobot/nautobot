@@ -165,7 +165,7 @@ def render_software_version_and_image_files(instance, software_version, context)
         )
     if overridden_software_image_files.exists():
         display += format_html(
-            "<strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
+            "<br><strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
             format_html_join(
                 "\n", "<li>{}</li>", [[hyperlinked_object(img)] for img in overridden_software_image_files.all()]
             ),

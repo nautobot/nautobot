@@ -1323,6 +1323,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 for token in field_name.split(LOOKUP_SEP):
                     try:
                         field_value = getattr(field_value, token)
+                        if field_value is None:
+                            break
                     except ObjectDoesNotExist:
                         field_value = None
                         break

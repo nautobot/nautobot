@@ -4,49 +4,6 @@
 {% load render_table from django_tables2 %}
 
 {% comment %}
-                            {% if object.all_power_ports.exists and object.all_power_outlets.exists %}
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <strong>Power Utilization</strong>
-                                    </div>
-                                    <table class="table table-hover panel-body">
-                                        <tr>
-                                            <th>Input</th>
-                                            <th>Outlets</th>
-                                            <th>Allocated</th>
-                                            <th>Available</th>
-                                            <th>Utilization</th>
-                                        </tr>
-                                        {% for powerport in object.all_power_ports.all %}
-                                            {% with utilization=powerport.get_power_draw powerfeed=powerport.connected_endpoint %}
-                                                <tr>
-                                                    <td>{{ powerport }}</td>
-                                                    <td>{{ utilization.outlet_count }}</td>
-                                                    <td>{{ utilization.allocated }}VA</td>
-                                                    {% if powerfeed.available_power %}
-                                                        <td>{{ powerfeed.available_power }}VA</td>
-                                                        <td>{% utilization_graph_raw_data utilization.allocated powerfeed.available_power %}</td>
-                                                    {% else %}
-                                                        <td class="text-muted">&mdash;</td>
-                                                        <td class="text-muted">&mdash;</td>
-                                                    {% endif %}
-                                                </tr>
-                                                {% for leg in utilization.legs %}
-                                                    <tr>
-                                                        <td style="padding-left: 20px">Leg {{ leg.name }}</td>
-                                                        <td>{{ leg.outlet_count }}</td>
-                                                        <td>{{ leg.allocated }}</td>
-                                                        <td>{{ powerfeed.available_power|divide:3 }}VA</td>
-                                                        {% with phase_available=powerfeed.available_power|divide:3 %}
-                                                            <td>{% utilization_graph_raw_data leg.allocated phase_available %}</td>
-                                                        {% endwith %}
-                                                    </tr>
-                                                {% endfor %}
-                                            {% endwith %}
-                                        {% endfor %}
-                                    </table>
-                                </div>
-                            {% endif %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Images</strong>
