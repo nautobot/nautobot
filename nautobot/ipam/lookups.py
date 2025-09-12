@@ -159,11 +159,11 @@ class NetworkFieldMixin:
             raise NotSupportedError(f"Lookup for host field does not include the {self.lookup_name} lookup.")
         return str(netaddr.IPNetwork(self.rhs).ip)
 
-    def process_lhs(self, compiler, connection):
+    def process_lhs(self, compiler, connection, lhs=None):
         self.alias = self.lhs.alias
         self.ip = get_ip_info(self.lhs.field.name, self.rhs, alias=self.lhs.alias)
-        return super().process_lhs(compiler, connection)
-    
+        return super().process_lhs(compiler, connection, lhs)
+
     def process_rhs(self, compiler, connection):
         sql, params = super().process_rhs(compiler, connection)
         params[0] = self.ip.rhs
@@ -244,8 +244,7 @@ class NetHost(Lookup):
         field_name = self.lhs.field.name
         if field_name != "host":
             raise NotSupportedError(f"Lookup only provided on the host fields, not {field_name}.")
-        self.ip = get_ip_info(field_name, self.rhs, alias=self.lhs.alias)
-        return str(self.ip.ip)
+        return str(netaddr.IPNetwork(self.rhs).ip)
 
     def process_rhs(self, compiler, connection):
         sql, params = super().process_rhs(compiler, connection)
@@ -258,6 +257,7 @@ class NetHost(Lookup):
         return self.ip.q_ip, lhs_params
 
     def as_sql(self, compiler, connection):
+        self.ip = get_ip_info(self.lhs.field.name, self.rhs, alias=self.lhs.alias)
         lhs, lhs_params = self.process_lhs(compiler, connection)
         rhs, rhs_params = self.process_rhs(compiler, connection)
         return f"{lhs} = {rhs}", lhs_params + rhs_params
@@ -270,10 +270,6 @@ class NetIn(Lookup):
         field_name = self.lhs.field.name
         if field_name != "host":
             raise NotSupportedError(f"Lookup only provided on the host field, not {field_name}.")
-        self.ips = []
-        for _ip in self.rhs:
-            ip = get_ip_info(field_name, _ip, alias=self.lhs.alias)
-            self.ips.append(ip)
         # This is to satisfy an issue with django cacheops, specifically this line:
         # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175
         # Without 1, and one 1 value as %s, will result in stacktrace. A non-impacting condition is added to the query
@@ -283,6 +279,13 @@ class NetIn(Lookup):
         elif _connection.vendor == "postgresql":
             self.query_starter = "'1' != ANY(%s) AND "
         return self.rhs
+
+    def process_lhs(self, compiler, connection, lhs=None):
+        self.ips = []
+        for _ip in self.rhs:
+            ip = get_ip_info(self.lhs.field.name, _ip, alias=self.lhs.alias)
+            self.ips.append(ip)
+        return super().process_lhs(compiler, connection, lhs)
 
     def as_sql(self, compiler, connection):
         _, lhs_params = self.process_lhs(compiler, connection)
