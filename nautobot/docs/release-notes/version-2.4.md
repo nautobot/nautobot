@@ -165,6 +165,63 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+## v2.4.18 (2025-09-15)
+
+### Security in v2.4.18
+
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated dependency `Django` to `~4.2.24` to mitigate `CVE-2025-57833`.
+
+### Added in v2.4.18
+
+- [#7614](https://github.com/nautobot/nautobot/issues/7614) - Added Bulk Edit functionality for the DynamicGroup model.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Added usage of `{% render_title %}` and `{% render_breadcrumbs %}` in `object_list.html` and `object_retrieve.html` templates.
+- [#7758](https://github.com/nautobot/nautobot/issues/7758) - Added SavedView capability to JobResults model.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Added support for `ObjectFieldsPanel(...fields="__all__", additional_fields=[...])` to allow inclusion of properties, reverse relations, nested lookups, and other attributes not normally included in `__all__`.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Enhanced `ObjectFieldsPanel` to support nested lookup of object fields, such as `fields=["rack__rack_group"]`.
+
+### Changed in v2.4.18
+
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated Devices, Prefixes, Plugins, Circuits views to use UI Component Framework Breadcrumbs.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectListView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context along with `verbose_name_plural` and `view_action`.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Changed `ObjectFieldsPanel.__init__` behavior to raise an error if `exclude_fields` is specified in combination with any value of `fields` other than `"__all__"`.
+
+### Fixed in v2.4.18
+
+- [#7330](https://github.com/nautobot/nautobot/issues/7330) - Fixed a `FieldError` exception when sorting tree-model (Location, LocationType, RackGroup, etc.) tables by a custom field column.
+- [#7330](https://github.com/nautobot/nautobot/issues/7330) - Fixed removal of list-view filters when reverting the table sorting to default.
+- [#7631](https://github.com/nautobot/nautobot/issues/7631) - Fixed duplicate records returned in some cases by `DynamicGroup.update_cached_members()`.
+- [#7723](https://github.com/nautobot/nautobot/issues/7723) - Fixed bug in which `Device` objects could be saved when they didn't have to be.
+- [#7748](https://github.com/nautobot/nautobot/issues/7748) - Updated `last_run` column in `JobTable` to avoid referencing settings directly inside TemplateColumn. Since django-tables2 does not include context processors when rendering column templates, using `settings.SHORT_DATETIME_FORMAT` caused lookup errors or pickling issues. Now the required format `settings.SHORT_DATETIME_FORMAT` is passed explicitly via `extra_context`, ensuring correct rendering in both views and table contexts.
+- [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv4 /31 Prefix records might be assigned the wrong `parent` Prefix.
+- [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv6 records such as `::1/128` might be assigned the wrong `parent` Prefix.
+- [#7754](https://github.com/nautobot/nautobot/issues/7754) - Fixed issue with `FilterTestCases.test_tenant_group` where the filter query could return the same `TenantGroup` object multiple times.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed column ordering issue by disabling `orderable` for `PowerFeedTable.occupied_positions`, `PowerFeedTable.phase_designation`, and `JobResultTable.duration`.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed `ObjectMetadataTable.value` column ordering issue by adding missing `order_by` attribute.
+- [#7774](https://github.com/nautobot/nautobot/issues/7774) - Fixed incorrect rendering of Nautobot `n` icon in some browsers.
+
+### Dependencies in v2.4.18
+
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated dependency `cryptography` to `~45.0.7`.
+- [#7793](https://github.com/nautobot/nautobot/issues/7793) - Updated dependency `django-silk` to `~5.4.3`.
+
+### Documentation in v2.4.18
+
+- [#7787](https://github.com/nautobot/nautobot/issues/7787) - Updated NautobotAppConfig docs to add `searchable_models` link.
+
+### Housekeeping in v2.4.18
+
+- [#7614](https://github.com/nautobot/nautobot/issues/7614) - Refactored DynamicGroup model related UI views to use `NautobotUIViewSet`.
+- [#7632](https://github.com/nautobot/nautobot/issues/7632) - Refactored GitRepository model related UI views to use `NautobotUIViewSet`.
+- [#7669](https://github.com/nautobot/nautobot/issues/7669) - Refactored Note model related UI views to use `UI component framework`.
+- [#7689](https://github.com/nautobot/nautobot/issues/7689) - Refactored CustomField model related UI views to use `UI component framework`.
+- [#7700](https://github.com/nautobot/nautobot/issues/7700) - Refactored VirtualChassis model related UI views to use `UI component framework`.
+- [#7760](https://github.com/nautobot/nautobot/issues/7760) - Updated Prefix API test to avoid a potential spurious failure.
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated development dependency `ruff` to `~0.12.12`.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Added a test to ensure model properties are not orderable.
+- [#7767](https://github.com/nautobot/nautobot/issues/7767) - Updated CI workflows and Docker image build to use Poetry 2.1.4.
+- [#7778](https://github.com/nautobot/nautobot/issues/7778) - Fixed unintended carry-over of data changes between subsequent subtests in `FilterTestCase.test_q_filter_valid`.
+- [#7786](https://github.com/nautobot/nautobot/issues/7786) - Updated ReadTheDocs build to use poetry instead of pip.
 
 ## v2.4.17 (2025-09-02)
 
