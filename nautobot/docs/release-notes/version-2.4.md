@@ -165,6 +165,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
 ## v2.4.18 (2025-09-15)
 
 ### Security in v2.4.18
@@ -192,7 +193,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7330](https://github.com/nautobot/nautobot/issues/7330) - Fixed removal of list-view filters when reverting the table sorting to default.
 - [#7631](https://github.com/nautobot/nautobot/issues/7631) - Fixed duplicate records returned in some cases by `DynamicGroup.update_cached_members()`.
 - [#7723](https://github.com/nautobot/nautobot/issues/7723) - Fixed bug in which `Device` objects could be saved when they didn't have to be.
-- [#7748](https://github.com/nautobot/nautobot/issues/7748) - Updated `last_run` column in `JobTable` to avoid referencing settings directly inside TemplateColumn. Since django-tables2 does not include context processors when rendering column templates, using `settings.SHORT_DATETIME_FORMAT` caused lookup errors or pickling issues. Now the required format `settings.SHORT_DATETIME_FORMAT` is passed explicitly via `extra_context`, ensuring correct rendering in both views and table contexts.
+- [#7748](https://github.com/nautobot/nautobot/issues/7748) - Updated `last_run` column in `JobTable` to avoid referencing settings directly inside TemplateColumn. Since `django-tables2` does not include context processors when rendering column templates, using `settings.SHORT_DATETIME_FORMAT` caused lookup errors or pickling issues. Now the required format `settings.SHORT_DATETIME_FORMAT` is passed explicitly via `extra_context`, ensuring correct rendering in both views and table contexts.
 - [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv4 /31 Prefix records might be assigned the wrong `parent` Prefix.
 - [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv6 records such as `::1/128` might be assigned the wrong `parent` Prefix.
 - [#7754](https://github.com/nautobot/nautobot/issues/7754) - Fixed issue with `FilterTestCases.test_tenant_group` where the filter query could return the same `TenantGroup` object multiple times.
