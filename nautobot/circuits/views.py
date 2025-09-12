@@ -5,6 +5,7 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags import helpers
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -93,6 +94,20 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
 
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Circuit),
+                ModelBreadcrumbItem(
+                    model=Circuit,
+                    label=lambda c: c["object"].circuit.provider,
+                    reverse_query_params=lambda c: {"provider": c["object"].circuit.provider.pk},
+                ),
+                InstanceBreadcrumbItem(instance=lambda c: c["object"].circuit),
+            ]
+        }
+    )
+
     object_detail_content = ObjectDetailContent(
         panels=(
             CircuitTerminationObjectFieldsPanel(
@@ -116,9 +131,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "cloud_network",
                     "port_speed",
                     "upstream_speed",
-                ],
-                exclude_fields=[
-                    "circuit",
                 ],
                 value_transforms={
                     "port_speed": [helpers.humanize_speed],
