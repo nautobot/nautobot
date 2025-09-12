@@ -485,13 +485,20 @@ def generate_latest_with_cache(registry=REGISTRY):
             this_metric_output.append(f"# TYPE {metric.name}{suffix} gauge\n")
             this_metric_output.extend(lines)
 
+        # BEGIN Nautobot-specific logic
+        # If the metric name starts with nautobot_, we cache the lines
         if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
-            # If the metric name starts with nautobot_, we cache the lines
             cached_lines.extend(this_metric_output)
+        # END Nautobot-specific logic
 
         # Always add the metric output to the final output
         output.extend(this_metric_output)
 
+    # BEGIN Nautobot-specific logic
+    # Add in any previously cached metrics.
+    # Note that this is mutually-exclusive with the above block, that is to say,
+    # either cached_lines will be populated OR collector.local_cache will be populated,
+    # never both at the same time.
     for collector in registry._collector_to_names:
         # This is to avoid a race condition where between the time to collect the metrics and
         # the time to generate the output, the cache is expired and we miss some metrics.
@@ -500,7 +507,8 @@ def generate_latest_with_cache(registry=REGISTRY):
             del collector.local_cache
 
     if cached_lines and not cache.get(METRICS_CACHE_KEY):
-        # No cache found, generate metrics
+        # No existing cache found, store the cached_lines to the cache
         cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
+    # END Nautobot-specific logic
 
     return "".join(output).encode("utf-8")
