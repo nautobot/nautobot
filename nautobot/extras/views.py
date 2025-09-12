@@ -2277,7 +2277,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(generic.GenericView, UIComponentsMixin):
+class ObjectChangeLogView(UIComponentsMixin, generic.GenericView):
     """
     Present a history of changes made to a particular object.
 
@@ -2459,7 +2459,7 @@ class NoteUIViewSet(
         return obj
 
 
-class ObjectNotesView(generic.GenericView, UIComponentsMixin):
+class ObjectNotesView(UIComponentsMixin, generic.GenericView):
     """
     Present a list of notes associated to a particular object.
 
