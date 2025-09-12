@@ -947,7 +947,11 @@ class ObjectsTablePanel(Panel):
             list_route = None
 
         if list_route:
-            query_params = {related_field_name: obj.pk}
+            # Normalize to a list for safe processing
+            if isinstance(related_field_name, str):
+                related_field_name = [related_field_name]
+
+            query_params = {field: obj.pk for field in related_field_name}
             if hasattr(self, "extra_params") and isinstance(self.extra_params, dict):
                 query_params.update(self.extra_params)
             body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
