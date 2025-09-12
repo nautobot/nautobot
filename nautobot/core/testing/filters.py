@@ -102,7 +102,7 @@ class FilterTestCases:
         def test_no_distinct_on_empty_filter_params(self):
             """Verify that an empty filterset doesn't cause a `SELECT DISTINCT`."""
             self.assertIsNotNone(self.filterset)
-            filterset = self.filterset({}, self.queryset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
             self.assertTrue(filterset.is_valid())
             self.assertNotIn(
                 "SELECT DISTINCT",
