@@ -3,8 +3,12 @@
 
 {% block title %}API Tokens{% endblock %}
 
+{% block page_title %}
+    {% include 'inc/page_title.html' with title='API Tokens' %}
+{% endblock %}
+
 {% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' with title='API Tokens' %}
+    {% include 'inc/breadcrumbs.html' %}
 {% endblock %}
 
 {% block usercontent %}
