@@ -8,6 +8,7 @@ import urllib.parse
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
@@ -23,6 +24,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, Status
@@ -594,7 +596,21 @@ class MetricsViewTestCase(TestCase):
         with mock.patch("nautobot.core.views.generate_latest_with_cache") as mock_generate_latest_with_cache:
             self.query_and_parse_metrics()
             self.query_and_parse_metrics()
-            self.assertTrue(mock_generate_latest_with_cache.call_count == 2)
+            self.assertEqual(mock_generate_latest_with_cache.call_count, 2)
+
+        from example_app.metrics import metric_example
+
+        cache.delete(METRICS_CACHE_KEY)  # Ensure we start with a clean cache for the next part of the test
+        # Assert that the metric function only gets called once even though we scrape metrics twice
+
+        mock_metric_function = mock.Mock(name="mock_metric_function", side_effect=metric_example)
+        with mock.patch.dict("nautobot.core.views.registry", app_metrics=[mock_metric_function]):
+            self.query_and_parse_metrics()
+            first_call_count = mock_metric_function.call_count
+            self.query_and_parse_metrics()
+            second_call_count = mock_metric_function.call_count
+            self.assertEqual(first_call_count, 1)
+            self.assertEqual(first_call_count, second_call_count)
 
 
 class AuthenticateMetricsTestCase(APITestCase):
