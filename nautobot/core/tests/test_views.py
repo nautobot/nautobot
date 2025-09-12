@@ -566,6 +566,36 @@ class MetricsViewTestCase(TestCase):
         metric_names_with_app.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_app, metric_names_without_app)
 
+    def test_enabled_metrics_cache_disabled(self):
+        """Assert that when cache is disabled the cache enabled function doesn't get called."""
+        with mock.patch("nautobot.core.views.utils.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
+
+    @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
+    def test_enabled_metrics_cache_enabled(self):
+        """Assert that multiple calls to metrics with caching returns expected response."""
+        test_metric_name = "nautobot_example_metric_count"
+        metrics_with_app = self.query_and_parse_metrics()
+        metrics_with_app_cached = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        metric_names_with_app_cached = {metric.name for metric in metrics_with_app_cached}
+        self.assertIn(test_metric_name, metric_names_with_app)
+        self.assertIn(test_metric_name, metric_names_with_app_cached)
+
+        # In some circumstances (e.g. if this test is run first) metrics_with_app may not have
+        # metrics from Django like total view counts. Since metrics_with_app_cached is called
+        # second, it should have everything that metrics_with_app has (plus potentially more).
+        # We at least want to ensure the cached version has everything the non-cached version has.
+        self.assertTrue(
+            metric_names_with_app.issubset(metric_names_with_app_cached),
+            msg="Cached metrics should be a superset of non-cached metrics.",
+        )
+        with mock.patch("nautobot.core.views.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.query_and_parse_metrics()
+            self.assertTrue(mock_generate_latest_with_cache.call_count == 2)
+
 
 class AuthenticateMetricsTestCase(APITestCase):
     def test_metrics_authentication(self):
