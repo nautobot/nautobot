@@ -416,7 +416,7 @@ def is_metrics_experimental_caching_enabled():
 
 
 def generate_latest_with_cache(registry=REGISTRY):
-    """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics for 5 minutes."""
+    """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics."""
 
     def sample_line(line):
         if line.labels:
