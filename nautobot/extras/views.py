@@ -689,8 +689,24 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             FilterQueryLogicBaseTextPanel(
                 label="Filter Query Logic",
                 section=SectionChoices.FULL_WIDTH,
-                weight=200,
+                weight=100,
                 render_as=ObjectTextPanel.RenderOptions.CODE,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="ancestors_table",
+                related_field_name="ancestors",
+                table_title="Ancestors",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="descendants_table",
+                related_field_name="descendants",
+                table_title="Descendants",
+                add_button_route=None,
             ),
         ]
     )
@@ -753,10 +769,8 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 )
                 ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
                 else:
-                    context["raw_query"] = None
                     try:
                         context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
                     except NoReverseMatch:

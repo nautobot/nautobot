@@ -470,6 +470,7 @@ class NestedDynamicGroupDescendantsTable(DynamicGroupMembershipTable):
 
     operator = tables.TemplateColumn(template_code=OPERATOR_LINK)
     name = tables.TemplateColumn(template_code=DESCENDANTS_LINK)
+    list_url = "extras:dynamicgroup_list"
 
     class Meta(DynamicGroupMembershipTable.Meta):
         pass

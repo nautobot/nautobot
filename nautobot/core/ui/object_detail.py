@@ -851,9 +851,11 @@ class ObjectsTablePanel(Panel):
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
             body_content_table_model = body_content_table.Meta.model
+            list_url = body_content_table.__class__.list_url if hasattr(body_content_table, "list_url") else None
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
+            list_url = getattr(self.table_class, "list_url", None)
             instance = get_obj_from_context(context)
 
             if self.table_attribute:
@@ -930,7 +932,6 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
-        list_url = getattr(self.table_class, "list_url", None)
         if not list_url:
             list_url = get_route_for_model(body_content_table_model, "list")
 

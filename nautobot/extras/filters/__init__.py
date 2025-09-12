@@ -626,9 +626,32 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         label="Group member ID",
     )
 
+    descendants = django_filters.UUIDFilter(method="filter_descendants", label="Descendant of Dynamic Group")
+    ancestors = django_filters.UUIDFilter(method="filter_ancestors", label="Ancestor of Dynamic Group")
+
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "description", "group_type", "tags")
+        fields = ("id", "name", "description", "group_type", "tags", "descendants", "ancestors")
+
+    def filter_descendants(self, queryset, name, value):
+        try:
+            root_group = DynamicGroup.objects.get(pk=value)
+        except DynamicGroup.DoesNotExist:
+            return queryset.none()
+
+        descendants = root_group.membership_tree()
+        descendant_groups = [membership.group.pk for membership in descendants]
+        return queryset.filter(pk__in=descendant_groups)
+
+    def filter_ancestors(self, queryset, name, value):
+        try:
+            child_group = DynamicGroup.objects.get(pk=value)
+        except DynamicGroup.DoesNotExist:
+            return queryset.none()
+
+        ancestors = child_group.get_ancestors()
+        ancestor_ids = [group.pk for group in ancestors]
+        return queryset.filter(pk__in=ancestor_ids)
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
