@@ -681,12 +681,6 @@ Running integrations tests requires the use of Docker at this time. They can be 
 
 The Selenium container is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
 
-Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
-
-| Docker Compose Workflow | Virtual Environment Workflow      |
-| ----------------------- | --------------------------------- |
-| (automatic)             | `invoke start --service selenium` |
-
 Integration tests are run by passing `--tag integration` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
 
 | Docker Compose Workflow          | Virtual Environment Workflow                                                                      |
