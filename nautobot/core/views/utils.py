@@ -438,6 +438,10 @@ def generate_latest_with_cache(registry=REGISTRY):
 
     cached_lines = []
     output = []
+    # NOTE: In the original prometheus_client code the lines are written to output directly,
+    # here we are going to cache some lines so we need to build each metric's output separately.
+    # So instead of `output.append(line)` we do
+    # `this_metric_output.append(line)` and then `output.extend(this_metric_output)`
     for metric in registry.collect():
         this_metric_output = []
         try:
@@ -504,10 +508,10 @@ def generate_latest_with_cache(registry=REGISTRY):
         # the time to generate the output, the cache is expired and we miss some metrics.
         if hasattr(collector, "local_cache") and collector.local_cache:
             output.extend(collector.local_cache)
-            del collector.local_cache
+            del collector.local_cache  # avoid re-using stale data on next call
 
+    # If we have any cached lines, and the cache is empty or expired, update the cache.
     if cached_lines and not cache.get(METRICS_CACHE_KEY):
-        # No existing cache found, store the cached_lines to the cache
         cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
     # END Nautobot-specific logic
 

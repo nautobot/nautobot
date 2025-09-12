@@ -447,6 +447,10 @@ class NautobotAppMetricsCollector(Collector):
             for metric_generator in registry["app_metrics"]:
                 yield from metric_generator()
         else:
+            # We stash the cached lines on the instance of the collector so that we can
+            # avoid a potential race condition where the cache expires between
+            # the time we check for it and the time we go to use it
+            # in generate_latest_with_cache()
             self.local_cache = cached_lines
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
