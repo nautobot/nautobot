@@ -56,4 +56,4 @@ class TagFilterTestCase(SeleniumTestCase):
         # Wait for choices to load
         time.sleep(0.5)
         # Tags should not appear in the dropdown since they don't apply to Locations
-        self.assertFalse(self.browser.is_text_present("Provider Tag"))
+        self.assertFalse(self.browser.is_text_present("A Provider Tag"))

@@ -1,10 +1,12 @@
 # VPN Phase 2 Policy
 
-The VPNPhase2Policy model for VPNs provides the following fields:
+A VPN Phase 2 Policy defines IPSec Phase 2 policy parameters. These parameters include the encapsulation mode, encryption and integrity algorithms, PFS (Perfect Forward Secrecy) groups, and lifetime settings. Phase 2 policies are reusable and can be associated with multiple VPN profiles.
 
-- `name`: Name
-- `description`: Description
-- `encryption_algorithm`: AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES
-- `integrity_algorithm`: SHA512, SHA384, SHA256, SHA1, MD5
-- `pfs_group`: Perfect Forward Secrecy group
-- `lifetime`: Lifetime in seconds
+Nautobot users can create and manage VPN Phase 2 Policies to standardize the configuration of VPN tunnels across their network infrastructure. Additionally, several Phase 2 policies are available by default in Nautobot to facilitate quick setup.
+
+| Name                        | Encryption Algorithm | Integrity Algorithm | PFS Group | Lifetime (seconds) |
+|-----------------------------|--------------------|----------------------|------------|--------------------|
+| High-Security Policy        | AES-256-GCM        | SHA512               | 21         | 1800               |
+| Standard Policy             | AES-256-CBC        | SHA256               | 14         | 3600               |
+| Performance-Oriented Policy | AES-128-CBC        | SHA256               | -          | 3600               |
+| Remote Access Policy        | AES-256-CBC        | SHA256               | 19         | 1800               |
