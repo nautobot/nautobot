@@ -341,11 +341,6 @@ urlpatterns = [
         name="device_consoleports_add",
     ),
     path(
-        "devices/<uuid:pk>/console-server-ports/",
-        views.DeviceConsoleServerPortsView.as_view(),
-        name="device_consoleserverports",
-    ),
-    path(
         "devices/<uuid:pk>/console-server-ports/add/",
         RedirectView.as_view(
             url="/dcim/console-server-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-server-ports/"
@@ -353,19 +348,9 @@ urlpatterns = [
         name="device_consoleserverports_add",
     ),
     path(
-        "devices/<uuid:pk>/power-ports/",
-        views.DevicePowerPortsView.as_view(),
-        name="device_powerports",
-    ),
-    path(
         "devices/<uuid:pk>/power-ports/add/",
         RedirectView.as_view(url="/dcim/power-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-ports/"),
         name="device_powerports_add",
-    ),
-    path(
-        "devices/<uuid:pk>/power-outlets/",
-        views.DevicePowerOutletsView.as_view(),
-        name="device_poweroutlets",
     ),
     path(
         "devices/<uuid:pk>/power-outlets/add/",
@@ -375,19 +360,9 @@ urlpatterns = [
         name="device_poweroutlets_add",
     ),
     path(
-        "devices/<uuid:pk>/interfaces/",
-        views.DeviceInterfacesView.as_view(),
-        name="device_interfaces",
-    ),
-    path(
         "devices/<uuid:pk>/interfaces/add/",
         RedirectView.as_view(url="/dcim/interfaces/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/interfaces/"),
         name="device_interfaces_add",
-    ),
-    path(
-        "devices/<uuid:pk>/front-ports/",
-        views.DeviceFrontPortsView.as_view(),
-        name="device_frontports",
     ),
     path(
         "devices/<uuid:pk>/front-ports/add/",
@@ -395,29 +370,14 @@ urlpatterns = [
         name="device_frontports_add",
     ),
     path(
-        "devices/<uuid:pk>/rear-ports/",
-        views.DeviceRearPortsView.as_view(),
-        name="device_rearports",
-    ),
-    path(
         "devices/<uuid:pk>/rear-ports/add/",
         RedirectView.as_view(url="/dcim/rear-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/rear-ports/"),
         name="device_rearports_add",
     ),
     path(
-        "devices/<uuid:pk>/device-bays/",
-        views.DeviceDeviceBaysView.as_view(),
-        name="device_devicebays",
-    ),
-    path(
         "devices/<uuid:pk>/device-bays/add/",
         RedirectView.as_view(url="/dcim/device-bays/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/device-bays/"),
         name="device_devicebays_add",
-    ),
-    path(
-        "devices/<uuid:pk>/module-bays/",
-        views.DeviceModuleBaysView.as_view(),
-        name="device_modulebays",
     ),
     path(
         "devices/<uuid:pk>/module-bays/add/",
@@ -427,26 +387,9 @@ urlpatterns = [
         name="device_modulebays_add",
     ),
     path(
-        "devices/<uuid:pk>/inventory/",
-        views.DeviceInventoryView.as_view(),
-        name="device_inventory",
-    ),
-    path(
         "devices/<uuid:pk>/config-context/",
         views.DeviceConfigContextView.as_view(),
         name="device_configcontext",
-    ),
-    path(
-        "devices/<uuid:pk>/changelog/",
-        views.DeviceChangeLogView.as_view(),
-        name="device_changelog",
-        kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="device_notes",
-        kwargs={"model": Device},
     ),
     path(
         "devices/<uuid:pk>/dynamic-groups/",
@@ -479,11 +422,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="device_add_image",
         kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/wireless/",
-        views.DeviceWirelessView.as_view(),
-        name="device_wireless",
     ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),

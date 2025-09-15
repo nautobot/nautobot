@@ -90,10 +90,6 @@ from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
-from nautobot.wireless.models import (
-    ControllerManagedDeviceGroupRadioProfileAssignment,
-    ControllerManagedDeviceGroupWirelessNetworkAssignment,
-)
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
@@ -1968,7 +1964,6 @@ class DeviceComponentPageMixin:
 
 
 class DeviceUIViewSet(NautobotUIViewSet):
-    queryset = Device.objects.all()
     queryset = Device.objects.select_related(
         "device_type__manufacturer",  # Needed for __str__() on device_type
     )
@@ -2308,8 +2303,105 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
         ),
         extra_tabs=(
+            # TODO: component tabs should *only* render if non-zero count
+            # TODO: return URLs for "add" button on tabs is incorrect (returns to the main detail tab)
             object_detail.DistinctViewTab(
+                # TODO: badge with module_count/module_bay_count
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
+                tab_id="module-bays",
+                label="Module Bays",
+                url_name="dcim:device_modulebays",
+                related_object_attribute="module_bays",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: prefetch_related(installed_module, installed_module__status)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Module Bays",
+                        table_class=tables.DeviceModuleBayTable,
+                        table_filter="parent_device",
+                        tab_id="module-bays",
+                        enable_bulk_actions=True,
+                        form_id="module-bays-form",
+                        footer_buttons=bulk_footer_buttons(form_id="module-bays-form", model=ModuleBay),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
+                tab_id="interfaces",
+                label="Interfaces",
+                url_name="dcim:device_interfaces",
+                related_object_attribute="vc_interfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable, lag).prefetch_related(_path__destination, ip_addresses, member_interfaces)
+                        # TODO: show 'device' column if the device is VC master
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Interfaces",
+                        table_class=tables.DeviceModuleInterfaceTable,
+                        table_filter="device",
+                        tab_id="interfaces",
+                        enable_bulk_actions=True,
+                        form_id="interfaces-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="interfaces-form", model=Interface
+                        ),
+                        include_paginator=True,
+                        header_extra_content_template_path="dcim/inc/device_interface_filter.html",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 300,
+                tab_id="front-ports",
+                label="Front Ports",
+                url_name="dcim:device_frontports",
+                related_object_attribute="all_front_ports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable, rear_port)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Front Ports",
+                        table_class=tables.DeviceModuleFrontPortTable,
+                        table_filter="device",
+                        tab_id="front-ports",
+                        enable_bulk_actions=True,
+                        form_id="front-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="front-ports-form", model=FrontPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 400,
+                tab_id="rear-ports",
+                label="Rear Ports",
+                url_name="dcim:device_rearports",
+                related_object_attribute="all_rear_ports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Rear Ports",
+                        table_class=tables.DeviceModuleRearPortTable,
+                        table_filter="device",
+                        tab_id="rear-ports",
+                        enable_bulk_actions=True,
+                        form_id="rear-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(form_id="rear-ports-form", model=RearPort),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 500,
                 tab_id="console-ports",
                 label="Console Ports",
                 url_name="dcim:device_consoleports",
@@ -2325,8 +2417,168 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         tab_id="console-ports",
                         enable_bulk_actions=True,
                         form_id="console-ports-form",
-                        footer_buttons=bulk_cable_termination_footer_buttons(form_id="console-ports-form", model=ConsolePort),
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="console-ports-form", model=ConsolePort
+                        ),
                         include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 600,
+                tab_id="console-server-ports",
+                label="Console Server Ports",
+                url_name="dcim:device_consoleserverports",
+                related_object_attribute="all_console_server_ports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Console Server Ports",
+                        table_class=tables.DeviceModuleConsoleServerPortTable,
+                        table_filter="device",
+                        tab_id="console-server-ports",
+                        enable_bulk_actions=True,
+                        form_id="console-server-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="console-server-ports-form", model=ConsoleServerPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 700,
+                tab_id="power-ports",
+                label="Power Ports",
+                url_name="dcim:device_powerports",
+                related_object_attribute="all_power_ports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Power Ports",
+                        table_class=tables.DeviceModulePowerPortTable,
+                        table_filter="device",
+                        tab_id="power-ports",
+                        enable_bulk_actions=True,
+                        form_id="power-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="power-ports-form", model=PowerPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 800,
+                tab_id="power-outlets",
+                label="Power Outlets",
+                url_name="dcim:device_poweroutlets",
+                related_object_attribute="all_power_outlets",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable, power_port).prefetch_related(_cable_path__destination)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Power Outlets",
+                        table_class=tables.DeviceModulePowerOutletTable,
+                        table_filter="device",
+                        tab_id="power-outlets",
+                        enable_bulk_actions=True,
+                        form_id="power-outlets-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="power-outlets-form", model=PowerOutlet
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 900,
+                tab_id="device-bays",
+                label="Device Bays",
+                url_name="dcim:device_devicebays",
+                related_object_attribute="device_bays",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(installed_device__device_type__manufacturer)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Device Bays",
+                        table_class=tables.DeviceDeviceBayTable,
+                        table_filter="device",
+                        tab_id="device-bays",
+                        enable_bulk_actions=True,
+                        form_id="device-bays-form",
+                        footer_buttons=bulk_footer_buttons(form_id="device-bays-form", model=DeviceBay),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1000,
+                tab_id="inventory",
+                label="Inventory",
+                url_name="dcim:device_inventory",
+                related_object_attribute="inventory_items",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(manufacturer)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Inventory Items",
+                        table_class=tables.DeviceInventoryItemTable,
+                        table_filter="device",
+                        tab_id="inventory",
+                        enable_bulk_actions=True,
+                        form_id="inventory-form",
+                        footer_buttons=bulk_footer_buttons(form_id="inventory-form", model=InventoryItem),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                # TODO: only if 'wireless' in controller_managed_device_group.capabilities
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1100,
+                tab_id="wireless",
+                label="Wireless",
+                url_name="dcim:device_wireless",
+                related_object_attribute="controller_managed_device_group",
+                panels=(
+                    object_detail.ObjectFieldsPanel(
+                        weight=100,
+                        section=SectionChoices.LEFT_HALF,
+                        label="Controller Managed Device Group",
+                        fields=["controller_managed_device_group", "controller_managed_device_group__controller"],
+                        key_transforms={
+                            "controller_managed_device_group": "Name",
+                            "controller_managed_device_group__controller": "Controller",
+                        },
+                    ),
+                    object_detail.ObjectsTablePanel(
+                        weight=200,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Wireless Networks",
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_attribute="wireless_network_assignments",
+                        related_field_name="controller_device_redundancy_group",
+                        tab_id="wireless",
+                        include_paginator=True,
+                        exclude_columns=["controller_managed_device_group", "controller"],
+                    ),
+                    object_detail.ObjectsTablePanel(
+                        weight=300,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Radio Profiles",
+                        table_class=ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+                        table_attribute="radio_profile_assignments",
+                        related_field_name="controller_device_redundancy_group",
+                        tab_id="wireless",
+                        include_paginator=True,
+                        exclude_columns=["controller_managed_device_group"],
                     ),
                 ),
             ),
@@ -2367,200 +2619,107 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["dcim.view_consoleport"],
     )
     def consoleports(self, request, *args, **kwargs):
-        return Response({})
+        return Response({"active_tab": "console-ports"})
 
+    @action(
+        detail=True,
+        url_path="console-server-ports",
+        url_name="consoleserverports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverport"],
+    )
+    def consoleserverports(self, request, *args, **kwargs):
+        return Response({"active_tab": "console-server-ports"})
 
-class DeviceConsoleServerPortsView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/consoleserverports.html"
+    @action(
+        detail=True,
+        url_path="device-bays",
+        url_name="devicebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicebay"],
+    )
+    def devicebays(self, request, *args, **kwargs):
+        return Response({"active_tab": "device-bays"})
 
-    def get_extra_context(self, request, instance):
-        consoleserverports = (
-            instance.all_console_server_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
-            data=consoleserverports, user=request.user, orderable=False
-        )
-        if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
-            "dcim.delete_consoleserverport"
-        ):
-            consoleserverport_table.columns.show("pk")
+    @action(
+        detail=True,
+        url_path="front-ports",
+        url_name="frontports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontport"],
+    )
+    def frontports(self, request, *args, **kwargs):
+        return Response({"active_tab": "front-ports"})
 
-        return {
-            **super().get_extra_context(request, instance),
-            "consoleserverport_table": consoleserverport_table,
-            "active_tab": "console-server-ports",
-        }
+    @action(
+        detail=True,
+        url_path="interfaces",
+        url_name="interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
+    def interfaces(self, request, *args, **kwargs):
+        return Response({"active_tab": "interfaces"})
 
+    @action(
+        detail=True,
+        url_path="inventory",
+        url_name="inventory",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_inventoryitem"],
+    )
+    def inventory(self, request, *args, **kwargs):
+        return Response({"active_tab": "inventory"})
 
-class DevicePowerPortsView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/powerports.html"
+    @action(
+        detail=True,
+        url_path="module-bays",
+        url_name="modulebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebay"],
+    )
+    def modulebays(self, request, *args, **kwargs):
+        return Response({"active_tab": "module-bays"})
 
-    def get_extra_context(self, request, instance):
-        powerports = (
-            instance.all_power_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        powerport_table = tables.DeviceModulePowerPortTable(data=powerports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
-            powerport_table.columns.show("pk")
+    @action(
+        detail=True,
+        url_path="power-outlets",
+        url_name="poweroutlets",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlet"],
+    )
+    def poweroutlets(self, request, *args, **kwargs):
+        return Response({"active_tab": "power-outlets"})
 
-        return {
-            **super().get_extra_context(request, instance),
-            "powerport_table": powerport_table,
-            "active_tab": "power-ports",
-        }
+    @action(
+        detail=True,
+        url_path="power-ports",
+        url_name="powerports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerport"],
+    )
+    def powerports(self, request, *args, **kwargs):
+        return Response({"active_tab": "power-ports"})
 
+    @action(
+        detail=True,
+        url_path="rear-ports",
+        url_name="rearports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearport"],
+    )
+    def rearports(self, request, *args, **kwargs):
+        return Response({"active_tab": "rear-ports"})
 
-class DevicePowerOutletsView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/poweroutlets.html"
-
-    def get_extra_context(self, request, instance):
-        poweroutlets = (
-            instance.all_power_outlets.restrict(request.user, "view")
-            .select_related("cable", "power_port")
-            .prefetch_related("_path__destination")
-        )
-        poweroutlet_table = tables.DeviceModulePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
-            poweroutlet_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "poweroutlet_table": poweroutlet_table,
-            "active_tab": "power-outlets",
-        }
-
-
-class DeviceInterfacesView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/interfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
-            .prefetch_related(
-                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
-                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
-                "_path__destination",
-                "tags",
-            )
-            .select_related("lag", "cable")
-            .order_by("_name")
-        )
-        interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
-        if VirtualChassis.objects.filter(master=instance).exists():
-            interface_table.columns.show("device")
-        if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
-            interface_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "interface_table": interface_table,
-            "active_tab": "interfaces",
-        }
-
-
-class DeviceFrontPortsView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/frontports.html"
-
-    def get_extra_context(self, request, instance):
-        frontports = instance.all_front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
-        frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
-            frontport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "frontport_table": frontport_table,
-            "active_tab": "front-ports",
-        }
-
-
-class DeviceRearPortsView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/rearports.html"
-
-    def get_extra_context(self, request, instance):
-        rearports = instance.all_rear_ports.restrict(request.user, "view").select_related("cable")
-        rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
-            rearport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "rearport_table": rearport_table,
-            "active_tab": "rear-ports",
-        }
-
-
-class DeviceDeviceBaysView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/devicebays.html"
-
-    def get_extra_context(self, request, instance):
-        devicebays = (
-            DeviceBay.objects.restrict(request.user, "view")
-            .filter(device=instance)
-            .select_related(
-                "installed_device__device_type__manufacturer",
-            )
-        )
-        devicebay_table = tables.DeviceDeviceBayTable(data=devicebays, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_devicebay") or request.user.has_perm("dcim.delete_devicebay"):
-            devicebay_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "devicebay_table": devicebay_table,
-            "active_tab": "device-bays",
-        }
-
-
-class DeviceModuleBaysView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/modulebays.html"
-
-    def get_extra_context(self, request, instance):
-        # note: Device modules tab shouldn't show descendant modules until a proper tree view is implemented
-        modulebays = (
-            ModuleBay.objects.restrict(request.user, "view")
-            .filter(parent_device=instance)
-            .prefetch_related("installed_module__status", "installed_module")
-        )
-        modulebay_table = tables.DeviceModuleBayTable(data=modulebays, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
-            modulebay_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "modulebay_table": modulebay_table,
-            "active_tab": "module-bays",
-        }
-
-
-class DeviceInventoryView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/inventory.html"
-
-    def get_extra_context(self, request, instance):
-        inventoryitems = (
-            InventoryItem.objects.restrict(request.user, "view").filter(device=instance).select_related("manufacturer")
-        )
-        inventoryitem_table = tables.DeviceInventoryItemTable(data=inventoryitems, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_inventoryitem") or request.user.has_perm("dcim.delete_inventoryitem"):
-            inventoryitem_table.columns.show("pk")
-
-        return {
-            "inventoryitem_table": inventoryitem_table,
-            "active_tab": "inventory",
-        }
+    @action(
+        detail=True,
+        url_path="wireless",
+        url_name="wireless",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_controller_managed_device_group"],
+    )
+    def wireless(self, request, *args, **kwargs):
+        return Response({"active_tab": "wireless"})
 
 
 class DeviceStatusView(generic.ObjectView):
@@ -2657,42 +2816,6 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
-
-
-class DeviceWirelessView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/wireless.html"
-
-    def get_extra_context(self, request, instance):
-        controller_managed_device_group = instance.controller_managed_device_group
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
-        )
-        wireless_networks_table.columns.hide("controller_managed_device_group")
-        wireless_networks_table.columns.hide("controller")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
-
-        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("radio_profile", "controller_managed_device_group")
-        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
-            data=radio_profiles, user=request.user, orderable=False
-        )
-        radio_profiles_table.columns.hide("controller_managed_device_group")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(radio_profiles_table)
-
-        return {
-            "wireless_networks_table": wireless_networks_table,
-            "radio_profiles_table": radio_profiles_table,
-            "active_tab": "wireless",
-        }
 
 
 #
