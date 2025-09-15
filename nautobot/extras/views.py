@@ -2328,6 +2328,7 @@ class ObjectChangeLogView(generic.GenericView):
                 "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
                 "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
+                "view_action": "changelog",
             },
         )
 
@@ -2507,6 +2508,7 @@ class ObjectNotesView(generic.GenericView):
                 "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
                 "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
+                "view_action": "notes",
             },
         )
 
