@@ -221,7 +221,7 @@ class ViewTestCases:
             captured_tree_cte_queries = [
                 query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
             ]
-            _query_separator = "\n" + ("-" * 10) + "NEXT QUERY" + "\n" + ("-" * 10)
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
             self.assertEqual(
                 len(captured_tree_cte_queries),
                 self.allowed_number_of_tree_queries_per_view_type["retrieve"],
