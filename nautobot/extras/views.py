@@ -748,13 +748,13 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 label="Filter",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                render_as=ObjectTextPanel.RenderOptions.JSON,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
             ),
             FilterQueryLogicBaseTextPanel(
                 label="Filter Query Logic",
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
