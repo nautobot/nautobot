@@ -303,16 +303,14 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=ip_status,
             namespace=self.namespace,
         )
-        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        url = reverse("ipam:prefix_ip_addresses", args=(instance.pk,))
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = (
-            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
-        )
+        ip_address_tab = f'<li role="presentation"> <a href="{url}?tab=ip-addresses">IP Addresses <span class="badge">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
 
 
