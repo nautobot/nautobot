@@ -70,13 +70,17 @@ jobs:
       - name: "Install npm dependencies"
         run: "poetry run invoke npm --command ci"
       - name: "Calculate checksum of originally committed UI dist files"
+        shell: bash
         run: |
-          echo "original_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+          original_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "original_checksum=$original_checksum" >> "$GITHUB_ENV"
       - name: "Build UI from source"
         run: "poetry run invoke ui-build"
       - name: "Re-calculate checksum of UI dist files after the build"
+        shell: bash
         run: |
-          echo "updated_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+          updated_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "updated_checksum=$updated_checksum" >> "$GITHUB_ENV"
       - name: "Compare calculated checksums"
         run: |
           echo "Comparing UI dist files checksums: \"$original_checksum\" and \"$updated_checksum\"."
