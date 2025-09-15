@@ -5,10 +5,8 @@ import zoneinfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection
 from django.db.models import Q
 from django.test import override_settings
-from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from netaddr import EUI
 import yaml
