@@ -196,8 +196,10 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
                 model = get_model_for_view_name(self.get_view_name(context))
                 if model is not None:
                     return model._meta.verbose_name_plural
-            except ValueError as err:
-                logger.error(err)
+            except ValueError:
+                # `get_model_for_view_name` is not working properly with some proper paths like "home"
+                # and because by default we're trying to resolve label by using `list_url` this error may occur in some apps
+                pass
         return super().get_label(context)
 
     def get_view_name(self, context: Context) -> Optional[str]:

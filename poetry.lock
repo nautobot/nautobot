@@ -961,13 +961,13 @@ hiredis = ["redis[hiredis] (>=4.0.2)"]
 
 [[package]]
 name = "django-silk"
-version = "5.4.2"
+version = "5.4.3"
 description = "Silky smooth profiling for the Django Framework"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "django_silk-5.4.2-py3-none-any.whl", hash = "sha256:8154203fae904dc66e99ede75a2bad9410abd672dbba6cb5b07b22f8b5577253"},
-    {file = "django_silk-5.4.2.tar.gz", hash = "sha256:f3b2be63c0b92a660b7aaee591c8a505bb0757e2de55f6914cb95c1ee9ea2138"},
+    {file = "django_silk-5.4.3-py3-none-any.whl", hash = "sha256:f7920ae91a34716654296140b2cbf449e9798237a0c6eb7cf2cd79c2cfb39321"},
+    {file = "django_silk-5.4.3.tar.gz", hash = "sha256:bedb17c8fd9c029a7746cb947864f5c9ea943ae33d6a9581e60f67c45e4490ad"},
 ]
 
 [package.dependencies]
@@ -4791,4 +4791,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.2,<3.13"
-content-hash = "85f8416427fb42406aa292117a9b2180f646a8ce6816d59eac641e9b8e3f951e"
+content-hash = "c0410013d27b0105dcfe51c83b2d502734f80d514a18b69c96592ac3815f6e08"
