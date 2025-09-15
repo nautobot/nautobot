@@ -4267,10 +4267,11 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VirtualChassisBulkEditForm
     filterset_class = filters.VirtualChassisFilterSet
     filterset_form_class = forms.VirtualChassisFilterForm
-    form_class = forms.VirtualChassisCreateForm
     serializer_class = serializers.VirtualChassisSerializer
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
+    create_form_class = forms.VirtualChassisCreateForm
+    update_form_class = forms.VirtualChassisForm
 
     class MembersObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):

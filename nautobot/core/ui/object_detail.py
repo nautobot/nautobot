@@ -1311,18 +1311,19 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         for field_name in fields:
             if field_name in self.exclude_fields:
                 continue
-            # Handle nested lookups, e.g. device_type__device_family
-            field_value = instance
-            for token in field_name.split(LOOKUP_SEP):
-                try:
-                    field_value = getattr(field_value, token)
-                except ObjectDoesNotExist:
-                    field_value = None
-                    break
-                except AttributeError:
-                    if self.ignore_nonexistent_fields:
-                        continue
-                    raise
+            try:
+                field_value = instance
+                # Handle nested lookups, e.g. device_type__device_family
+                for token in field_name.split(LOOKUP_SEP):
+                    try:
+                        field_value = getattr(field_value, token)
+                    except ObjectDoesNotExist:
+                        field_value = None
+                        break
+            except AttributeError:
+                if self.ignore_nonexistent_fields:
+                    continue
+                raise
 
             data[field_name] = field_value
 
