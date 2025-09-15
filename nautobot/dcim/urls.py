@@ -31,6 +31,7 @@ router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
+router.register("devices", views.DeviceUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("locations", views.LocationUIViewSet)
@@ -332,27 +333,6 @@ urlpatterns = [
         name="devicebaytemplate_delete",
     ),
     # Devices
-    path("devices/", views.DeviceListView.as_view(), name="device_list"),
-    path("devices/add/", views.DeviceEditView.as_view(), name="device_add"),
-    path("devices/import/", views.DeviceBulkImportView.as_view(), name="device_import"),  # 3.0 TODO: remove, unused
-    path("devices/edit/", views.DeviceBulkEditView.as_view(), name="device_bulk_edit"),
-    path(
-        "devices/delete/",
-        views.DeviceBulkDeleteView.as_view(),
-        name="device_bulk_delete",
-    ),
-    path("devices/<uuid:pk>/", views.DeviceView.as_view(), name="device"),
-    path("devices/<uuid:pk>/edit/", views.DeviceEditView.as_view(), name="device_edit"),
-    path(
-        "devices/<uuid:pk>/delete/",
-        views.DeviceDeleteView.as_view(),
-        name="device_delete",
-    ),
-    path(
-        "devices/<uuid:pk>/console-ports/",
-        views.DeviceConsolePortsView.as_view(),
-        name="device_consoleports",
-    ),
     path(
         "devices/<uuid:pk>/console-ports/add/",
         RedirectView.as_view(

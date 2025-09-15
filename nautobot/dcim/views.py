@@ -47,6 +47,7 @@ from nautobot.core.ui.breadcrumbs import (
 )
 from nautobot.core.ui.bulk_buttons import (
     BulkDeleteButton,
+    BulkDisconnectButton,
     BulkEditButton,
     BulkRenameButton,
 )
@@ -771,6 +772,15 @@ def bulk_footer_buttons(form_id: str, model):
     return [
         BulkRenameButton(form_id=form_id, model=model),
         BulkEditButton(form_id=form_id, model=model),
+        BulkDeleteButton(form_id=form_id, model=model),
+    ]
+
+
+def bulk_cable_termination_footer_buttons(form_id: str, model):
+    return [
+        BulkRenameButton(form_id=form_id, model=model),
+        BulkEditButton(form_id=form_id, model=model),
+        BulkDisconnectButton(form_id=form_id, model=model),
         BulkDeleteButton(form_id=form_id, model=model),
     ]
 
@@ -1957,33 +1967,39 @@ class DeviceComponentPageMixin:
     )
 
 
-class DeviceListView(generic.ObjectListView):
+class DeviceUIViewSet(NautobotUIViewSet):
+    queryset = Device.objects.all()
     queryset = Device.objects.select_related(
         "device_type__manufacturer",  # Needed for __str__() on device_type
     )
-    filterset = filters.DeviceFilterSet
-    filterset_form = forms.DeviceFilterForm
-    table = tables.DeviceTable
-    template_name = "dcim/device_list.html"
+    filterset_class = filters.DeviceFilterSet
+    filterset_form_class = forms.DeviceFilterForm
+    table_class = tables.DeviceTable
+    form_class = forms.DeviceForm
+    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    serializer_class = serializers.DeviceSerializer
+    # TODO: template_name = "dcim/device_list.html"
 
-
-class DeviceView(DevicePageMixin, generic.ObjectView):
-    queryset = Device.objects.select_related(
-        "cluster__cluster_group",
-        "controller_managed_device_group__controller",
-        "device_redundancy_group",
-        "device_type__device_family",
-        "location",
-        "platform",
-        "primary_ip4",
-        "primary_ip6",
-        "rack__rack_group",
-        "role",
-        "secrets_group",
-        "software_version",
-        "status",
-        "tenant__tenant_group",
-    ).prefetch_related("images", "software_image_files")
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "retrieve":
+            queryset = queryset.select_related(
+                "cluster__cluster_group",
+                "controller_managed_device_group__controller",
+                "device_redundancy_group",
+                "device_type__device_family",
+                "location",
+                "platform",
+                "primary_ip4",
+                "primary_ip6",
+                "rack__rack_group",
+                "role",
+                "secrets_group",
+                "software_version",
+                "status",
+                "tenant__tenant_group",
+            ).prefetch_related("images", "software_image_files")
+        return queryset
 
     class DeviceDetailContent(object_detail.ObjectDetailContent):
         """
@@ -2291,68 +2307,70 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 exclude_columns=["device"],
             ),
         ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
+                tab_id="console-ports",
+                label="Console Ports",
+                url_name="dcim:device_consoleports",
+                related_object_attribute="all_console_ports",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Console Ports",
+                        table_class=tables.DeviceModuleConsolePortTable,
+                        table_filter="device",
+                        tab_id="console-ports",
+                        enable_bulk_actions=True,
+                        form_id="console-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(form_id="console-ports-form", model=ConsolePort),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
-        # VirtualChassis members
-        if instance.virtual_chassis is not None:
-            vc_members = (
-                Device.objects.restrict(request.user, "view")
-                .filter(virtual_chassis=instance.virtual_chassis)
-                .order_by("vc_position")
-            )
-            vc_members_table = tables.VirtualChassisMembersTable(vc_members)
-        else:
-            vc_members_table = None
+        extra_context = super().get_extra_context(request, instance)
 
-        modulebay_count = instance.module_bays.count()
-        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+        if self.action == "retrieve":
+            # VirtualChassis members
+            if instance.virtual_chassis is not None:
+                vc_members = (
+                    Device.objects.restrict(request.user, "view")
+                    .filter(virtual_chassis=instance.virtual_chassis)
+                    .order_by("vc_position")
+                )
+                vc_members_table = tables.VirtualChassisMembersTable(vc_members)
+            else:
+                vc_members_table = None
+            extra_context["vc_members_table"] = vc_members_table
+            extra_context["active_tab"] = "device"
 
-        return {
-            **super().get_extra_context(request, instance),
-            "vc_members_table": vc_members_table,
-            "active_tab": "device",
-            "modulebay_count": modulebay_count,
-            "module_count": f"{module_count}/{modulebay_count}",
-        }
+        if self.detail:
+            modulebay_count = instance.module_bays.count()
+            module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+            extra_context["modulebay_count"] = modulebay_count
+            extra_context["module_count"] = f"{module_count}/{modulebay_count}"
 
-class DeviceComponentTabView(DevicePageMixin, generic.ObjectView):
-    queryset = Device.objects.all()
+        return extra_context
 
-    def get_extra_context(self, request, instance):
-        modulebay_count = instance.module_bays.count()
-        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
-
-        return {
-            **super().get_extra_context(request, instance),
-            "modulebay_count": modulebay_count,
-            "module_count": f"{module_count}/{modulebay_count}",
-        }
-
-
-class DeviceConsolePortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/consoleports.html"
-
-    def get_extra_context(self, request, instance):
-        consoleports = (
-            instance.all_console_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
-            consoleport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "consoleport_table": consoleport_table,
-            "active_tab": "console-ports",
-        }
+    @action(
+        detail=True,
+        url_path="console-ports",
+        url_name="consoleports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleport"],
+    )
+    def consoleports(self, request, *args, **kwargs):
+        return Response({})
 
 
-class DeviceConsoleServerPortsView(DeviceComponentTabView):
+class DeviceConsoleServerPortsView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/consoleserverports.html"
 
@@ -2377,7 +2395,7 @@ class DeviceConsoleServerPortsView(DeviceComponentTabView):
         }
 
 
-class DevicePowerPortsView(DeviceComponentTabView):
+class DevicePowerPortsView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/powerports.html"
 
@@ -2398,7 +2416,7 @@ class DevicePowerPortsView(DeviceComponentTabView):
         }
 
 
-class DevicePowerOutletsView(DeviceComponentTabView):
+class DevicePowerOutletsView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/poweroutlets.html"
 
@@ -2419,7 +2437,7 @@ class DevicePowerOutletsView(DeviceComponentTabView):
         }
 
 
-class DeviceInterfacesView(DeviceComponentTabView):
+class DeviceInterfacesView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/interfaces.html"
 
@@ -2448,7 +2466,7 @@ class DeviceInterfacesView(DeviceComponentTabView):
         }
 
 
-class DeviceFrontPortsView(DeviceComponentTabView):
+class DeviceFrontPortsView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/frontports.html"
 
@@ -2465,7 +2483,7 @@ class DeviceFrontPortsView(DeviceComponentTabView):
         }
 
 
-class DeviceRearPortsView(DeviceComponentTabView):
+class DeviceRearPortsView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/rearports.html"
 
@@ -2482,7 +2500,7 @@ class DeviceRearPortsView(DeviceComponentTabView):
         }
 
 
-class DeviceDeviceBaysView(DeviceComponentTabView):
+class DeviceDeviceBaysView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/devicebays.html"
 
@@ -2505,7 +2523,7 @@ class DeviceDeviceBaysView(DeviceComponentTabView):
         }
 
 
-class DeviceModuleBaysView(DeviceComponentTabView):
+class DeviceModuleBaysView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/modulebays.html"
 
