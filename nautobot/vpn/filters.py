@@ -179,6 +179,16 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         label="VPN (name or ID)",
         to_field_name="name",
     )
+    endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNTunnel.objects.all(),
+        to_field_name="name",
+        label="Endpoint A",
+    )
+    endpoint_z_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNTunnel.objects.all(),
+        to_field_name="name",
+        label="Endpoint Z",
+    )
 
     class Meta:
         """Meta attributes for filter."""
@@ -214,16 +224,6 @@ class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         queryset=Interface.objects.filter(type="tunnel"),
         to_field_name="name",
         label="Tunnel Interface (ID or name)",
-    )
-    endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.VPNTunnel.objects.all(),
-        to_field_name="name",
-        label="Endpoint A",
-    )
-    endpoint_z_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.VPNTunnel.objects.all(),
-        to_field_name="name",
-        label="Endpoint Z",
     )
 
     class Meta:
