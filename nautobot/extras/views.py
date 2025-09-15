@@ -59,7 +59,6 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
-    UIComponentsMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
@@ -2277,7 +2276,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(UIComponentsMixin, generic.GenericView):
+class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
 
@@ -2459,7 +2458,7 @@ class NoteUIViewSet(
         return obj
 
 
-class ObjectNotesView(UIComponentsMixin, generic.GenericView):
+class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
 
