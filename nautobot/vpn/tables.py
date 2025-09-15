@@ -265,6 +265,8 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    vpn = tables.Column(linkify=True)
+    vpn_profile = tables.Column(linkify=True, verbose_name="VPN Profile")
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
     tenant = TenantColumn()
@@ -317,15 +319,15 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     source_interface = tables.Column(linkify=True)
     source_ipaddress = tables.Column(linkify=True)
     tunnel_interface = tables.Column(linkify=True)
-    protected_prefixes_dg_count = LinkedCountColumn(
-        viewname="extras:dynamicgroup_list",
-        verbose_name="Dynamic Group",
+    protected_prefixes_count = LinkedCountColumn(
+        viewname="ipam:prefix_list",
+        verbose_name="Protected Prefixes",
         url_params={"vpn_tunnel_endpoints": "pk"},
         reverse_lookup="vpn_tunnel_endpoints",
     )
-    protected_prefixes_count = LinkedCountColumn(
-        viewname="ipam:prefix_list",
-        verbose_name="Prefix",
+    protected_prefixes_dg_count = LinkedCountColumn(
+        viewname="extras:dynamicgroup_list",
+        verbose_name="Protected Prefixes Dynamic Group",
         url_params={"vpn_tunnel_endpoints": "pk"},
         reverse_lookup="vpn_tunnel_endpoints",
     )
@@ -339,28 +341,26 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            "vpn_profile",
             "device",
             "source_interface",
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
+            "protected_prefixes_dg_count",
             "role",
             "status",
         )
         default_columns = (
             "pk",
             "name",
-            "vpn_profile",
             "device",
             "source_interface",
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
+            "protected_prefixes_dg_count",
             "role",
             "actions",
         )

@@ -175,8 +175,6 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
     source_ipaddress = factory.Maybe("has_device", random_instance(IPAddress), None)
     source_fqdn = factory.Maybe("has_device", "", factory.Faker("word"))
     tunnel_interface = factory.Maybe("has_device", random_instance(Interface.objects.filter(type="tunnel")), None)
-    has_profile = NautobotBoolIterator()
-    vpn_profile = factory.Maybe("has_profile", random_instance(models.VPNProfile), None)
     has_role = NautobotBoolIterator()
     role = factory.Maybe(
         "has_role",
