@@ -204,14 +204,14 @@ jobs:
       - name: "Calculate checksum of originally committed UI dist files"
         shell: bash
         run: |
-          original_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          original_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
           echo "original_checksum=$original_checksum" >> "$GITHUB_ENV"
       - name: "Build UI from source"
         run: "poetry run invoke ui-build"
       - name: "Re-calculate checksum of UI dist files after the build"
         shell: bash
         run: |
-          updated_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          updated_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
           echo "updated_checksum=updated_checksum" >> "$GITHUB_ENV"
       - name: "Compare calculated checksums"
         run: |
