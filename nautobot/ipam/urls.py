@@ -13,13 +13,13 @@ app_name = "ipam"
 router = NautobotUIViewSetRouter()
 router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
 router.register("namespaces", views.NamespaceUIViewSet)
+router.register("prefixes", views.PrefixUIViewSet)
 router.register("rirs", views.RIRUIViewSet)
 router.register("route-targets", views.RouteTargetUIViewSet)
 router.register("services", views.ServiceUIViewSet)
 router.register("vlans", views.VLANUIViewSet)
 router.register("vlan-groups", views.VLANGroupUIViewSet)
 router.register("vrfs", views.VRFUIViewSet)
-router.register("prefiexes", views.PrefixUIViewSet)
 
 urlpatterns = [
     # IP addresses

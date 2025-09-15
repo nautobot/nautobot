@@ -356,6 +356,9 @@ class PrefixUIViewSet(NautobotUIViewSet):
                     "utilization",
                 ],
                 ignore_nonexistent_fields=True,  # utilization it's not a field
+                value_transforms={
+                    "ip_version": [lambda v: f"IPv{v}" if v is not None else helpers.placeholder(v)],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -394,10 +397,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
             ),
         ],
         extra_tabs=[
-            prefix_ui.ChildPrefixDistinctViewTab(
+            prefix_ui.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
                 label="Child Prefixes",
+                related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
                     prefix_ui.PrefixChildTablePanel(
@@ -406,6 +410,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         context_table_key="prefix_table",
                         add_button_route=None,
                         include_paginator=True,
+                        header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
                     ),
                 ),
             ),
@@ -421,6 +426,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         context_table_key="ip_table",
                         add_button_route=None,
                         include_paginator=True,
+                        header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
                     ),
                 ],
             ),

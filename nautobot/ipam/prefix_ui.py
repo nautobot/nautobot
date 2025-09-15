@@ -3,7 +3,7 @@ import logging
 from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.object_detail import (
@@ -16,20 +16,6 @@ from nautobot.core.ui.object_detail import (
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
-
-
-class ChildPrefixDistinctViewTab(DistinctViewTab):
-    def render_label(self, context):
-        obj = get_obj_from_context(context)
-        count = getattr(obj, "descendants_count", None)
-        if count is None:
-            return super().render_label(context)
-
-        return format_html(
-            "{} {}",
-            self.label,
-            render_to_string("utilities/templatetags/badge.html", helpers.badge(count, True)),
-        )
 
 
 class IPAddressDistinctViewTab(DistinctViewTab):
@@ -126,13 +112,19 @@ class AddIPAddressButton(Button):
 class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     """A table panel for displaying key-value pairs of prefix-related attributes, along with any override values defined on the prefix object."""
 
-    def render_locations_list(self, value):
+    def render_locations_list(self, key, value, instance):
         """Renders a <ul> HTML list of locations with hyperlinks, or a placeholder if none exist."""
         if not value or not value.exists():
             return helpers.placeholder(None)
 
-        items = format_html_join("\n", "<li>{}</li>", ((helpers.hyperlinked_object(q),) for q in value.all()))
-        return format_html("<ul>{}</ul>", items)
+        base_url = reverse("dcim:location_list")
+        full_listing_link = f"{base_url}?prefixes={instance.pk}"
+
+        return helpers.render_m2m(
+            value.all(),
+            full_listing_link=full_listing_link,
+            verbose_name_plural=key,
+        )
 
     def render_utilization(self, value):
         """Renders a utilization graph, or a placeholder if none exist."""
@@ -164,11 +156,10 @@ class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTabl
         return data
 
     def render_value(self, key, value, context):
-        if key == "ip_version":
-            return f"IPv{value}"
+        instance = get_obj_from_context(context)
         if key == "utilization":
             return self.render_utilization(value)
         if key == "locations":
-            return self.render_locations_list(value)
+            return self.render_locations_list(key, value, instance)
 
         return super().render_value(key, value, context)
