@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
@@ -22,8 +21,8 @@
 {% endblock extra_buttons %}
 
 {% block extra_nav_tabs %}
-        <li class="nav-item" role="presentation">
-             <a href="{% url 'extras:gitrepository_result' pk=object.pk %}" class="nav-link{% if active_tab == 'result' %} active{% endif %}">Synchronization Status</a>
+        <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
+             <a href="{% url 'extras:gitrepository_result' pk=object.pk %}">Synchronization Status</a>
         </li>
 {% endblock extra_nav_tabs %}
 
@@ -81,7 +80,3 @@
                 </table>
             </div>
 {% endblock %}
-=======
-{% extends 'extras/gitrepository_retrieve.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
->>>>>>> develop

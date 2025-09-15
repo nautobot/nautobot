@@ -44,8 +44,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.13"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+>>>>>>> develop
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -118,8 +123,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.13"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+>>>>>>> develop
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
   tests-mysql:
@@ -154,8 +164,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.10"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.9"
+>>>>>>> develop
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
   migration-tests-mysql:
@@ -188,8 +203,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.10"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.9"
+>>>>>>> develop
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
@@ -219,8 +239,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.13"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+>>>>>>> develop
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
@@ -255,8 +280,13 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
+<<<<<<< HEAD
           poetry-version: "1.8.5"
           python-version: "3.13"
+=======
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+>>>>>>> develop
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb -e fix_in_v3"

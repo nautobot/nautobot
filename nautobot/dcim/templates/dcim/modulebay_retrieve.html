@@ -1,5 +1,56 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
+<<<<<<< HEAD
+=======
+{% block content_left_page %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Module Bay</strong>
+                        </div>
+                        <table class="table table-hover panel-body attr-table">
+                            <tr>
+                                {% if object.parent_device %}
+                                    <td>Parent Device</td>
+                                    <td>
+                                        {{ object.parent_device|hyperlinked_object }}
+                                    </td>
+                                {% else %}
+                                    <td>Parent Module</td>
+                                    <td>
+                                        {{ object.parent_module|hyperlinked_object }}
+                                    </td>
+                                {% endif %}
+                            </tr>
+                            <tr>
+                                <td>Family</td>
+                                <td>
+                                    {{ object.module_family|hyperlinked_object }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Name</td>
+                                <td>{{ object.name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Position</td>
+                                <td>{{ object.position }}</td>
+                            </tr>
+                            <tr>
+                                <td>Label</td>
+                                <td>{{ object.label|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Description</td>
+                                <td>{{ object.description|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>Requires first-party modules</td>
+                                <td>{{ object.requires_first_party_modules|render_boolean }}</td>
+                            </tr>
+                        </table>
+                    </div>
+{% endblock content_left_page %}
+>>>>>>> develop
 
 {% block page_title %}
     {% with title=object.display|default:object %}

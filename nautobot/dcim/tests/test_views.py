@@ -4203,6 +4203,47 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Sanity check:
         self.assertBodyContains(response, "<th>Name</th>", html=True)
 
+    def test_set_master_after_adding_member(self):
+        """Ensure master can be set for a member that was added via the Add Member flow."""
+        self.add_permissions(
+            "dcim.view_device",
+            "dcim.view_virtualchassis",
+            "dcim.change_virtualchassis",
+            "dcim.change_device",
+        )
+
+        # Create VC
+        vc = VirtualChassis.objects.create(name="VC-test", domain="domain-test")
+
+        # Simulate adding a member via the separate "add-member" flow by creating the device with virtual_chassis
+        member = Device.objects.create(
+            device_type=self.devices[0].device_type,
+            role=self.devices[0].role,
+            status=self.devices[0].status,
+            name="separately-added-device",
+            location=self.devices[0].location,
+            virtual_chassis=vc,
+            vc_position=1,
+        )
+
+        # Now edit the VC and set the master to the existing member
+        payload_data = {
+            "name": vc.name,
+            "domain": vc.domain,
+            "master": str(member.pk),
+            # no members formset rows are required because the member already exists
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        url = reverse("dcim:virtualchassis_edit", kwargs={"pk": vc.pk})
+        self.client.post(url, data=payload_data, follow=True)
+
+        vc.refresh_from_db()
+        self.assertEqual(vc.master, member)
+
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel

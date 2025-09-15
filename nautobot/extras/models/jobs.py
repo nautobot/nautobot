@@ -50,7 +50,11 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
+<<<<<<< HEAD
 from nautobot.extras.models.mixins import ApprovableModelMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
+=======
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
+>>>>>>> develop
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -622,7 +626,7 @@ class JobQueueAssignment(BaseModel):
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel, CustomFieldModel):
+class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     """
     This model stores the results from running a Job.
     """

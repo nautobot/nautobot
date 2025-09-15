@@ -8,9 +8,48 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
+<<<<<<< HEAD
 {% block page_title %}
     {% include 'inc/page_title.html' %}
 {% endblock page_title %}
+=======
+{% block header %}
+    <div class="row noprint">
+        <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
+        {% captureas default_breadcrumbs %}
+            {% if list_url %}
+                <li><a href="{% url list_url %}">{{ title }}</a></li>
+            {% endif %}
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
+            {% block breadcrumbs %}
+                {% if list_url %}
+                    <li><a href="{% url list_url %}">{{ title }}</a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock breadcrumbs %}
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+        </div>
+        {% if search_form %}
+        <div class="col-sm-4 col-md-3">
+            <form action="#" method="get" id="search-form">
+                <div class="input-group">
+                    {{ search_form.q }}
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+{% endblock header %}
+>>>>>>> develop
 
 {% block breadcrumbs %}
     {% include 'inc/breadcrumbs.html' %}

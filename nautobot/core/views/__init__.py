@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
@@ -51,6 +52,11 @@ from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.utils import (
+    generate_latest_with_cache,
+    is_metrics_experimental_caching_enabled,
+    METRICS_CACHE_KEY,
+)
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
@@ -433,8 +439,17 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        for metric_generator in registry["app_metrics"]:
-            yield from metric_generator()
+        cached_lines = cache.get(METRICS_CACHE_KEY)
+        if not is_metrics_experimental_caching_enabled() or not cached_lines:
+            # If caching is disabled or no cache is found, generate metrics
+            for metric_generator in registry["app_metrics"]:
+                yield from metric_generator()
+        else:
+            # We stash the cached lines on the instance of the collector so that we can
+            # avoid a potential race condition where the cache expires between
+            # the time we check for it and the time we go to use it
+            # in generate_latest_with_cache()
+            self.local_cache = cached_lines
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
@@ -483,7 +498,13 @@ class NautobotMetricsView(APIView):
         except ValueError:
             # Collector already registered, we are running without multiprocessing
             pass
-        metrics_page = generate_latest(prometheus_registry)
+
+        if is_metrics_experimental_caching_enabled():
+            # Use the vendored version of generate_latest with Caching support
+            metrics_page = generate_latest_with_cache(prometheus_registry)
+        else:
+            # Use the original version of generate_latest to generate the metrics
+            metrics_page = generate_latest(prometheus_registry)
         return Response(metrics_page, content_type=CONTENT_TYPE_LATEST)
 
 

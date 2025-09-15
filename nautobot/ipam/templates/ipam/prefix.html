@@ -1,6 +1,7 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
+<<<<<<< HEAD
 {% block breadcrumbs %}
     <li class="breadcrumb-item"><a href="{% url 'ipam:namespace_list' %}">Namespaces</a></li>
     <li class="breadcrumb-item">{{ object.namespace | hyperlinked_object }}</li>
@@ -9,6 +10,8 @@
     <li class="breadcrumb-item">{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
+=======
+>>>>>>> develop
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}
         <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&namespace={{ object.namespace.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}" class="btn btn-success">
