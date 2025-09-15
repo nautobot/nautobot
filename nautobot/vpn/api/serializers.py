@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema_field
-from rest_framework.serializers import CharField, ChoiceField, ListField, SerializerMethodField
+from rest_framework.serializers import CharField, ChoiceField, ListField, PrimaryKeyRelatedField, SerializerMethodField
 
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 
@@ -97,11 +97,32 @@ class VPNSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pyl
 class VPNTunnelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNTunnel Serializer."""
 
+    vpn_profile = SerializerMethodField(read_only=True)
+    _vpn_profile = PrimaryKeyRelatedField(
+        queryset=models.VPNProfile.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         """Meta attributes."""
 
         model = models.VPNTunnel
         fields = "__all__"
+
+    @extend_schema_field(CharField)
+    def get_vpn_profile(self, instance):
+        """Expose vpn_profile property."""
+        obj = instance.vpn_profile
+        if obj:
+            return VPNProfileSerializer(obj, context=self.context).data
+        return None
+
+    def validate(self, attrs):
+        """Map vpn_profile to _vpn_profile when doing POST requests."""
+        if "vpn_profile" in self.initial_data:
+            attrs["_vpn_profile"] = self.initial_data["vpn_profile"]
+        return super().validate(attrs)
 
 
 class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors

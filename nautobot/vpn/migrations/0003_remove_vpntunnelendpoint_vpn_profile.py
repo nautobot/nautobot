@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('vpn', '0002_populate_status_roles_defaults'),
+        ("vpn", "0002_populate_status_roles_defaults"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='vpntunnelendpoint',
-            name='vpn_profile',
+            model_name="vpntunnelendpoint",
+            name="vpn_profile",
         ),
     ]

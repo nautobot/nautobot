@@ -265,6 +265,8 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    vpn = tables.Column(linkify=True)
+    vpn_profile = tables.Column(linkify=True, verbose_name="VPN Profile")
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
     tenant = TenantColumn()

@@ -310,7 +310,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
                 add_button_route=None,
-                label="Protected"
+                label="Protected",
             ),
             ObjectsTablePanel(
                 weight=200,

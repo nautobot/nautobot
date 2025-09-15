@@ -304,7 +304,6 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_links",
     "custom_validators",
     "export_templates",
-    "graphql",
     "statuses",
     "webhooks",
 )
@@ -314,7 +313,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     tunnel_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Tunnel ID")
-    vpn_profile = models.ForeignKey(
+    _vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
         related_name="vpn_tunnels",
@@ -372,10 +371,24 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         "endpoint_a",
         "endpoint_z",
         "status",
-        "vpn_profile",
+        "_vpn_profile",
         "tenant",
         "role",
     ]
+
+    @property
+    def vpn_profile(self):
+        """Return the VPN Profile assigned to the Tunnel, falling back to the VPN's profile if not set."""
+        if self._vpn_profile:
+            return self._vpn_profile
+        if self.vpn and self.vpn.vpn_profile:
+            return self.vpn.vpn_profile
+        return None
+
+    @vpn_profile.setter
+    def vpn_profile(self, value):
+        """Set the VPN Profile directly on the Tunnel."""
+        self._vpn_profile = value
 
     class Meta:
         """Meta class for VPNTunnel."""
@@ -396,7 +409,6 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_links",
     "custom_validators",
     "export_templates",
-    "graphql",
     "webhooks",
 )
 class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
