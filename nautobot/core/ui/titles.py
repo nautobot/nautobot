@@ -1,9 +1,10 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from django.template import Context, Template
 from django.utils.html import strip_tags
 
 DEFAULT_TITLES: dict[str, str] = {
+    "*": "{{ verbose_name_plural|bettertitle }}",
     "list": "{{ verbose_name_plural|bettertitle }}",
     "detail": "{{ object.display|default:object }}",
     "retrieve": "{{ object.display|default:object }}",
@@ -59,7 +60,7 @@ class Titles:
         if template_plugins:
             self.template_plugins.extend(template_plugins)
 
-    def render(self, context: Context, mode: ModeType = "html") -> str:
+    def render(self, context: Union[dict, Context], mode: ModeType = "html") -> str:
         """
         Renders the title based on given context and current action.
 
@@ -68,12 +69,15 @@ class Titles:
         Make sure that needed context variables are in context and needed plugins are loaded.
 
         Args:
-            context (Context): Render context.
+            context (Union[dict, Context]): Render context.
             mode (ModeType): Rendering mode: "html" or "plain".
 
         Returns:
             (str): HTML fragment or plain text, depending on `mode`.
         """
+        if isinstance(context, dict):
+            context = Context(context)
+
         with context.update(self.get_extra_context(context)):
             template_str = self.get_template_str(context)
             template = Template(self.template_plugins_str + template_str)
@@ -92,7 +96,7 @@ class Titles:
         Returns:
             str: The template string for the current action, or an empty string if not found.
         """
-        action = context.get("view_action", "list")
+        action = context.get("view_action", "")
 
         template_str = self.titles.get(action)
         if template_str:
@@ -102,7 +106,7 @@ class Titles:
         if detail:
             return self.titles.get("detail", "")
 
-        return ""
+        return self.titles.get("*", "")
 
     @property
     def template_plugins_str(self) -> str:

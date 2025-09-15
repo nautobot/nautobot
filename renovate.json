@@ -5,7 +5,6 @@
   ],
   "enabledManagers": [
     "npm",
-    "pip_requirements",
     "poetry"
   ],
   "extends": [
