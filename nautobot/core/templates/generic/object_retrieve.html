@@ -11,6 +11,12 @@
 {% load ui_framework %}
 
 
+{% block page_title %}
+    {% with title=object.display|default:object %}
+        {% include 'inc/page_title.html' with title=title copy_title=True %}
+    {% endwith %}
+{% endblock page_title %}
+
 {% block breadcrumbs %}
     {% with title=object.display|default:object %}
         {% get_breadcrumbs as crumbs %}

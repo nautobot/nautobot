@@ -1,0 +1,1 @@
+Separate `page_title` block from `breadcrumbs` in base Django templates.

@@ -16,7 +16,10 @@
         <div class="container-fluid mb-12 mt-16">
             <div class="row row-cols-3">
                 <div class="col">
-                    {% include 'inc/breadcrumbs.html' with title=name|add:' – REST API' %}
+                    <div>
+                        {% include 'inc/page_title.html' with title=name|add:' – REST API' %}
+                        {% include 'inc/breadcrumbs.html' %}
+                    </div>
                 </div>
                 {% include 'inc/header.html' %}
             </div>

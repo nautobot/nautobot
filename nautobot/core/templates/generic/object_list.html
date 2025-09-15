@@ -8,6 +8,10 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
+{% block page_title %}
+    {% include 'inc/page_title.html' %}
+{% endblock page_title %}
+
 {% block breadcrumbs %}
     {% include 'inc/breadcrumbs.html' %}
 {% endblock breadcrumbs %}

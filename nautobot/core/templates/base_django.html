@@ -22,7 +22,10 @@
         <div class="container-fluid mb-12 mt-16">
             <div class="row row-cols-3">
                 <div class="col">
-                    {% block breadcrumbs %}{% endblock breadcrumbs %}
+                    <div>
+                        {% block page_title %}{% endblock page_title %}
+                        {% block breadcrumbs %}{% endblock breadcrumbs %}
+                    </div>
                 </div>
                 {% include 'inc/header.html' %}
             </div>
