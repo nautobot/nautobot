@@ -24,10 +24,8 @@ class TagFilterTestCase(SeleniumTestCase):
 
     def test_tag_matching_content_type(self):
         # Navigate to the Provider list view
-        self.browser.links.find_by_partial_text("Circuits").click()
-        link = self.browser.links.find_by_partial_text("Providers").first
-        self.browser.execute_script("arguments[0].scrollIntoView(true);", link._element)
-        link.click()
+        self.click_navbar_entry("Circuits", "Providers")
+
         # Open the filter form
         self.browser.find_by_id("id__filterbtn").click()
         time.sleep(0.5)
