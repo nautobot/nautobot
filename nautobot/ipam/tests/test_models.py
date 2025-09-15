@@ -172,6 +172,13 @@ class IPAddressToInterfaceTest(TestCase):
             IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
         self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
 
+    def test_m2m_save_signal_invoked_on_iface_ip_addresses_add(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            self.test_int1.ip_addresses.add(ip_addr, through_defaults={"vm_interface": self.test_vmint1})
+
+        self.assertIn("Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception))
+
     def test_primary_ip_retained_when_deleted_from_device_or_module_interface(self):
         """Test primary_ip4 remains set when the same IP is assigned to multiple interfaces and deleted from one."""
 
