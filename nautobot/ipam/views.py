@@ -352,7 +352,6 @@ class PrefixView(generic.ObjectView):
         vpn_endpoints = instance.vpn_tunnel_endpoints.restrict(request.user, "view")
         vpn_endpoints_table = VPNTunnelEndpointTable(vpn_endpoints, orderable=False)
         vpn_endpoints_table.exclude = (
-            "vpn_profile",
             "destination_ipaddress",
             "destination_fqdn",
             "protected_prefixes_dg_count",

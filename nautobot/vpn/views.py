@@ -269,7 +269,6 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields=[
                     "name",
-                    "vpn_profile",
                     "device",
                     "source_interface",
                     "source_ipaddress",
@@ -306,19 +305,21 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=100,
-                table_class=DynamicGroupTable,
-                table_filter="vpn_tunnel_endpoints",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=[],
-                add_button_route=None,
-            ),
-            ObjectsTablePanel(
-                weight=200,
                 table_class=PrefixTable,
                 table_filter="vpn_tunnel_endpoints",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
                 add_button_route=None,
+                label="Protected"
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=DynamicGroupTable,
+                table_filter="vpn_tunnel_endpoints",
+                section=SectionChoices.FULL_WIDTH,
+                exclude_columns=[],
+                add_button_route=None,
+                label="Protected Prefixes",
             ),
         ],
     )

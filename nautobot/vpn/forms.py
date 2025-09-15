@@ -412,12 +412,6 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
         },
         help_text="Interface must be of type Tunnel",
     )
-    vpn_profile = DynamicModelChoiceField(
-        queryset=models.VPNProfile.objects.all(),
-        required=False,
-        label="VPN Profile",
-        help_text="VPN Profile for the tunnel endpoint.",
-    )
     protected_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
@@ -427,7 +421,7 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
     protected_prefixes_dg = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(),
         required=False,
-        label="Protected Prefixes (from Dynamic Group)",
+        label="Protected Prefixes Dynamic Group",
         to_field_name="name",
         help_text="Protected Prefixes behind the tunnel endpoint.",
     )
@@ -446,17 +440,16 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         queryset=models.VPNTunnelEndpoint.objects.all(), widget=forms.MultipleHiddenInput
     )
     source_fqdn = forms.CharField(required=False, label="Source Fqdn")
-    protected_prefixes_dg = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(),
-        required=False,
-        label="Dynamic Group",
-        to_field_name="name",
-    )
     protected_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
         label="Prefix",
-        # TODO INIT defaulting to the common field `name`, you may want to change this.
+        to_field_name="name",
+    )
+    protected_prefixes_dg = DynamicModelMultipleChoiceField(
+        queryset=DynamicGroup.objects.all(),
+        required=False,
+        label="Dynamic Group",
         to_field_name="name",
     )
 
@@ -465,7 +458,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
 
         model = models.VPNTunnelEndpoint
         nullable_fields = [
-            "vpn_profile",
             "source_ipaddress",
             "source_interface",
             "source_fqdn",
