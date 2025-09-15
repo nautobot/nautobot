@@ -292,7 +292,6 @@ class LocationUIViewSet(NautobotUIViewSet):
         related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
-        # TODO: Why is distinct only needed for the VLAN count?
         stats = {
             "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "device_count": Device.objects.restrict(request.user, "view")
