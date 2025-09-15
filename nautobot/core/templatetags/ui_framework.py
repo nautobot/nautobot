@@ -59,7 +59,7 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
 
     Examples:
     - UI Component Framework breadcrumbs are defined in the view. But in the template, {% block breadcrumbs %} is being used,
-    to override breadcrumbs. Output: template breadcrumbs will be rendered.
+    to override breadcrumbs or `{% block extra_breadcrumbs %}`. Output: template breadcrumbs will be rendered.
     - There is no UI Component Framework breadcrumbs and no other block overrides. Output: default breadcrumbs will be rendered.
     - UI Component Framework breadcrumbs are defined in the view. No breadcrumbs block overrides. Output: UI Component Framework breadcrumbs will be rendered.
     """
