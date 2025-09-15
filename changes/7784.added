@@ -1,2 +1,0 @@
-Added support for `ObjectFieldsPanel(...fields="__all__", additional_fields=[...])` to allow inclusion of properties, reverse relations, nested lookups, and other attributes not normally included in `__all__`.
-Enhanced `ObjectFieldsPanel` to support nested lookup of object fields, such as `fields=["rack__rack_group"]`.
