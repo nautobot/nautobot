@@ -3,24 +3,13 @@
 {% load static %}
 
 {% block masthead %}
-<<<<<<< HEAD
     <h1>
-        <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
+        <span id="devicename">{% block title %}{{ block.super }}{% endblock title %}</span>
         <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="{{ object }}">
             <span aria-hidden="true" class="mdi mdi-content-copy"></span>
             <span class="visually-hidden">Copy</span>
         </button>
     </h1>
-=======
-    <span class="hover_copy">
-        <h1>
-            <span id="devicename">{% block title %}{{ block.super }}{% endblock title %}</span>
-            <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-text="{{ object }}">
-                <span class="mdi mdi-content-copy"></span>
-            </button>
-        </h1>
-    </span>
->>>>>>> develop
 {% endblock masthead %}
 
 {% block extra_nav_tabs %}

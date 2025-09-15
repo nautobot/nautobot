@@ -39,7 +39,7 @@ from nautobot.core.forms import (
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (

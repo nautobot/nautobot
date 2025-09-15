@@ -28,13 +28,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   yamllint:
@@ -48,13 +43,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
@@ -68,13 +58,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev --only linting"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   hadolint:
@@ -112,13 +97,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run check migrations"
         run: "poetry run invoke check-migrations"
   check-schema:
@@ -146,13 +126,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -180,13 +155,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
   ui-code-check:
@@ -280,13 +250,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.10"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.9"
->>>>>>> develop
+          python-version: "3.10"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
     needs:
@@ -332,13 +297,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage --exclude-tag fix_in_v3"
       - name: "Generate coverage comment"
@@ -443,13 +403,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.10"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.9"
->>>>>>> develop
+          python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
     needs:
@@ -487,13 +442,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
     needs:
@@ -536,13 +486,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb -e fix_in_v3"
@@ -566,13 +511,8 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--only dev"
-<<<<<<< HEAD
-          poetry-version: "1.8.5"
-          python-version: "3.13"
-=======
           poetry-version: "2.1.4"
-          python-version: "3.12"
->>>>>>> develop
+          python-version: "3.13"
       - name: "Check for changelog entry"
         run: |
           git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}

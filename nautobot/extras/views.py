@@ -59,11 +59,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-<<<<<<< HEAD
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
-=======
-from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
->>>>>>> develop
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -165,9 +161,9 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
     table_class = tables.ApprovalWorkflowDefinitionTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -228,9 +224,9 @@ class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
     table_class = tables.ApprovalWorkflowStageDefinitionTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -256,7 +252,7 @@ class ApprovalWorkflowUIViewSet(
     table_class = tables.ApprovalWorkflowTable
     action_buttons = ()
 
-    class ApprovalWorkflowPanel(ObjectFieldsPanel):
+    class ApprovalWorkflowPanel(object_detail.ObjectFieldsPanel):
         def __init__(self, **kwargs):
             super().__init__(
                 fields=(
@@ -296,7 +292,7 @@ class ApprovalWorkflowUIViewSet(
 
             return super().render_value(key, value, context)
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             ApprovalWorkflowPanel(
                 weight=100,
@@ -341,7 +337,7 @@ class ApprovalWorkflowStageUIViewSet(
     table_class = tables.ApprovalWorkflowStageTable
     action_buttons = ()
 
-    class ApprovalWorkflowStagePanel(ObjectFieldsPanel):
+    class ApprovalWorkflowStagePanel(object_detail.ObjectFieldsPanel):
         def __init__(self, **kwargs):
             super().__init__(
                 fields=(
@@ -392,7 +388,7 @@ class ApprovalWorkflowStageUIViewSet(
             data["min_approvers"] = obj.approval_workflow_stage_definition.min_approvers
             return data
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             ApprovalWorkflowStagePanel(
                 weight=100,

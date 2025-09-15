@@ -24,7 +24,9 @@
                 <div class="col">
                     <div>
                         {% block page_title %}{% endblock page_title %}
-                        {% block breadcrumbs %}{% endblock breadcrumbs %}
+                        {% block breadcrumbs_wrapper %}
+                            {% block breadcrumbs %}{% endblock breadcrumbs %}
+                        {% endblock breadcrumbs_wrapper %}
                     </div>
                 </div>
                 {% include 'inc/header.html' %}

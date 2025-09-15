@@ -1393,19 +1393,6 @@ def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
     return title
 
 
-<<<<<<< HEAD
-@register.simple_tag(takes_context=True)
-def get_breadcrumbs(context):
-    crumbs = []
-
-    if context_object := context.get("object"):
-        list_url = validated_viewname(context_object, "list")
-        crumbs.append((reverse(list_url), bettertitle(context.get("verbose_name_plural", ""))))
-        crumbs.append((get_object_link(context_object), str(context_object)))
-
-    return crumbs
-
-
 @register.inclusion_tag("echarts/echarts.html")
 def render_echart(chart, chart_config, chart_container_id, chart_width="100%", chart_height="32rem"):
     """
@@ -1418,7 +1405,8 @@ def render_echart(chart, chart_config, chart_container_id, chart_width="100%", c
         "chart_height": chart_height,
         "chart_container_id": chart_container_id,
     }
-=======
+
+
 # https://www.djangosnippets.org/snippets/545/
 @register.tag(name="captureas")
 def do_captureas(parser, token):
@@ -1441,4 +1429,3 @@ class CaptureasNode(template.Node):
         output = output.strip()
         context[self.varname] = output
         return ""
->>>>>>> develop

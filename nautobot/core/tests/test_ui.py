@@ -9,19 +9,14 @@ from django.test import RequestFactory
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
-<<<<<<< HEAD
 from nautobot.core.ui.choices import EChartsTypeChoices
 from nautobot.core.ui.echarts import (
     EChartsBase,
     queryset_to_nested_dict_keys_as_series,
     queryset_to_nested_dict_records_as_series,
 )
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
-=======
 from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectFieldsPanel, ObjectsTablePanel, Panel
-from nautobot.dcim.models import DeviceRedundancyGroup
->>>>>>> develop
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.ipam.models import Prefix
 

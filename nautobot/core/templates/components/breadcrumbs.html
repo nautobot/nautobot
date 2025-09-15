@@ -1,34 +1,21 @@
-<<<<<<< HEAD
+{% load helpers %}
+
 <nav aria-label="Breadcrumbs" class="mt-4">
     <ol class="breadcrumb">
         {% block breadcrumbs %}
-            {% for url, title in breadcrumbs_items %}
-                <li class="breadcrumb-item">
-=======
-{% load helpers %}
-
-<ol class="breadcrumb">
-    {% block breadcrumbs %}
-        {% if legacy_breadcrumbs %}
-            {{ legacy_breadcrumbs | safe }}
-        {% else %}
-            {% for url, title in breadcrumbs_items %}
-                <li>
->>>>>>> develop
-                {% if url %}
-                    <a href="{{ url }}">{{ title }}</a>
-                {% else %}
-                    {{ title }}
-                {% endif %}
-                </li>
-            {% endfor %}
-<<<<<<< HEAD
-            {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% if legacy_breadcrumbs %}
+                {{ legacy_breadcrumbs | safe }}
+            {% else %}
+                {% for url, title in breadcrumbs_items %}
+                    <li class="breadcrumb-item">
+                    {% if url %}
+                        <a href="{{ url }}">{{ title }}</a>
+                    {% else %}
+                        {{ title }}
+                    {% endif %}
+                    </li>
+                {% endfor %}
+            {% endif %}
         {% endblock %}
     </ol>
 </nav>
-=======
-        {% endif %}
-    {% endblock %}
-</ol>
->>>>>>> develop
