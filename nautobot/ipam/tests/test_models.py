@@ -177,7 +177,9 @@ class IPAddressToInterfaceTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             self.test_int1.ip_addresses.add(ip_addr, through_defaults={"vm_interface": self.test_vmint1})
 
-        self.assertIn("Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception))
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
 
     def test_primary_ip_retained_when_deleted_from_device_or_module_interface(self):
         """Test primary_ip4 remains set when the same IP is assigned to multiple interfaces and deleted from one."""
