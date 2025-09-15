@@ -176,6 +176,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#7614](https://github.com/nautobot/nautobot/issues/7614) - Added Bulk Edit functionality for the DynamicGroup model.
 - [#7687](https://github.com/nautobot/nautobot/issues/7687) - Added usage of `{% render_title %}` and `{% render_breadcrumbs %}` in `object_list.html` and `object_retrieve.html` templates.
+- [#7727](https://github.com/nautobot/nautobot/issues/7727) - EXPERIMENTAL: Enabled caching of App-generated Prometheus metrics. This is an experimental feature and may be removed or changed in future releases.
 - [#7758](https://github.com/nautobot/nautobot/issues/7758) - Added SavedView capability to JobResults model.
 - [#7784](https://github.com/nautobot/nautobot/issues/7784) - Added support for `ObjectFieldsPanel(...fields="__all__", additional_fields=[...])` to allow inclusion of properties, reverse relations, nested lookups, and other attributes not normally included in `__all__`.
 - [#7784](https://github.com/nautobot/nautobot/issues/7784) - Enhanced `ObjectFieldsPanel` to support nested lookup of object fields, such as `fields=["rack__rack_group"]`.
@@ -186,6 +187,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context.
 - [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectListView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context along with `verbose_name_plural` and `view_action`.
 - [#7784](https://github.com/nautobot/nautobot/issues/7784) - Changed `ObjectFieldsPanel.__init__` behavior to raise an error if `exclude_fields` is specified in combination with any value of `fields` other than `"__all__"`.
+- [#7795](https://github.com/nautobot/nautobot/issues/7795) - Changed CircuitTermination UI `Port Speed` and `Upstream Speed` fields back to single field `Speed` with arrows.
+- [#7801](https://github.com/nautobot/nautobot/issues/7801) - Updated Breadcrumbs docs and `UIComponentsMixin` order in some classes.
 
 ### Fixed in v2.4.18
 
@@ -200,6 +203,10 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed column ordering issue by disabling `orderable` for `PowerFeedTable.occupied_positions`, `PowerFeedTable.phase_designation`, and `JobResultTable.duration`.
 - [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed `ObjectMetadataTable.value` column ordering issue by adding missing `order_by` attribute.
 - [#7774](https://github.com/nautobot/nautobot/issues/7774) - Fixed incorrect rendering of Nautobot `n` icon in some browsers.
+- [#7783](https://github.com/nautobot/nautobot/issues/7783) - Fixed an issue where you could not set the virtual chassis master.
+- [#7789](https://github.com/nautobot/nautobot/issues/7789) - Changed certain filter fields to prevent unnecessary SELECT DISTINCT queries.
+- [#7803](https://github.com/nautobot/nautobot/issues/7803) - Fixed a regression in the handling of `ObjectFieldsPanel(ignore_nonexistent_fields=True)` introduced by #7784.
+- [#7808](https://github.com/nautobot/nautobot/issues/7808) - Fixed double `Notes` or `Change Log` added in title.
 
 ### Dependencies in v2.4.18
 
@@ -223,6 +230,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7767](https://github.com/nautobot/nautobot/issues/7767) - Updated CI workflows and Docker image build to use Poetry 2.1.4.
 - [#7778](https://github.com/nautobot/nautobot/issues/7778) - Fixed unintended carry-over of data changes between subsequent subtests in `FilterTestCase.test_q_filter_valid`.
 - [#7786](https://github.com/nautobot/nautobot/issues/7786) - Updated ReadTheDocs build to use poetry instead of pip.
+- [#7804](https://github.com/nautobot/nautobot/issues/7804) - Changed development docker-compose environment to not start the `selenium` container by default.
+- [#7804](https://github.com/nautobot/nautobot/issues/7804) - Changed `invoke tests` to auto-start the `selenium` container as needed when running integration tests.
 
 ## v2.4.17 (2025-09-02)
 
