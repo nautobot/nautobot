@@ -1377,6 +1377,15 @@ properties:
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     type: "boolean"
+  METRICS_EXPERIMENTAL_CACHING_DURATION:
+    default: 0
+    description: >-
+      The number of seconds to cache Nautobot App metrics before refreshing them.
+      A value of `0` means no caching (i.e. always recompute metrics on each request). This feature is experimental
+      and may change or be removed in a future release, including patch releases.
+    environment_variable: "NAUTOBOT_METRICS_EXPERIMENTAL_CACHING_DURATION"
+    type: "integer"
+    version_added: "2.4.18"
   NAPALM_ARGS:
     additionalProperties: true
     default: {}
