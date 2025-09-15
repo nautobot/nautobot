@@ -209,7 +209,7 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
     # One query for the natural slug, one for `LocationViewSet.get_extra_context`
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
