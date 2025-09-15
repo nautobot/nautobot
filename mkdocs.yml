@@ -521,11 +521,11 @@ nav:
           - VPN:
               - "user-guide/core-data-model/vpn/index.md"
               - VPN: "user-guide/core-data-model/vpn/vpn.md"
+              - VPN Tunnel: "user-guide/core-data-model/vpn/vpntunnel.md"
+              - VPN Tunnel EndPoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
+              - VPN Profile: "user-guide/core-data-model/vpn/vpnprofile.md"
               - VPN Phase 1 Policy: "user-guide/core-data-model/vpn/vpnphase1policy.md"
               - VPN Phase 2 Policy: "user-guide/core-data-model/vpn/vpnphase2policy.md"
-              - VPN Profile": "user-guide/core-data-model/vpn/vpnprofile.md"
-              - VPN Tunnel": "user-guide/core-data-model/vpn/vpntunnel.md"
-              - VPN Tunnel EndPoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
       - Platform Functionality:
           - Approval Workflows: "user-guide/platform-functionality/approval-workflow.md"
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
