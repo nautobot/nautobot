@@ -1325,6 +1325,9 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         ["virtual_machine", "virtual_machine__id"],
         ["virtual_machine", "virtual_machine__name"],
     )
+    allowed_number_of_tree_queries_per_view_type = {
+        "retrieve": 1,
+    }
 
     @classmethod
     def setUpTestData(cls):

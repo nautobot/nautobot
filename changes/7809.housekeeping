@@ -1,0 +1,1 @@
+Added CTE query count tracking to all view set test cases to keep track of and minimize their count.

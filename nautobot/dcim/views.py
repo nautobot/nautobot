@@ -287,9 +287,12 @@ class LocationUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         if instance is None:
             return super().get_extra_context(request, instance)
-        related_locations = (
+        # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
+        # ensure it is only performed once rather than as a subquery for each of the different count stats.
+        related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
+        # TODO: Why is distinct only needed for the VLAN count?
         stats = {
             "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "device_count": Device.objects.restrict(request.user, "view")
