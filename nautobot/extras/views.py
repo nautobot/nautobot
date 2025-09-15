@@ -25,7 +25,6 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
@@ -36,8 +35,9 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -61,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -158,12 +158,12 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=["template"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Template",
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 object_field="template",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ),
     )
@@ -574,6 +574,59 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     template_name = "extras/customfield_update.html"
     action_buttons = ("add",)
 
+    class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+            _type = getattr(obj, "type", None)
+
+            if key == "default":
+                if not value:
+                    return helpers.HTML_NONE
+                if _type == "markdown":
+                    return helpers.render_markdown(value)
+                elif _type == "json":
+                    return helpers.render_json(value)
+                else:
+                    return helpers.placeholder(value)
+            return super().render_value(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            CustomFieldObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
+            ),
+            object_detail.DataTablePanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Custom Field Choices",
+                context_data_key="choices_data",
+                context_columns_key="columns",
+                context_column_headers_key="header",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Assignment",
+                fields=[
+                    "content_types",
+                ],
+                key_transforms={"content_types": "Content Types"},
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Validation Rules",
+                fields=["validation_minimum", "validation_maximum", "validation_regex"],
+                value_transforms={
+                    "validation_regex": [lambda val: None if val == "" else val, helpers.pre_tag],
+                },
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -582,6 +635,16 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        if self.action == "retrieve":
+            choices_data = []
+
+            for choice in instance.custom_field_choices.all():
+                choices_data.append({"value": choice.value, "weight": choice.weight})
+
+            context["columns"] = ["value", "weight"]
+            context["header"] = ["Value", "Weight"]
+            context["choices_data"] = choices_data
 
         return context
 
@@ -611,9 +674,9 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CustomLinkSerializer
     table_class = tables.CustomLinkTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Custom Link",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -919,6 +982,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -952,6 +1017,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 
@@ -970,26 +1038,26 @@ class ExportTemplateUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ExportTemplateSerializer
     table_class = tables.ExportTemplateTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Details",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=["name", "owner", "description"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Template",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 fields=["content_type", "mime_type", "file_extension"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Code Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="template_code",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ]
     )
@@ -1036,97 +1104,6 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
-class GitRepositoryListView(generic.ObjectListView):
-    queryset = GitRepository.objects.all()
-    filterset = filters.GitRepositoryFilterSet
-    filterset_form = forms.GitRepositoryFilterForm
-    table = tables.GitRepositoryTable
-    template_name = "extras/gitrepository_list.html"
-
-    def extra_context(self):
-        # Get the newest results for each repository name
-        results = {
-            r.task_kwargs["repository"]: r
-            for r in JobResult.objects.filter(
-                task_name__startswith="nautobot.core.jobs.GitRepository",
-                task_kwargs__repository__isnull=False,
-                status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .order_by("date_done")
-            .defer("result")
-        }
-        return {
-            "job_results": results,
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryView(generic.ObjectView):
-    queryset = GitRepository.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class GitRepositoryEditView(generic.ObjectEditView):
-    queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryForm
-    template_name = "extras/gitrepository_object_edit.html"
-
-    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
-    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
-    # again, this will be moved to the API calls, so just something to keep in mind.
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.user = request.user
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def get_return_url(self, request, obj=None, default_return_url=None):
-        if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
-        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
-
-
-class GitRepositoryDeleteView(generic.ObjectDeleteView):
-    queryset = GitRepository.objects.all()
-
-
-class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-
-
-class GitRepositoryBulkEditView(generic.BulkEditView):
-    queryset = GitRepository.objects.select_related("secrets_group")
-    filterset = filters.GitRepositoryFilterSet
-    table = tables.GitRepositoryBulkTable
-    form = forms.GitRepositoryBulkEditForm
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-    filterset = filters.GitRepositoryFilterSet
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
@@ -1151,39 +1128,87 @@ def check_and_call_git_repository_function(request, pk, func):
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
-
-
-class GitRepositoryDryRunView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
-
-
-class GitRepositoryResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
+class GitRepositoryUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.GitRepositoryBulkEditForm
+    filterset_form_class = forms.GitRepositoryFilterForm
     queryset = GitRepository.objects.all()
-    template_name = "extras/gitrepository_result.html"
+    form_class = forms.GitRepositoryForm
+    filterset_class = filters.GitRepositoryFilterSet
+    serializer_class = serializers.GitRepositorySerializer
+    table_class = tables.GitRepositoryTable
 
-    def get_required_permission(self):
-        return "extras.view_gitrepository"
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        context["datasource_contents"] = get_datasource_contents("extras.gitrepository")
 
-    def get_extra_context(self, request, instance):
+        if self.action in ("list", "bulk_update", "bulk_destroy"):
+            results = {
+                r.task_kwargs["repository"]: r
+                for r in JobResult.objects.filter(
+                    task_name__startswith="nautobot.core.jobs.GitRepository",
+                    task_kwargs__repository__isnull=False,
+                    status__in=JobResultStatusChoices.READY_STATES,
+                )
+                .order_by("date_done")
+                .defer("result")
+            }
+            context["job_results"] = results
+
+        return context
+
+    def form_valid(self, form):
+        if hasattr(form, "instance") and form.instance is not None:
+            form.instance.user = self.request.user
+            form.instance.request = self.request
+        return super().form_valid(form)
+
+    def get_return_url(self, request, obj=None, default_return_url=None):
+        # Only redirect to result if object exists and action is not deletion
+        if request.method == "POST" and obj is not None and self.action != "destroy":
+            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
+
+    @action(
+        detail=True,
+        url_path="result",
+        url_name="result",
+        custom_view_base_action="view",
+    )
+    def result(self, request, pk=None):
+        instance = self.get_object()
         job_result = instance.get_latest_sync()
 
-        if job_result is None:
-            job_result = {}
-
-        return {
-            "result": job_result,
+        context = {
+            "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
+            "verbose_name": instance._meta.verbose_name,
         }
+
+        return render(request, "extras/gitrepository_result.html", context)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="sync",
+        url_name="sync",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def sync(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="dry-run",
+        url_name="dryrun",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def dry_run(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
 #
@@ -2085,9 +2110,9 @@ class JobHookUIViewSet(NautobotUIViewSet):
     table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2183,9 +2208,9 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2300,6 +2325,10 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
+                "view_action": "changelog",
             },
         )
 
@@ -2393,6 +2422,20 @@ class NoteUIViewSet(
     serializer_class = serializers.NoteSerializer
     table_class = tables.NoteTable
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Note),
+                ModelBreadcrumbItem(
+                    model=lambda c: c["object"].assigned_object,
+                    action="notes",
+                    reverse_kwargs=lambda c: {"pk": c["object"].assigned_object.pk},
+                    label=lambda c: c["object"].assigned_object,
+                    should_render=lambda c: c["object"].assigned_object,
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -2462,6 +2505,10 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
+                "view_action": "notes",
             },
         )
 
@@ -2480,9 +2527,9 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     table_class = tables.RelationshipTable
     queryset = Relationship.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Relationship",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -2498,13 +2545,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
                     "destination_filter",
                 ],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Source Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 fields=["source_type", "source_label", "source_hidden", "source_filter"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Destination Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
@@ -2710,7 +2757,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.SecretsGroupTable
     queryset = SecretsGroup.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
                 label="Secrets Group Details",
@@ -2902,33 +2949,33 @@ class WebhookUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.WebhookSerializer
     table_class = tables.WebhookTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Webhook",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="HTTP",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
                 value_transforms={"additional_headers": [helpers.pre_tag]},
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Security",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("secret", "ssl_verification", "ca_file_path"),
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Body Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="body_template",
-                render_as=BaseTextPanel.RenderOptions.CODE,
+                render_as=object_detail.BaseTextPanel.RenderOptions.CODE,
             ),
         ]
     )
