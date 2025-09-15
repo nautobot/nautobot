@@ -7,7 +7,7 @@ from django.test import RequestFactory
 
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
+from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectFieldsPanel, ObjectsTablePanel, Panel
 from nautobot.dcim.models import DeviceRedundancyGroup
 from nautobot.dcim.tables.devices import DeviceTable
 
@@ -66,6 +66,19 @@ class DataTablePanelTest(TestCase):
             ).get_column_headers(context),
             ["One", "Three"],
         )
+
+
+class ObjectFieldsPanelTest(TestCase):
+    def test_get_data_ignore_nonexistent_fields(self):
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=True)
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+        context = Context({"object": redundancy_group})
+        data = panel.get_data(context)
+        self.assertEqual(data, {"name": redundancy_group.name})  # no keys for nonexistent fields
+
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=False)
+        with self.assertRaises(AttributeError):
+            data = panel.get_data(context)
 
 
 class BaseTextPanelTest(TestCase):

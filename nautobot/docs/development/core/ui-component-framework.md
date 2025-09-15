@@ -149,8 +149,8 @@ There are 3 main breadcrumb items classes:
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
 
 By default, breadcrumbs class will add to the breadcrumbs path following items:
-- link to the `list_url` at the beginning
-- link to view the `object` details at the end
+- link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
+- link to view the `object` details at the end - built-in behavior
 
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
@@ -176,9 +176,6 @@ It will generate:
 </ol>
 ```
 
-!!! important
-    By adding custom items you're actually extending the default paths.
-
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
 
@@ -202,7 +199,6 @@ It will generate:
 
 ```html
 <ol class="breadcrumb">
-    <li><a href="/dcim/devices">Devices</a></li>
     <li><a href="/">Home</a></li>
     <li><a href="/dcim/locations">Locations</a></li>
     <li><a href="/dcim/devices/<uuid>">Device name</a></li>
