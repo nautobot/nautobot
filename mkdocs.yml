@@ -671,7 +671,7 @@ nav:
           - Adding and Updating Nautobot Settings: "development/core/settings.md"
           - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
           - Application Registry: "development/core/application-registry.md"
-          - Bootstrap UI: "development/core/bootstrap-ui.md"
+          - UI Best Practices: "development/core/ui-best-practices.md"
           - Best Practices: "development/core/best-practices.md"
           - Caching: "development/core/caching.md"
           - Controllers: "development/core/controllers.md"
