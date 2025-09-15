@@ -75,9 +75,9 @@ from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -2063,14 +2063,9 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
 
         def render_body_content(self, context):
             instance = get_obj_from_context(context)
-            header = mark_safe("""\
-<tr>
-    <th>Input</th>
-    <th>Outlets</th>
-    <th>Allocated</th>
-    <th>Available</th>
-    <th>Utilization</th>
-</tr>""")
+            header = mark_safe(
+                "<tr><th>Input</th><th>Outlets</th><th>Allocated</th><th>Available</th><th>Utilization</th></tr>"
+            )
             body = mark_safe("")
             for powerport in instance.all_power_ports.all():
                 utilization = powerport.get_power_draw()
@@ -2115,6 +2110,16 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                         utilization_graph,
                     )
             return header + body
+
+    class DeviceImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
+
+            if not request.user.has_perms(self.add_permissions or []):
+                return None
+            return reverse("dcim:device_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
 
     object_detail_content = DeviceDetailContent(
         extra_buttons=(
@@ -2268,13 +2273,15 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
                 exclude_columns=["parent"],
                 include_columns=["ip_addresses"],
             ),
-            #     TODO: images panel
-            #     ObjectsTablePanel(
-            #         weight=300,
-            #         section=SectionChoices.RIGHT_HALF,
-            #         table_class=???,
-            #         table_filter="device",
-            #     ),
+            DeviceImageAttachmentsTablePanel(
+                weight=400,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Images",
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="device",
+                add_permissions=["extras.add_imageattachment"],
+            ),
             object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
@@ -2298,53 +2305,15 @@ class DeviceView(DevicePageMixin, generic.ObjectView):
         else:
             vc_members_table = None
 
-        # Services
-        services = Service.objects.restrict(request.user, "view").filter(device=instance)
-
-        # VRF assignments
-        vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
-
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(
-                request.user, "view"
-            ).filter(device_types=instance.device_type)
-            if not software_version_images.exists():
-                software_version_images = instance.software_version.software_image_files.restrict(
-                    request.user, "view"
-                ).filter(default_image=True)
-        else:
-            software_version_images = []
-
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
-        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
-            "tenant", "primary_ip4", "primary_ip6"
-        )
-        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
-        vdc_url = reverse("dcim:virtualdevicecontext_add")
-        return_url = instance.get_absolute_url()
-        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(vdcs_table)
-
         return {
             **super().get_extra_context(request, instance),
-            "services": services,
-            "software_version_images": software_version_images,
             "vc_members_table": vc_members_table,
-            "vrf_table": vrf_table,
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
-            "vdcs_table": vdcs_table,
-            "vdcs_table_add_url": vdcs_table_add_url,
         }
 
 

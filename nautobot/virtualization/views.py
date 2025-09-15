@@ -265,12 +265,6 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
 
             return super().render_value(key, value, context)
 
-    class VirtualMachineClusterPanel(object_detail.ObjectFieldsPanel):
-        def get_data(self, context):
-            instance = object_detail.get_obj_from_context(context, self.context_object_key)
-            data = {"cluster": instance.cluster, "cluster_type": instance.cluster.cluster_type}
-            return data
-
     class VirtualMachineAddInterfacesButton(object_detail.Button):
         def get_link(self, context):
             instance = object_detail.get_obj_from_context(context, self.context_object_key)
@@ -312,10 +306,12 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 table_filter="virtual_machine",
                 exclude_columns=["related_object_type", "related_object_name"],
             ),
-            VirtualMachineClusterPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=200,
                 section=SectionChoices.RIGHT_HALF,
                 label="Cluster",
+                fields=("cluster", "cluster__cluster_type"),
+                key_transforms={"cluster__cluster_type": "Cluster Type"},
             ),
             object_detail.ObjectFieldsPanel(
                 weight=300,
