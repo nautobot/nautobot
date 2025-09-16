@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
+from django.test.client import RequestFactory
 from django.urls import reverse
 from netaddr import EUI
 import yaml
@@ -107,6 +108,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
+    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -232,7 +234,14 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=status,
             description="Hi!",
         )
-        for loc in [loc1, loc2, loc3, loc4]:
+        loc5 = Location.objects.create(
+            name="Leaf 2",
+            location_type=lt3,
+            parent=loc3,
+            status=status,
+            description="Hi!",
+        )
+        for loc in [loc1, loc2, loc3, loc4, loc5]:
             loc.validated_save()
 
         cls.form_data = {
@@ -430,6 +439,21 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
+
+    def test_get_extra_context(self):
+        view_set = LocationUIViewSet()
+        child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
+        parent_location = child_1.parent
+        child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        status = Status.objects.get_for_model(Prefix).first()
+        prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
+        prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
+        prefix_1.locations.set([child_1, child_2])
+        prefix_2.locations.set([child_1, child_2])
+        request = RequestFactory().get(parent_location.get_absolute_url())
+        request.user = User.objects.first()
+        context = view_set.get_extra_context(request=request, instance=parent_location)
+        self.assertEqual(context["stats"]["prefix_count"], 2)
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):

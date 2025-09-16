@@ -59,7 +59,6 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
-    UIComponentsMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
@@ -2228,18 +2227,16 @@ class JobButtonUIViewSet(NautobotUIViewSet):
 #
 # Change logging
 #
-
-
-class ObjectChangeListView(generic.ObjectListView):
+class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ObjectChangeFilterSet
+    filterset_form_class = forms.ObjectChangeFilterForm
     queryset = ObjectChange.objects.all()
-    filterset = filters.ObjectChangeFilterSet
-    filterset_form = forms.ObjectChangeFilterForm
-    table = tables.ObjectChangeTable
-    template_name = "extras/objectchange_list.html"
+    serializer_class = serializers.ObjectChangeSerializer
+    table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
-    def get(self, request, **kwargs):
+    def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
         # newer methods specifying the lookup method.
 
@@ -2255,29 +2252,37 @@ class ObjectChangeListView(generic.ObjectListView):
             request.GET.update({"time__lte": request.GET.get("time_before")})
             request.GET._mutable = False
 
-        return super().get(request=request, **kwargs)
-
-
-class ObjectChangeView(generic.ObjectView):
-    queryset = ObjectChange.objects.all()
+        return super().get(request=request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
-        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
-        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
+        """
+        Adds snapshot diff and related changes table for the object change detail view.
+        """
+        context = super().get_extra_context(request, instance)
 
-        snapshots = instance.get_snapshots()
-        return {
-            "diff_added": snapshots["differences"]["added"],
-            "diff_removed": snapshots["differences"]["removed"],
-            "next_change": instance.get_next_change(request.user),
-            "prev_change": instance.get_prev_change(request.user),
-            "related_changes_table": related_changes_table,
-            "related_changes_count": related_changes.count(),
-            **super().get_extra_context(request, instance),
-        }
+        if self.action == "retrieve":
+            related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
+            related_changes_table = tables.ObjectChangeTable(
+                data=related_changes[:50],  # Limit for performance
+                orderable=False,
+            )
+            snapshots = instance.get_snapshots()
+
+            context.update(
+                {
+                    "diff_added": snapshots["differences"]["added"],
+                    "diff_removed": snapshots["differences"]["removed"],
+                    "next_change": instance.get_next_change(request.user),
+                    "prev_change": instance.get_prev_change(request.user),
+                    "related_changes_table": related_changes_table,
+                    "related_changes_count": related_changes.count(),
+                }
+            )
+
+        return context
 
 
-class ObjectChangeLogView(generic.GenericView, UIComponentsMixin):
+class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
 
@@ -2329,6 +2334,7 @@ class ObjectChangeLogView(generic.GenericView, UIComponentsMixin):
                 "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
                 "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
+                "view_action": "changelog",
             },
         )
 
@@ -2459,7 +2465,7 @@ class NoteUIViewSet(
         return obj
 
 
-class ObjectNotesView(generic.GenericView, UIComponentsMixin):
+class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
 
@@ -2508,6 +2514,7 @@ class ObjectNotesView(generic.GenericView, UIComponentsMixin):
                 "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
                 "view_titles": self.get_view_titles(obj, view_type=""),
                 "detail": True,
+                "view_action": "notes",
             },
         )
 

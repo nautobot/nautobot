@@ -1,1 +1,0 @@
-Fixed bug in which `Device` objects could be saved when they didn't have to be.
