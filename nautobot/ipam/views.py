@@ -18,6 +18,7 @@ import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from nautobot.apps.ui import Titles
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -26,6 +27,7 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.titles import DEFAULT_TITLES
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
@@ -348,6 +350,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
             ]
         }
     )
+    view_titles = Titles(
+        titles={
+            "prefixes": f"{DEFAULT_TITLES['detail']} - Prefixes",
+            "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -411,7 +419,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             ),
         ],
         extra_tabs=[
-            prefix_ui.DistinctViewTab(
+            object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
                 label="Child Prefixes",
@@ -428,11 +436,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                     ),
                 ),
             ),
-            prefix_ui.IPAddressDistinctViewTab(
+            object_detail.DistinctViewTab(
                 weight=900,
                 tab_id="ip-addresses",
                 label="IP Addresses",
-                url_name="ipam:prefix_ip_addresses",
+                related_object_attribute="all_ips",
+                url_name="ipam:prefix_ipaddresses",
                 panels=[
                     prefix_ui.IPAddressTablePanel(
                         section=SectionChoices.FULL_WIDTH,
@@ -530,6 +539,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "permissions": permissions,
                 "bulk_querystring": bulk_querystring,
                 "active_tab": "prefixes",
+                "view_action": "prefixes",
                 "show_available": request.GET.get("show_available", "true") == "true",
             }
         )
@@ -537,7 +547,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         url_path="ip-addresses",
-        url_name="ip_addresses",
+        url_name="ipaddresses",
         custom_view_base_action="view",
         custom_view_additional_permissions=["ipam.view_ipaddress"],
     )
@@ -579,6 +589,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "permissions": permissions,
                 "bulk_querystring": bulk_querystring,
                 "active_tab": "ip-addresses",
+                "view_action": "ip_addresses",
                 "show_available": request.GET.get("show_available", "true") == "true",
             }
         )

@@ -303,7 +303,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=ip_status,
             namespace=self.namespace,
         )
-        url = reverse("ipam:prefix_ip_addresses", args=(instance.pk,))
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))

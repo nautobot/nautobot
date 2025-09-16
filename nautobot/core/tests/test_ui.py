@@ -5,9 +5,20 @@ from unittest.mock import patch
 from django.template import Context
 from django.test import RequestFactory
 
+from nautobot.cloud.models import CloudNetwork, CloudResourceType
+from nautobot.cloud.tables import CloudServiceTable
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectFieldsPanel, ObjectsTablePanel, Panel
+from nautobot.core.ui.object_detail import (
+    BaseTextPanel,
+    DataTablePanel,
+    DistinctViewTab,
+    ObjectDetailContent,
+    ObjectFieldsPanel,
+    ObjectsTablePanel,
+    Panel,
+    SectionChoices,
+)
 from nautobot.dcim.models import DeviceRedundancyGroup
 from nautobot.dcim.tables.devices import DeviceTable
 
@@ -213,3 +224,90 @@ class ObjectsTablePanelTest(TestCase):
             panel.get_extra_context(context_data)
 
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
+
+
+class ObjectDetailContentExtraTabsTest(TestCase):
+    user_permissions = ["cloud.view_cloudresourcetype", "cloud.view_cloudservice", "cloud.view_cloudnetwork"]
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory()
+        self.request = self.factory.get("/")
+        self.request.user = self.user
+        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata"]
+
+    def test_default_extra_tabs_exist(self):
+        content = ObjectDetailContent(
+            panels=[],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id))
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_extra_tabs_exist(self):
+        content = ObjectDetailContent(
+            panels=[],
+            extra_tabs=[
+                DistinctViewTab(
+                    weight=1000,
+                    tab_id="services",
+                    label="Cloud Services",
+                    url_name="cloud:cloudresourcetype_services",
+                    related_object_attribute="cloud_services",
+                    panels=(
+                        ObjectsTablePanel(
+                            section=SectionChoices.FULL_WIDTH,
+                            weight=100,
+                            table_class=CloudServiceTable,
+                            table_filter="cloud_resource_type",
+                            tab_id="services",
+                        ),
+                    ),
+                ),
+            ],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id) + 1)
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.default_tabs_id.append("services")
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_extra_tab_panel_context(self):
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        cn = CloudNetwork.objects.filter(cloud_resource_type=cloud_resource_type)[0]
+
+        tab = DistinctViewTab(
+            weight=1000,
+            tab_id="services",
+            label="Cloud Services",
+            url_name="cloud:cloudresourcetype_services",
+            related_object_attribute="cloud_services",
+            panels=(
+                ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=100,
+                    table_class=CloudServiceTable,
+                    table_filter="cloud_resource_type",
+                    tab_id="services",
+                ),
+            ),
+        )
+        context = {"request": self.request, "object": cloud_resource_type}
+        extra_context = tab.get_extra_context(context)
+        self.assertIn("url", extra_context)
+        self.assertTrue(extra_context["url"].endswith("/services/"))
+
+        panel = tab.panels[0]
+        panel_context = panel.get_extra_context(context)
+
+        self.assertIn("body_content_table", panel_context)
+        table = panel_context["body_content_table"]
+
+        # Table should contain the CloudService linked to the CloudNetwork
+        services_from_network = set(cn.cloud_services.values_list("pk", flat=True))
+        services_from_table = set(obj.pk for obj in table.data)
+        self.assertTrue(
+            services_from_network & services_from_table,  # common part not empty
+            "Expected at least one service from network to appear in the table",
+        )

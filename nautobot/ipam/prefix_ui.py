@@ -3,12 +3,10 @@ import logging
 from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils.html import format_html
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.object_detail import (
     Button,
-    DistinctViewTab,
     KeyValueTablePanel,
     ObjectFieldsPanel,
     ObjectsTablePanel,
@@ -16,30 +14,6 @@ from nautobot.core.ui.object_detail import (
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
-
-
-class IPAddressDistinctViewTab(DistinctViewTab):
-    def render_label(self, context):
-        obj = get_obj_from_context(context)
-        get_all_ips = getattr(obj, "get_all_ips", None)
-        if not callable(get_all_ips):
-            return super().render_label(context)
-
-        try:
-            count = get_all_ips().count()
-        except Exception as e:
-            logger.warning(f"Could not count IPs for {obj}: {e}")
-            return super().render_label(context)
-
-        count = get_all_ips().count()
-        if count is None:
-            return super().render_label(context)
-
-        return format_html(
-            "{} {}",
-            self.label,
-            render_to_string("utilities/templatetags/badge.html", helpers.badge(count, True)),
-        )
 
 
 class PrefixChildTablePanel(ObjectsTablePanel):
