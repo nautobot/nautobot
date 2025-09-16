@@ -287,23 +287,28 @@ class LocationUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         if instance is None:
             return super().get_extra_context(request, instance)
-        related_locations = (
+        related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
+        prefix_count_queryset = Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations)
+        vlan_count_queryset = VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations)
+        circuit_count_queryset = Circuit.objects.restrict(request.user, "view").filter(
+            circuit_terminations__location__in=related_locations
+        )
+        # When there is more than one location, the models that can be assigned to more then one location at the same
+        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
+        # a performance penalty.
+        if len(related_locations) > 1:
+            prefix_count_queryset = prefix_count_queryset.distinct()
+            vlan_count_queryset = vlan_count_queryset.distinct()
+            circuit_count_queryset = circuit_count_queryset.distinct()
         stats = {
+            "prefix_count": prefix_count_queryset.count(),
+            "vlan_count": vlan_count_queryset.count(),
+            "circuit_count": circuit_count_queryset.count(),
             "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "device_count": Device.objects.restrict(request.user, "view")
             .filter(location__in=related_locations)
-            .count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .distinct()
-            .count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(circuit_terminations__location__in=related_locations)
             .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view")
             .filter(cluster__location__in=related_locations)
