@@ -2367,7 +2367,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Module Bays",
                         table_class=tables.DeviceModuleBayTable,
-                        table_filter="parent_device",
+                        table_filter="parent_device",  # TODO: is this right or should we use table_attribute=module_bays?
                         tab_id="module_bays",
                         enable_bulk_actions=True,
                         form_id="module-bays-form",
@@ -2391,7 +2391,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Interfaces",
                         table_class=tables.DeviceModuleInterfaceTable,
-                        table_filter="device",
+                        table_attribute="vc_interfaces",
+                        related_field_name="device",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
                         form_id="interfaces-form",
@@ -2417,7 +2418,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Front Ports",
                         table_class=tables.DeviceModuleFrontPortTable,
-                        table_filter="device",
+                        table_attribute="all_front_ports",
+                        related_field_name="device",
                         tab_id="front_ports",
                         enable_bulk_actions=True,
                         form_id="front-ports-form",
@@ -2442,7 +2444,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Rear Ports",
                         table_class=tables.DeviceModuleRearPortTable,
-                        table_filter="device",
+                        table_attribute="all_rear_ports",
+                        related_field_name="device",
                         tab_id="rear_ports",
                         enable_bulk_actions=True,
                         form_id="rear-ports-form",
@@ -2465,7 +2468,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Console Ports",
                         table_class=tables.DeviceModuleConsolePortTable,
-                        table_filter="device",
+                        table_attribute="all_console_ports",
+                        related_field_name="device",
                         tab_id="console_ports",
                         enable_bulk_actions=True,
                         form_id="console-ports-form",
@@ -2490,7 +2494,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Console Server Ports",
                         table_class=tables.DeviceModuleConsoleServerPortTable,
-                        table_filter="device",
+                        table_attribute="all_console_server_ports",
+                        related_field_name="device",
                         tab_id="console_server_ports",
                         enable_bulk_actions=True,
                         form_id="console-server-ports-form",
@@ -2515,7 +2520,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Power Ports",
                         table_class=tables.DeviceModulePowerPortTable,
-                        table_filter="device",
+                        table_attribute="all_power_ports",
+                        related_field_name="device",
                         tab_id="power_ports",
                         enable_bulk_actions=True,
                         form_id="power-ports-form",
@@ -2540,7 +2546,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Power Outlets",
                         table_class=tables.DeviceModulePowerOutletTable,
-                        table_filter="device",
+                        table_attribute="all_power_outlets",
+                        related_field_name="device",
                         tab_id="power_outlets",
                         enable_bulk_actions=True,
                         form_id="power-outlets-form",
@@ -2673,7 +2680,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         extra_context = super().get_extra_context(request, instance)
 
-        if self.action == "retrieve":
+        if self.detail:  # TODO: change to `if self.action == "retrieve"` as a part of addressing NAUTOBOT-1051
             # VirtualChassis members
             if instance.virtual_chassis is not None:
                 vc_members = (
@@ -2685,13 +2692,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
             else:
                 vc_members_table = None
             extra_context["vc_members_table"] = vc_members_table
-
-        if self.detail:
-            modulebay_count = instance.module_bays.count()
-            module_count = instance.module_bays.filter(installed_module__isnull=False).count()
-
-            extra_context["modulebay_count"] = modulebay_count
-            extra_context["module_count"] = f"{module_count}/{modulebay_count}"
 
         return extra_context
 
