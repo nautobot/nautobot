@@ -108,6 +108,7 @@ class HomeView(AccessMixin, TemplateView):
         context = self.get_context_data()
         context.update(
             {
+                "title": "Home",
                 "new_release": new_release,
             }
         )

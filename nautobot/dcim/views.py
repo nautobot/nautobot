@@ -1902,7 +1902,22 @@ class DevicePageMixin:
                 BaseBreadcrumbItem(
                     label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
                 ),
-            ]
+            ],
+            "update": [
+                ModelBreadcrumbItem(model=Device),
+                ModelBreadcrumbItem(
+                    model=Device,
+                    label=lambda c: c["obj"].location,
+                    reverse_query_params=lambda c: {"location": c["obj"].location.pk},
+                ),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["obj"].parent_bay.device,
+                    should_render=lambda c: hasattr(c["obj"], "parent_bay"),
+                ),
+                BaseBreadcrumbItem(
+                    label=lambda c: c["obj"].parent_bay, should_render=lambda c: hasattr(c["obj"], "parent_bay")
+                ),
+            ],
         }
     )
 
@@ -2521,7 +2536,7 @@ class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceEditView(generic.ObjectEditView):
+class DeviceEditView(DevicePageMixin, generic.ObjectEditView):
     queryset = Device.objects.all()
     model_form = forms.DeviceForm
     template_name = "dcim/device_edit.html"
