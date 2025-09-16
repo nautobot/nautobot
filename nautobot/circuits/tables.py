@@ -18,7 +18,7 @@ CIRCUIT_TERMINATION_PARENT = """
 {% if value.provider_network %}
 {{ value.provider_network|hyperlinked_object }}
 {% elif value.location %}
-{{ value.location|hyperlinked_object }}
+{{ value.location|hyperlinked_object:"name" }}
 {% elif value.cloud_network %}
 {{ value.cloud_network|hyperlinked_object }}
 {% else %}
