@@ -676,7 +676,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         """
         if instance is not None:
             return {
-                "active_tab": request.GET.get("tab", "main"),
+                "active_tab": request.GET.get("tab", self.action if self.action != "retrieve" else "main"),
             }
         return {}
 

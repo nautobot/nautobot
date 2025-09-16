@@ -4,7 +4,7 @@
         <a href="#" title="{{ disabled_message }}">{{ label }}</a>
     </li>
 {% else %}
-    <li role="presentation"{% if request.GET.tab == tab_id %} class="active"{% endif %}>
+    <li role="presentation"{% if request.GET.tab == tab_id or active_tab == tab_id %} class="active"{% endif %}>
         <a href="{{ url }}">{{ label }}</a>
     </li>
 {% endif %}

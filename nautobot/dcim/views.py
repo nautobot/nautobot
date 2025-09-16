@@ -991,7 +991,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="frontports",
+        url_path="front-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_frontporttemplate"],
     )
@@ -1001,7 +1001,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="rearports",
+        url_path="rear-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_rearporttemplate"],
     )
@@ -1011,7 +1011,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="consoleports",
+        url_path="console-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleporttemplate"],
     )
@@ -1021,7 +1021,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="consoleserverports",
+        url_path="console-server-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleserverporttemplate"],
     )
@@ -1031,7 +1031,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="powerports",
+        url_path="power-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_powerporttemplate"],
     )
@@ -1041,7 +1041,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="poweroutlets",
+        url_path="power-outlets",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_poweroutlettemplate"],
     )
@@ -1051,7 +1051,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="devicebays",
+        url_path="device-bays",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_devicebaytemplate"],
     )
@@ -1061,7 +1061,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="modulebays",
+        url_path="module-bays",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_modulebaytemplate"],
     )
@@ -2032,7 +2032,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             self._tabs.append(
                 object_detail.DistinctViewTab(
                     weight=object_detail.Tab.WEIGHT_GROUPS_TAB,
-                    tab_id="dynamic-groups",
+                    tab_id="dynamic_groups",
                     label="Dynamic Groups",
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
@@ -2345,7 +2345,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 # TODO: badge with module_count/module_bay_count
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
-                tab_id="module-bays",
+                tab_id="module_bays",
                 label="Module Bays",
                 url_name="dcim:device_modulebays",
                 related_object_attribute="module_bays",
@@ -2357,7 +2357,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Module Bays",
                         table_class=tables.DeviceModuleBayTable,
                         table_filter="parent_device",
-                        tab_id="module-bays",
+                        tab_id="module_bays",
                         enable_bulk_actions=True,
                         form_id="module-bays-form",
                         footer_buttons=bulk_footer_buttons(form_id="module-bays-form", model=ModuleBay),
@@ -2393,7 +2393,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 300,
-                tab_id="front-ports",
+                tab_id="front_ports",
                 label="Front Ports",
                 url_name="dcim:device_frontports",
                 related_object_attribute="all_front_ports",
@@ -2405,7 +2405,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Front Ports",
                         table_class=tables.DeviceModuleFrontPortTable,
                         table_filter="device",
-                        tab_id="front-ports",
+                        tab_id="front_ports",
                         enable_bulk_actions=True,
                         form_id="front-ports-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
@@ -2417,7 +2417,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 400,
-                tab_id="rear-ports",
+                tab_id="rear_ports",
                 label="Rear Ports",
                 url_name="dcim:device_rearports",
                 related_object_attribute="all_rear_ports",
@@ -2429,7 +2429,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Rear Ports",
                         table_class=tables.DeviceModuleRearPortTable,
                         table_filter="device",
-                        tab_id="rear-ports",
+                        tab_id="rear_ports",
                         enable_bulk_actions=True,
                         form_id="rear-ports-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(form_id="rear-ports-form", model=RearPort),
@@ -2439,7 +2439,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 500,
-                tab_id="console-ports",
+                tab_id="console_ports",
                 label="Console Ports",
                 url_name="dcim:device_consoleports",
                 related_object_attribute="all_console_ports",
@@ -2451,7 +2451,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Ports",
                         table_class=tables.DeviceModuleConsolePortTable,
                         table_filter="device",
-                        tab_id="console-ports",
+                        tab_id="console_ports",
                         enable_bulk_actions=True,
                         form_id="console-ports-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
@@ -2463,7 +2463,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 600,
-                tab_id="console-server-ports",
+                tab_id="console_server_ports",
                 label="Console Server Ports",
                 url_name="dcim:device_consoleserverports",
                 related_object_attribute="all_console_server_ports",
@@ -2475,7 +2475,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Server Ports",
                         table_class=tables.DeviceModuleConsoleServerPortTable,
                         table_filter="device",
-                        tab_id="console-server-ports",
+                        tab_id="console_server_ports",
                         enable_bulk_actions=True,
                         form_id="console-server-ports-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
@@ -2487,7 +2487,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 700,
-                tab_id="power-ports",
+                tab_id="power_ports",
                 label="Power Ports",
                 url_name="dcim:device_powerports",
                 related_object_attribute="all_power_ports",
@@ -2499,7 +2499,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Ports",
                         table_class=tables.DeviceModulePowerPortTable,
                         table_filter="device",
-                        tab_id="power-ports",
+                        tab_id="power_ports",
                         enable_bulk_actions=True,
                         form_id="power-ports-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
@@ -2511,7 +2511,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 800,
-                tab_id="power-outlets",
+                tab_id="power_outlets",
                 label="Power Outlets",
                 url_name="dcim:device_poweroutlets",
                 related_object_attribute="all_power_outlets",
@@ -2523,7 +2523,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Outlets",
                         table_class=tables.DeviceModulePowerOutletTable,
                         table_filter="device",
-                        tab_id="power-outlets",
+                        tab_id="power_outlets",
                         enable_bulk_actions=True,
                         form_id="power-outlets-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
@@ -2535,7 +2535,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 900,
-                tab_id="device-bays",
+                tab_id="device_bays",
                 label="Device Bays",
                 url_name="dcim:device_devicebays",
                 related_object_attribute="device_bays",
@@ -2547,7 +2547,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Device Bays",
                         table_class=tables.DeviceDeviceBayTable,
                         table_filter="device",
-                        tab_id="device-bays",
+                        tab_id="device_bays",
                         enable_bulk_actions=True,
                         form_id="device-bays-form",
                         footer_buttons=bulk_footer_buttons(form_id="device-bays-form", model=DeviceBay),
@@ -2628,7 +2628,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             DeviceNAPALMTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
-                tab_id="lldp-neighbors",
+                tab_id="lldp_neighbors",
                 label="LLDP Neighbors",
                 url_name="dcim:device_lldp_neighbors",
                 required_permissions=["dcim.napalm_read_device"],
@@ -2642,7 +2642,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
-                tab_id="config-context",
+                tab_id="config_context",
                 label="Config Context",
                 url_name="dcim:device_configcontext",
                 required_permissions=["extras.view_configcontext"],
@@ -2665,7 +2665,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
             else:
                 vc_members_table = None
             extra_context["vc_members_table"] = vc_members_table
-            extra_context["active_tab"] = "device"
 
         if self.detail:
             modulebay_count = instance.module_bays.count()
@@ -2684,7 +2683,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["extras.view_dynamicgroup"],
     )
     def dynamic_groups(self, request, *args, **kwargs):
-        return Response({"active_tab": "dynamic-groups"})
+        return Response({})
 
     @action(
         detail=True,
@@ -2693,8 +2692,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleport"],
     )
-    def consoleports(self, request, *args, **kwargs):
-        return Response({"active_tab": "console-ports"})
+    def console_ports(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2703,8 +2702,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleserverport"],
     )
-    def consoleserverports(self, request, *args, **kwargs):
-        return Response({"active_tab": "console-server-ports"})
+    def console_server_ports(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2713,8 +2712,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_devicebay"],
     )
-    def devicebays(self, request, *args, **kwargs):
-        return Response({"active_tab": "device-bays"})
+    def device_bays(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2723,8 +2722,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_frontport"],
     )
-    def frontports(self, request, *args, **kwargs):
-        return Response({"active_tab": "front-ports"})
+    def front_ports(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2734,7 +2733,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["dcim.view_interface"],
     )
     def interfaces(self, request, *args, **kwargs):
-        return Response({"active_tab": "interfaces"})
+        return Response({})
 
     @action(
         detail=True,
@@ -2744,7 +2743,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["dcim.view_inventoryitem"],
     )
     def inventory(self, request, *args, **kwargs):
-        return Response({"active_tab": "inventory"})
+        return Response({})
 
     @action(
         detail=True,
@@ -2753,8 +2752,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_modulebay"],
     )
-    def modulebays(self, request, *args, **kwargs):
-        return Response({"active_tab": "module-bays"})
+    def module_bays(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2763,8 +2762,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_poweroutlet"],
     )
-    def poweroutlets(self, request, *args, **kwargs):
-        return Response({"active_tab": "power-outlets"})
+    def power_outlets(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2773,8 +2772,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_powerport"],
     )
-    def powerports(self, request, *args, **kwargs):
-        return Response({"active_tab": "power-ports"})
+    def power_ports(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2783,8 +2782,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_rearport"],
     )
-    def rearports(self, request, *args, **kwargs):
-        return Response({"active_tab": "rear-ports"})
+    def rear_ports(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -2794,7 +2793,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["dcim.view_controller_managed_device_group"],
     )
     def wireless(self, request, *args, **kwargs):
-        return Response({"active_tab": "wireless"})
+        return Response({})
 
     @action(
         detail=True,
@@ -2807,7 +2806,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "template": "dcim/device/status.html",
-                "active_tab": "status",
             },
         )
 
@@ -2829,7 +2827,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
             {
                 "template": "dcim/device/lldp_neighbors.html",
                 "interfaces": interfaces,
-                "active_tab": "lldb-neighbors",
             },
         )
 
@@ -2844,7 +2841,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "template": "dcim/device/config.html",
-                "active_tab": "config",
             },
         )
 
@@ -2880,7 +2876,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
             "format": data_format,
             "template": "extras/object_configcontext.html",
             "base_template": "dcim/device.html",
-            "active_tab": "config-context",
         }
 
         return Response(context)
