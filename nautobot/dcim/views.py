@@ -2499,7 +2499,7 @@ class DeviceConfigContextView(DevicePageMixin, ObjectConfigContextView):
         return Device.objects.annotate_config_context_data()
 
 
-class DeviceChangeLogView(ObjectChangeLogView, DevicePageMixin):
+class DeviceChangeLogView(DevicePageMixin, ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 

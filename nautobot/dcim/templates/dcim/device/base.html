@@ -5,7 +5,7 @@
 {% block masthead %}
     <span class="hover_copy">
         <h1>
-            <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
+            <span id="devicename">{% block title %}{{ block.super }}{% endblock title %}</span>
             <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-text="{{ object }}">
                 <span class="mdi mdi-content-copy"></span>
             </button>
