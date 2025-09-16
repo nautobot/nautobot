@@ -8,14 +8,18 @@
 {% block breadcrumbs_wrapper %}
     {% captureas default_breadcrumbs %}
         {% with list_url=obj|validated_viewname:"list" %}
-            <li class="breadcrumb-item"><a href="{% url list_url %}">{{ obj|meta:"verbose_name_plural"|bettertitle }}</a></li>
+            {% if list_url is not None %}
+                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ obj|meta:"verbose_name_plural"|bettertitle }}</a></li>
+            {% endif %}
         {% endwith %}
     {% endcaptureas %}
 
     {% captureas block_breadcrumbs %}
         {% block breadcrumbs %}
             {% with list_url=obj|validated_viewname:"list" %}
-                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ obj|meta:"verbose_name_plural"|bettertitle }}</a></li>
+                {% if list_url is not None %}
+                    <li class="breadcrumb-item"><a href="{% url list_url %}">{{ obj|meta:"verbose_name_plural"|bettertitle }}</a></li>
+                {% endif %}
             {% endwith %}
             {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
         {% endblock %}
