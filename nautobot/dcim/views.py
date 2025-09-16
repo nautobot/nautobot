@@ -2158,6 +2158,18 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 return None
             return reverse("dcim:device_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
 
+    class DeviceModuleBaysTab(object_detail.DistinctViewTab):
+        def render_label(self, context):
+            obj = get_obj_from_context(context)
+            module_count = obj.module_bays.filter(installed_module__isnull=False).count()
+            return format_html(
+                "{} {}",
+                self.label,
+                render_to_string(
+                    "utilities/templatetags/badge.html", helpers.badge(f"{module_count}/{self.related_object_count}")
+                ),
+            )
+
     class DeviceNAPALMTab(object_detail.DistinctViewTab):
         def render_label_wrapper(self, context):
             obj = get_obj_from_context(context)
@@ -2340,10 +2352,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
         ),
         extra_tabs=(
-            # TODO: component tabs should *only* render if non-zero count
             # TODO: return URLs for "add" button on tabs is incorrect (returns to the main detail tab)
-            object_detail.DistinctViewTab(
-                # TODO: badge with module_count/module_bay_count
+            DeviceModuleBaysTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
                 tab_id="module_bays",
                 label="Module Bays",
