@@ -2,12 +2,9 @@
 {% load helpers %}
 {% load ui_framework %}
 
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock breadcrumbs_wrapper %}
+
 {% block header %}
-    <div class="row d-print-none">
-        <div class="col-md-12">
-            {% render_breadcrumbs %}
-        </div>
-    </div>
     <div class="pull-right d-print-none">
         {% block buttons %}
             {% if app_data.home_url %}
@@ -27,9 +24,6 @@
             {% endif %}
         {% endblock buttons %}
     </div>
-    {% block masthead %}
-        <h1>{% block title %}{% render_title %}{% endblock %}</h1>
-    {% endblock masthead %}
 {% endblock header %}
 
 {% block content %}
