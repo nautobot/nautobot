@@ -1036,6 +1036,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Service
+    allowed_number_of_tree_queries_per_view_type = {
+        "retrieve": 1,
+    }
 
     @classmethod
     def setUpTestData(cls):
