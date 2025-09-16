@@ -24,6 +24,7 @@ from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -335,6 +336,19 @@ class PrefixView(generic.ObjectView):
         "vlan__vlan_group",
         "namespace",
     ).prefetch_related("locations")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Namespace),
+                InstanceBreadcrumbItem(instance=lambda context: context["object"].namespace),
+                ModelBreadcrumbItem(
+                    model=Prefix,
+                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
+                    label_key="verbose_name_plural",
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -1104,16 +1118,10 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     queryset = VLAN.objects.all()
 
     class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def get_data(self, context):
-            instance = get_obj_from_context(context, self.context_object_key)
-            data = super().get_data(context)
-            data["locations"] = instance.locations.all()
-            return data
-
         def render_value(self, key, value, context):
-            instance = get_obj_from_context(context)
             if key == "locations":
-                return helpers.render_m2m(value, f"/dcim/locations/?vlans={instance.pk}", key)
+                instance = get_obj_from_context(context)
+                return helpers.render_m2m(value.all(), f"/dcim/locations/?vlans={instance.pk}", key)
             return super().render_value(key, value, context)
 
     class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
@@ -1140,6 +1148,7 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                additional_fields=["locations"],
             ),
             PrefixObjectsTablePanel(
                 weight=100,

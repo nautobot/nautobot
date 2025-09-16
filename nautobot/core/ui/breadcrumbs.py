@@ -192,9 +192,14 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
 
     def get_label(self, context: Context) -> str:
         if self.label_from_view_name:
-            model = get_model_for_view_name(self.get_view_name(context))
-            if model is not None:
-                return model._meta.verbose_name_plural
+            try:
+                model = get_model_for_view_name(self.get_view_name(context))
+                if model is not None:
+                    return model._meta.verbose_name_plural
+            except ValueError:
+                # `get_model_for_view_name` is not working properly with some proper paths like "home"
+                # and because by default we're trying to resolve label by using `list_url` this error may occur in some apps
+                pass
         return super().get_label(context)
 
     def get_view_name(self, context: Context) -> Optional[str]:
@@ -401,6 +406,7 @@ class Breadcrumbs:
         # Default breadcrumb if view defines `list_url` in the Context
         ViewNameBreadcrumbItem(
             view_name_key="list_url",
+            label_key="title",
             label_from_view_name=True,
             should_render=lambda context: context.get("list_url") is not None,
         ),
@@ -447,7 +453,7 @@ class Breadcrumbs:
         Returns:
             (list[tuple[str, str]]): A list of (url, label) tuples representing breadcrumb entries.
         """
-        action = context.get("view_action", "list")
+        action = context.get("view_action", "")
         detail = context.get("detail", False)
         items = self.get_items_for_action(self.items, action, detail)
         return [item.as_pair(context) for item in items if item.should_render(context)]
@@ -457,7 +463,7 @@ class Breadcrumbs:
         Filters out all items that both label and url are None or empty str.
 
         Args:
-            items (list[tuple[str, str]]): breadcrumb items pair.s
+            items (list[tuple[str, str]]): breadcrumb items pairs.
             context (Context): The view or template context.
 
         Returns:
@@ -481,8 +487,7 @@ class Breadcrumbs:
     @staticmethod
     def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
         """
-        Get the breadcrumb items for a specific action, with fallback to 'detail' if not found
-        and to asterisk (*) if present.
+        Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
 
         Args:
             items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.

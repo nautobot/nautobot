@@ -11,6 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
 from django.db.models import CharField, JSONField, Q, URLField
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -622,7 +623,7 @@ class DataTablePanel(Panel):
         **kwargs,
     ):
         """
-        Instantiate a DataDictTablePanel.
+        Instantiate a DataTablePanel.
 
         Args:
             context_data_key (str): The key in the render context that stores the data used to populate the table.
@@ -990,6 +991,7 @@ class KeyValueTablePanel(Panel):
         context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
+        key_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
         **kwargs,
     ):
@@ -1008,6 +1010,8 @@ class KeyValueTablePanel(Panel):
 
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+                For example: {'content_types': 'Content Type'}.
         """
         if data and context_data_key:
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
@@ -1015,6 +1019,7 @@ class KeyValueTablePanel(Panel):
         self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
+        self.key_transforms = key_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
@@ -1271,6 +1276,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self,
         *,
         fields="__all__",
+        additional_fields=(),
         exclude_fields=(),
         context_object_key=None,
         ignore_nonexistent_fields=False,
@@ -1284,6 +1290,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
                 Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
+                When a list is specified, it may include model `@property` attributes and nested lookups (if desired) in
+                addition to concrete model fields; when using `fields="__all__"`, such additional attributes and lookups
+                may be specified with the `additional_fields` parameter.
+            additional_fields (list): Only relevant if `fields == "__all__"`, in which case it can specify additional
+                non-default fields to include such as reverse relations, `@property` attributes, nested lookups, etc.
             exclude_fields (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
             context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
@@ -1292,6 +1303,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 (see `render_label()`).
         """
         self.fields = fields
+        if additional_fields and fields != "__all__":
+            raise ValueError("additional_fields may only be used in combination with fields='__all__'")
+        self.additional_fields = additional_fields
+        if exclude_fields and fields != "__all__":
+            raise ValueError("exclude_fields may only be used in combination with fields='__all__'")
         self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
@@ -1305,6 +1321,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_value(self, key, value, context: Context):
         obj = get_obj_from_context(context, self.context_object_key)
+        # TODO: handle nested keys, e.g. device_type__device_family
         try:
             field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
@@ -1325,8 +1342,18 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         if isinstance(field_instance, JSONField):
             return format_html("<pre>{}</pre>", render_json(value))
 
-        if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
-            return render_content_types(value)
+        if isinstance(field_instance, ManyToManyField):
+            if field_instance.related_model == ContentType:
+                return render_content_types(value)
+            # TODO: this would be nice but it's probably too error-prone in general:
+            # return render_m2m(
+            #     value.all(),
+            #     (
+            #         reverse(get_route_for_model(field_instance.related_model, "list")) + "?" +
+            #         obj._meta.verbose_name_plural.lower().replace(" ", "_") + "=" + str(obj.pk)
+            #     ),
+            #     key,
+            # )
 
         if isinstance(field_instance, CharField) and hasattr(obj, f"get_{key}_display"):
             # For example, Secret.provider -> Secret.get_provider_display()
@@ -1368,6 +1395,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
 
+        fields += self.additional_fields
+
         data = {}
 
         if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
@@ -1378,9 +1407,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             if field_name in self.exclude_fields:
                 continue
             try:
-                field_value = getattr(instance, field_name)
-            except ObjectDoesNotExist:
-                field_value = None
+                field_value = instance
+                # Handle nested lookups, e.g. device_type__device_family
+                for token in field_name.split(LOOKUP_SEP):
+                    try:
+                        field_value = getattr(field_value, token)
+                    except ObjectDoesNotExist:
+                        field_value = None
+                        break
             except AttributeError:
                 if self.ignore_nonexistent_fields:
                     continue
@@ -1396,6 +1430,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
+
+        if key in self.key_transforms:
+            return self.key_transforms[key]
+
         instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
