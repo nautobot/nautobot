@@ -10,12 +10,11 @@
 {% load tz %}
 {% load ui_framework %}
 
-
 {% block page_title %}
-    {% with title=object.display|default:object %}
-        {% include 'inc/page_title.html' with title=title copy_title=True %}
+    {% with copy_title=True %}
+        {{ block.super }}
     {% endwith %}
-{% endblock page_title %}
+{% endblock %}
 
 {% block breadcrumbs_wrapper %}
     {% captureas default_breadcrumbs %}

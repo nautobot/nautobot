@@ -8,9 +8,7 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
-{% block page_title %}
-    {% include 'inc/page_title.html' %}
-{% endblock page_title %}
+{% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
     {% captureas default_breadcrumbs %}
