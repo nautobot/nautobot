@@ -125,16 +125,24 @@ class ObjectDetailContent:
 class Component:
     """Common base class for renderable components (tabs, panels, etc.)."""
 
-    def __init__(self, *, weight):
+    def __init__(
+        self,
+        *,
+        weight,
+        required_permissions=None,
+    ):
         """Initialize common Component properties.
 
         Args:
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         self.weight = weight
+        self.required_permissions = required_permissions or []
 
-    def should_render(self, context: dict):
+    def should_render(self, context: Context):
         """
         Check whether this component should be rendered at all.
 
@@ -142,9 +150,13 @@ class Component:
         In general most Components may also return an empty string when actually rendered, which is typically also a
         means to specify that they do not need to be rendered, but may be more expensive to derive.
 
+        The default implementation here checks for `self.required_permissions` if any.
+
         Returns:
             (bool): `True` (default) if this component should be rendered.
         """
+        if self.required_permissions:
+            return context["request"].user.has_perms(self.required_permissions)
         return True
 
     def render(self, context: Context):
@@ -180,7 +192,6 @@ class Button(Component):
         link_name=None,
         icon=None,
         template_path="components/button/default.html",
-        required_permissions=None,
         javascript_template_path=None,
         attributes=None,
         size=None,
@@ -201,8 +212,6 @@ class Button(Component):
             context_object_key (str, optional): The key in the render context that will contain the linked object.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
-            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
-                The button will only be rendered if the user has these permissions.
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
@@ -213,17 +222,12 @@ class Button(Component):
         self.link_name = link_name
         self.icon = icon
         self.template_path = template_path
-        self.required_permissions = required_permissions or []
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         self.size = size
         self.link_includes_pk = link_includes_pk
         self.context_object_key = context_object_key
         super().__init__(**kwargs)
-
-    def should_render(self, context: Context):
-        """Render if and only if the requesting user has appropriate permissions (if any)."""
-        return context["request"].user.has_perms(self.required_permissions)
 
     def get_link(self, context: Context):
         """
@@ -1006,6 +1010,8 @@ class KeyValueTablePanel(Panel):
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return bool(self.get_data(context))
 
     def get_data(self, context: Context):
@@ -1618,7 +1624,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         if not hasattr(obj, "get_custom_field_groupings"):
             return False
         self.custom_field_data = obj.get_custom_field_groupings(advanced_ui=self.advanced_ui)
-        return bool(self.custom_field_data)
+        return bool(self.custom_field_data) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap the response from `get_custom_field_groupings()` to a nested dict as expected by the parent class."""
@@ -1694,7 +1700,7 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         if not hasattr(obj, "get_computed_fields_grouping"):
             return False
         self.computed_fields_data = obj.get_computed_fields_grouping(advanced_ui=self.advanced_ui)
-        return bool(self.computed_fields_data)
+        return bool(self.computed_fields_data) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap `get_computed_fields_grouping()` to the nested dict format expected by the base class."""
@@ -1740,7 +1746,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             self.relationships_data["source"]
             or self.relationships_data["destination"]
             or self.relationships_data["peer"]
-        )
+        ) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap `get_relationships_with_related_objects()` to the flat dict format expected by the base class."""
@@ -1791,6 +1797,8 @@ class _ObjectTagsPanel(Panel):
         )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return hasattr(get_obj_from_context(context), "tags")
 
     def get_extra_context(self, context: Context):
@@ -1822,6 +1830,8 @@ class _ObjectCommentPanel(ObjectTextPanel):
         )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return hasattr(get_obj_from_context(context), "comments")
 
 
@@ -1955,6 +1965,8 @@ class _ObjectDetailContactsTab(Tab):
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return getattr(get_obj_from_context(context), "is_contact_associable_model", False)
 
     def render_label(self, context: Context):
@@ -1979,6 +1991,7 @@ class _ObjectDetailGroupsTab(Tab):
         label="Dynamic Groups",
         weight=Tab.WEIGHT_GROUPS_TAB,
         panels=None,
+        required_permissions=("extras.view_dynamic_group",),
         **kwargs,
     ):
         if panels is None:
@@ -1992,15 +2005,20 @@ class _ObjectDetailGroupsTab(Tab):
                     related_field_name="member_id",
                 ),
             )
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+        super().__init__(
+            tab_id=tab_id,
+            label=label,
+            weight=weight,
+            panels=panels,
+            required_permissions=required_permissions,
+            **kwargs,
+        )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         obj = get_obj_from_context(context)
-        return (
-            getattr(obj, "is_dynamic_group_associable_model", False)
-            and context["request"].user.has_perm("extras.view_dynamicgroup")
-            and obj.dynamic_groups.exists()
-        )
+        return getattr(obj, "is_dynamic_group_associable_model", False) and obj.dynamic_groups.exists()
 
     def render_label(self, context: Context):
         return format_html(
@@ -2023,6 +2041,7 @@ class _ObjectDetailMetadataTab(Tab):
         label="Object Metadata",
         weight=Tab.WEIGHT_METADATA_TAB,
         panels=None,
+        required_permissions=("extras.view_objectmetadata",),
         **kwargs,
     ):
         if panels is None:
@@ -2038,15 +2057,20 @@ class _ObjectDetailMetadataTab(Tab):
                     header_extra_content_template_path=None,
                 ),
             )
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+        super().__init__(
+            tab_id=tab_id,
+            label=label,
+            weight=weight,
+            panels=panels,
+            required_permissions=required_permissions,
+            **kwargs,
+        )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         obj = get_obj_from_context(context)
-        return (
-            getattr(obj, "is_metadata_associable_model", False)
-            and context["request"].user.has_perm("extras.view_objectmetadata")
-            and obj.associated_object_metadata.exists()
-        )
+        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
 
     def render_label(self, context: Context):
         return format_html(

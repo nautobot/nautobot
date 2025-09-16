@@ -387,32 +387,6 @@ urlpatterns = [
         name="device_modulebays_add",
     ),
     path(
-        "devices/<uuid:pk>/config-context/",
-        views.DeviceConfigContextView.as_view(),
-        name="device_configcontext",
-    ),
-    path(
-        "devices/<uuid:pk>/dynamic-groups/",
-        views.DeviceDynamicGroupsView.as_view(),
-        name="device_dynamicgroups",
-        kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/status/",
-        views.DeviceStatusView.as_view(),
-        name="device_status",
-    ),
-    path(
-        "devices/<uuid:pk>/lldp-neighbors/",
-        views.DeviceLLDPNeighborsView.as_view(),
-        name="device_lldp_neighbors",
-    ),
-    path(
-        "devices/<uuid:pk>/config/",
-        views.DeviceConfigView.as_view(),
-        name="device_config",
-    ),
-    path(
         "devices/<uuid:device>/services/assign/",
         ServiceEditView.as_view(),
         name="device_service_assign",

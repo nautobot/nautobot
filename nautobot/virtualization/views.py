@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils.html import mark_safe
 from django.utils.http import urlencode
 from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.templatetags.helpers import HTML_NONE
@@ -256,6 +257,12 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualMachineDetailTable
     queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "config_context":
+            queryset = queryset.annotate_config_context_data()
+        return queryset
+
     class VirtualMachineFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             if key == "software_version":
@@ -367,6 +374,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 tab_id="config-context",
                 label="Config Context",
                 url_name="virtualization:virtualmachine_configcontext",
+                required_permissions=["extras.view_configcontext"],
             ),
         ),
     )
@@ -382,13 +390,13 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
 
         # Determine user's preferred output format
         if request.GET.get("data_format") in ["json", "yaml"]:
-            format_ = request.GET.get("data_format")
+            data_format = request.GET.get("data_format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format_, commit=True)
+                request.user.set_config("extras.configcontext.format", data_format, commit=True)
         elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontext.format", "json")
+            data_format = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format_ = "json"
+            data_format = "json"
 
         context = {
             "object": instance,
@@ -399,12 +407,13 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             **common_detail_view_context(request, instance),
             "rendered_context": instance.get_config_context(),
             "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
-            "format": format_,
+            "format": data_format,
+            "template": "extras/object_configcontext.html",
             "base_template": "virtualization/virtualmachine.html",
             "active_tab": "config-context",
         }
 
-        return render(request, "extras/object_configcontext.html", context)
+        return Response(context)
 
 
 #

@@ -20,7 +20,6 @@ from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
-from django.utils.functional import cached_property
 from django.utils.html import format_html, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
@@ -70,14 +69,13 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import get_obj_from_context
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
-from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
@@ -1971,7 +1969,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.DeviceFilterForm
     table_class = tables.DeviceTable
     form_class = forms.DeviceForm
-    bulk_update_form_class = forms.DeviceTypeBulkEditForm
+    bulk_update_form_class = forms.DeviceBulkEditForm
     serializer_class = serializers.DeviceSerializer
     # TODO: template_name = "dcim/device_list.html"
 
@@ -1994,12 +1992,30 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 "status",
                 "tenant__tenant_group",
             ).prefetch_related("images", "software_image_files")
+        elif self.action == "config_context":
+            queryset = queryset.annotate_config_context_data()
         return queryset
 
     class DeviceDetailContent(object_detail.ObjectDetailContent):
         """
         Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
         """
+
+        class DeviceDynamicGroupsTextPanel(object_detail.BaseTextPanel):
+            def get_value(self, context):
+                dg_list_url = reverse("extras:dynamicgroup_list")
+                job_run_url = reverse(
+                    "extras:job_run_by_class_path",
+                    kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
+                )
+                return (
+                    "Dynamic group membership is cached for performance reasons, "
+                    "therefore this page may not always be up-to-date.\n\n"
+                    "You can refresh the membership of any specific group by viewing it from the list below or from the "
+                    f"[Dynamic Groups list view]({dg_list_url}).\n\n"
+                    "You can also refresh the membership of **all** groups by running the "
+                    f"[Refresh Dynamic Group Caches job]({job_run_url})."
+                )
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -2011,13 +2027,18 @@ class DeviceUIViewSet(NautobotUIViewSet):
             self._tabs.append(
                 object_detail.DistinctViewTab(
                     weight=object_detail.Tab.WEIGHT_GROUPS_TAB,
-                    tab_id="dynamic_groups",
+                    tab_id="dynamic-groups",
                     label="Dynamic Groups",
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
                     panels=(
-                        object_detail.ObjectsTablePanel(
+                        self.DeviceDynamicGroupsTextPanel(
                             weight=100,
+                            render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
+                            label="Dynamic Group caching",
+                        ),
+                        object_detail.ObjectsTablePanel(
+                            weight=200,
                             table_class=DynamicGroupTable,
                             table_attribute="dynamic_groups",
                             exclude_columns=["content_type"],
@@ -2131,6 +2152,17 @@ class DeviceUIViewSet(NautobotUIViewSet):
             if not request.user.has_perms(self.add_permissions or []):
                 return None
             return reverse("dcim:device_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
+
+    class DeviceNAPALMTab(object_detail.DistinctViewTab):
+        def render_label_wrapper(self, context):
+            obj = get_obj_from_context(context)
+            if obj.platform is None:
+                with context.update({"disabled_message": "No platform assigned to this device"}):
+                    return super().render_label_wrapper(context)
+            if not obj.platform.napalm_driver:
+                with context.update({"disabled_message": "No NAPALM driver assigned for this platform"}):
+                    return super().render_label_wrapper(context)
+            return super().render_label_wrapper(context)
 
     object_detail_content = DeviceDetailContent(
         extra_buttons=(
@@ -2582,6 +2614,34 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     ),
                 ),
             ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1200,
+                tab_id="status",
+                label="Status",
+                url_name="dcim:device_status",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
+                tab_id="lldp-neighbors",
+                label="LLDP Neighbors",
+                url_name="dcim:device_lldp_neighbors",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
+                tab_id="config",
+                label="Configuration",
+                url_name="dcim:device_config",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
+                tab_id="config-context",
+                label="Config Context",
+                url_name="dcim:device_configcontext",
+                required_permissions=["extras.view_configcontext"],
+            ),
         ),
     )
 
@@ -2610,6 +2670,16 @@ class DeviceUIViewSet(NautobotUIViewSet):
             extra_context["module_count"] = f"{module_count}/{modulebay_count}"
 
         return extra_context
+
+    @action(
+        detail=True,
+        url_path="dynamic-groups",
+        url_name="dynamicgroups",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_dynamicgroup"],
+    )
+    def dynamic_groups(self, request, *args, **kwargs):
+        return Response({"active_tab": "dynamic-groups"})
 
     @action(
         detail=True,
@@ -2721,101 +2791,94 @@ class DeviceUIViewSet(NautobotUIViewSet):
     def wireless(self, request, *args, **kwargs):
         return Response({"active_tab": "wireless"})
 
+    @action(
+        detail=True,
+        url_path="status",
+        url_name="status",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
+    )
+    def status(self, request, *args, **kwargs):
+        return Response(
+            {
+                "template": "dcim/device/status.html",
+                "active_tab": "status",
+            },
+        )
 
-class DeviceStatusView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/status.html"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "active_tab": "status",
-        }
-
-
-class DeviceLLDPNeighborsView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/lldp_neighbors.html"
-
-    def get_extra_context(self, request, instance):
+    @action(
+        detail=True,
+        url_path="lldp-neighbors",
+        url_name="lldp_neighbors",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
+    )
+    def lldp_neighbors(self, request, *args, **kwargs):
+        instance = self.get_object()
         interfaces = (
             instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
+        return Response(
+            {
+                "template": "dcim/device/lldp_neighbors.html",
+                "interfaces": interfaces,
+                "active_tab": "lldb-neighbors",
+            },
+        )
 
-        return {
-            "interfaces": interfaces,
-            "active_tab": "lldp-neighbors",
-        }
-
-
-class DeviceConfigView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/config.html"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "active_tab": "config",
-        }
-
-
-class DeviceConfigContextView(DevicePageMixin, ObjectConfigContextView):
-    base_template = "dcim/device/base.html"
-
-    @cached_property
-    def queryset(self):  # pylint: disable=method-hidden
-        """
-        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
-        """
-        return Device.objects.annotate_config_context_data()
-
-
-class DeviceChangeLogView(DevicePageMixin, ObjectChangeLogView):
-    base_template = "dcim/device/base.html"
-
-
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
-    base_template = "dcim/device/base.html"
-
-
-class DeviceEditView(generic.ObjectEditView):
-    queryset = Device.objects.all()
-    model_form = forms.DeviceForm
-    template_name = "dcim/device_edit.html"
-
-
-class DeviceDeleteView(generic.ObjectDeleteView):
-    queryset = Device.objects.all()
-
-
-class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Device.objects.all()
-    table = tables.DeviceImportTable
-
-
-class DeviceBulkEditView(generic.BulkEditView):
-    queryset = Device.objects.select_related(
-        "tenant",
-        "location",
-        "rack",
-        "role",
-        "device_type__manufacturer",
-        "secrets_group",
-        "device_redundancy_group",
-        "controller_managed_device_group",
+    @action(
+        detail=True,
+        url_path="config",
+        url_name="config",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
     )
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
-    form = forms.DeviceBulkEditForm
+    def config(self, request, *args, **kwargs):
+        return Response(
+            {
+                "template": "dcim/device/config.html",
+                "active_tab": "config",
+            },
+        )
 
+    @action(
+        detail=True,
+        url_path="config-context",
+        url_name="configcontext",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_configcontext"],
+    )
+    def config_context(self, request, *args, **kwargs):
+        instance = self.get_object()
 
-class DeviceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
+        # Determine user's preferred output format
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            data_format = request.GET.get("data_format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontext.format", data_format, commit=True)
+        elif request.user.is_authenticated:
+            data_format = request.user.get_config("extras.configcontext.format", "json")
+        else:
+            data_format = "json"
+
+        context = {
+            "object": instance,
+            "content_type": ContentType.objects.get_for_model(self.queryset.model),
+            "verbose_name": self.queryset.model._meta.verbose_name,
+            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
+            **common_detail_view_context(request, instance),
+            "rendered_context": instance.get_config_context(),
+            "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
+            "format": data_format,
+            "template": "extras/object_configcontext.html",
+            "base_template": "dcim/device.html",
+            "active_tab": "config-context",
+        }
+
+        return Response(context)
 
 
 #
