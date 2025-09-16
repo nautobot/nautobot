@@ -433,6 +433,7 @@ class DistinctViewTab(Tab):
         url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
         label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
         related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
+        hide_if_empty (bool, optional): Do not render this tab if the related_object_attribute is an empty queryset.
     """
 
     def __init__(
@@ -441,38 +442,52 @@ class DistinctViewTab(Tab):
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
         related_object_attribute="",
+        hide_if_empty=False,
         **kwargs,
     ):
         self.url_name = url_name
         self.related_object_attribute = related_object_attribute
+        self.hide_if_empty = hide_if_empty
         super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
 
-    def render_label(self, context: Context):
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+
+        self.related_object_count = None
         if not self.related_object_attribute:
-            return super().render_label(context)
+            return True
 
         obj = get_obj_from_context(context)
         if not hasattr(obj, self.related_object_attribute):
             logger.warning(
                 f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
             )
-            return super().render_label(context)
+            return True
 
         try:
-            related_obj_count = getattr(obj, self.related_object_attribute).count()
-            return format_html(
-                "{} {}",
-                self.label,
-                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count, True)),
-            )
+            self.related_object_count = getattr(obj, self.related_object_attribute).count()
         except AttributeError:
             logger.warning(
                 f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
             )
+
+        if self.hide_if_empty and not self.related_object_count:
+            return False
+        return True
+
+    def render_label(self, context: Context):
+        if not self.related_object_attribute or not self.related_object_count:
             return super().render_label(context)
+
+        return format_html(
+            "{} {}",
+            self.label,
+            render_to_string("utilities/templatetags/badge.html", badge(self.related_object_count, True)),
+        )
 
 
 class Panel(Component):

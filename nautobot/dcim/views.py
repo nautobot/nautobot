@@ -899,6 +899,7 @@ def make_bulk_tab(weight, tab_name, label, url_name, related_attr, table_class, 
         label=label,
         url_name=url_name,
         related_object_attribute=related_attr,
+        hide_if_empty=True,
         panels=(
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -1976,7 +1977,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
     form_class = forms.DeviceForm
     bulk_update_form_class = forms.DeviceBulkEditForm
     serializer_class = serializers.DeviceSerializer
-    # TODO: template_name = "dcim/device_list.html"
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -2349,6 +2349,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Module Bays",
                 url_name="dcim:device_modulebays",
                 related_object_attribute="module_bays",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: prefetch_related(installed_module, installed_module__status)
@@ -2371,6 +2372,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Interfaces",
                 url_name="dcim:device_interfaces",
                 related_object_attribute="vc_interfaces",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable, lag).prefetch_related(_path__destination, ip_addresses, member_interfaces)
@@ -2397,6 +2399,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Front Ports",
                 url_name="dcim:device_frontports",
                 related_object_attribute="all_front_ports",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable, rear_port)
@@ -2421,6 +2424,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Rear Ports",
                 url_name="dcim:device_rearports",
                 related_object_attribute="all_rear_ports",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable)
@@ -2443,6 +2447,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Console Ports",
                 url_name="dcim:device_consoleports",
                 related_object_attribute="all_console_ports",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable).prefetch_related(_cable_path__destination)
@@ -2467,6 +2472,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Console Server Ports",
                 url_name="dcim:device_consoleserverports",
                 related_object_attribute="all_console_server_ports",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable).prefetch_related(_cable_path__destination)
@@ -2491,6 +2497,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Power Ports",
                 url_name="dcim:device_powerports",
                 related_object_attribute="all_power_ports",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable).prefetch_related(_cable_path__destination)
@@ -2515,6 +2522,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Power Outlets",
                 url_name="dcim:device_poweroutlets",
                 related_object_attribute="all_power_outlets",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(cable, power_port).prefetch_related(_cable_path__destination)
@@ -2539,6 +2547,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Device Bays",
                 url_name="dcim:device_devicebays",
                 related_object_attribute="device_bays",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(installed_device__device_type__manufacturer)
@@ -2561,6 +2570,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 label="Inventory",
                 url_name="dcim:device_inventory",
                 related_object_attribute="inventory_items",
+                hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         # TODO: select_related(manufacturer)
