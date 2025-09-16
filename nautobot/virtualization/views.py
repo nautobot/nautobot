@@ -281,10 +281,6 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 + urlencode({"virtual_machine": instance.pk, "return_url": instance.get_absolute_url()})
             )
 
-    class VirtualMachineConfigContextTab(object_detail.DistinctViewTab):
-        def should_render(self, context):
-            return context["request"].user.has_perms(["extras.view_configcontext"])
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             VirtualMachineFieldsPanel(
@@ -369,7 +365,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             ),
         ),
         extra_tabs=(
-            VirtualMachineConfigContextTab(
+            object_detail.DistinctViewTab(
                 weight=1000,
                 tab_id="config-context",
                 label="Config Context",
