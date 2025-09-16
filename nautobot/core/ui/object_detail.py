@@ -623,7 +623,7 @@ class DataTablePanel(Panel):
         **kwargs,
     ):
         """
-        Instantiate a DataDictTablePanel.
+        Instantiate a DataTablePanel.
 
         Args:
             context_data_key (str): The key in the render context that stores the data used to populate the table.

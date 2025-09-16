@@ -1427,5 +1427,5 @@ class CaptureasNode(template.Node):
     def render(self, context):
         output = self.nodelist.render(context)
         output = output.strip()
-        context[self.varname] = output
+        context[self.varname] = mark_safe(output)  # noqa: S308  # we already rendered it, so it's 'safe' now?
         return ""
