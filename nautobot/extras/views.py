@@ -357,9 +357,6 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
             validator = Draft7Validator(instance.data_schema)
         except SchemaError:
             validator = {}
-
-        extra_tabs = ()
-
         extra_tabs = (
             object_detail.DistinctViewTab(
                 weight=300,

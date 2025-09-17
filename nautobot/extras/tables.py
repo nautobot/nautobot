@@ -5,6 +5,7 @@ import django_tables2 as tables
 from django_tables2.data import TableData
 from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
+from jsonschema import Draft7Validator, SchemaError
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.models.querysets import count_related
@@ -281,8 +282,6 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field, None)
-        # don't do import here, just doing to demonstrate the fix
-        from jsonschema import Draft7Validator, SchemaError
 
         try:
             if hasattr(record, "local_config_context_schema") and record.local_config_context_schema is not None:
