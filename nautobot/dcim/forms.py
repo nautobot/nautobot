@@ -612,7 +612,7 @@ class RackBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=100)
+    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=500)
     desc_units = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Descending units")
     outer_width = forms.IntegerField(required=False, min_value=1)
     outer_depth = forms.IntegerField(required=False, min_value=1)

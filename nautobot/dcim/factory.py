@@ -634,7 +634,7 @@ class RackFactory(PrimaryModelFactory):
     type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
 
     width = factory.Faker("random_element", elements=RackWidthChoices.values())
-    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    u_height = factory.Faker("pyint", min_value=10, max_value=500)
     desc_units = NautobotBoolIterator()
 
     has_outer_width = NautobotBoolIterator()
