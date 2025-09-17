@@ -7,14 +7,9 @@ from django.core.exceptions import (
 )
 from django.db.models import ManyToManyField, ProtectedError
 
-
-from nautobot.extras.models import SavedView
-
-
-from nautobot.core import exceptions
 from nautobot.core.forms.utils import restrict_form_fields
-from nautobot.core.utils.filtering import get_filterset_field
-from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
+from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.views.utils import get_bulk_queryset_from_view
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs import (
     BooleanVar,
@@ -23,6 +18,7 @@ from nautobot.extras.jobs import (
     ObjectVar,
     RunJobTaskFailed,
 )
+from nautobot.extras.models import SavedView
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 name = "System Jobs"
@@ -36,7 +32,7 @@ class BulkEditObjects(Job):
         description="Type of objects to update",
     )
     form_data = JSONVar(description="BulkEditForm data")
-    pk_list = JSONVar(description="List of objects pks to delete", required=False)
+    pk_list = JSONVar(description="List of objects pks to edit", required=False)
     edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
     saved_view = ObjectVar(model=SavedView, required=False)
@@ -48,12 +44,11 @@ class BulkEditObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def _update_objects(self, model, form, filter_query_params, edit_all, nullified_fields, saved_view):
-
-        # base_queryset = model.objects.restrict(self.user, "change")
-
-        from nautobot.core.views.mixins import _get_bulk_queryset_from_view
-        queryset = _get_bulk_queryset_from_view(model, edit_all, filter_query_params, pk_list, saved_view)
+    def _update_objects(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
+        base_queryset = model.objects.restrict(self.user, "change")
+        queryset = get_bulk_queryset_from_view(
+            self.user, model, edit_all, filter_query_params, pk_list, saved_view_id, self.logger
+        )
 
         with deferred_change_logging_for_bulk_operation():
             updated_objects_pk = []
@@ -110,11 +105,18 @@ class BulkEditObjects(Job):
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=self.user)
             total_updated_objs = len(updated_objects_pk)
+            # Enforce object-level permissions. This works because we used .restrict() above and if the user
+            # doesn't have permission to change one of the objects after the change, it won't be in base_queryset
+            # filtered to the pks of the objects we just changed.
+            if base_queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
+                raise ObjectDoesNotExist
             return total_updated_objs
 
-    def _process_valid_form(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view):
+    def _process_valid_form(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
         try:
-            total_updated_objs = self._update_objects(model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view)
+            total_updated_objs = self._update_objects(
+                model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id
+            )
             msg = f"Updated {total_updated_objs} {model._meta.verbose_name_plural}"
             self.logger.info(msg)
             return msg
@@ -128,8 +130,7 @@ class BulkEditObjects(Job):
     def run(  # pylint: disable=arguments-differ
         self, *, content_type, form_data, pk_list=None, edit_all=False, filter_query_params=None, saved_view=None
     ):
-        if saved_view:
-            saved_view = saved_view.pk
+        saved_view_id = saved_view.pk if saved_view is not None else None
         if not filter_query_params:
             filter_query_params = {}
         # self.pk_list = pk_list or []
@@ -159,7 +160,9 @@ class BulkEditObjects(Job):
         if form.is_valid():
             self.logger.debug("Form validation was successful")
             nullified_fields = form_data.get("_nullify")
-            return self._process_valid_form(model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view)
+            return self._process_valid_form(
+                model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id
+            )
         else:
             self.logger.error(f"Form validation unsuccessful: {form.errors.as_json()}")
 
@@ -190,8 +193,7 @@ class BulkDeleteObjects(Job):
     def run(  # pylint: disable=arguments-differ
         self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view=None
     ):
-        if saved_view:
-            saved_view = saved_view.pk
+        saved_view_id = saved_view.pk if saved_view is not None else None
         if not filter_query_params:
             filter_query_params = {}
         if not self.user.has_perm(f"{content_type.app_label}.delete_{content_type.model}"):
@@ -207,8 +209,10 @@ class BulkDeleteObjects(Job):
             )
             raise RunJobTaskFailed("Model not found")
         # import here to avoid circular import
-        from nautobot.core.views.mixins import _get_bulk_queryset_from_view
-        queryset = _get_bulk_queryset_from_view(model, delete_all, filter_query_params, pk_list, saved_view)
+
+        queryset = get_bulk_queryset_from_view(
+            self.user, model, delete_all, filter_query_params, pk_list, saved_view_id, self.logger
+        )
 
         verbose_name_plural = model._meta.verbose_name_plural
 

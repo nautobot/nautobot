@@ -144,7 +144,7 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "tags"]
+        fields = ["id", "name", "rd", "tags", "description"]
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):

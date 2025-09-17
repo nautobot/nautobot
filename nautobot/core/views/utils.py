@@ -1,12 +1,15 @@
 import datetime
 from io import BytesIO
+import logging
 import urllib.parse
 
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, Subquery
+from django.http import QueryDict
+from django.test import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -17,12 +20,21 @@ from rest_framework import exceptions, serializers
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
+from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
-from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
+from nautobot.core.utils.lookup import (
+    get_created_and_last_updated_usernames_for_model,
+    get_filterset_for_model,
+    get_form_for_model,
+    get_view_for_model,
+)
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+
+logger = logging.getLogger(__name__)
 
 METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
 always_generated_metrics = [
@@ -516,3 +528,90 @@ def generate_latest_with_cache(registry=REGISTRY):
     # END Nautobot-specific logic
 
     return "".join(output).encode("utf-8")
+
+
+def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_list, saved_view_id="", log=None):
+    """
+    Return a queryset for bulk operations based on the provided parameters.
+
+    Args:
+        user: The user performing the bulk operation.
+        model: The model class on which the bulk operation is being performed.
+        is_all: Boolean indicating whether the operation applies to all objects or a subset.
+        filter_query_params: A request.GET or dictionary of filter parameters to apply to the queryset.
+        pk_list: A list of primary keys to include, when not using a filter.
+        saved_view_id: Optional ID of a saved view to apply additional filters from.
+
+    Returns:
+        A Django queryset representing the objects to be affected by the bulk operation.
+    """
+    view_class = get_view_for_model(model, view_type="List")
+    view_instance = view_class()
+    request = RequestFactory().get("/")
+    view_instance.request = request
+    view_instance.request.user = user
+    view_instance.action = "bulk_edit"  # or "bulk_delete", doesn't matter here
+    queryset = view_instance.get_queryset().restrict(user, "change")
+
+    if not log:
+        log = logger
+
+    filterset_class = get_filterset_for_model(model)
+
+    if isinstance(filter_query_params, QueryDict):
+        filterset_class = lookup.get_filterset_for_model(model)
+        if filterset_class:
+            filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+        else:
+            filter_query_params = {}
+
+    # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
+    # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
+    if not is_all and pk_list:
+        log.debug(f"Filtering by PKs: {pk_list}")
+        return queryset.filter(pk__in=pk_list)
+
+    # Should this ever happen?
+    if not is_all and not pk_list:
+        log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
+        return queryset.none()
+
+    new_filter_query_params = {}
+
+    filterset = filterset_class()
+    for key, value in filter_query_params.items():
+        if filterset.filters.get(key) is not None:
+            new_filter_query_params[key] = value
+        else:
+            log.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+    filter_query_params = new_filter_query_params
+
+    # short circuit if no filtering is needed
+    if is_all and not saved_view_id and not filter_query_params:
+        log.debug("Filtering by nothing, returning all objects")
+        return queryset
+
+    # This covers if there is a filter and a saved view, as when you have both,
+    # the saved view filters show up in the query params or the url.
+    if is_all and filter_query_params:
+        log.debug(f"Filtering by parameters: {filter_query_params}")
+        inner_queryset = filterset_class(filter_query_params, queryset).qs.values("pk")
+        # We take this approach because filterset.qs has already applied .distinct(),
+        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
+        return queryset.filter(pk__in=Subquery(inner_queryset))
+
+    saved_view_filter_params = {}
+    if saved_view_id:
+        saved_view_obj = SavedView.objects.get(id=saved_view_id)
+        saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
+
+    # This covers the case where there is a saved view but no additional filter parameters.
+    if is_all and saved_view_filter_params:
+        log.debug(f"Filtering by saved view parameters: {saved_view_filter_params}")
+        inner_queryset = filterset_class(saved_view_filter_params, queryset).qs.values("pk")
+        # We take this approach because filterset.qs has already applied .distinct(),
+        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
+        return queryset.filter(pk__in=Subquery(inner_queryset))
+
+    log.debug("Filtering by None, as no valid operation was found, returning empty queryset. This should not happen.")
+    return queryset.none()
