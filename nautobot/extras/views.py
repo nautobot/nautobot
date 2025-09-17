@@ -2012,9 +2012,9 @@ class ScheduledJobApprovalQueueListView(ObjectListViewMixin):
     action_buttons = ()
 
     def get_template_name(self):
-        if self.action == "list":
-            return "extras/scheduled_jobs_approval_queue_list.html"
-        return super().get_template_name()
+        if self.action != "list":
+            raise ValueError(f"action {self.action} is not supported")
+        return "extras/scheduled_jobs_approval_queue_list.html"
 
 
 #
