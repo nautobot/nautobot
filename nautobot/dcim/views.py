@@ -1978,7 +1978,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "retrieve":
+        if self.detail:  # TODO: change to self.action == "retrieve" as a part of addressing NAUTOBOT-1051
             queryset = queryset.select_related(
                 "cluster__cluster_group",
                 "controller_managed_device_group__controller",
@@ -1994,8 +1994,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 "software_version",
                 "status",
                 "tenant__tenant_group",
+                "virtual_chassis",
             ).prefetch_related("images", "software_image_files")
-        elif self.action == "config_context":
+        if self.action == "config_context":
             queryset = queryset.annotate_config_context_data()
         return queryset
 
@@ -2214,6 +2215,20 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 extra_context["body_content_table"].columns.show("device")
             return extra_context
 
+    class DeviceWirelessTab(object_detail.DistinctViewTab):
+        """
+        DistinctViewTab that only renders if the device belongs to a wireless-capable controller_managed_device_group.
+        """
+
+        def should_render(self, context):
+            if not super().should_render(context):
+                return False
+            obj = get_obj_from_context(context)
+            return (
+                obj.controller_managed_device_group is not None
+                and "wireless" in obj.controller_managed_device_group.capabilities
+            )
+
     class DeviceNAPALMTab(object_detail.DistinctViewTab):
         """DistinctViewTab for device NAPALM getters; disables the tab if the device/platform isn't set appropriately."""
 
@@ -2413,10 +2428,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=tables.VirtualDeviceContextTable,
                 table_filter="device",
                 exclude_columns=["device"],
+                show_table_config_button=False,
             ),
         ),
         extra_tabs=(
-            # TODO: return URLs for "add" button on tabs is incorrect (returns to the main detail tab)
             DeviceModuleBaysTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
                 tab_id="module_bays",
@@ -2426,11 +2441,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: prefetch_related(installed_module, installed_module__status)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Module Bays",
                         table_class=tables.DeviceModuleBayTable,
+                        prefetch_related_fields=["installed_module", "installed_module__status"],
                         table_filter="parent_device",  # TODO: is this right or should we use table_attribute=module_bays?
                         tab_id="module_bays",
                         enable_bulk_actions=True,
@@ -2449,12 +2464,15 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     DeviceInterfacesTablePanel(
-                        # TODO: select_related(cable, lag).prefetch_related(_path__destination, ip_addresses, member_interfaces)
+                        # TODO: .prefetch_related(ip_addresses.restrict, member_interfaces.restrict)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Interfaces",
                         table_class=tables.DeviceModuleInterfaceTable,
                         table_attribute="vc_interfaces",
+                        order_by_fields=["_name"],
+                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=["cable", "lag"],
                         related_field_name="device",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
@@ -2476,12 +2494,12 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable, rear_port)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Front Ports",
                         table_class=tables.DeviceModuleFrontPortTable,
                         table_attribute="all_front_ports",
+                        select_related_fields=["cable", "rear_port"],
                         related_field_name="device",
                         tab_id="front_ports",
                         enable_bulk_actions=True,
@@ -2502,12 +2520,12 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Rear Ports",
                         table_class=tables.DeviceModuleRearPortTable,
                         table_attribute="all_rear_ports",
+                        select_related_fields=["cable"],
                         related_field_name="device",
                         tab_id="rear_ports",
                         enable_bulk_actions=True,
@@ -2526,12 +2544,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Console Ports",
                         table_class=tables.DeviceModuleConsolePortTable,
                         table_attribute="all_console_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
                         related_field_name="device",
                         tab_id="console_ports",
                         enable_bulk_actions=True,
@@ -2552,12 +2571,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Console Server Ports",
                         table_class=tables.DeviceModuleConsoleServerPortTable,
                         table_attribute="all_console_server_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
                         related_field_name="device",
                         tab_id="console_server_ports",
                         enable_bulk_actions=True,
@@ -2578,12 +2598,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable).prefetch_related(_cable_path__destination)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Power Ports",
                         table_class=tables.DeviceModulePowerPortTable,
                         table_attribute="all_power_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
                         related_field_name="device",
                         tab_id="power_ports",
                         enable_bulk_actions=True,
@@ -2604,12 +2625,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(cable, power_port).prefetch_related(_cable_path__destination)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Power Outlets",
                         table_class=tables.DeviceModulePowerOutletTable,
                         table_attribute="all_power_outlets",
+                        select_related_fields=["cable", "power_port"],
+                        prefetch_related_fields=["_path__destination"],
                         related_field_name="device",
                         tab_id="power_outlets",
                         enable_bulk_actions=True,
@@ -2630,11 +2652,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(installed_device__device_type__manufacturer)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Device Bays",
                         table_class=tables.DeviceDeviceBayTable,
+                        select_related_fields=["installed_device__device_type__manufacturer"],
                         table_filter="device",
                         tab_id="device_bays",
                         enable_bulk_actions=True,
@@ -2653,11 +2675,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
-                        # TODO: select_related(manufacturer)
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Inventory Items",
                         table_class=tables.DeviceInventoryItemTable,
+                        select_related_fields=["manufacturer"],
                         table_filter="device",
                         tab_id="inventory",
                         enable_bulk_actions=True,
@@ -2667,8 +2689,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     ),
                 ),
             ),
-            object_detail.DistinctViewTab(
-                # TODO: only if 'wireless' in controller_managed_device_group.capabilities
+            DeviceWirelessTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1100,
                 tab_id="wireless",
                 label="Wireless",
