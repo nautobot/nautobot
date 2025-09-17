@@ -80,7 +80,7 @@ In case available helpers and utilities are not sufficient to style a component,
 
 If the answer to all these questions is yes, then we advise using HTML `style` attribute for simplicity as well as coupling the style tightly with a specific element.
 
-Otherwise, define a custom CSS code within `<style>` tag in document head, preferably inside a `{% block extra_styles %}` Django template block. If developing for the core and custom styles are indented to be used throughout multiple pages, consider adding them to the main `nautobot.scss` file.
+Otherwise, define a custom CSS code within `<style>` tag in document head, preferably inside a `{% block extra_styles %}` Django template block. If developing for the core and custom styles are intended to be used throughout multiple pages, consider adding them to the main `nautobot.scss` file.
 
 ### Custom colors
 
