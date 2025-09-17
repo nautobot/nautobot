@@ -627,6 +627,7 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
     template_name = "redoc_ui.html"
     view_titles = Titles(titles={"*": "API Documentation"})
 
+    @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
         response.data["view_titles"] = self.view_titles
