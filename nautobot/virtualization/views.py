@@ -367,7 +367,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
         extra_tabs=(
             object_detail.DistinctViewTab(
                 weight=1000,
-                tab_id="config-context",
+                tab_id="config_context",
                 label="Config Context",
                 url_name="virtualization:virtualmachine_configcontext",
                 required_permissions=["extras.view_configcontext"],
@@ -406,7 +406,6 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             "format": data_format,
             "template": "extras/object_configcontext.html",
             "base_template": "virtualization/virtualmachine.html",
-            "active_tab": "config-context",
         }
 
         return Response(context)
