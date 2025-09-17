@@ -673,8 +673,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The specific object being viewed, if any
+            request (Request): The current request
+            instance (Model, optional): The specific object being viewed, if any
         """
         if instance is not None:
             default_tab = "main"
