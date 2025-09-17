@@ -28,7 +28,6 @@
             <div class="row row-cols-3">
                 <div class="col">
                     <div>
-                    {# TODO: I'm wrapping this part with page_title block just temporarily. It's mostly being used in new system-views with added header so I hope to remove those in NAUTOBOT-1009 #}
                     {% with copy_title=False %}
                         {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
                     {% endwith %}
