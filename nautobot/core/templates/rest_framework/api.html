@@ -39,6 +39,10 @@
         {% block content %}
             {{ block.super }}
         {% endblock %}
+
+        {% if filter_form %}
+          {{ filter_form }}
+        {% endif %}
     </main>
     {% include 'inc/footer.html' %}
     <style>
@@ -46,16 +50,18 @@
             clear: both;  /* Fix description floating issue */
         }
     </style>
+
+    {% block script %}
+        {% include 'inc/javascript.html' %}
+        <script src="{% static "rest_framework/js/prettify-min.js" %}"></script>
+        <script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
+        <script src="{% static "rest_framework/js/default.js" %}"></script>
+        <script>
+        $(document).ready(function() {
+            $('form').ajaxForm();
+        });
+        </script>
+    {% endblock script %}
 {% endblock body %}
 
-{% block script %}
-    {% include 'inc/javascript.html' %}
-    <script src="{% static "rest_framework/js/prettify-min.js" %}"></script>
-    <script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
-    <script src="{% static "rest_framework/js/default.js" %}"></script>
-    <script>
-    $(document).ready(function() {
-        $('form').ajaxForm();
-    });
-    </script>
-{% endblock script %}
+
