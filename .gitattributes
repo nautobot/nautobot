@@ -1,6 +1,12 @@
+# Force Unix-style \n endings, not \r\n Windows-style.
 *.sh text eol=lf
+
 # Treat minified or packed JS/CSS files as binary, as they're not meant to be human-readable
 *.min.* binary
 *.map binary
 *.pack.js binary
 nautobot/project-static/materialdesignicons-6.5.95/preview.html binary
+
+*.html text=auto
+*.py text=auto
+*.js text=auto
