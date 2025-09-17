@@ -49,9 +49,11 @@ from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.mixins import UIComponentsMixin
 from nautobot.core.views.utils import (
     generate_latest_with_cache,
     is_metrics_experimental_caching_enabled,
@@ -161,8 +163,9 @@ class MediaView(AccessMixin, View):
         return self.handle_no_permission()
 
 
-class WorkerStatusView(UserPassesTestMixin, TemplateView):
+class WorkerStatusView(UserPassesTestMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/worker_status.html"
+    view_titles = Titles(titles={"*": "Nautobot Worker Status"})
 
     def test_func(self):
         return self.request.user.is_staff
@@ -273,30 +276,34 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
                 "timeout": timeout,
                 "workers": workers,
             },
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_titles": self.get_view_titles(),
         }
 
         return self.render_to_response(context)
 
 
-class ThemePreviewView(LoginRequiredMixin, TemplateView):
+class ThemePreviewView(LoginRequiredMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
-
-    def get_context_data(self, **kwargs):
-        return {
-            "breadcrumbs": Breadcrumbs(
+    view_titles = Titles(titles={"*": "Nautobot Theme Preview"})
+    breadcrumbs = Breadcrumbs(
                 items={
                     "generic": [
                         ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
                         ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
                     ],
                 },
-            ),
+            )
+
+    def get_context_data(self, **kwargs):
+        return {
             "content_type": ContentType.objects.get_for_model(Status),
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
             "table": StatusTable(Status.objects.all()[:3]),
-            "title": "Nautobot Theme Preview",
+            "view_titles": self.get_view_titles(),
+            "breadcrumbs": self.get_breadcrumbs(),
             "view_action": "generic",
         }
 
@@ -421,7 +428,9 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, UIComponentsMixin, GraphQLView):
+    view_titles = Titles(titles={"*": "GraphiQL"})
+
     def render_graphiql(self, request, **data):
         query_name = request.GET.get("name")
         if query_name:
@@ -429,6 +438,8 @@ class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
             data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
+        data["breadcrumbs"] = self.get_breadcrumbs()
+        data["view_titles"] = self.get_view_titles()
         return render(request, self.graphiql_template, data)
 
 
@@ -523,13 +534,14 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
-class AboutView(AccessMixin, TemplateView):
+class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
     """
     Nautobot About View which displays general information about Nautobot and contact details
     for Network to Code.
     """
 
     template_name = "about.html"
+    view_titles = Titles(titles={"*": "About Nautobot"})
 
     def get(self, request, *args, **kwargs):
         # Redirect user to login page if not authenticated
@@ -557,6 +569,8 @@ class AboutView(AccessMixin, TemplateView):
                 "new_release": new_release,
                 "support_contract_active": support_contract_active,
                 "support_expiration_date": support_expiration_date,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             }
         )
 
@@ -567,3 +581,4 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
+    extra_context = {"view_titles": Titles(titles={"*": "Jinja Template Renderer"})}

@@ -2,6 +2,9 @@
 {% load buttons %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
 <style>
@@ -21,18 +24,6 @@
         width: 1.5rem;
     }
 </style>
-{% endblock %}
-
-{% block page_title %}
-    {% include 'inc/page_title.html' %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock %}
-
-{% block title %}
-    Nautobot Theme Preview
 {% endblock %}
 
 {% block content %}

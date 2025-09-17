@@ -2,6 +2,7 @@
 {% load helpers %}
 {% load plugins %}
 {% load static %}
+{% load ui_framework %}
 
 {% block bootstrap_theme %}
     {% include 'inc/media.html' %}
@@ -18,7 +19,15 @@
                 <div class="col">
                     <div>
                         {% include 'inc/page_title.html' with title=name|add:' – REST API' %}
-                        {% include 'inc/breadcrumbs.html' %}
+                        {% block breadcrumbs %}
+                            <nav aria-label="Breadcrumbs" class="mt-4">
+                                <ol class="breadcrumb">
+                                    {% for breadcrumb_name, breadcrumb_url in breadcrumblist %}
+                                        <li class="breadcrumb-item"><a href="{{ breadcrumb_url }}">{{ breadcrumb_name }}</a></li>
+                                    {% endfor %}
+                                </ol>
+                            </nav>
+                        {% endblock %}
                     </div>
                 </div>
                 {% include 'inc/header.html' %}
@@ -27,7 +36,9 @@
         {% block header %}{% endblock header %}
     </header>
     <main class="container-fluid wrapper" id="main-content" tabindex="-1">
-        {{ block.super }}
+        {% block content %}
+            {{ block.super }}
+        {% endblock %}
     </main>
     {% include 'inc/footer.html' %}
     <style>
