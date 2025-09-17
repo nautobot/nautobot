@@ -287,13 +287,13 @@ class ThemePreviewView(LoginRequiredMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
     view_titles = Titles(titles={"*": "Nautobot Theme Preview"})
     breadcrumbs = Breadcrumbs(
-                items={
-                    "generic": [
-                        ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
-                        ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
-                    ],
-                },
-            )
+        items={
+            "generic": [
+                ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
+                ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
+            ],
+        },
+    )
 
     def get_context_data(self, **kwargs):
         return {

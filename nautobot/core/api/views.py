@@ -45,6 +45,7 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.fields import TagsField
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
@@ -594,6 +595,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     renderer_classes = [*SpectacularSwaggerView.renderer_classes, FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
+    view_titles = Titles(titles={"*": "API Documentation"})
 
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
@@ -611,6 +613,11 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         # Add additional data so drf-spectacular will use the Token keyword in authorization header.
         response.data["schema_auth_names"] = ["tokenAuth"]
+
+        # Pass `Titles` instance to render title from this view rather than original from Swagger View
+        response.data["view_titles"] = self.view_titles
+        del response.data["title"]
+
         return response
 
 
@@ -618,6 +625,14 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
     """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
 
     template_name = "redoc_ui.html"
+    view_titles = Titles(titles={"*": "API Documentation"})
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        response.data["view_titles"] = self.view_titles
+        del response.data["title"]
+
+        return response
 
 
 @method_decorator(gzip_page, name="dispatch")
