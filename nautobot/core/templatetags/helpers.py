@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import datetime
 import json
 import logging
@@ -23,7 +24,7 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
-from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
+from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
@@ -840,11 +841,7 @@ def get_attr(obj, attr, default=None):
     return getattr(obj, attr, default)
 
 
-@register.simple_tag()
-def querystring(request, **kwargs):
-    """
-    Append or update the page number in a querystring.
-    """
+def _base_querystring(request, **kwargs):
     querydict = request.GET.copy()
     for k, v in kwargs.items():
         if v is not None:
@@ -856,6 +853,66 @@ def querystring(request, **kwargs):
         return "?" + query_string
     else:
         return ""
+
+
+# TODO: Remove this tag in Nautobot 3.0.
+
+
+@register.simple_tag()
+@deprecation.method_deprecated(
+    "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
+    "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
+    "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
+    "and is a replica of Django 5.2's `querystring` templatetag."
+)
+def querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+@register.simple_tag()
+def legacy_querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+# Note: This is vendored from Django 5.2
+@register.simple_tag(name="django_querystring", takes_context=True)
+def django_querystring(context, query_dict=None, **kwargs):
+    """
+    Add, remove, and change parameters of a ``QueryDict`` and return the result
+    as a query string. If the ``query_dict`` argument is not provided, default
+    to ``request.GET``.
+
+    For example::
+
+        {% django_querystring foo=3 %}
+
+    To remove a key::
+
+        {% django_querystring foo=None %}
+
+    To use with pagination::
+
+        {% django_querystring page=page_obj.next_page_number %}
+
+    A custom ``QueryDict`` can also be used::
+
+        {% django_querystring my_query_dict foo=3 %}
+    """
+    if query_dict is None:
+        query_dict = context.request.GET
+    params = query_dict.copy()
+    for key, value in kwargs.items():
+        if value is None:
+            if key in params:
+                del params[key]
+        elif isinstance(value, Iterable) and not isinstance(value, str):
+            params.setlist(key, value)
+        else:
+            params[key] = value
+    if not params and not query_dict:
+        return ""
+    query_string = params.urlencode()
+    return f"?{query_string}"
 
 
 @register.simple_tag()
@@ -1295,3 +1352,27 @@ def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
         return strip_tags(title)
 
     return title
+
+
+# https://www.djangosnippets.org/snippets/545/
+@register.tag(name="captureas")
+def do_captureas(parser, token):
+    try:
+        _, args = token.contents.split(None, 1)
+    except ValueError:
+        raise template.TemplateSyntaxError("'captureas' node requires a variable name.")
+    nodelist = parser.parse(("endcaptureas",))
+    parser.delete_first_token()
+    return CaptureasNode(nodelist, args)
+
+
+class CaptureasNode(template.Node):
+    def __init__(self, nodelist, varname):
+        self.nodelist = nodelist
+        self.varname = varname
+
+    def render(self, context):
+        output = self.nodelist.render(context)
+        output = output.strip()
+        context[self.varname] = output
+        return ""

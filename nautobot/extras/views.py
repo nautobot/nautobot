@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,7 +25,6 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from nautobot.apps.ui import BaseTextPanel
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
@@ -36,8 +35,9 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectTextPanel
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -46,11 +46,9 @@ from nautobot.core.utils.lookup import (
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
-    GetReturnURLMixin,
     ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -63,7 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -160,12 +158,12 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=["template"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Template",
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 object_field="template",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ),
     )
@@ -576,6 +574,59 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     template_name = "extras/customfield_update.html"
     action_buttons = ("add",)
 
+    class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+            _type = getattr(obj, "type", None)
+
+            if key == "default":
+                if not value:
+                    return helpers.HTML_NONE
+                if _type == "markdown":
+                    return helpers.render_markdown(value)
+                elif _type == "json":
+                    return helpers.render_json(value)
+                else:
+                    return helpers.placeholder(value)
+            return super().render_value(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            CustomFieldObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
+            ),
+            object_detail.DataTablePanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Custom Field Choices",
+                context_data_key="choices_data",
+                context_columns_key="columns",
+                context_column_headers_key="header",
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                label="Assignment",
+                fields=[
+                    "content_types",
+                ],
+                key_transforms={"content_types": "Content Types"},
+            ),
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                label="Validation Rules",
+                fields=["validation_minimum", "validation_maximum", "validation_regex"],
+                value_transforms={
+                    "validation_regex": [lambda val: None if val == "" else val, helpers.pre_tag],
+                },
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -584,6 +635,16 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+        if self.action == "retrieve":
+            choices_data = []
+
+            for choice in instance.custom_field_choices.all():
+                choices_data.append({"value": choice.value, "weight": choice.weight})
+
+            context["columns"] = ["value", "weight"]
+            context["header"] = ["Value", "Weight"]
+            context["choices_data"] = choices_data
 
         return context
 
@@ -613,9 +674,9 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CustomLinkSerializer
     table_class = tables.CustomLinkTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Custom Link",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -649,212 +710,263 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 #
 
 
-class DynamicGroupListView(generic.ObjectListView):
+class DynamicGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.DynamicGroupBulkEditForm
+    filterset_class = filters.DynamicGroupFilterSet
+    filterset_form_class = forms.DynamicGroupFilterForm
+    form_class = forms.DynamicGroupForm
     queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
-    filterset_form = forms.DynamicGroupFilterForm
+    serializer_class = serializers.DynamicGroupSerializer
+    table_class = tables.DynamicGroupTable
     action_buttons = ("add",)
-
-
-class DynamicGroupView(generic.ObjectView):
-    queryset = DynamicGroup.objects.all()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.model
-        table_class = get_table_for_model(model)
-
-        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            # Ensure that members cache is up-to-date for this specific group
-            members = instance.update_cached_members()
-            messages.success(request, f"Refreshed cached members list for {instance}")
-        else:
-            members = instance.members
-
-        if table_class is not None:
-            # Members table (for display on Members nav tab)
-            if hasattr(members, "without_tree_fields"):
-                members = members.without_tree_fields()
-            members_table = table_class(
-                members.restrict(request.user, "view"),
-                orderable=False,
-                exclude=["dynamic_group_count"],
-                hide_hierarchy_ui=True,
-            )
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(members_table)
-
-            # Descendants table
-            descendants_memberships = instance.membership_tree()
-            descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                descendants_memberships,
-                orderable=False,
-            )
-            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
-
-            # Ancestors table
-            ancestors = instance.get_ancestors()
-            ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
-            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
-
-            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                context["raw_query"] = pretty_print_query(instance.generate_query())
-                context["members_list_url"] = None
+        if self.action in ("create", "update"):
+            filterform_class = instance.generate_filter_form()
+            if filterform_class is None:
+                context["filter_form"] = None
+            elif request.POST:
+                context["filter_form"] = filterform_class(data=request.POST)
             else:
-                context["raw_query"] = None
-                try:
-                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
-                except NoReverseMatch:
+                initial = instance.get_initial()
+                context["filter_form"] = filterform_class(initial=initial)
+
+            formset_kwargs = {"instance": instance}
+            if request.POST:
+                formset_kwargs["data"] = request.POST
+            context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
+
+        elif self.action == "retrieve":
+            model = instance.model
+            table_class = get_table_for_model(model)
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                # Ensure that members cache is up-to-date for this specific group
+                members = instance.update_cached_members()
+                messages.success(request, f"Refreshed cached members list for {instance}")
+            else:
+                members = instance.members
+            if table_class is not None:
+                if hasattr(members, "without_tree_fields"):
+                    members = members.without_tree_fields()
+
+                members_table = table_class(
+                    members.restrict(request.user, "view"),
+                    orderable=False,
+                    exclude=["dynamic_group_count"],
+                    hide_hierarchy_ui=True,
+                )
+                paginate = {
+                    "paginator_class": EnhancedPaginator,
+                    "per_page": get_paginate_count(request),
+                }
+                RequestConfig(request, paginate).configure(members_table)
+
+                # Descendants table
+                descendants_memberships = instance.membership_tree()
+                descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                    descendants_memberships,
+                    orderable=False,
+                )
+                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+
+                # Ancestors table
+                ancestors = instance.get_ancestors()
+                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                    ancestors,
+                    orderable=False,
+                )
+                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+                if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
-            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
-            context["members_table"] = members_table
-            context["ancestors_table"] = ancestors_table
-            context["ancestors_tree"] = ancestors_tree
-            context["descendants_table"] = descendants_table
-            context["descendants_tree"] = descendants_tree
+                else:
+                    context["raw_query"] = None
+                    try:
+                        context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                    except NoReverseMatch:
+                        context["members_list_url"] = None
+
+                context.update(
+                    {
+                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                        "members_table": members_table,
+                        "ancestors_table": ancestors_table,
+                        "ancestors_tree": ancestors_tree,
+                        "descendants_table": descendants_table,
+                        "descendants_tree": descendants_tree,
+                    }
+                )
 
         return context
 
+    def form_save(self, form, **kwargs):
+        obj = form.save(commit=False)
+        context = self.get_extra_context(self.request, obj)
 
-class DynamicGroupEditView(generic.ObjectEditView):
-    queryset = DynamicGroup.objects.all()
-    model_form = forms.DynamicGroupForm
-    template_name = "extras/dynamicgroup_edit.html"
+        # Save filters
+        if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            filter_form = context.get("filter_form")
+            if not filter_form or not filter_form.is_valid():
+                form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+                raise ValidationError("invalid dynamic group filter_form")
+            try:
+                obj.set_filter(filter_form.cleaned_data)
+            except ValidationError as err:
+                form.add_error(None, "Invalid filter detected in existing DynamicGroup filter data.")
+                for msg in getattr(err, "messages", [str(err)]):
+                    if msg:
+                        form.add_error(None, msg)
+                raise
 
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
+        # After filters have been set, now we save the object to the database.
+        obj.save()
+        # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+        form.save_m2m()
 
-        filterform_class = instance.generate_filter_form()
+        # Process the formsets for children
+        children = context.get("children")
+        if children and not children.is_valid():
+            form.add_error(None, "Errors encountered when saving Dynamic Group associations. See below.")
+            # dedupe only non-field errors to avoid duplicates in the banner
+            added_errors = set()
+            for f in children.forms:
+                for msg in f.non_field_errors():
+                    if msg not in added_errors:
+                        form.add_error(None, msg)
+                        added_errors.add(msg)
+            raise ValidationError("invalid DynamicGroupMembershipFormSet")
 
-        if filterform_class is None:
-            filter_form = None
-        elif request.POST:
-            filter_form = filterform_class(data=request.POST)
+        if children:
+            children.save()
+
+        return obj
+
+    # Suppress the global top banner when ValidationError happens
+    def _handle_validation_error(self, e):
+        self.has_error = True
+
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="assign-members",
+        url_name="bulk_assign",
+        custom_view_base_action="add",
+        custom_view_additional_permissions=[
+            "extras.add_staticgroupassociation",
+        ],
+    )
+    def bulk_assign(self, request):
+        """
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
+        """
+        if request.method == "GET":
+            return redirect(reverse("extras:staticgroupassociation_list"))
+
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
+        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
+        model = content_type.model_class()
+        self.default_return_url = get_route_for_model(model, "list")
+        filterset_class = get_filterset_for_model(model)
+
+        if request.POST.get("_all"):
+            if filterset_class:
+                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            else:
+                pk_list = list(model.objects.values_list("pk", flat=True))
         else:
-            initial = instance.get_initial()
-            filter_form = filterform_class(initial=initial)
+            pk_list = request.POST.getlist("pk")
 
-        ctx["filter_form"] = filter_form
-
-        formset_kwargs = {"instance": instance}
-        if request.POST:
-            formset_kwargs["data"] = request.POST
-
-        ctx["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
-
-        return ctx
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = forms.DynamicGroupBulkAssignForm(model, request.POST)
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
             logger.debug("Form validation was successful")
-
             try:
                 with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    # Obtain the instance, but do not yet `save()` it to the database.
-                    obj = form.save(commit=False)
-
-                    ctx = self.get_extra_context(request, obj)
-                    if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                        # Process the filter form and save the query filters to `obj.filter`.
-                        filter_form = ctx["filter_form"]
-                        if filter_form.is_valid():
-                            obj.set_filter(filter_form.cleaned_data)
+                    add_to_groups = list(form.cleaned_data["add_to_groups"])
+                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                    if new_group_name:
+                        if not request.user.has_perm("extras.add_dynamicgroup"):
+                            raise DynamicGroup.DoesNotExist
                         else:
-                            raise RuntimeError(filter_form.errors)
+                            new_group = DynamicGroup(
+                                name=new_group_name,
+                                content_type=content_type,
+                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+                            )
+                            new_group.validated_save()
+                            # Check permissions
+                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
 
-                    # After filters have been set, now we save the object to the database.
-                    obj.save()
-                    # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
-                    form.save_m2m()
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
+                            add_to_groups.append(new_group)
+                            msg = "Created dynamic group"
+                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
+                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
+                            messages.success(request, msg)
 
-                    # Process the formsets for children
-                    children = ctx["children"]
-                    if children.is_valid():
-                        children.save()
-                    else:
-                        raise RuntimeError(children.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                try:
-                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                except AttributeError:
-                    msg = format_html("{} {}", msg, obj)
-                messages.success(request, msg)
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            for dynamic_group in add_to_groups:
+                                association, created = StaticGroupAssociation.objects.get_or_create(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type_id=content_type.id,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                if created:
+                                    logger.debug("Created %s", association)
 
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
+                        # Enforce object-level permissions
+                        permitted_associations = StaticGroupAssociation.objects.restrict(request.user, "add")
+                        if permitted_associations.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                            associations
+                        ):
+                            raise StaticGroupAssociation.DoesNotExist
 
-                    return redirect(request.get_full_path())
+                    if associations:
+                        msg = (
+                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                            f"to {len(add_to_groups)} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(request, msg)
 
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
+                    if form.cleaned_data["remove_from_groups"]:
+                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
+                            (
+                                StaticGroupAssociation.objects.restrict(request.user, "delete")
+                                .filter(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id__in=pk_list,
+                                )
+                                .delete()
+                            )
 
+                        msg = (
+                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(request, msg)
+            except ValidationError as e:
+                messages.error(request, e)
             except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving Dynamic Group associations. See below."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a something that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                logger.debug(msg)
-                form.add_error(None, msg)
-            except ValidationError as err:
-                msg = "Invalid filter detected in existing DynamicGroup filter data."
-                logger.debug(msg)
-                err_messages = err.args[0].split("\n")
-                for message in err_messages:
-                    if message:
-                        form.add_error(None, message)
+                msg = "Static group association failed due to object-level permissions violation"
+                logger.warning(msg)
+                messages.error(request, msg)
 
         else:
             logger.debug("Form validation failed")
+            messages.error(request, form.errors)
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class DynamicGroupDeleteView(generic.ObjectDeleteView):
-    queryset = DynamicGroup.objects.all()
-
-
-class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = DynamicGroup.objects.all()
-    table = tables.DynamicGroupTable
-    filterset = filters.DynamicGroupFilterSet
+        return redirect(self.get_return_url(request))
 
 
 class ObjectDynamicGroupsView(generic.GenericView):
@@ -870,6 +982,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -903,6 +1017,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
+                "detail": True,
             },
         )
 
@@ -921,26 +1038,26 @@ class ExportTemplateUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ExportTemplateSerializer
     table_class = tables.ExportTemplateTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Details",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=["name", "owner", "description"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Template",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
                 fields=["content_type", "mime_type", "file_extension"],
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Code Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="template_code",
-                render_as=ObjectTextPanel.RenderOptions.CODE,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
         ]
     )
@@ -987,97 +1104,6 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
-class GitRepositoryListView(generic.ObjectListView):
-    queryset = GitRepository.objects.all()
-    filterset = filters.GitRepositoryFilterSet
-    filterset_form = forms.GitRepositoryFilterForm
-    table = tables.GitRepositoryTable
-    template_name = "extras/gitrepository_list.html"
-
-    def extra_context(self):
-        # Get the newest results for each repository name
-        results = {
-            r.task_kwargs["repository"]: r
-            for r in JobResult.objects.filter(
-                task_name__startswith="nautobot.core.jobs.GitRepository",
-                task_kwargs__repository__isnull=False,
-                status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .order_by("date_done")
-            .defer("result")
-        }
-        return {
-            "job_results": results,
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryView(generic.ObjectView):
-    queryset = GitRepository.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class GitRepositoryEditView(generic.ObjectEditView):
-    queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryForm
-    template_name = "extras/gitrepository_object_edit.html"
-
-    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
-    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
-    # again, this will be moved to the API calls, so just something to keep in mind.
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.user = request.user
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def get_return_url(self, request, obj=None, default_return_url=None):
-        if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
-        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
-
-
-class GitRepositoryDeleteView(generic.ObjectDeleteView):
-    queryset = GitRepository.objects.all()
-
-
-class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-
-
-class GitRepositoryBulkEditView(generic.BulkEditView):
-    queryset = GitRepository.objects.select_related("secrets_group")
-    filterset = filters.GitRepositoryFilterSet
-    table = tables.GitRepositoryBulkTable
-    form = forms.GitRepositoryBulkEditForm
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
-        return super().alter_obj(obj, request, url_args, url_kwargs)
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
-class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
-    queryset = GitRepository.objects.all()
-    table = tables.GitRepositoryBulkTable
-    filterset = filters.GitRepositoryFilterSet
-
-    def extra_context(self):
-        return {
-            "datasource_contents": get_datasource_contents("extras.gitrepository"),
-        }
-
-
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
@@ -1102,39 +1128,87 @@ def check_and_call_git_repository_function(request, pk, func):
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
-
-
-class GitRepositoryDryRunView(generic.GenericView):
-    def post(self, request, pk):
-        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
-
-
-class GitRepositoryResultView(generic.ObjectView):
-    """
-    Display a JobResult and its Job data.
-    """
-
+class GitRepositoryUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.GitRepositoryBulkEditForm
+    filterset_form_class = forms.GitRepositoryFilterForm
     queryset = GitRepository.objects.all()
-    template_name = "extras/gitrepository_result.html"
+    form_class = forms.GitRepositoryForm
+    filterset_class = filters.GitRepositoryFilterSet
+    serializer_class = serializers.GitRepositorySerializer
+    table_class = tables.GitRepositoryTable
 
-    def get_required_permission(self):
-        return "extras.view_gitrepository"
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        context["datasource_contents"] = get_datasource_contents("extras.gitrepository")
 
-    def get_extra_context(self, request, instance):
+        if self.action in ("list", "bulk_update", "bulk_destroy"):
+            results = {
+                r.task_kwargs["repository"]: r
+                for r in JobResult.objects.filter(
+                    task_name__startswith="nautobot.core.jobs.GitRepository",
+                    task_kwargs__repository__isnull=False,
+                    status__in=JobResultStatusChoices.READY_STATES,
+                )
+                .order_by("date_done")
+                .defer("result")
+            }
+            context["job_results"] = results
+
+        return context
+
+    def form_valid(self, form):
+        if hasattr(form, "instance") and form.instance is not None:
+            form.instance.user = self.request.user
+            form.instance.request = self.request
+        return super().form_valid(form)
+
+    def get_return_url(self, request, obj=None, default_return_url=None):
+        # Only redirect to result if object exists and action is not deletion
+        if request.method == "POST" and obj is not None and self.action != "destroy":
+            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
+
+    @action(
+        detail=True,
+        url_path="result",
+        url_name="result",
+        custom_view_base_action="view",
+    )
+    def result(self, request, pk=None):
+        instance = self.get_object()
         job_result = instance.get_latest_sync()
 
-        if job_result is None:
-            job_result = {}
-
-        return {
-            "result": job_result,
+        context = {
+            "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
+            "verbose_name": instance._meta.verbose_name,
         }
+
+        return render(request, "extras/gitrepository_result.html", context)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="sync",
+        url_name="sync",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def sync(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="dry-run",
+        url_name="dryrun",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.change_gitrepository"],
+    )
+    def dry_run(self, request, pk=None):
+        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
 #
@@ -2031,9 +2105,9 @@ class JobHookUIViewSet(NautobotUIViewSet):
     table_class = tables.JobHookTable
     queryset = JobHook.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2129,9 +2203,9 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
@@ -2148,18 +2222,16 @@ class JobButtonUIViewSet(NautobotUIViewSet):
 #
 # Change logging
 #
-
-
-class ObjectChangeListView(generic.ObjectListView):
+class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ObjectChangeFilterSet
+    filterset_form_class = forms.ObjectChangeFilterForm
     queryset = ObjectChange.objects.all()
-    filterset = filters.ObjectChangeFilterSet
-    filterset_form = forms.ObjectChangeFilterForm
-    table = tables.ObjectChangeTable
-    template_name = "extras/objectchange_list.html"
+    serializer_class = serializers.ObjectChangeSerializer
+    table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
-    def get(self, request, **kwargs):
+    def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
         # newer methods specifying the lookup method.
 
@@ -2175,26 +2247,34 @@ class ObjectChangeListView(generic.ObjectListView):
             request.GET.update({"time__lte": request.GET.get("time_before")})
             request.GET._mutable = False
 
-        return super().get(request=request, **kwargs)
-
-
-class ObjectChangeView(generic.ObjectView):
-    queryset = ObjectChange.objects.all()
+        return super().get(request=request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
-        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
-        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
+        """
+        Adds snapshot diff and related changes table for the object change detail view.
+        """
+        context = super().get_extra_context(request, instance)
 
-        snapshots = instance.get_snapshots()
-        return {
-            "diff_added": snapshots["differences"]["added"],
-            "diff_removed": snapshots["differences"]["removed"],
-            "next_change": instance.get_next_change(request.user),
-            "prev_change": instance.get_prev_change(request.user),
-            "related_changes_table": related_changes_table,
-            "related_changes_count": related_changes.count(),
-            **super().get_extra_context(request, instance),
-        }
+        if self.action == "retrieve":
+            related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
+            related_changes_table = tables.ObjectChangeTable(
+                data=related_changes[:50],  # Limit for performance
+                orderable=False,
+            )
+            snapshots = instance.get_snapshots()
+
+            context.update(
+                {
+                    "diff_added": snapshots["differences"]["added"],
+                    "diff_removed": snapshots["differences"]["removed"],
+                    "next_change": instance.get_next_change(request.user),
+                    "prev_change": instance.get_prev_change(request.user),
+                    "related_changes_table": related_changes_table,
+                    "related_changes_count": related_changes.count(),
+                }
+            )
+
+        return context
 
 
 class ObjectChangeLogView(generic.GenericView):
@@ -2246,6 +2326,10 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": base_template,
                 "active_tab": "changelog",
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
+                "view_action": "changelog",
             },
         )
 
@@ -2339,6 +2423,37 @@ class NoteUIViewSet(
     serializer_class = serializers.NoteSerializer
     table_class = tables.NoteTable
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Note),
+                ModelBreadcrumbItem(
+                    model=lambda c: c["object"].assigned_object,
+                    action="notes",
+                    reverse_kwargs=lambda c: {"pk": c["object"].assigned_object.pk},
+                    label=lambda c: c["object"].assigned_object,
+                    should_render=lambda c: c["object"].assigned_object,
+                ),
+            ]
+        }
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["user", "assigned_object_type", "assigned_object"],
+            ),
+            object_detail.ObjectTextPanel(
+                label="Text",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="note",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.MARKDOWN,
+            ),
+        ),
+    )
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
@@ -2391,6 +2506,10 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                "breadcrumbs": self.get_breadcrumbs(obj, view_type=""),
+                "view_titles": self.get_view_titles(obj, view_type=""),
+                "detail": True,
+                "view_action": "notes",
             },
         )
 
@@ -2409,9 +2528,9 @@ class RelationshipUIViewSet(NautobotUIViewSet):
     table_class = tables.RelationshipTable
     queryset = Relationship.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Relationship",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -2427,13 +2546,13 @@ class RelationshipUIViewSet(NautobotUIViewSet):
                     "destination_filter",
                 ],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Source Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 fields=["source_type", "source_label", "source_hidden", "source_filter"],
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Destination Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
@@ -2639,7 +2758,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
     table_class = tables.SecretsGroupTable
     queryset = SecretsGroup.objects.all()
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
                 label="Secrets Group Details",
@@ -2707,125 +2826,6 @@ class StaticGroupAssociationUIViewSet(
         return queryset
 
 
-class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
-    queryset = StaticGroupAssociation.objects.all()
-    form_class = forms.DynamicGroupBulkAssignForm
-
-    def get_required_permission(self):
-        return get_permission_for_model(self.queryset.model, "add")
-
-    def get(self, request):
-        return redirect(self.get_return_url(request))
-
-    def post(self, request, **kwargs):
-        """
-        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
-
-        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
-        there's no separate confirmation step involved.
-        """
-        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
-        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
-        model = content_type.model_class()
-        self.default_return_url = get_route_for_model(model, "list")
-        filterset_class = get_filterset_for_model(model)
-
-        if request.POST.get("_all"):
-            if filterset_class is not None:
-                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
-            else:
-                pk_list = list(model.objects.all().values_list("pk", flat=True))
-        else:
-            pk_list = request.POST.getlist("pk")
-
-        form = self.form_class(model, request.POST)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-            try:
-                with transaction.atomic():
-                    add_to_groups = list(form.cleaned_data["add_to_groups"])
-                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
-                    if new_group_name:
-                        if not request.user.has_perm("extras.add_dynamicgroup"):
-                            raise DynamicGroup.DoesNotExist
-                        else:
-                            new_group = DynamicGroup(
-                                name=new_group_name,
-                                content_type=content_type,
-                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
-                            )
-                            new_group.validated_save()
-                            # Check permissions
-                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
-
-                            add_to_groups.append(new_group)
-                            msg = "Created dynamic group"
-                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
-                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
-                            messages.success(self.request, msg)
-
-                    with deferred_change_logging_for_bulk_operation():
-                        associations = []
-                        for pk in pk_list:
-                            for dynamic_group in add_to_groups:
-                                association, created = StaticGroupAssociation.objects.get_or_create(
-                                    dynamic_group=dynamic_group,
-                                    associated_object_type_id=content_type.id,
-                                    associated_object_id=pk,
-                                )
-                                association.validated_save()
-                                associations.append(association)
-                                if created:
-                                    logger.debug("Created %s", association)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
-                            associations
-                        ):
-                            raise StaticGroupAssociation.DoesNotExist
-
-                    if associations:
-                        msg = (
-                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
-                            f"to {len(add_to_groups)} dynamic group(s)."
-                        )
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    if form.cleaned_data["remove_from_groups"]:
-                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
-                            (
-                                StaticGroupAssociation.objects.restrict(request.user, "delete")
-                                .filter(
-                                    dynamic_group=dynamic_group,
-                                    associated_object_type=content_type,
-                                    associated_object_id__in=pk_list,
-                                )
-                                .delete()
-                            )
-
-                        msg = (
-                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
-                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
-                        )
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-            except ValidationError as e:
-                messages.error(self.request, e)
-            except ObjectDoesNotExist:
-                msg = "Static group association failed due to object-level permissions violation"
-                logger.warning(msg)
-                messages.error(self.request, msg)
-
-        else:
-            logger.debug("Form validation failed")
-            messages.error(self.request, form.errors)
-
-        return redirect(self.get_return_url(request))
-
-
 #
 # Custom statuses
 #
@@ -2874,6 +2874,7 @@ class TagUIViewSet(NautobotUIViewSet):
                 table_filter="tag",
                 select_related_fields=["content_type"],
                 prefetch_related_fields=["content_object"],
+                include_paginator=True,
             ),
         ),
     )
@@ -2949,33 +2950,33 @@ class WebhookUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.WebhookSerializer
     table_class = tables.WebhookTable
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Webhook",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("name", "content_types", "type_create", "type_update", "type_delete", "enabled"),
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="HTTP",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
                 value_transforms={"additional_headers": [helpers.pre_tag]},
             ),
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 label="Security",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("secret", "ssl_verification", "ca_file_path"),
             ),
-            ObjectTextPanel(
+            object_detail.ObjectTextPanel(
                 label="Body Template",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 object_field="body_template",
-                render_as=BaseTextPanel.RenderOptions.CODE,
+                render_as=object_detail.BaseTextPanel.RenderOptions.CODE,
             ),
         ]
     )

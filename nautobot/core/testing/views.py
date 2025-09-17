@@ -1,4 +1,5 @@
 import contextlib
+import inspect
 import re
 from typing import Optional, Sequence
 from unittest import mock, skipIf
@@ -9,8 +10,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import urlencode
@@ -144,6 +147,10 @@ class ViewTestCases:
         """
 
         custom_action_required_permissions = {}
+        # TODO: Expand to other relevant view types, e.g. 'list'.
+        allowed_number_of_tree_queries_per_view_type = {
+            "retrieve": 0,
+        }
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
@@ -180,7 +187,8 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            response = self.client.get(instance.get_absolute_url())
+            with CaptureQueriesContext(connection) as capture_queries_context:
+                response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
@@ -208,6 +216,22 @@ class ViewTestCases:
                             self.assertBodyContains(response, escape(str(value)))
                     else:
                         self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
+
+            # Check that no more than the appropriate number of tree CTE queries have been run.
+            captured_tree_cte_queries = [
+                query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+            self.assertEqual(
+                len(captured_tree_cte_queries),
+                self.allowed_number_of_tree_queries_per_view_type["retrieve"],
+                f"The CTE tree was calculated a different number of times ({len(captured_tree_cte_queries)})"
+                f" than allowed ({self.allowed_number_of_tree_queries_per_view_type['retrieve']}). The allowed number"
+                f" can be configured on the viewset with the `allowed_number_of_tree_queries_per_view_type` dictionary."
+                f" Care should be taken to only increase these numbers where necessary - tree queries can become really"
+                f" slow with bigger datasets."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
             return response  # for consumption by child test cases if desired
 
@@ -775,6 +799,30 @@ class ViewTestCases:
                 response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
+        def test_model_properties_as_table_columns_are_not_orderable(self):
+            """
+            Check for table columns that are property-based and not orderable.
+            """
+            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not table_class:
+                return
+
+            queryset = self._get_queryset()
+            table = table_class(queryset)
+            model_cls = table._meta.model
+
+            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
+
+            for name, column in table.base_columns.items():
+                if hasattr(column, "order_by") and column.order_by:
+                    continue
+                if name in property_fields and name != "pk":
+                    with self.subTest(column_name=name):
+                        self.assertFalse(
+                            column.orderable,
+                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
+                        )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):

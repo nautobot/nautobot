@@ -2,20 +2,10 @@
 {% load helpers %}
 {% load static %}
 
-{% block breadcrumbs %}
-            <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-            <li><a href="{% url 'dcim:device_list' %}?location={{ object.location.pk }}">{{ object.location }}</a></li>
-            {% if object.parent_bay %}
-                <li>{{ object.parent_bay.device|hyperlinked_object }}</li>
-                <li>{{ object.parent_bay }}</li>
-            {% endif %}
-            <li>{{ object|hyperlinked_object }}</li>
-{% endblock breadcrumbs %}
-
 {% block masthead %}
     <span class="hover_copy">
         <h1>
-            <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
+            <span id="devicename">{% block title %}{{ block.super }}{% endblock title %}</span>
             <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-text="{{ object }}">
                 <span class="mdi mdi-content-copy"></span>
             </button>
