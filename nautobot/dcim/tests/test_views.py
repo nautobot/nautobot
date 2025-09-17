@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
+from django.test.client import RequestFactory
 from django.urls import reverse
 from netaddr import EUI
 import yaml
@@ -107,6 +108,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
+    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -208,6 +210,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
+    # One query for the natural slug, one for `LocationViewSet.get_extra_context`
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -230,7 +234,14 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=status,
             description="Hi!",
         )
-        for loc in [loc1, loc2, loc3, loc4]:
+        loc5 = Location.objects.create(
+            name="Leaf 2",
+            location_type=lt3,
+            parent=loc3,
+            status=status,
+            description="Hi!",
+        )
+        for loc in [loc1, loc2, loc3, loc4, loc5]:
             loc.validated_save()
 
         cls.form_data = {
@@ -429,10 +440,26 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
 
+    def test_get_extra_context(self):
+        view_set = LocationUIViewSet()
+        child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
+        parent_location = child_1.parent
+        child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        status = Status.objects.get_for_model(Prefix).first()
+        prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
+        prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
+        prefix_1.locations.set([child_1, child_2])
+        prefix_2.locations.set([child_1, child_2])
+        request = RequestFactory().get(parent_location.get_absolute_url())
+        request.user = User.objects.first()
+        context = view_set.get_extra_context(request=request, instance=parent_location)
+        self.assertEqual(context["stats"]["prefix_count"], 2)
+
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -460,6 +487,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTest
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -495,6 +523,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Rack
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2081,6 +2110,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestC
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2773,6 +2803,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2822,6 +2853,7 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2870,6 +2902,7 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2926,6 +2959,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2995,6 +3029,7 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3195,6 +3230,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3310,6 +3346,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3376,6 +3413,7 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4246,6 +4284,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4274,6 +4313,7 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerFeed
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4713,6 +4753,7 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
 class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualDeviceContext
     filterset = VirtualDeviceContextFilterSet
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
