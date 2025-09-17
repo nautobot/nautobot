@@ -537,13 +537,22 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
     Args:
         user: The user performing the bulk operation.
         model: The model class on which the bulk operation is being performed.
-        is_all: Boolean indicating whether the operation applies to all objects or a subset.
+        is_all: Boolean indicating whether the operation applies to pk_list or not.
         filter_query_params: A request.GET or dictionary of filter parameters to apply to the queryset.
         pk_list: A list of primary keys to include, when not using a filter.
-        saved_view_id: Optional ID of a saved view to apply additional filters from.
+        saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
 
     Returns:
         A Django queryset representing the objects to be affected by the bulk operation.
+
+    Notes:
+        Start
+        ├── !is_all and pk_list: Return queryset filtered by pk_list
+        ├── !is_all and !pk_list: Return empty queryset
+        ├── is_all and !saved_view_id and ~filter_query_params: Return all objects
+        ├── is_all and filter_query_params: Return queryset filtered by filter_query_params
+        ├── is_all and saved_view_id: Return queryset filtered by saved_view_filter_params
+        └── else: Return empty queryset
     """
     view_class = get_view_for_model(model, view_type="List")
     view_instance = view_class()
