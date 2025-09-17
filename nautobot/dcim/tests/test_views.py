@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.test import override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
 import yaml
 
@@ -2308,6 +2309,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
         device = Device.objects.first()
+        self.add_permissions("dcim.add_virtualdevicecontext")
         url = reverse("dcim:device", kwargs={"pk": device.pk})
         response = self.client.get(url)
         response_body = extract_page_body(response.content.decode(response.charset))
@@ -4223,7 +4225,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
         Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, "<th>Device</th>", html=True)
+        self.assertBodyContains(
+            response,
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            html=True,
+        )
 
     def test_device_column_not_visible(self):
         """
@@ -4236,9 +4242,14 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
-        self.assertNotIn("<th >Device</th>", extract_page_body(response.content.decode(response.charset)))
+        self.assertNotIn(
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
+        )
         # Sanity check:
-        self.assertBodyContains(response, "<th>Name</th>", html=True)
+        self.assertBodyContains(
+            response, '<th class="orderable"><a data-column-name="name" href="?sort=name">Name</a></th>', html=True
+        )
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""
