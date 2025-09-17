@@ -813,7 +813,7 @@ class ObjectsTablePanel(Panel):
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
-        self.add_permissions = add_permissions
+        self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
@@ -844,21 +844,26 @@ class ObjectsTablePanel(Panel):
         if self.tab_id:
             return_url += f"?tab={self.tab_id}"
 
-        if self.add_button_route == "default":
-            body_content_table_class = self.table_class or context[self.context_table_key].__class__
-            body_content_table_model = body_content_table_class.Meta.model
-            permission_name = get_permission_for_model(body_content_table_model, "add")
-            if request.user.has_perms([permission_name]):
-                try:
-                    add_route = reverse(get_route_for_model(body_content_table_model, "add"))
-                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
-                except NoReverseMatch:
-                    logger.warning("add route for `body_content_table_model` not found")
+        if self.add_button_route is not None:
+            add_permissions = self.add_permissions
+            if not add_permissions:
+                body_content_table_class = self.table_class or context[self.context_table_key].__class__
+                body_content_table_model = body_content_table_class.Meta.model
+                add_permissions = [get_permission_for_model(body_content_table_model, "add")]
 
-        elif self.add_button_route is not None:
-            if request.user.has_perms(self.add_permissions or []):
-                add_route = reverse(self.add_button_route)
-                body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+            if self.add_button_route == "default":
+                if request.user.has_perms(add_permissions):
+                    try:
+                        add_route = reverse(get_route_for_model(body_content_table_model, "add"))
+                        body_content_table_add_url = (
+                            f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+                        )
+                    except NoReverseMatch:
+                        logger.warning("add route for `body_content_table_model` not found")
+            else:
+                if request.user.has_perms(add_permissions):
+                    add_route = reverse(self.add_button_route)
+                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
 
         return body_content_table_add_url
 

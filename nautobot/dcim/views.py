@@ -1902,28 +1902,6 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 
 
-class DevicePageMixin:
-    breadcrumbs = Breadcrumbs(
-        items={
-            "detail": [
-                ModelBreadcrumbItem(model=Device),
-                ModelBreadcrumbItem(
-                    model=Device,
-                    label=lambda c: c["object"].location,
-                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
-                ),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_bay.device,
-                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
-                ),
-                BaseBreadcrumbItem(
-                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
-                ),
-            ]
-        }
-    )
-
-
 class DeviceComponentPageMixin:
     """
     This class hold the breadcrumbs paths for Device Components Pages like console ports.
@@ -1978,6 +1956,26 @@ class DeviceUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.DeviceBulkEditForm
     serializer_class = serializers.DeviceSerializer
 
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Device),
+                ModelBreadcrumbItem(
+                    model=Device,
+                    label=lambda c: c["object"].location,
+                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
+                ),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].parent_bay.device,
+                    should_render=lambda c: hasattr(c["object"], "parent_bay"),
+                ),
+                BaseBreadcrumbItem(
+                    label=lambda c: c["object"].parent_bay, should_render=lambda c: hasattr(c["object"], "parent_bay")
+                ),
+            ]
+        }
+    )
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action == "retrieve":
@@ -2007,6 +2005,18 @@ class DeviceUIViewSet(NautobotUIViewSet):
         """
 
         class DeviceDynamicGroupsTextPanel(object_detail.BaseTextPanel):
+            """Panel displaying a note about caching of dynamic groups."""
+
+            def __init__(
+                self,
+                *,
+                weight,
+                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
+                label="Dynamic Group caching",
+                **kwargs,
+            ):
+                super().__init__(weight=weight, render_as=render_as, label=label, **kwargs)
+
             def get_value(self, context):
                 dg_list_url = reverse("extras:dynamicgroup_list")
                 job_run_url = reverse(
@@ -2037,11 +2047,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
                     panels=(
-                        self.DeviceDynamicGroupsTextPanel(
-                            weight=100,
-                            render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
-                            label="Dynamic Group caching",
-                        ),
+                        self.DeviceDynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
                             weight=200,
                             table_class=DynamicGroupTable,
@@ -2056,6 +2062,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
             )
 
     class DeviceFieldsPanel(object_detail.ObjectFieldsPanel):
+        """
+        ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
+        """
+
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
@@ -2080,8 +2090,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     helpers.hyperlinked_object(value),
                     instance.device_redundancy_group_priority,
                 )
-            if key == "device_type":
-                return format_html("{} ({}U)", helpers.hyperlinked_object(value), value.u_height)
             if key == "software_version":
                 instance = get_obj_from_context(context, self.context_object_key)
                 return render_software_version_and_image_files(instance, value, context)
@@ -2089,16 +2097,22 @@ class DeviceUIViewSet(NautobotUIViewSet):
             return super().render_value(key, value, context)
 
     class DeviceVirtualChassisMembersTablePanel(object_detail.ObjectsTablePanel):
+        """ObjectsTablePanel that only renders if the device belongs to a virtual-chassis."""
+
         def should_render(self, context):
             instance = get_obj_from_context(context)
             return instance.virtual_chassis is not None
 
     class DevicePowerUtilizationPanel(object_detail.Panel):
+        """Panel showing a table of PDU calculated power utilization per power-port on the device."""
+
         def should_render(self, context):
+            """Only render if the device is a PDU, i.e. has both power-ports and power-outlets."""
             instance = get_obj_from_context(context)
             return instance.all_power_ports.exists() and instance.all_power_outlets.exists()
 
         def render_body_content(self, context):
+            """Render a table with one row per power-port and additional rows per leg for three-phase power."""
             instance = get_obj_from_context(context)
             header = mark_safe(
                 "<tr><th>Input</th><th>Outlets</th><th>Allocated</th><th>Available</th><th>Utilization</th></tr>"
@@ -2106,6 +2120,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             body = mark_safe("")
             for powerport in instance.all_power_ports.all():
                 utilization = powerport.get_power_draw()
+                # Table row for each power-port
                 powerfeed = powerport.connected_endpoint
                 if powerfeed is not None and powerfeed.available_power:
                     available_power = powerfeed.available_power
@@ -2126,6 +2141,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     available_power,
                     utilization_graph,
                 )
+
+                # Indented table row for each leg of a three-phase power-port.
                 for leg in utilization["legs"]:
                     if powerfeed is not None and powerfeed.available_power:
                         available_power = powerfeed.available_power / 3
@@ -2149,16 +2166,24 @@ class DeviceUIViewSet(NautobotUIViewSet):
             return header + body
 
     class DeviceImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
+        """
+        ObjectsTablePanel with a custom _get_table_add_url() implementation.
+
+        Needed because the URL is `/dcim/devices/<pk>/images/add/`, not `extras/image-attachments/add?device=<pk>`.
+        """
+
         def _get_table_add_url(self, context):
             obj = get_obj_from_context(context)
             request = context["request"]
             return_url = context.get("return_url", obj.get_absolute_url())
 
-            if not request.user.has_perms(self.add_permissions or []):
+            if not request.user.has_perms(["extras.add_imageattachment"]):
                 return None
             return reverse("dcim:device_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
 
     class DeviceModuleBaysTab(object_detail.DistinctViewTab):
+        """DistinctViewTab for device module-bays; shows both the module and module-bay count as a badge."""
+
         def render_label(self, context):
             obj = get_obj_from_context(context)
             module_count = obj.module_bays.filter(installed_module__isnull=False).count()
@@ -2170,7 +2195,19 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 ),
             )
 
+    class DeviceInterfacesTablePanel(object_detail.ObjectsTablePanel):
+        """ObjectsTablePanel for device interfaces; shows the "Device" column if the device is a VirtualChassis master."""
+
+        def get_extra_context(self, context):
+            extra_context = super().get_extra_context(context)
+            obj = get_obj_from_context(context)
+            if VirtualChassis.objects.filter(master=obj).exists():
+                extra_context["body_content_table"].columns.show("device")
+            return extra_context
+
     class DeviceNAPALMTab(object_detail.DistinctViewTab):
+        """DistinctViewTab for device NAPALM getters; disables the tab if the device/platform isn't set appropriately."""
+
         def render_label_wrapper(self, context):
             obj = get_obj_from_context(context)
             if obj.platform is None:
@@ -2279,12 +2316,16 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "asset_tag",
                 ],
                 key_transforms={"device_type__device_family": "Device Family"},
+                value_transforms={
+                    "device_type": [lambda v: format_html("{} ({}U)", helpers.hyperlinked_object(v), v.u_height)],
+                },
             ),
             DeviceVirtualChassisMembersTablePanel(
                 weight=110,
                 section=SectionChoices.LEFT_HALF,
                 context_table_key="vc_members_table",
                 table_title="Virtual Chassis",
+                show_table_config_button=False,
             ),
             DeviceFieldsPanel(
                 weight=120,
@@ -2323,6 +2364,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
+                show_table_config_button=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=300,
@@ -2332,6 +2374,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_filter="device",
                 exclude_columns=["parent"],
                 include_columns=["ip_addresses"],
+                show_table_config_button=False,
             ),
             DeviceImageAttachmentsTablePanel(
                 weight=400,
@@ -2340,7 +2383,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=ImageAttachmentTable,
                 table_attribute="images",
                 related_field_name="device",
-                add_permissions=["extras.add_imageattachment"],
+                show_table_config_button=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
@@ -2384,9 +2427,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 related_object_attribute="vc_interfaces",
                 hide_if_empty=True,
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    DeviceInterfacesTablePanel(
                         # TODO: select_related(cable, lag).prefetch_related(_path__destination, ip_addresses, member_interfaces)
-                        # TODO: show 'device' column if the device is VC master
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Interfaces",
