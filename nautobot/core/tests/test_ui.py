@@ -276,6 +276,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
     def test_extra_tab_panel_context(self):
         cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
         cn = CloudNetwork.objects.filter(cloud_resource_type=cloud_resource_type)[0]
+        cloud_services = cn.cloud_services.filter(cloud_resource_type=cloud_resource_type)
 
         tab = DistinctViewTab(
             weight=1000,
@@ -303,11 +304,4 @@ class ObjectDetailContentExtraTabsTest(TestCase):
 
         self.assertIn("body_content_table", panel_context)
         table = panel_context["body_content_table"]
-
-        # Table should contain the CloudService linked to the CloudNetwork
-        services_from_network = set(cn.cloud_services.values_list("pk", flat=True))
-        services_from_table = set(obj.pk for obj in table.data)
-        self.assertTrue(
-            services_from_network & services_from_table,  # common part not empty
-            "Expected at least one service from network to appear in the table",
-        )
+        self.assertQuerySetEqual(cloud_services, table.data)
