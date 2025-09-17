@@ -554,6 +554,8 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         ├── is_all and saved_view_id: Return queryset filtered by saved_view_filter_params
         └── else: Return empty queryset
     """
+    # We do this on purpose, as taking from the view will not work once set to the job. It is better
+    # to be consistent from view -> to confirmation view -> job, then to be more correct for edge case views
     view_class = get_view_for_model(model, view_type="List")
     view_instance = view_class()
     request = RequestFactory().get("/")
@@ -565,6 +567,8 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
     if not log:
         log = logger
 
+    # We do this on purpose, as taking from the view will not work once set to the job. It is better
+    # to be consistent from view -> to confirmation view -> job, then to be more correct for edge case views
     filterset_class = get_filterset_for_model(model)
 
     if isinstance(filter_query_params, QueryDict):
