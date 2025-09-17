@@ -2100,8 +2100,17 @@ class DeviceUIViewSet(NautobotUIViewSet):
         """ObjectsTablePanel that only renders if the device belongs to a virtual-chassis."""
 
         def should_render(self, context):
-            instance = get_obj_from_context(context)
-            return instance.virtual_chassis is not None
+            obj = get_obj_from_context(context)
+            return obj.virtual_chassis is not None
+
+        def get_extra_context(self, context):
+            extra_context = super().get_extra_context(context)
+            obj = get_obj_from_context(context)
+            extra_context["virtual_chassis"] = obj.virtual_chassis
+            extra_context["body_content_table_list_url"] = (
+                reverse("dcim:device_list") + "?virtual_chassis=" + str(obj.virtual_chassis.pk)
+            )
+            return extra_context
 
     class DevicePowerUtilizationPanel(object_detail.Panel):
         """Panel showing a table of PDU calculated power utilization per power-port on the device."""
@@ -2325,7 +2334,19 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 context_table_key="vc_members_table",
                 table_title="Virtual Chassis",
+                related_field_name="vc_master",
                 show_table_config_button=False,
+                add_button_route=None,
+                footer_buttons=[
+                    object_detail.Button(
+                        weight=100,
+                        label="View Virtual Chassis",
+                        icon="mdi-arrow-right-bold",
+                        size="xs",
+                        link_name="dcim:virtualchassis",
+                        context_object_key="virtual_chassis",
+                    ),
+                ],
             ),
             DeviceFieldsPanel(
                 weight=120,
