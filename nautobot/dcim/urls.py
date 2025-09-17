@@ -469,6 +469,16 @@ urlpatterns = [
         kwargs={"model": Device},
     ),
     path(
+        "devices/<uuid:pk>/clusters/add",
+        views.DeviceAddToClusterView.as_view(),
+        name="device_add_to_clusters",
+    ),
+    path(
+        "devices/<uuid:pk>/clusters/remove/",
+        views.DeviceRemoveFromClustersView.as_view(),
+        name="device_remove_from_clusters",
+    ),
+    path(
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",

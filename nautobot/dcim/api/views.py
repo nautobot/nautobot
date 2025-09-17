@@ -36,6 +36,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -856,3 +857,9 @@ class ModuleFamilyViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.ModuleFamilySerializer
     filterset_class = filters.ModuleFamilyFilterSet
+
+
+class DeviceClusterAssignmentViewSet(ModelViewSet):
+    queryset = DeviceClusterAssignment.objects.all()
+    serializer_class = serializers.DeviceClusterAssignmentSerializer
+    filterset_class = filters.DeviceClusterAssignmentFilterSet

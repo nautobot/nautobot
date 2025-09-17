@@ -140,6 +140,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "customlink",
     "devicebay",
     "devicebaytemplate",
+    "deviceclusterassignment",
     "devicetypetosoftwareimagefile",
     "dynamicgroupmembership",
     "exporttemplate",

@@ -5,9 +5,8 @@ from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
-from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import LocationToLocationsQuerySetMixin, RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
-from nautobot.ipam.mixins import LocationToLocationsQuerySetMixin
 
 
 class RIRQuerySet(RestrictedQuerySet):
