@@ -2047,6 +2047,7 @@ class SavedViewUIViewSet(
             return redirect(self.get_return_url(request, obj=sv))
         return super().destroy(request, *args, **kwargs)
 
+
 class ScheduledJobUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
