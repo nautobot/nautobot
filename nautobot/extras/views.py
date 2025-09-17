@@ -2909,7 +2909,7 @@ class ScheduledJobUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
-    queryset = ScheduledJob.objects.all()
+    queryset = ScheduledJob.objects.enabled()
     filterset_class = filters.ScheduledJobFilterSet
     filterset_form_class = forms.ScheduledJobFilterForm
     serializer_class = serializers.ScheduledJobSerializer
@@ -2917,46 +2917,32 @@ class ScheduledJobUIViewSet(
     action_buttons = ()
 
     def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action != "retrieve" and not instance:
-            return context
+        if instance is None:
+            return super().get_extra_context(request, instance)
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 labels[name] = field.label or pretty_name(name)
+        return {
+            "labels": labels,
+            "job_class_found": (job_class is not None),
+            "default_time_zone": get_current_timezone(),
+            **super().get_extra_context(request, instance),
+        }
 
-        context.update(
-            {
-                "labels": labels,
-                "job_class_found": (job_class is not None),
-                "default_time_zone": get_current_timezone(),
-            }
-        )
+class ScheduledJobApprovalQueueListView(ObjectListViewMixin):
+    queryset = ScheduledJob.objects.needs_approved()
+    table_class = tables.ScheduledJobApprovalQueueTable
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    action_buttons = ()
 
-        # Add approval workflow table
-        approval_workflows = instance.associated_approval_workflows.all()
-        approval_workflows_count = approval_workflows.count()
-        approval_workflow_table = tables.ApprovalWorkflowTable(
-            data=approval_workflows,
-            user=request.user,
-            exclude=["object_under_review", "object_under_review_content_type"],
-        )
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_table)
-
-        context.update(
-            {
-                "approval_workflows_count": approval_workflows_count,
-                "approval_workflow_table": approval_workflow_table,
-            }
-        )
-
-        return context
-
+    def get_template_name(self):
+        if self.action != "list":
+                raise ValueError(f"action {self.action} is not supported")
+        return "extras/scheduled_jobs_approval_queue_list.html"
 
 #
 # Job hooks
