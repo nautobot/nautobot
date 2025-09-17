@@ -37,6 +37,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
+from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -612,7 +613,7 @@ class RackBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=500)
+    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=RACK_U_HEIGHT_MAXIMUM)
     desc_units = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Descending units")
     outer_width = forms.IntegerField(required=False, min_value=1)
     outer_depth = forms.IntegerField(required=False, min_value=1)
