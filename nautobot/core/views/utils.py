@@ -581,7 +581,7 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
     if not is_all and pk_list:
-        log.debug(f"Filtering by PKs: {pk_list}")
+        log.debug(f"Filtering by PK list")
         return queryset.filter(pk__in=pk_list)
 
     # Should this ever happen?
@@ -601,7 +601,7 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
 
     # short circuit if no filtering is needed
     if is_all and not saved_view_id and not filter_query_params:
-        log.debug("Filtering by nothing, returning all objects")
+        log.debug("No filters or saved view specified, returning all objects")
         return queryset
 
     # This covers if there is a filter and a saved view, as when you have both,
