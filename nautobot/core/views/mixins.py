@@ -1,6 +1,5 @@
 import logging
 from typing import ClassVar, Optional, Type, Union
-from django.db.models import Subquery
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -32,9 +31,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from nautobot.core.utils.lookup import get_filterset_for_model
-
-from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -46,10 +42,11 @@ from nautobot.core.forms import (
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils import filtering, lookup, permissions
+from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
+    get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
     import_csv_helper,
@@ -992,55 +989,6 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
         else:
             return self.form_invalid(form)
 
-def _get_bulk_queryset_from_view(model, is_all, filter_query_params, pk_list, saved_view_id=""):
-    # If not all, and pk_list are provided, return the queryset for the pk_list
-    if not is_all and pk_list:
-        print(f"Filtering by PKs: {pk_list}")
-        return model.objects.filter(pk__in=pk_list)
-    
-    # Should this ever happen?
-    if not is_all and not pk_list:
-        print("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
-        return model.objects.none()
-
-    filterset_class = get_filterset_for_model(model)
-
-    new_filter_query_params = {}
-
-    for key, value in filter_query_params.items():
-        try:
-            filtering.get_filterset_field(filterset_class(), key)
-            new_filter_query_params[key] = value
-        except core_exceptions.FilterSetFieldNotFound:
-            print(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
-
-    filter_query_params = new_filter_query_params
-
-    # short circuit if no filtering is needed
-    if is_all and not saved_view_id and not filter_query_params:
-        print("Filtering by nothing, returning all objects")
-        return model.objects.all()
-
-    # if filtering by queryset
-    if is_all and filter_query_params:
-        print(f"Filtering by parameters: {filter_query_params}")
-        inner_queryset = filterset_class(filter_query_params, model.objects.all()).qs.values('pk')
-        # We take this approach because filterset.qs has already applied .distinct(),
-        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-        return model.objects.filter(pk__in=Subquery(inner_queryset))
-
-    saved_view_filter_params = {}
-    if saved_view_id:
-        saved_view_obj = SavedView.objects.get(id=saved_view_id)
-        saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
-
-    if is_all and saved_view_filter_params:
-        print(f"Filtering by saved view parameters: {saved_view_filter_params}")
-        inner_queryset = filterset_class(saved_view_filter_params, model.objects.all()).qs.values('pk')
-        # We take this approach because filterset.qs has already applied .distinct(),
-        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-        return model.objects.filter(pk__in=Subquery(inner_queryset))
-    print("Filtering by nothing, returning all objects")
 
 class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     """
@@ -1172,19 +1120,12 @@ class BulkEditAndBulkDeleteModelMixin:
         """Prepare and enqueue bulk delete job."""
         job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        # Discarding non-filter query params
-
         job_form = BulkDeleteObjects.as_form(
             data={
                 "pk_list": pk_list,
                 "content_type": ContentType.objects.get_for_model(model),
                 "delete_all": delete_all,
-                "filter_query_params": filter_query_params,
+                "filter_query_params": request.GET,
                 "saved_view": saved_view_id,
             }
         )
@@ -1202,11 +1143,6 @@ class BulkEditAndBulkDeleteModelMixin:
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
         if nullified_fields := request.POST.getlist("_nullify"):
             form_data["_nullify"] = nullified_fields
         else:
@@ -1218,7 +1154,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 "pk_list": pk_list,
                 "content_type": ContentType.objects.get_for_model(model),
                 "edit_all": edit_all,
-                "filter_query_params": filter_query_params,
+                "filter_query_params": request.GET,
                 "saved_view": saved_view_id,
             }
         )
@@ -1250,12 +1186,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         is_all = bool(self.request.POST.get("_all"))
         saved_view_id = self.request.POST.get("saved_view", "")
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        queryset = _get_bulk_queryset_from_view(model, is_all, filter_query_params, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
 
         try:
             with transaction.atomic():
@@ -1290,18 +1221,15 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
         data = {}
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        queryset = _get_bulk_queryset_from_view(model, is_all, filter_query_params, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
 
         if "_confirm" in request.POST:
             form_class = self.get_form_class(**kwargs)
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
-                return self.send_bulk_delete_objects_to_job(request, self.pk_list, queryset.model, is_all, saved_view_id)
+                return self.send_bulk_delete_objects_to_job(
+                    request, self.pk_list, queryset.model, is_all, saved_view_id
+                )
             else:
                 return self.form_invalid(form)
         table = None
@@ -1411,14 +1339,12 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         ]
         nullified_fields = request.POST.getlist("_nullify") or []
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
 
-            queryset = _get_bulk_queryset_from_view(model, is_all, filter_query_params, self.pk_list, saved_view_id)
+            queryset = get_bulk_queryset_from_view(
+                request.user, model, is_all, request.GET, self.pk_list, saved_view_id
+            )
 
             for obj in queryset:
                 self.obj = obj
@@ -1497,12 +1423,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         is_all = bool(self.request.POST.get("_all"))
         saved_view_id = self.request.POST.get("saved_view", "")
 
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        queryset = _get_bulk_queryset_from_view(model, is_all, filter_query_params, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
 
         data = {}
         form_class = self.get_form_class()
@@ -1511,7 +1432,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             form = form_class(queryset.model, request.POST, edit_all=is_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.send_bulk_edit_objects_to_job(request,form.cleaned_data, self.pk_list, queryset.model, is_all, saved_view_id)
+                return self.send_bulk_edit_objects_to_job(
+                    request, form.cleaned_data, self.pk_list, queryset.model, is_all, saved_view_id
+                )
             else:
                 return self.form_invalid(form)
         table = None
