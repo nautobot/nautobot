@@ -93,7 +93,7 @@ def nav_menu(request):
                             if has_identified_active_link:
                                 is_active = False
                             else:
-                                is_active = (item_link in [request.path, related_list_view_link)
+                                is_active = item_link in [request.path, related_list_view_link]
                                 if is_active:
                                     has_identified_active_link = True
 
