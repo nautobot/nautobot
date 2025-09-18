@@ -2075,7 +2075,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 try:
                     if instance.parent_bay is not None:
                         parent = instance.parent_bay.device
-                        display = format_html("{} / {}", helpers.hyperlinked_object(parent), instance.parent_bay)
+                        display = format_html(
+                            "{} / {}",
+                            helpers.hyperlinked_object(parent),
+                            helpers.hyperlinked_object(instance.parent_bay),
+                        )
                         if parent.position is not None:
                             display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
                         return display
@@ -2896,7 +2900,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         url_path="wireless",
         url_name="wireless",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["dcim.view_controller_managed_device_group"],
+        custom_view_additional_permissions=["dcim.view_controllermanageddevicegroup"],
     )
     def wireless(self, request, *args, **kwargs):
         return Response({})
