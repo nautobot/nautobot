@@ -62,9 +62,9 @@ def nav_menu(request):
         if not model:
             view_func = request.resolver_match.func
             view_class = None
-            if hasattr(view_func, "view_class"):
+            if hasattr(view_func, "view_class"):  # Valid for generic Views
                 view_class = view_func.view_class
-            elif hasattr(view_func, "cls"):
+            elif hasattr(view_func, "cls"):  # Valid for UI component framework ViewSets
                 view_class = view_func.cls
             view_instance = view_class() if view_class else None
             queryset = getattr(view_instance, "queryset", None)
