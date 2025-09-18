@@ -3,8 +3,12 @@
 
 {% block title %}Advanced Settings{% endblock %}
 
+{% block page_title %}
+    {% include 'inc/page_title.html' with title='Advanced Settings' %}
+{% endblock %}
+
 {% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' with title='Advanced Settings' %}
+    {% include 'inc/breadcrumbs.html' %}
 {% endblock %}
 
 {% block usercontent %}

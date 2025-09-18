@@ -10,19 +10,30 @@
 {% load tz %}
 {% load ui_framework %}
 
-
-{% block breadcrumbs %}
-    {% with title=object.display|default:object %}
-        {% get_breadcrumbs as crumbs %}
-        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
-    {% endwith %}
-{% endblock breadcrumbs %}
-
-{% block title %}
-    {% with title=object.display|default:object %}
-        {{ title }}
+{% block page_title %}
+    {% with copy_title=True %}
+        {{ block.super }}
     {% endwith %}
 {% endblock %}
+
+{% block breadcrumbs_wrapper %}
+    {% captureas default_breadcrumbs %}
+        {% with list_url=object|validated_viewname:"list" %}
+            <li class="breadcrumb-item"><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+        {% endwith %}
+    {% endcaptureas %}
+
+    {% captureas block_breadcrumbs %}
+        {% block breadcrumbs %}
+            {% with list_url=object|validated_viewname:"list" %}
+                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+            {% endwith %}
+            {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+        {% endblock %}
+    {% endcaptureas %}
+
+    {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+{% endblock breadcrumbs_wrapper %}
 
 {% block header %}
     <div data-nb-tests-id="object-details-header-tabs">

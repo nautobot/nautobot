@@ -1,7 +1,1 @@
 {% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-{% block breadcrumbs %}
-    {% with title=object.display|default:object %}
-        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
-    {% endwith %}
-{% endblock breadcrumbs %}

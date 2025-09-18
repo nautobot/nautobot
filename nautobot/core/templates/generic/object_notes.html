@@ -2,8 +2,6 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block title %}{{ block.super }} - Notes{% endblock %}
-
 {% block content %}
     {% if perms.extras.add_note %}
         <form action="{% url 'extras:note_add' %}?return_url={{ request.path }}?tab=notes" method="post" enctype="multipart/form-data">

@@ -1,17 +1,10 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock breadcrumbs_wrapper %}
 
 {% block header %}
-    <div class="row d-print-none">
-        <div class="col-md-12">
-            <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
-                    <li><a href="{% url 'apps:app_detail' app=app_data.package %}">{{ app_data.name | bettertitle }}</a></li>
-                {% endblock breadcrumbs %}
-            </ol>
-        </div>
-    </div>
     <div class="pull-right d-print-none">
         {% block buttons %}
             {% if app_data.home_url %}
@@ -31,9 +24,6 @@
             {% endif %}
         {% endblock buttons %}
     </div>
-    {% block masthead %}
-        <h1>{% block title %}{{ app_data.name | bettertitle }}{% endblock %}</h1>
-    {% endblock masthead %}
 {% endblock header %}
 
 {% block content %}

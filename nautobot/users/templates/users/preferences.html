@@ -4,8 +4,12 @@
 
 {% block title %}User Preferences{% endblock %}
 
+{% block page_title %}
+    {% include 'inc/page_title.html' with title='User Preferences' %}
+{% endblock %}
+
 {% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' with title='User Preferences' %}
+    {% include 'inc/breadcrumbs.html' %}
 {% endblock %}
 
 {% block usercontent %}

@@ -1,11 +1,16 @@
 {% load static %}
 {% load helpers %}
 {% load plugins %}
+{% load ui_framework %}
+
+{% captureas title_block_content %}
+    {% block title %}{% render_title %}{% endblock %}
+{% endcaptureas %}
 
 <!DOCTYPE html>
 <html lang="en"{% with cookie_theme=request.COOKIES|get_item:'theme' %}{% if cookie_theme == 'dark' or cookie_theme == 'light' %} data-theme="{{cookie_theme}}" data-bs-theme="{{cookie_theme}}"{% endif %}{% endwith %}>
 <head>
-    <title>{% block title %}Home{% endblock %}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+    <title>{{ title_block_content }}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
 </head>
@@ -22,7 +27,15 @@
         <div class="container-fluid mb-12 mt-16">
             <div class="row row-cols-3">
                 <div class="col">
-                    {% block breadcrumbs %}{% endblock breadcrumbs %}
+                    <div>
+                    {# TODO: I'm wrapping this part with page_title block just temporarily. It's mostly being used in new system-views with added header so I hope to remove those in NAUTOBOT-1009 #}
+                    {% with copy_title=False %}
+                        {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
+                    {% endwith %}
+                    {% block breadcrumbs_wrapper %}
+                        {% block breadcrumbs %}{% endblock breadcrumbs %}
+                    {% endblock breadcrumbs_wrapper %}
+                    </div>
                 </div>
                 {% include 'inc/header.html' %}
             </div>
