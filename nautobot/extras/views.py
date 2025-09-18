@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1286,7 +1286,11 @@ class JobListView(generic.ObjectListView):
     Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
     """
 
-    queryset = JobModel.objects.all()
+    queryset = JobModel.objects.all().annotate(
+        latest_job_result_status=Subquery(
+            JobResult.objects.filter(job_model=OuterRef("pk")).values_list("status", flat=True)[:1]
+        )
+    )
     table = tables.JobTable
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
