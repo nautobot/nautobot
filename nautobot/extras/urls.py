@@ -100,11 +100,6 @@ urlpatterns = [
         name="scheduledjob_bulk_delete_legacy",
     ),
     path(
-        "jobs/scheduled-jobs/<uuid:pk>/approval-workflow/",
-        RedirectView.as_view(url="/extras/scheduled-jobs/%(pk)s/approval-workflow/"),
-        name="scheduledjob_approvalworkflow_legacy",
-    ),
-    path(
         "jobs/<uuid:pk>/",
         views.JobView.as_view(),
         name="job",
