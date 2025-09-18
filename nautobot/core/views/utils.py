@@ -587,7 +587,7 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         filterset_class = lookup.get_filterset_for_model(model)
         if filterset_class:
             filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
-            print(f"Normalized filter_query_params: {filter_query_params}")
+            log.debug(f"Normalized filter_query_params: {filter_query_params}")
         else:
             filter_query_params = {}
 
