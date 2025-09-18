@@ -98,7 +98,7 @@ def nav_menu(request):
                                     has_identified_active_link = True
 
                             nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
-                                "active": active,
+                                "is_active": is_active,
                                 "name": item_details["name"],
                                 "weight": item_details["weight"],
                             }

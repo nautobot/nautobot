@@ -117,8 +117,7 @@
                                     </li>
                                     {% for item_link, item_details in group_details.items.items %}
                                         <li class="nb-sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
-                                            {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
-                                            <a class="nb-sidenav-link{% if item_details.active %} nb-sidenav-link-active{% endif %}"
+                                            <a class="nb-sidenav-link{% if item_details.is_active %} nb-sidenav-link-active{% endif %}"
                                                data-item-weight="{{ item_details.weight }}"
                                                href="{{ item_link }}">
                                                 {{ item_details.name }}

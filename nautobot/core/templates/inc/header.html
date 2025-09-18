@@ -17,7 +17,7 @@
                         {% for tab_name, tab_details in nav_menu.tabs.items %}
                             {% for group_name, group_details in tab_details.groups.items %}
                                 {% for item_link, item_details in group_details.items.items %}
-                                    {% if item_details.active %}
+                                    {% if item_details.is_active %}
                                         <span class="badge border" data-nb-link="{{ item_link }}"><!--
                                             -->in: {{ item_details.name }}<!--
                                             --><button tabindex="-1" type="button">
