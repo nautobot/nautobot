@@ -1,0 +1,1 @@
+Fixed invalid `list_url` when models not have `list` view.
