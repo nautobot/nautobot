@@ -40,7 +40,7 @@ from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
-from . import filters, forms, prefix_ui, tables
+from . import filters, forms, tables, ui
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -359,10 +359,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            prefix_ui.PrefixObjectFieldsPanel(
+            ui.PrefixObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 label="Prefix",
+                # TODO: can be changed to __all__ as a part of NAUTOBOT-1053
                 fields=[
                     "namespace",
                     "ip_version",
@@ -426,7 +427,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
-                    prefix_ui.PrefixChildTablePanel(
+                    ui.PrefixChildTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="prefix_table",
@@ -443,7 +444,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="all_ips",
                 url_name="ipam:prefix_ipaddresses",
                 panels=[
-                    prefix_ui.IPAddressTablePanel(
+                    ui.IPAddressTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="ip_table",
@@ -455,7 +456,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             ),
         ],
         extra_buttons=[
-            prefix_ui.AddChildPrefixButton(
+            ui.AddChildPrefixButton(
                 weight=200,
                 label="Add Child Prefix",
                 link_name="ipam:prefix_add",
@@ -463,7 +464,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
             ),
-            prefix_ui.AddIPAddressButton(
+            ui.AddIPAddressButton(
                 weight=300,
                 label="Add an IP Address",
                 link_name="ipam:ipaddress_add",
@@ -475,7 +476,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance):
-        try:
+        if self.action == "retrieve" and instance is not None:
             if instance.parent != instance.get_parent():
                 messages.warning(
                     request,
@@ -489,8 +490,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         "Check/Fix IPAM Parents",
                     ),
                 )
-        except (AttributeError, ValueError):
-            pass
         return super().get_extra_context(request, instance)
 
     @action(

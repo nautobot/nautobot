@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlencode
 
 from django.template import Context
 from django.template.loader import render_to_string
@@ -16,6 +17,7 @@ from nautobot.core.views.utils import get_obj_from_context
 logger = logging.getLogger(__name__)
 
 
+# TODO: can be removed as a part of NAUTOBOT-1051
 class PrefixChildTablePanel(ObjectsTablePanel):
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -23,6 +25,7 @@ class PrefixChildTablePanel(ObjectsTablePanel):
         return context.get("active_tab") == "prefixes"
 
 
+# TODO: can be removed as a part of NAUTOBOT-1051
 class IPAddressTablePanel(ObjectsTablePanel):
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -39,10 +42,8 @@ class AddChildPrefixButton(Button):
         return context.get("active_tab") == "prefixes" and context.get("first_available_prefix") is not None
 
     def get_link(self, context):
-        from urllib.parse import urlencode
-
-        obj = get_obj_from_context(context)
         first_available_prefix = context.get("first_available_prefix")
+        obj = get_obj_from_context(context)
         if not first_available_prefix:
             return None
 
@@ -67,10 +68,8 @@ class AddIPAddressButton(Button):
         return context.get("active_tab") == "ip-addresses" and context.get("first_available_ip") is not None
 
     def get_link(self, context: Context):
-        from urllib.parse import urlencode
-
-        obj = get_obj_from_context(context)
         first_available_ip = context.get("first_available_ip")
+        obj = get_obj_from_context(context)
         if not first_available_ip:
             return None
 
@@ -112,8 +111,13 @@ class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
 
 class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTablePanel):
     """
-    ObjectFieldsPanel that renders its fields in a 3-column layout.
-    Inherits behavior from ObjectFieldsPanel but overrides rendering with PrefixKeyValueOverrideValueTablePanel.
+    A panel that combines field rendering from ObjectFieldsPanel with the
+    key/value rendering style of PrefixKeyValueOverrideValueTablePanel.
+
+    - Adds custom handling for specific fields such as:
+      - "utilization": retrieved from the instance via get_utilization().
+      - "locations": rendered as a locations list.
+    Falls back to the parent class rendering for all other fields.
     """
 
     def get_data(self, context):
@@ -122,13 +126,11 @@ class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTabl
         instance = get_obj_from_context(context, self.context_object_key)
 
         if instance and "utilization" in fields:
-            try:
-                data["utilization"] = instance.get_utilization()
-            except Exception:
-                data["utilization"] = None
+            data["utilization"] = instance.get_utilization()
 
         return data
 
+    # TODO: can be removed as a part of NAUTOBOT-1052
     def render_value(self, key, value, context):
         instance = get_obj_from_context(context)
         if key == "utilization":

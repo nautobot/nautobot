@@ -227,6 +227,10 @@ class ObjectsTablePanelTest(TestCase):
 
 
 class ObjectDetailContentExtraTabsTest(TestCase):
+    """
+    Test suite for verifying the behavior of ObjectDetailContent when rendering default and extra tabs.
+    """
+
     user_permissions = ["cloud.view_cloudresourcetype", "cloud.view_cloudservice", "cloud.view_cloudnetwork"]
 
     def setUp(self):
@@ -237,6 +241,9 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata"]
 
     def test_default_extra_tabs_exist(self):
+        """
+        Test the default set of tabs (main, advanced, contacts, dynamic_groups, object_metadata) is present.
+        """
         content = ObjectDetailContent(
             panels=[],
         )
@@ -246,6 +253,10 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.assertListEqual(tab_ids, self.default_tabs_id)
 
     def test_extra_tabs_exist(self):
+        """
+        Test that extra tabs (e.g. "services") can be injected via the `extra_tabs` argument.
+        Validating that tab IDs are correctly combined when extra tabs are provided.
+        """
         content = ObjectDetailContent(
             panels=[],
             extra_tabs=[
@@ -274,6 +285,10 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.assertListEqual(tab_ids, self.default_tabs_id)
 
     def test_extra_tab_panel_context(self):
+        """
+        Confirming that extra tab panels produce the correct context,
+        including `url` and `body_content_table` populated with the expected related objects.
+        """
         cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
         cn = CloudNetwork.objects.filter(cloud_resource_type=cloud_resource_type)[0]
         cloud_services = cn.cloud_services.filter(cloud_resource_type=cloud_resource_type)
