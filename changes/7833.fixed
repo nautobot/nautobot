@@ -1,1 +1,1 @@
-Fixed invalid `list_url` when models not have `list` view.
+Fixed an exception when rendering an object detail view with no corresponding list view.
