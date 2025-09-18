@@ -90,10 +90,12 @@ def nav_menu(request):
                         if not item_details["permissions"] or has_one_or_more_perms(
                             request.user, item_details["permissions"]
                         ):
-                            active = False
-                            if not has_identified_active_link:
-                                active = request.path == item_link or related_list_view_link == item_link
-                                has_identified_active_link = active
+                            if has_identified_active_link:
+                                is_active = False
+                            else:
+                                is_active = (item_link in [request.path, related_list_view_link)
+                                if is_active:
+                                    has_identified_active_link = True
 
                             nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
                                 "active": active,
