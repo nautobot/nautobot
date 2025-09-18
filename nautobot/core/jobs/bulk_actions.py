@@ -47,7 +47,7 @@ class BulkEditObjects(Job):
     def _update_objects(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
         base_queryset = model.objects.restrict(self.user, "change")
         queryset = get_bulk_queryset_from_view(
-            self.user, model, edit_all, filter_query_params, pk_list, saved_view_id, self.logger
+            self.user, model, edit_all, filter_query_params, pk_list, saved_view_id, "change", self.logger
         )
 
         with deferred_change_logging_for_bulk_operation():
@@ -211,7 +211,7 @@ class BulkDeleteObjects(Job):
         # import here to avoid circular import
 
         queryset = get_bulk_queryset_from_view(
-            self.user, model, delete_all, filter_query_params, pk_list, saved_view_id, self.logger
+            self.user, model, delete_all, filter_query_params, pk_list, saved_view_id, "delete", self.logger
         )
 
         verbose_name_plural = model._meta.verbose_name_plural

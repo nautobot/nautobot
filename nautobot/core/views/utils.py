@@ -9,7 +9,6 @@ from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey, Subquery
 from django.http import QueryDict
-from django.test import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -530,7 +529,7 @@ def generate_latest_with_cache(registry=REGISTRY):
     return "".join(output).encode("utf-8")
 
 
-def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_list, saved_view_id="", log=None):
+def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_list, saved_view_id, action, log=None):
     """
     Return a queryset for bulk operations based on the provided parameters.
 
@@ -552,42 +551,64 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         ├── is_all and !saved_view_id and ~filter_query_params: Return all objects
         ├── is_all and filter_query_params: Return queryset filtered by filter_query_params
         ├── is_all and saved_view_id: Return queryset filtered by saved_view_filter_params
-        └── else: Return empty queryset
+        ├── is_all and not saved_view_id: Return queryset filtered by saved_view_filter_params
+        └── else: raise RuntimeError
     """
-    # We do this on purpose, as taking from the view will not work once set to the job. It is better
-    # to be consistent from view -> to confirmation view -> job, then to be more correct for edge case views
-    view_class = get_view_for_model(model, view_type="List")
-    view_instance = view_class()
-    request = RequestFactory().get("/")
-    view_instance.request = request
-    view_instance.request.user = user
-    view_instance.action = "bulk_edit"  # or "bulk_delete", doesn't matter here
-    queryset = view_instance.get_queryset().restrict(user, "change")
-
     if not log:
         log = logger
 
-    # We do this on purpose, as taking from the view will not work once set to the job. It is better
-    # to be consistent from view -> to confirmation view -> job, then to be more correct for edge case views
+    if action == "delete":
+        view_name = "BulkDelete"
+    elif action == "change":
+        view_name = "BulkEdit"
+    else:
+        view_name = "List"
+
+    # The view_class is determined from model on purpose, as view_class the view as a param, will not work
+    # with a job. It is better to be consistent with each with sending the same params that will
+    # always be available from to the confirmation page and to the job.
+    view_class = get_view_for_model(model, view_type=view_name)
+
+    if not view_class:
+        raise RuntimeError(f"No view found for model {model} to determine base queryset.")
+
+    queryset = view_class.queryset.restrict(user, action)
+
+    # The filterset_class is determined from model on purpose, as filterset_class the view as a param, will not work
+    # with a job. It is better to be consistent with each with sending the same params that will
+    # always be available from to the confirmation page and to the job.
     filterset_class = get_filterset_for_model(model)
+
+    if not filterset_class:
+        log.debug(f"No filterset_class found for model {model}, returning all objects")
+        return queryset
 
     if isinstance(filter_query_params, QueryDict):
         filterset_class = lookup.get_filterset_for_model(model)
         if filterset_class:
             filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+            print(f"Normalized filter_query_params: {filter_query_params}")
         else:
             filter_query_params = {}
 
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
     if not is_all and pk_list:
-        log.debug(f"Filtering by PK list")
+        log.debug("Filtering by PK list")
         return queryset.filter(pk__in=pk_list)
 
     # Should this ever happen?
     if not is_all and not pk_list:
         log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
         return queryset.none()
+
+    # The query params when you manually delete filters from the UI include on the saved view filter
+    # set the flag all_filters_removed to true. If that is the case, we ignore the saved view below, by setting it
+    # to None here
+    if filter_query_params.get("all_filters_removed"):
+        log.debug("The `all_filters_removed` flag is set, ignoring saved view")
+        saved_view_id = None
+        filter_query_params.pop("all_filters_removed")
 
     new_filter_query_params = {}
 
@@ -615,7 +636,10 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
 
     saved_view_filter_params = {}
     if saved_view_id:
-        saved_view_obj = SavedView.objects.get(id=saved_view_id)
+        try:
+            saved_view_obj = SavedView.objects.get(id=saved_view_id)
+        except SavedView.DoesNotExist:
+            return queryset.none()
         saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
 
     # This covers the case where there is a saved view but no additional filter parameters.
@@ -626,5 +650,10 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         # and performing a .delete directly on a queryset with .distinct applied is not allowed.
         return queryset.filter(pk__in=Subquery(inner_queryset))
 
-    log.debug("Filtering by None, as no valid operation was found, returning empty queryset. This should not happen.")
-    return queryset.none()
+    # short circuit if no filtering is applied with a saved view
+    if is_all and not saved_view_filter_params:
+        log.debug("Saved view with no filters specified, returning all objects")
+        return queryset
+
+    log.debug("Filtering by None, as no valid operation was found.")
+    raise RuntimeError("No valid operation found to generate bulk queryset.")
