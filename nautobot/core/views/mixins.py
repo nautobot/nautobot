@@ -1184,9 +1184,11 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         model = queryset.model
         # Delete objects
         is_all = bool(self.request.POST.get("_all"))
-        saved_view_id = self.request.POST.get("saved_view", "")
+        saved_view_id = request.GET.get("saved_view", "")
 
-        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "delete"
+        )
 
         try:
             with transaction.atomic():
@@ -1221,7 +1223,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
         data = {}
 
-        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "delete"
+        )
 
         if "_confirm" in request.POST:
             form_class = self.get_form_class(**kwargs)
@@ -1325,7 +1329,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         model = queryset.model
         # Delete objects
         is_all = bool(self.request.POST.get("_all"))
-        saved_view_id = self.request.POST.get("saved_view", "")
+        saved_view_id = request.GET.get("saved_view", "")
 
         form_custom_fields = getattr(form, "custom_fields", [])
         form_relationships = getattr(form, "relationships", [])
@@ -1343,7 +1347,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             updated_objects = []
 
             queryset = get_bulk_queryset_from_view(
-                request.user, model, is_all, request.GET, self.pk_list, saved_view_id
+                request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "change"
             )
 
             for obj in queryset:
@@ -1421,9 +1425,11 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         model = _queryset.model
         self.pk_list = list(request.POST.getlist("pk"))
         is_all = bool(self.request.POST.get("_all"))
-        saved_view_id = self.request.POST.get("saved_view", "")
+        saved_view_id = request.GET.get("saved_view", "")
 
-        queryset = get_bulk_queryset_from_view(request.user, model, is_all, request.GET, self.pk_list, saved_view_id)
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "change"
+        )
 
         data = {}
         form_class = self.get_form_class()
