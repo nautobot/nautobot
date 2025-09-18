@@ -224,7 +224,6 @@ class GetSavedViewsForUserTestCase(TransactionTestCase):
         """Test if method is working with anonymous users and return only shared views."""
         user = AnonymousUser()
         saved_views = get_saved_views_for_user(user, "dcim:device_list")
-        print(list(saved_views.values_list("name", flat=True)))
         self.assertEqual(saved_views.count(), 2)
         expected_names = ["saved_view_shared", "saved_view_shared_different_owner"]
         self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
