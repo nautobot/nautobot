@@ -20,7 +20,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -74,7 +74,7 @@ from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
@@ -557,15 +557,172 @@ class RackUIViewSet(NautobotUIViewSet):
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
 
+    class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            if request.user.has_perms(self.add_permissions or []):
+                return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
+            return None
+
+    class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "space_utilization" or key == "power_utilization":
+                return self.get_utilization_graph(value)
+
+            if key == "rack_group":
+                if not value:
+                    return helpers.HTML_NONE
+                all_groups = [*list(value.ancestors()), value]
+                return format_html_join(" / ", "{}", ((helpers.hyperlinked_object(group),) for group in all_groups))
+
+            if key == "devices":
+                request = context["request"]
+                obj = get_obj_from_context(context)
+                device_count = Device.objects.restrict(request.user, "view").filter(rack=obj).count()
+                if not device_count:
+                    return helpers.HTML_NONE
+                full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
+                link = format_html('<a href="{}">{}</a>', full_url, device_count)
+                return link
+
+            return super().render_value(key, value, context)
+
+        def get_utilization_graph(self, value):
+            data = helpers.utilization_graph(value)
+            return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+    class DimensionsObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+
+            if key == "u_height":
+                if not value:
+                    return helpers.HTML_NONE
+                orientation = "descending" if obj.desc_units else "ascending"
+                return format_html("{}U ({})", value, orientation)
+
+            if key == "outer_width" or key == "outer_depth":
+                if not value:
+                    return helpers.HTML_NONE
+                return format_html("{} {}", value, obj.get_outer_unit_display())
+
+            return super().render_value(key, value, context)
+
+    class NonRackedDevicesObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("dcim.add_device"):
+                return None
+
+            obj = get_obj_from_context(context)
+            params = []
+            if obj is not None:
+                params.append(("rack", obj.pk))
+                if obj.location is not None:
+                    params.append(("location", obj.location.pk))
+
+            params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
+            return f"{reverse('dcim:device_add')}?{urlencode(params)}"
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            RackObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                fields=[
+                    "location",
+                    "rack_group",
+                    "facility_id",
+                    "tenant",
+                    "status",
+                    "role",
+                    "serial",
+                    "asset_tag",
+                    "devices",
+                    "space_utilization",
+                    "power_utilization",
+                ],
+            ),
+            DimensionsObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Dimensions",
+                fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                table_class=tables.PowerFeedDetailTable,
+                table_filter="rack",
+                add_button_route=None,
+            ),
+            ImageAttachmentObjectsTablePanel(
+                table_title="Images",
+                section=SectionChoices.LEFT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="image_attachments",
+                related_field_name="object_id",
+                weight=400,
+                add_permissions=[
+                    "extras.add_imageattachment",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=500,
+                table_class=tables.RackReservationDetailTable,
+                table_filter="rack",
+                include_columns=["tenant"],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=600,
+                template_path="dcim/rack_layout.html",
+            ),
+            NonRackedDevicesObjectsTablePanel(
+                weight=700,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="nonracked_devices_table",
+                related_field_name="rack",
+                table_title="Non-Racked Devices",
+                exclude_columns=[
+                    "status",
+                    "tenant",
+                    "location",
+                    "rack",
+                    "manufacturer",
+                    "primary_ip",
+                    "actions",
+                ],
+                include_columns=["parent_device"],
+                extra_params={"position__isnull": True},
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
             # Get 0U and child devices located within the rack
-            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
                 "device_type__manufacturer"
             )
-
+            nonracked_devices_table = tables.NonRackedDevicesTable(nonracked_devices)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(nonracked_devices_table)
+            context["nonracked_devices_table"] = nonracked_devices_table
             peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
             if instance.rack_group:
@@ -575,13 +732,6 @@ class RackUIViewSet(NautobotUIViewSet):
 
             context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
             context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-            context["power_feeds"] = (
-                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-            )
-            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
         return context
 
 

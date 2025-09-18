@@ -55,6 +55,8 @@ from .template_code import (
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
+    PARENT_BAY,
+    PARENT_DEVICE,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -90,6 +92,7 @@ __all__ = (
     "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
+    "NonRackedDevicesTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -1592,3 +1595,20 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
             "interface_count",
         )
+
+
+class NonRackedDevicesTable(RoleTableMixin, BaseTable):
+    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
+    device_type = tables.LinkColumn(
+        viewname="dcim:devicetype",
+        args=[Accessor("device_type__pk")],
+        verbose_name="Type",
+        text=lambda record: record.device_type.display,
+    )
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
+    parent_bay = tables.TemplateColumn(template_code=PARENT_BAY, verbose_name="")
+
+    class Meta(BaseTable.Meta):
+        model = Device
+        fields = ("pk", "name", "role", "device_type", "parent_device", "parent_bay")
+        default_columns = ("name", "role", "device_type", "parent_device", "parent_bay")
