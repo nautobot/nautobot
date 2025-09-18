@@ -1,0 +1,3 @@
+Improved active nav menu items determination logic and moved it from template to context processor.
+Changed Scheduled Jobs URL path from `/extras/jobs/scheduled-jobs/` to `/extras/scheduled-jobs/.
+Restricted nav menu to highlight only active item at a time.
