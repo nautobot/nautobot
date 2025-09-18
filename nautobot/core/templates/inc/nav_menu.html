@@ -24,7 +24,7 @@
             {% if nav_menu_version_control %}
                 <li>
                     {% url 'plugins:nautobot_version_control:branch_list' as branch_list_url %}
-                    <a class="nb-sidenav-list-item nb-sidenav-list-item-flat{% if request.path == branch_list_url %} nb-sidenav-list-item-active{% endif %}" href="{{ branch_list_url }}">
+                    <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_list_url }}">
                         <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
                         <span>Branches</span>
                     </a>
@@ -58,7 +58,7 @@
                         </button>
                     {% else %}
                         {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
-                        <a class="nb-sidenav-list-item nb-sidenav-list-item-flat{% if request.path == branch_diffs_url %} nb-sidenav-list-item-active{% endif %}" href="{{ branch_diffs_url }}">
+                        <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_diffs_url }}">
                             <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
                             <span>View diffs</span>
                         </a>
@@ -118,7 +118,7 @@
                                     {% for item_link, item_details in group_details.items.items %}
                                         <li class="nb-sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
                                             {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
-                                            <a class="nb-sidenav-link{% if item_link in request.path %} nb-sidenav-link-active{% endif %}"
+                                            <a class="nb-sidenav-link{% if item_details.active %} nb-sidenav-link-active{% endif %}"
                                                data-item-weight="{{ item_details.weight }}"
                                                href="{{ item_link }}">
                                                 {{ item_details.name }}
