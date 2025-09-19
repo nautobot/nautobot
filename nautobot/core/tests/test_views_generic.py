@@ -35,5 +35,9 @@ class TestViewsGeneric(TestCase):
                 class MyMixin(base_view):
                     pass
 
+                # Defining this class will fail if there is MRO issue
+                # pylint: disable=unused-variable
                 class MyView(MyMixin, extension_view):
                     queryset = Location.objects.all()
+
+                # pylint: enable=unused-variable
