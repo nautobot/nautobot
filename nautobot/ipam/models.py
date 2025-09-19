@@ -882,6 +882,38 @@ class Prefix(PrimaryModel):
             )
         self.locations.set([value])
 
+    @property
+    def default_ancestors(self):
+        """
+        Return this prefix's ancestors in default order.
+
+        This is equivalent to calling `ancestors()` with default
+        arguments: ordered from larger to smaller prefix lengths,
+        excluding the prefix itself.
+        """
+        return self.ancestors()
+
+    @property
+    def default_descendants(self):
+        """
+        Return this prefix's descendants in default order.
+
+        This is equivalent to calling `descendants()` with
+        default arguments: all subnets, excluding the prefix itself.
+        """
+        return self.descendants()
+
+    @property
+    def all_ips(self):
+        """
+        All IP addresses contained within this prefix, including
+        those in descendant prefixes.
+
+        This is a property alias for `get_all_ips()` and may be
+        preferred in new code for readability.
+        """
+        return self.get_all_ips()
+
     def reparent_subnets(self):
         """
         Handle changes to the parentage of other Prefixes as a consequence of this Prefix's creation or update.
