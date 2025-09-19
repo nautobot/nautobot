@@ -1,16 +1,6 @@
 {% extends 'users/base.html' %}
 {% load form_helpers %}
 
-{% block title %}Advanced Settings{% endblock %}
-
-{% block page_title %}
-    {% include 'inc/page_title.html' with title='Advanced Settings' %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock %}
-
 {% block usercontent %}
     <form action="." method="post" class="h-100 vstack">
         {% csrf_token %}

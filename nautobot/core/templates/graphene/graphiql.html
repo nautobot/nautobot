@@ -8,13 +8,14 @@ add "&raw" to the end of the URL within a browser.
 {% load plugins %}
 {% load static %}
 {% load helpers %}
+{% load ui_framework %}
 <!DOCTYPE html>
 <html>
 <head>
   {% include 'inc/media.html' %}
   {% block extra_styles %}{% endblock %}
   <!-- Nautobot template requirements -->
-  <title>{% block title %}GraphiQL{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+  <title>{% render_title %} - {{ settings.BRANDING_TITLE }}</title>
 
   <!-- GraphiQL template requirements -->
   <style>
@@ -97,12 +98,9 @@ add "&raw" to the end of the URL within a browser.
           <div class="row row-cols-3">
               <div class="col">
                   <div>
-                      {% block page_title %}
-                          {% include 'inc/page_title.html' with title='GraphiQL' %}
-                      {% endblock page_title %}
-                      {% block breadcrumbs %}
-                          {% include 'inc/breadcrumbs.html' %}
-                      {% endblock breadcrumbs %}
+                      {% render_title as title %}
+                      {% include 'inc/page_title.html' with title=title %}
+                      {% render_breadcrumbs %}
                   </div>
               </div>
               {% include 'inc/header.html' %}

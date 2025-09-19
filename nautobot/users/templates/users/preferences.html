@@ -2,16 +2,6 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block title %}User Preferences{% endblock %}
-
-{% block page_title %}
-    {% include 'inc/page_title.html' with title='User Preferences' %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock %}
-
 {% block usercontent %}
     <form method="post" action="" class="h-100 vstack">
         {% csrf_token %}

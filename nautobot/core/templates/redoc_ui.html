@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
+{% load ui_framework %}
 
-{% block title %}{{ title | default:"Redoc" }}{% endblock title %}
-
-{% block breadcrumbs %}
-    {% include "inc/breadcrumbs.html" %}
-{% endblock %}
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
     <style>
