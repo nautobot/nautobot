@@ -396,7 +396,6 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_links",
     "custom_validators",
     "export_templates",
-    "graphql",
     "webhooks",
 )
 class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
@@ -460,7 +459,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         to="extras.DynamicGroup",
         related_name="vpn_tunnel_endpoints",
         blank=True,
-        verbose_name="Protected Prefixes (from Dynamic Group)",
+        verbose_name="Protected Prefixes Dynamic Group",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -477,8 +476,8 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         "source_ipaddress",
         "source_fqdn",
         "tunnel_interface",
-        "protected_prefixes_dg",
         "protected_prefixes",
+        "protected_prefixes_dg",
     ]
 
     class Meta:
@@ -492,7 +491,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         if self.source_interface:
             device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
             if self.source_ipaddress:
-                return f"{device_intf}({self.source_ipaddress.address})"
+                return f"{device_intf} ({self.source_ipaddress.address})"
             return device_intf
         return self.source_fqdn
 
