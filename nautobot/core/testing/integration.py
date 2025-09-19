@@ -312,6 +312,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
+        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
