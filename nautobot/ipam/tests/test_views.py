@@ -312,7 +312,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = f'<li role="presentation"> <a href="{url}?tab=ip-addresses">IP Addresses <span class="badge">2</span></a></li>'
+        ip_address_tab = (
+            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
+        )
         self.assertInHTML(ip_address_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address""", content)
@@ -339,7 +341,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.0/30", strip_tags(content))
-        ip_address_tab = f'<li role="presentation"> <a href="{url}?tab=prefixes">Child Prefixes <span class="badge">1</span></a></li>'
+        ip_address_tab = f'<li role="presentation" class="active"><a href="{url}">Child Prefixes <span class="badge">1</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
