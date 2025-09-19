@@ -831,6 +831,28 @@ def label_list(value, suffix=""):
     )
 
 
+@library.filter()
+@register.filter()
+def format_timezone(value):
+    """
+    Return a human-readable representation of a time zone including:
+      - Time zone name and UTC offset on the first line
+      - Local date and time on the next line (in smaller font)
+
+    Example (rendered in HTML):
+        Africa/Asmara (UTC +0300)<br>
+        <small>Local time: 08/21/2025 01:50 pm</small>
+    """
+    if not value:
+        return HTML_NONE
+
+    now = datetime.datetime.now(value)
+    result = (
+        f"{value} (UTC {now.strftime('%z')})<br><small>Local time: {now.strftime('%m/%d/%Y %I:%M %p').lower()}</small>"
+    )
+    return mark_safe(result)  # noqa: S308
+
+
 #
 # Tags
 #
