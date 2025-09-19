@@ -799,6 +799,7 @@ class BulkEditTestCase(TransactionTestCase):
             content_type=self.role_ct.id,
             edit_all=False,
             filter_query_params={"per_page": 2},
+            pk_list=pk_list,
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
@@ -818,6 +819,7 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
+            pk_list=pk_list,
             filter_query_params={"sort": "name"},
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
@@ -872,6 +874,7 @@ class BulkEditTestCase(TransactionTestCase):
             content_type=self.namespace_ct.id,
             edit_all=False,
             filter_query_params={},
+            pk_list=pk_list,
             form_data={
                 "pk": pk_list,
                 "description": "Example description for bulk edit",
@@ -969,15 +972,16 @@ class BulkEditTestCase(TransactionTestCase):
             "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.status_ct.id,
-            edit_all=False,
+            edit_all=True,
             filter_query_params={"name__isw": "A", "sort": "name"},
+            pk_list=[str(statuses[0].pk)],
             form_data={
                 "pk": [str(statuses[0].pk)],
                 "color": "aa1409",
             },
             username=self.user.username,
         )
-        self._common_no_error_test_assertion(Status, job_result, 1, name__istartswith="A", color="aa1409")
+        self._common_no_error_test_assertion(Status, job_result, len(statuses), name__istartswith="A", color="aa1409")
         self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_objects_passing_in_both_pk_list_and_edit_all(self):
@@ -1135,13 +1139,12 @@ class BulkDeleteTestCase(TransactionTestCase):
             "BulkDeleteObjects",
             content_type=self.status_ct.id,
             pk_list=statuses_to_delete,
-            username=self.user.username,
+            delete_all=False,
+            filter_query_params={},
         )
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-        self.assertEqual(
-            error_log.message, "You do not have permissions to delete some of the objects provided in `pk_list`."
-        )
+        self.assertIn("Cannot delete some instances of model", error_log.message)
         self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
 
     def test_bulk_delete_objects_select_all(self):
