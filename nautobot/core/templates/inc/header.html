@@ -17,8 +17,7 @@
                         {% for tab_name, tab_details in nav_menu.tabs.items %}
                             {% for group_name, group_details in tab_details.groups.items %}
                                 {% for item_link, item_details in group_details.items.items %}
-                                    {% comment %}TODO(norbert-mieczkowski-codilime): Figure out more reliable way of mapping active nav_menu link to browser URL.{% endcomment %}
-                                    {% if item_link in request.path %}
+                                    {% if item_details.is_active %}
                                         <span class="badge border" data-nb-link="{{ item_link }}"><!--
                                             -->in: {{ item_details.name }}<!--
                                             --><button tabindex="-1" type="button">
