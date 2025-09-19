@@ -1,16 +1,10 @@
-<<<<<<< HEAD
-<li class="nav-item" role="presentation">
-    <a class="nav-link{% if request.GET.tab == tab_id %} active{% endif %}" href="{{ url }}?tab={{ tab_id }}">{{ label }}</a>
-</li>
-=======
 {% comment %}disabled_message is not part of the default render context but a tab can define it if needed.{% endcomment %}
 {% if disabled_message %}
-    <li role="presentation" class="disabled">
-        <a href="#" title="{{ disabled_message }}">{{ label }}</a>
+    <li class="nav-item" role="presentation" title="{{ disabled_message }}">
+        <a class="nav-link disabled" href="#">{{ label }}</a>
     </li>
 {% else %}
-    <li role="presentation"{% if request.GET.tab == tab_id or active_tab == tab_id %} class="active"{% endif %}>
-        <a href="{{ url }}">{{ label }}</a>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if request.GET.tab == tab_id or active_tab == tab_id %} active{% endif %}" href="{{ url }}">{{ label }}</a>
     </li>
 {% endif %}
->>>>>>> develop

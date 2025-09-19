@@ -52,13 +52,8 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present("Test-Power-Panel"))  # related object
         self.assertTrue(self.browser.is_text_present("Power Panel"))  # relationship label
         # Check the relationship does NOT appear in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
-<<<<<<< HEAD
         self.switch_tab("Advanced")
-        self.assertFalse(self.browser.is_text_present("power panel"))
-=======
         self.assertFalse(self.browser.is_text_present("Test-Power-Panel"))
->>>>>>> develop
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Set the custom_field to only show in the advanced tab
         relationship.advanced_ui = True
@@ -69,11 +64,6 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertFalse(self.browser.is_text_present("Test-Power-Panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Check the relationship appears in the advanced tab
-<<<<<<< HEAD
         self.switch_tab("Advanced")
-        self.assertTrue(self.browser.is_text_present("power panel"))
-=======
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.assertTrue(self.browser.is_text_present("Test-Power-Panel"))
->>>>>>> develop
         self.assertTrue(self.browser.is_text_present("Power Panel"))

@@ -680,17 +680,13 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             instance (Model, optional): The specific object being viewed, if any
         """
         if instance is not None:
-<<<<<<< HEAD
-            return {
-                "object_detail_content": getattr(self, "object_detail_content", None),
-                "active_tab": request.GET.get("tab", "main"),
-            }
-=======
             default_tab = "main"
             if hasattr(self, "action") and self.action != "retrieve":
                 default_tab = self.action
-            return {"active_tab": request.GET.get("tab", default_tab)}
->>>>>>> develop
+            return {
+                "object_detail_content": getattr(self, "object_detail_content", None),
+                "active_tab": request.GET.get("tab", default_tab),
+            }
         return {}
 
     def get_template_name(self):

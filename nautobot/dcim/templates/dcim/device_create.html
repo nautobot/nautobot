@@ -64,7 +64,7 @@
             <div class="form-group" id="software_version_image_container" style="display:none">
                 <div class="col-md-3"></div>
                 <div class="col-md-9">
-                    <span class="help-block">
+                    <span class="form-text">
                         <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
                         <ul id="software_version_image_list">
                             <li> Software images for the selected software version will appear here </li>
@@ -135,8 +135,6 @@
             $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'device_types': device_type_id}}),
             $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'default_image': 'true'}})
         ).then(
-            (device_type_images, default_image) => {
-                if (default_image[0].count == 0 && device_type_images[0].count == 0) {
             (device_type_images, default_image) => {
                 if (default_image[0].count == 0 && device_type_images[0].count == 0) {
                     software_version_image_description.innerHTML = `

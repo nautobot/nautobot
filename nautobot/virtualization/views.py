@@ -263,29 +263,12 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             queryset = queryset.annotate_config_context_data()
         return queryset
 
-<<<<<<< HEAD
-        if self.action == "retrieve":
-            # Interfaces
-            vminterfaces = (
-                VMInterface.objects.restrict(request.user, "view")
-                .filter(virtual_machine=instance)
-                .prefetch_related(Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)))
-            )
-            vminterface_table = tables.VirtualMachineVMInterfaceTable(
-                vminterfaces, user=request.user, orderable=False, configurable=True
-            )
-            if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
-                "virtualization.delete_vminterface"
-            ):
-                vminterface_table.columns.show("pk")
-=======
     class VirtualMachineFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             if key == "software_version":
                 return render_software_version_and_image_files(
                     object_detail.get_obj_from_context(context, self.context_object_key), value, context
                 )
->>>>>>> develop
 
             return super().render_value(key, value, context)
 

@@ -50,16 +50,10 @@ router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
-<<<<<<< HEAD
     # Approver Dashboard
     path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
     # Approvee Dashboard
     path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
-    # Change logging
-    path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
-=======
->>>>>>> develop
     # Config context schema
     path(
         "config-context-schemas/<uuid:pk>/validation/",
