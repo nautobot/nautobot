@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -12,7 +12,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ManyToManyField, Model, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -217,10 +217,152 @@ class GetReturnURLMixin:
         return reverse("home")
 
 
-@extend_schema(exclude=True)
-class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormView):
+class UIComponentsMixin:
     """
-    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to acheive the desired behavior pattern for NautobotUIViewSet
+    Mixin that resolves UI components (e.g., breadcrumbs, titles) either from:
+    1) the current view class (preferred),
+    2) a related view class for a given model (via `lookup.get_view_for_model()`),
+    3) or a default component class.
+
+    The public helpers (`get_view_titles()`, `get_breadcrumbs()`) return concrete
+    component *instances* ready to use in renderers/templates.
+
+    It should be used in views that use the `nautobot.apps.views.GenericView` and standard Nautobot templates.
+
+    Example usage:
+    ```
+    def get(self, request, *args, **kwargs):
+        context = {
+            ...
+            "breadcrumbs": self.get_breadcrumbs(model),
+        }
+        context["title"] = self.get_view_titles(model).render(context)
+
+        return render(
+            request,
+            "extras/plugins_list.html",
+            context,
+        )
+    ```
+
+    Attributes:
+        breadcrumbs (ClassVar[Optional[Breadcrumbs]]): Optional component declared on the view class. May be:
+              - `None` (no local definition, fall back),
+              - a component *class* (will be instantiated),
+              - or a pre-instantiated component (returned as-is).
+        view_titles (ClassVar[Optional[Titles]]): Same contract as `breadcrumbs`,
+            but for titles.
+    """
+
+    breadcrumbs: ClassVar[Optional[Breadcrumbs]] = None
+    view_titles: ClassVar[Optional[Titles]] = None
+
+    def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
+        """
+        Resolve and return the `Titles` component instance.
+
+        Resolution order:
+          1) If `self.view_titles` is set on the current view, use it.
+          2) Else, if `model` is provided, copy the `view_titles` from the view
+             class associated with that model via `lookup.get_view_for_model(model, action)`.
+          3) Else, instantiate and return the default `Titles()`.
+
+        Args:
+            model: A Django model **class**, **instance**, dotted name string, or `None`.
+                Passed to `lookup.get_view_for_model()` to find the related view class.
+                If `None`, only local/default resolution is used.
+            view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+
+        Returns:
+            Titles: A concrete `Titles` component instance ready to use.
+        """
+        return self._resolve_component("view_titles", Titles, model, view_type)
+
+    def get_breadcrumbs(
+        self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
+    ) -> Breadcrumbs:
+        """
+        Resolve and return the `Breadcrumbs` component instance.
+
+        Resolution order mirrors `get_view_titles()`:
+         1) Use `self.breadcrumbs` if set locally.
+         2) Else, if `model` is provided, copy the `breadcrumbs` from the view
+             class associated with that model via `lookup.get_view_for_model(model, action)`.
+         3) Else return a new default `Breadcrumbs()`.
+
+        Args:
+           model: A Django model **class**, **instance**, dotted name string, or `None`.
+                Passed to `lookup.get_view_for_model()` to find the related view class.
+                If `None`, only local/default resolution is used.
+           view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+
+        Returns:
+           Breadcrumbs: A concrete `Breadcrumbs` component instance.
+        """
+        return self._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
+
+    def _resolve_component(
+        self,
+        attr_name: str,
+        default_cls: Type[Union[Breadcrumbs, Titles]],
+        model: Union[None, str, Type[Model], Model] = None,
+        view_type: str = "List",
+    ) -> Union[Breadcrumbs, Titles]:
+        """
+        Resolve a UI component by name.
+
+        Return local view's attribute defined via `attr_name` or
+        the `attr_name` defined on the view class for model via lookup.get_view_for_model(model, view_type) or
+        instantiates `default_cls`.
+
+        Args:
+            attr_name (str): Attribute to resolve (e.g., "breadcrumbs").
+            default_cls: Default Breadcrumbs/Title class to instantiate if not found.
+            model (Union[None, str, Type[Model], Model]): Django model (class/instance/dotted string) to locate a related view class.
+            view_type (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
+        Returns:
+            Breadcrumbs/Title instance.
+        """
+        local = getattr(self, attr_name, None)
+        if local is not None:
+            return self._instantiate_if_needed(local, default_cls)
+
+        if model is not None:
+            view_class = lookup.get_view_for_model(model, view_type)
+            view_component = getattr(view_class, attr_name, None)
+            return self._instantiate_if_needed(view_component, default_cls)
+
+        return default_cls()
+
+    @staticmethod
+    def _instantiate_if_needed(
+        attr: Union[None, Type[Union[Breadcrumbs, Titles]], Breadcrumbs, Titles],
+        default_cls: Type[Union[Breadcrumbs, Titles]],
+    ) -> Union[Breadcrumbs, Titles]:
+        """
+        Normalize a value into a component instance.
+
+        If attr is None - return default_cls().
+        If attr is a class - instantiate it.
+        Otherwise, return as is.
+
+        Args:
+            attr: None, a Breadcrumbs/Title class or an instance.
+            default_cls: Fallback class to instantiate when attr is None.
+        Returns:
+            Breadcrumbs/Title instance.
+        """
+        if attr is None:
+            return default_cls()
+        if isinstance(attr, type):
+            return attr()
+        return attr
+
+
+@extend_schema(exclude=True)
+class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetReturnURLMixin, FormView):
+    """
+    NautobotViewSetMixin is an aggregation of various mixins from DRF, Django and Nautobot to achieve the desired behavior pattern for NautobotUIViewSet
     """
 
     renderer_classes = [NautobotHTMLRenderer]
@@ -244,14 +386,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # custom view attributes used for permission checks and handling
     custom_view_base_action = None
     custom_view_additional_permissions = None
-    view_titles = None
-    breadcrumbs = None
-
-    def get_view_titles(self):
-        return self.instantiate_if_needed(self.view_titles, Titles)
-
-    def get_breadcrumbs(self):
-        return self.instantiate_if_needed(self.breadcrumbs, Breadcrumbs)
 
     @staticmethod
     def instantiate_if_needed(attr, default_cls):
@@ -537,13 +671,16 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_extra_context(self, request, instance=None):
         """
         Return any additional context data for the template.
-        request: The current request
-        instance: The object being viewed
+
+        Args:
+            request (Request): The current request
+            instance (Model, optional): The specific object being viewed, if any
         """
         if instance is not None:
-            return {
-                "active_tab": request.GET.get("tab", "main"),
-            }
+            default_tab = "main"
+            if hasattr(self, "action") and self.action != "retrieve":
+                default_tab = self.action
+            return {"active_tab": request.GET.get("tab", default_tab)}
         return {}
 
     def get_template_name(self):

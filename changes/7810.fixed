@@ -1,0 +1,1 @@
+Improved performance for device detail view by avoiding to calculate the location tree more often than needed.

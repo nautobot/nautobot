@@ -7,7 +7,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
+from django.test.client import RequestFactory
 from django.urls import reverse
+from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
 import yaml
 
@@ -107,6 +109,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
+    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -208,6 +211,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
+    # One query for the natural slug, one for `LocationViewSet.get_extra_context`
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -230,7 +235,14 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=status,
             description="Hi!",
         )
-        for loc in [loc1, loc2, loc3, loc4]:
+        loc5 = Location.objects.create(
+            name="Leaf 2",
+            location_type=lt3,
+            parent=loc3,
+            status=status,
+            description="Hi!",
+        )
+        for loc in [loc1, loc2, loc3, loc4, loc5]:
             loc.validated_save()
 
         cls.form_data = {
@@ -429,10 +441,26 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
 
+    def test_get_extra_context(self):
+        view_set = LocationUIViewSet()
+        child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
+        parent_location = child_1.parent
+        child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        status = Status.objects.get_for_model(Prefix).first()
+        prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
+        prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
+        prefix_1.locations.set([child_1, child_2])
+        prefix_2.locations.set([child_1, child_2])
+        request = RequestFactory().get(parent_location.get_absolute_url())
+        request.user = User.objects.first()
+        context = view_set.get_extra_context(request=request, instance=parent_location)
+        self.assertEqual(context["stats"]["prefix_count"], 2)
+
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -460,6 +488,7 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTest
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -495,6 +524,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Rack
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2081,6 +2111,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestC
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2278,6 +2309,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
         device = Device.objects.first()
+        self.add_permissions("dcim.add_virtualdevicecontext")
         url = reverse("dcim:device", kwargs={"pk": device.pk})
         response = self.client.get(url)
         response_body = extract_page_body(response.content.decode(response.charset))
@@ -2291,6 +2323,63 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """
         self.assertInHTML(expected_add_vdc_button_html, response_body)
         self.assertIn("Add virtual device context", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_with_parent_bay(self):
+        parent_device = Device.objects.first()
+        parent_device.subdevice_role = "parent"
+        parent_device.validated_save()
+        child_device = Device.objects.last()
+        child_device.location = parent_device.location
+        child_device.subdevice_role = "child"
+        child_device.validated_save()
+        device_bay = DeviceBay.objects.create(
+            name="test device bay", device=parent_device, installed_device=child_device
+        )
+
+        url = reverse("dcim:device", kwargs={"pk": child_device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(parent_device.display, response_body)
+        self.assertInHTML(str(device_bay), response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_with_rack(self):
+        device = Device.objects.filter(device_type__u_height__gt=0).first()
+        self.assertIsNotNone(device)
+        device.rack = Rack.objects.filter(u_height__gt=device.device_type.u_height).first()
+        self.assertIsNotNone(device.rack)
+        device.position = 1
+        device.face = "front"
+        device.validated_save()
+        url = reverse("dcim:device", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(f"U{device.position} / {device.get_face_display()}", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_modulebays(self):
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        module = Module.objects.filter(parent_module_bay__isnull=True).first()
+
+        module_bays = (
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 1"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 2"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3"),
+        )
+
+        module.location = None
+        module.parent_module_bay = module_bays[0]
+        module.validated_save()
+
+        url = reverse("dcim:device_modulebays", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        # Custom badge - module count / module-bay count
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("1/3", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
@@ -2492,6 +2581,32 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_wireless(self):
+        self.add_permissions("dcim.view_controllermanageddevicegroup")
+        device = Device.objects.first()
+        device.controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
+        device.validated_save()
+        device.controller_managed_device_group.capabilities = ["wireless"]
+        device.controller_managed_device_group.validated_save()
+
+        url = reverse("dcim:device_wireless", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_napalm_tabs(self):
+        self.add_permissions("dcim.napalm_read_device")
+        device = Device.objects.first()
+        # TODO set NAPALM args, mock NAPALM APIs?
+
+        url = reverse("dcim:device_status", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+        url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+        url = reverse("dcim:device_config", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_primary_ips(self):
         """Test assigning a primary IP to a device."""
         self.add_permissions("dcim.change_device")
@@ -2542,6 +2657,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self._get_queryset().get(name="Device X").local_config_context_schema.pk,
             schema.pk,
         )
+
+        url = reverse("dcim:device_configcontext", kwargs={"pk": self._get_queryset().get(name="Device X").pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("foo", response_body)
+        self.assertIn("bar", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_local_config_context_schema_validation_fails(self):
@@ -2773,6 +2895,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2822,6 +2945,7 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2870,6 +2994,7 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2926,6 +3051,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -2995,6 +3121,7 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3195,6 +3322,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3310,6 +3438,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -3376,6 +3505,7 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4185,7 +4315,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
         Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, "<th>Device</th>", html=True)
+        self.assertBodyContains(
+            response,
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            html=True,
+        )
 
     def test_device_column_not_visible(self):
         """
@@ -4198,13 +4332,60 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
-        self.assertNotIn("<th >Device</th>", extract_page_body(response.content.decode(response.charset)))
+        self.assertNotIn(
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
+        )
         # Sanity check:
-        self.assertBodyContains(response, "<th>Name</th>", html=True)
+        self.assertBodyContains(
+            response, '<th class="orderable"><a data-column-name="name" href="?sort=name">Name</a></th>', html=True
+        )
+
+    def test_set_master_after_adding_member(self):
+        """Ensure master can be set for a member that was added via the Add Member flow."""
+        self.add_permissions(
+            "dcim.view_device",
+            "dcim.view_virtualchassis",
+            "dcim.change_virtualchassis",
+            "dcim.change_device",
+        )
+
+        # Create VC
+        vc = VirtualChassis.objects.create(name="VC-test", domain="domain-test")
+
+        # Simulate adding a member via the separate "add-member" flow by creating the device with virtual_chassis
+        member = Device.objects.create(
+            device_type=self.devices[0].device_type,
+            role=self.devices[0].role,
+            status=self.devices[0].status,
+            name="separately-added-device",
+            location=self.devices[0].location,
+            virtual_chassis=vc,
+            vc_position=1,
+        )
+
+        # Now edit the VC and set the master to the existing member
+        payload_data = {
+            "name": vc.name,
+            "domain": vc.domain,
+            "master": str(member.pk),
+            # no members formset rows are required because the member already exists
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        url = reverse("dcim:virtualchassis_edit", kwargs={"pk": vc.pk})
+        self.client.post(url, data=payload_data, follow=True)
+
+        vc.refresh_from_db()
+        self.assertEqual(vc.master, member)
 
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerPanel
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4233,6 +4414,7 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = PowerFeed
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -4672,6 +4854,7 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
 class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VirtualDeviceContext
     filterset = VirtualDeviceContextFilterSet
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):

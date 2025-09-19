@@ -1,1 +1,0 @@
-Removed UI warnings about various combinations of Prefix types (container versus network versus pool) and IP addresses, as time has shown that there are valid use cases for many of these combinations.

@@ -1,3 +1,0 @@
-Fixed incorrect data after editing a Prefix's `prefix`/`network`/`prefix_length` fields by adding a `clean()` check to detect and block cases where it could result in orphaned IPAddress records.
-Fixed incorrect data after editing a Prefix's `prefix`/`network`/`prefix_length` fields by adding logic in `save()` to correctly reparent existing child Prefix and IPAddress records.
-Fixed potential for incorrect data when moving a VRF-associated Prefix between Namespaces by adding a `clean()` check to detect and block this scenario.

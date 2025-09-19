@@ -19,8 +19,6 @@ services:
     depends_on:
       redis:
         condition: service_started
-      selenium:
-        condition: service_started
       db:
         condition: service_healthy
     env_file:
@@ -80,6 +78,8 @@ services:
     env_file:
       - ./dev.env
   selenium:
+    profiles:
+      - selenium
     image: selenium/standalone-firefox:4.27
     ports:
         - "4444:4444"

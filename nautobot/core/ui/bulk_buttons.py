@@ -45,6 +45,14 @@ class BulkEditButton(BaseBulkButton):
     weight = 300
 
 
+class BulkDisconnectButton(BaseBulkButton):
+    action = "disconnect"
+    color = ButtonActionColorChoices.DISCONNECT
+    icon = "mdi-ethernet-cable-off"
+    label = "Disconnect"
+    weight = 350
+
+
 class BulkDeleteButton(BaseBulkButton):
     action = "delete"
     color = ButtonActionColorChoices.DELETE

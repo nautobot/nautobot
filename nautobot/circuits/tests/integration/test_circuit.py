@@ -128,8 +128,8 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 # Assert that value are properly set
                 panel_label = f"Termination - {side} Side"
                 self.assertPanelValue(panel_label, "Location", self.location.name)
-                self.assertPanelValue(panel_label, "Port Speed (Kbps)", port_speed)
-                self.assertPanelValue(panel_label, "Upstream Speed (Kbps)", upstream_speed)
+                self.assertPanelValue(panel_label, "Speed", port_speed)
+                self.assertPanelValue(panel_label, "Speed", upstream_speed)
                 self.assertPanelValue(panel_label, "Cross-connect ID", xconnect_id)
                 self.assertPanelValue(panel_label, "Patch Panel/port(s)", pp_info)
                 self.assertPanelValue(panel_label, "Description", description)

@@ -17,7 +17,6 @@ import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor, OrderBy, OrderByTuple
-from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -107,6 +106,12 @@ class BaseTable(django_tables2.Table):
         if order_by is None and saved_view is not None:
             order_by = saved_view.config.get("sort_order", None)
 
+        # Don't show hierarchy if we're sorted
+        if order_by is not None and hide_hierarchy_ui is None:
+            hide_hierarchy_ui = True
+
+        self.hide_hierarchy_ui = hide_hierarchy_ui
+
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
 
@@ -117,12 +122,6 @@ class BaseTable(django_tables2.Table):
                 *self.exclude,
                 *[column.name for column in self.columns if isinstance(column.column, LinkedCountColumn)],
             ]
-
-        # Don't show hierarchy if we're sorted
-        if order_by is not None and hide_hierarchy_ui is None:
-            hide_hierarchy_ui = True
-
-        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
@@ -304,6 +303,10 @@ class BaseTable(django_tables2.Table):
         Arguments:
             value: iterable or comma separated string of order by aliases.
         """
+        # The below block of code is copied from Table.order_by()
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+
         # collapse empty values to ()
         order_by = () if not value else value
         # accept string
@@ -316,22 +319,17 @@ class BaseTable(django_tables2.Table):
                 valid.append(alias)
         self._order_by = OrderByTuple(valid)
 
-        # The above block of code is copied from super().order_by
-        # due to limitations in directly calling parent class methods within a property setter.
-        # See Python bug report: https://bugs.python.org/issue14965
-        model = getattr(self.Meta, "model", None)
-        if model and issubclass(model, TreeNode):
-            # Use the TreeNode model's approach to sorting
-            queryset = self.data.data
-            # If the data passed into the Table is a list (as in cases like BulkImport post),
-            # convert this list to a queryset.
-            # This ensures consistent behavior regardless of the input type.
-            if isinstance(self.data.data, list):
-                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
-            self.data.data = queryset.extra(order_by=self._order_by)
-        else:
-            # Otherwise, use the default sorting method
-            self.data.order_by(self._order_by)
+        # Nautobot-specific logic begins here
+        if self._order_by:
+            self.hide_hierarchy_ui = True
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "without_tree_fields"):
+                self.data.data = self.data.data.without_tree_fields()
+        elif not self.hide_hierarchy_ui:
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "with_tree_fields"):
+                self.data.data = self.data.data.with_tree_fields()
+
+        # Resume base class implementation
+        self.data.order_by(self._order_by)
 
     def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
         """Conditionally prefetch the specified database column if the related table field is visible.
