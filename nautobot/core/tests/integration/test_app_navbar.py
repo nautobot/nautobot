@@ -102,18 +102,21 @@ class AppNavBarTestCase(SeleniumTestCase):
         """
         Verify that menu expanded/collapse state is persistent and does not reset after page refresh.
         """
-        def get_toggler(aria_expanded):
-            return self.browser.find_by_xpath(f"//*[@id='sidenav']//button[contains(@class, 'nb-sidenav-toggler') and @aria-expanded='{aria_expanded}']")
 
-        toggler = get_toggler('true')  # Get toggler, expect sidenav to be expanded by default.
+        def get_toggler(aria_expanded):
+            return self.browser.find_by_xpath(
+                f"//*[@id='sidenav']//button[contains(@class, 'nb-sidenav-toggler') and @aria-expanded='{aria_expanded}']"
+            )
+
+        toggler = get_toggler("true")  # Get toggler, expect sidenav to be expanded by default.
         self.assertTrue(toggler)
 
         toggler.click()  # Collapse sidenav.
         self.browser.reload()
-        toggler = get_toggler('false')  # Get toggler, expect sidenav to stay collapsed after full document reload.
+        toggler = get_toggler("false")  # Get toggler, expect sidenav to stay collapsed after full document reload.
         self.assertTrue(toggler)
 
         toggler.click()  # Expand sidenav.
         self.browser.reload()
-        toggler = get_toggler('true')  # Get toggler, expect sidenav to be expanded again.
+        toggler = get_toggler("true")  # Get toggler, expect sidenav to be expanded again.
         self.assertTrue(toggler)
