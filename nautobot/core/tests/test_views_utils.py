@@ -404,19 +404,6 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         )
         self.assertQuerysetEqual(qs, [self.vrfs[7]], ordered=False)
 
-    # def test_no_valid_operation(self):
-    #     """else: raise RuntimeError"""
-    #     with self.assertRaises(RuntimeError):
-    #         print(get_bulk_queryset_from_view(
-    #             user=self.user,
-    #             model=VRF,
-    #             is_all=False,
-    #             filter_query_params={},
-    #             pk_list=[],
-    #             saved_view_id=None,
-    #             action="change",
-    #         ))
-
     def test_queryset_respects_permissions(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
         # Create a non-superuser with no permissions
