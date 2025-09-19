@@ -632,7 +632,7 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         inner_queryset = filterset_class(filter_query_params, queryset).qs.values("pk")
         # We take this approach because filterset.qs has already applied .distinct(),
         # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-        return queryset.filter(pk__in=Subquery(inner_queryset))
+        return queryset.filter(pk__in=inner_queryset)
 
     saved_view_filter_params = {}
     if saved_view_id:
