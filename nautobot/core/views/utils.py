@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
-from django.db.models import ForeignKey, Subquery
+from django.db.models import ForeignKey
 from django.http import QueryDict
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
