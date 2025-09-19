@@ -31,7 +31,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -43,10 +42,11 @@ from nautobot.core.forms import (
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils import filtering, lookup, permissions
+from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
+    get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
     import_csv_helper,
@@ -1116,58 +1116,17 @@ class BulkEditAndBulkDeleteModelMixin:
 
     logger = logging.getLogger(__name__)
 
-    def _get_bulk_edit_delete_all_queryset(self, request):
-        """
-        Retrieve the queryset of model instances to be bulk-deleted or bulk-deleted, filtered based on request parameters.
-
-        This method handles the retrieval of a queryset of model instances that match the specified
-        filter criteria in the request parameters, allowing a bulk delete operation to be performed
-        on all matching instances.
-        """
-        model = self.queryset.model
-
-        # This Mixin is currently been used by both NautobotUIViewSet ObjectBulkDestroyViewMixin, ObjectBulkUpdateViewMixin
-        # BulkEditView, and BulkDeleteView which uses different keys for accessing filterset
-        filterset_class = getattr(self, "filterset", None)
-        if filterset_class is None:
-            filterset_class = getattr(self, "filterset_class", None)
-
-        if request.GET and filterset_class is not None:
-            queryset = filterset_class(request.GET, model.objects.all()).qs  # pylint: disable=not-callable
-            # We take this approach because filterset.qs has already applied .distinct(),
-            # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-            queryset = self.queryset.filter(pk__in=queryset)
-        else:
-            queryset = model.objects.all()
-        return queryset
-
-    def send_bulk_delete_objects_to_job(self, request, pk_list, model, delete_all):
+    def send_bulk_delete_objects_to_job(self, request, pk_list, model, delete_all, saved_view_id=""):
         """Prepare and enqueue bulk delete job."""
         job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
-
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        # Discarding non-filter query params
-        new_filter_query_params = {}
-
-        for key, value in filter_query_params.items():
-            try:
-                filtering.get_filterset_field(filterset_class(), key)
-                new_filter_query_params[key] = value
-            except core_exceptions.FilterSetFieldNotFound:
-                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
-
-        filter_query_params = new_filter_query_params
 
         job_form = BulkDeleteObjects.as_form(
             data={
                 "pk_list": pk_list,
                 "content_type": ContentType.objects.get_for_model(model),
                 "delete_all": delete_all,
-                "filter_query_params": filter_query_params,
+                "filter_query_params": request.GET,
+                "saved_view": saved_view_id,
             }
         )
         # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
@@ -1180,25 +1139,9 @@ class BulkEditAndBulkDeleteModelMixin:
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
-    def send_bulk_edit_objects_to_job(self, request, form_data, model):
+    def send_bulk_edit_objects_to_job(self, request, form_data, pk_list, model, edit_all, saved_view_id=""):
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
-        if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
-        else:
-            filter_query_params = {}
-
-        # Discarding non-filter query params
-        new_filter_query_params = {}
-
-        for key, value in filter_query_params.items():
-            try:
-                filtering.get_filterset_field(filterset_class(), key)
-                new_filter_query_params[key] = value
-            except core_exceptions.FilterSetFieldNotFound:
-                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
-
-        filter_query_params = new_filter_query_params
 
         if nullified_fields := request.POST.getlist("_nullify"):
             form_data["_nullify"] = nullified_fields
@@ -1208,9 +1151,11 @@ class BulkEditAndBulkDeleteModelMixin:
         job_form = BulkEditObjects.as_form(
             data={
                 "form_data": form_data,
+                "pk_list": pk_list,
                 "content_type": ContentType.objects.get_for_model(model),
-                "edit_all": request.POST.get("_all") is not None,
-                "filter_query_params": filter_query_params,
+                "edit_all": edit_all,
+                "filter_query_params": request.GET,
+                "saved_view": saved_view_id,
             }
         )
         # NOTE: BulkEditObjects cant be invalid, so there is no need for handling invalid error
@@ -1234,14 +1179,16 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
-        pk_list = self.pk_list
+        # pk_list = self.pk_list
         queryset = self.get_queryset()
         model = queryset.model
         # Delete objects
-        if self.request.POST.get("_all"):
-            queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-        else:
-            queryset = queryset.filter(pk__in=pk_list)
+        is_all = bool(self.request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
+
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "delete"
+        )
 
         try:
             with transaction.atomic():
@@ -1270,25 +1217,27 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
         """
         queryset = self.get_queryset()
-        delete_all = bool(request.POST.get("_all"))
+        model = queryset.model
+        self.pk_list = list(request.POST.getlist("pk"))
+        is_all = bool(request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
         data = {}
-        # Are we deleting *all* objects in the queryset or just a selected subset?
-        if delete_all:
-            self.pk_list = []
-            queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-        else:
-            self.pk_list = list(request.POST.getlist("pk"))
-            queryset = queryset.filter(pk__in=self.pk_list)
+
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "delete"
+        )
 
         if "_confirm" in request.POST:
             form_class = self.get_form_class(**kwargs)
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
-                return self.send_bulk_delete_objects_to_job(request, self.pk_list, queryset.model, delete_all)
+                return self.send_bulk_delete_objects_to_job(
+                    request, self.pk_list, queryset.model, is_all, saved_view_id
+                )
             else:
                 return self.form_invalid(form)
         table = None
-        if not delete_all:
+        if not is_all:
             table_class = self.get_table_class()
             table = table_class(queryset, orderable=False)
             if not table.rows:
@@ -1305,7 +1254,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
             {
                 "table": table,
                 "total_objs_to_delete": queryset.count(),
-                "delete_all": delete_all,
+                "delete_all": is_all,
             }
         )
         return Response(data)
@@ -1375,8 +1324,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
     # NOTE: Performing BulkEdit Objects has been moved to a system job, but the logic remains here to ensure backward compatibility.
     def _process_bulk_update_form(self, form):
         request = self.request
+        self.pk_list = list(request.POST.getlist("pk"))
         queryset = self.get_queryset()
         model = queryset.model
+        # Delete objects
+        is_all = bool(self.request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
+
         form_custom_fields = getattr(form, "custom_fields", [])
         form_relationships = getattr(form, "relationships", [])
         # Standard fields are those that are intrinsic to self.model in the form
@@ -1388,14 +1342,14 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify") or []
+
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
-            edit_all = self.request.POST.get("_all")
 
-            if edit_all:
-                queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-            else:
-                queryset = queryset.filter(pk__in=form.cleaned_data["pk"])
+            queryset = get_bulk_queryset_from_view(
+                request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "change"
+            )
+
             for obj in queryset:
                 self.obj = obj
                 # Update standard fields. If a field is listed in _nullify, delete its value.
@@ -1467,27 +1421,30 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
         """
-        edit_all = request.POST.get("_all")
+        _queryset = self.get_queryset()
+        model = _queryset.model
+        self.pk_list = list(request.POST.getlist("pk"))
+        is_all = bool(self.request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
 
-        if edit_all:
-            self.pk_list = None
-            queryset = self._get_bulk_edit_delete_all_queryset(request)
-        else:
-            self.pk_list = list(request.POST.getlist("pk"))
-            queryset = self.get_queryset().filter(pk__in=self.pk_list)
+        queryset = get_bulk_queryset_from_view(
+            request.user, model, is_all, request.GET, self.pk_list, saved_view_id, "change"
+        )
 
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = form_class(queryset.model, request.POST, edit_all=edit_all)
+            form = form_class(queryset.model, request.POST, edit_all=is_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.send_bulk_edit_objects_to_job(self.request, form.cleaned_data, queryset.model)
+                return self.send_bulk_edit_objects_to_job(
+                    request, form.cleaned_data, self.pk_list, queryset.model, is_all, saved_view_id
+                )
             else:
                 return self.form_invalid(form)
         table = None
-        if not edit_all:
+        if not is_all:
             table_class = self.get_table_class()
             table = table_class(queryset, orderable=False)
             if not table.rows:

@@ -227,7 +227,7 @@
                                     </button>
                                 {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
-                                    <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
+                                    <button type="submit" name="_edit_all" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
                                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit All
                                     </button>
                                 {% endif %}
