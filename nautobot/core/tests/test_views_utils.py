@@ -4,10 +4,9 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.db import ProgrammingError
 from django.http import QueryDict
-from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
-from nautobot.core.testing import TransactionTestCase
+from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.core.views.utils import (
     check_filter_for_display,
     get_bulk_queryset_from_view,
@@ -261,11 +260,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.filter(pk__in=[self.vrfs[2].pk, self.vrfs[4].pk]).order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[2], self.vrfs[4]], ordered=False)
 
         # Same test but with empty QueryDict
         filter_query_params = QueryDict(mutable=True)
@@ -278,11 +273,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.filter(pk__in=[self.vrfs[2].pk, self.vrfs[4].pk]).order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[2], self.vrfs[4]], ordered=False)
 
     def test_not_is_all_and_no_pk_list(self):
         """!is_all and !pk_list: Return empty queryset. This should not normally happen in practice."""
@@ -320,11 +311,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.all().order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, self.vrfs, ordered=False)
 
         filter_query_params = QueryDict(mutable=True)
         qs = get_bulk_queryset_from_view(
@@ -336,11 +323,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.all().order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, self.vrfs, ordered=False)
 
     def test_is_all_and_filter_query_params(self):
         """is_all and filter_query_params: Return queryset filtered by filter_query_params (description)"""
@@ -353,11 +336,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.filter(description="desc-1").order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, VRF.objects.filter(description="desc-1"), ordered=False)
 
         # Same test but with QueryDict
         filter_query_params = QueryDict(mutable=True)
@@ -371,11 +350,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.filter(description="desc-1").order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, VRF.objects.filter(description="desc-1"), ordered=False)
 
     def test_is_all_and_saved_view_id(self):
         """is_all and saved_view_id: Return queryset filtered by saved_view_filter_params (name)"""
@@ -388,11 +363,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=self.saved_view.id,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs,
-            VRF.objects.filter(name=self.vrfs[5].name),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[5]], ordered=False)
 
         filter_query_params = QueryDict(mutable=True)
         qs = get_bulk_queryset_from_view(
@@ -404,11 +375,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=self.saved_view.id,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs,
-            VRF.objects.filter(name=self.vrfs[5].name),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[5]], ordered=False)
 
     def test_is_all_and_not_saved_view_id_but_saved_view_filter_params(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
@@ -421,11 +388,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs,
-            VRF.objects.filter(name=self.vrfs[7].name),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[7]], ordered=False)
 
         # Same test but with QueryDict
         filter_query_params = QueryDict(mutable=True)
@@ -439,11 +402,7 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs,
-            VRF.objects.filter(name=self.vrfs[7].name),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, [self.vrfs[7]], ordered=False)
 
     # def test_no_valid_operation(self):
     #     """else: raise RuntimeError"""
