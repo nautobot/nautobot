@@ -51,17 +51,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class NamespaceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Namespace
     custom_action_required_permissions = {
         "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
@@ -72,11 +62,18 @@ class NamespaceTestCase(
     @classmethod
     def setUpTestData(cls):
         locations = Location.objects.get_for_model(Namespace)
+        tenants = Tenant.objects.all()[:2]
 
-        cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
+        cls.form_data = {
+            "name": "Namespace X",
+            "location": locations[0].pk,
+            "tenant": tenants[0].pk,
+            "description": "A new Namespace",
+        }
 
         cls.bulk_edit_data = {
             "description": "New description",
+            "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
 

@@ -68,6 +68,13 @@ class Namespace(PrimaryModel):
         blank=True,
         null=True,
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="namespaces",
+        blank=True,
+        null=True,
+    )
 
     @property
     def ip_addresses(self):
