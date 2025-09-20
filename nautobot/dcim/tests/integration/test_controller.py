@@ -1,4 +1,5 @@
 from django.urls import reverse
+from selenium.webdriver.support.ui import WebDriverWait
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.models import JobResult
@@ -19,6 +20,7 @@ class ControllerTestCase(SeleniumTestCase):
 
         # Create LocationType
         self.click_navbar_entry("Organization", "Location Types")
+        WebDriverWait(self.browser, 10).until(lambda b: b.url.endswith(reverse("dcim:locationtype_list")))
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_add"))
@@ -28,6 +30,7 @@ class ControllerTestCase(SeleniumTestCase):
 
         # Create Location
         self.click_navbar_entry("Organization", "Locations")
+        WebDriverWait(self.browser, 10).until(lambda b: b.url.endswith(reverse("dcim:location_list")))
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_add"))
@@ -38,6 +41,8 @@ class ControllerTestCase(SeleniumTestCase):
 
         # Create Controller
         self.click_navbar_entry("Devices", "Controllers")
+        WebDriverWait(self.browser, 10).until(lambda b: b.url.endswith(reverse("dcim:controller_list")))
+
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:controller_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:controller_add"))
@@ -48,6 +53,7 @@ class ControllerTestCase(SeleniumTestCase):
 
         # Test bulk edit
         self.click_navbar_entry("Devices", "Controllers")
+        WebDriverWait(self.browser, 10).until(lambda b: b.url.endswith(reverse("dcim:controller_list")))
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:controller_list"))
         self.browser.find_by_xpath("//input[@name='pk']").click()
         bulk_edit_url = reverse("dcim:controller_bulk_edit")
