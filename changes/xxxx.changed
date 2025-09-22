@@ -1,0 +1,1 @@
+The `has_approval_workflow_definition` method has been moved to `ApprovableModelMixin` from `ScheduledJob` so that it can be used by any model that will be handled by the approval process.
