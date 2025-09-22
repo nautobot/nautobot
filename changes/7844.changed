@@ -1,0 +1,2 @@
+Implemented UI Component Framework `breadcrumbs` for core views that were previously using `extra_breadcrumbs` template block overrides.
+Refactored `JobResultUIViewSet` to use UI Component Framework `breadcrumbs`.
