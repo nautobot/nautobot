@@ -275,8 +275,26 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 # Locations
 #
 
+class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
+    def get_data(self, context):
+        data = super().get_data(context)
+        obj = get_obj_from_context(context, self.context_object_key)
 
-class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
+        if obj and obj.latitude and obj.longitude:
+            data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
+        else:
+            data["GPS Coordinates"] = "Not available"
+
+        return data
+
+    def render_value(self, key, value, context):
+        if key == "GPS Coordinates":
+            if value != "Not available":
+                return helpers.render_address(value)
+            return helpers.HTML_NONE
+
+        return super().render_value(key, value, context)
+class LocationRackGroupsPanel(object_detail.ObjectFieldsPanel):
     def render_rack_row(self, indent_px, url, name, count, elevation_url):
         return format_html(
             """
@@ -341,38 +359,23 @@ class RackGroupsFieldsPanel(object_detail.ObjectFieldsPanel):
         )
 
 
-class LocationImagesTablePanel(object_detail.ObjectsTablePanel):
+class LocationImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
     """
-    Custom table panel for Location Images that correctly passes `object_id` to reverse().
+    ObjectsTablePanel with a custom _get_table_add_url() implementation.
+
+    Needed because the URL is `/dcim/devices/<pk>/images/add/`, not `extras/image-attachments/add?location=<pk>`.
     """
 
     def _get_table_add_url(self, context):
         obj = get_obj_from_context(context)
         request = context["request"]
         return_url = context.get("return_url", obj.get_absolute_url())
-        if self.tab_id:
-            return_url += f"?tab={self.tab_id}"
 
-        if self.add_button_route and request.user.has_perms(self.add_permissions or []):
-            try:
-                add_route = reverse(self.add_button_route, kwargs={"object_id": str(obj.pk)})
-                return f"{add_route}?return_url={return_url}"
-            except NoReverseMatch:
-                logger.warning(f"Add route `{self.add_button_route}` could not be reversed with object_id={obj.pk}.")
-
-        return None
+        if not request.user.has_perms(["extras.add_imageattachment"]):
+            return None
+        return reverse("dcim:location_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
 
 
-class LocationObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-    FIELD_LABEL_OVERRIDES = {
-        "parent": "Hierarchy",
-        "asn": "AS Number",
-    }
-
-    def render_key(self, key, value, context):
-        if key in self.FIELD_LABEL_OVERRIDES:
-            return self.FIELD_LABEL_OVERRIDES[key]
-        return super().render_key(key, value, context)
 
 
 class LocationUIViewSet(NautobotUIViewSet):
@@ -391,7 +394,7 @@ class LocationUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            LocationObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
@@ -408,20 +411,21 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "location_type": [partial(helpers.hyperlinked_object, field="name")],
                     "time_zone": [helpers.format_timezone],
                 },
+                key_transforms={
+                    "asn": "AS Number",
+                },
             ),
-            object_detail.ObjectFieldsPanel(
+            LocationGeographicalInfoFieldsPanel(
                 weight=110,
                 section=SectionChoices.LEFT_HALF,
                 label="Geographical Info",
                 fields=[
                     "physical_address",
                     "shipping_address",
-                    "gps_coordinates",
                 ],
                 value_transforms={
                     "physical_address": [helpers.render_address],
                     "shipping_address": [helpers.render_address],
-                    "gps_coordinates": [helpers.render_address],
                 },
             ),
             object_detail.ObjectFieldsPanel(
@@ -449,30 +453,30 @@ class LocationUIViewSet(NautobotUIViewSet):
                     (VirtualMachine, "cluster__location__in"),
                 ],
             ),
-            RackGroupsFieldsPanel(
+            LocationRackGroupsPanel(
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
-                context_object_key="object",
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 table_title="Children",
-                table_class=tables.FlatLocationTable,
+                table_class=tables.LocationTable,
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
+                hide_hierarchy_ui=True
+               
             ),
-            LocationImagesTablePanel(
-                table_title="Images",
-                section=SectionChoices.RIGHT_HALF,
-                table_class=ImageAttachmentTable,
-                table_attribute="image_attachments",
-                related_field_name="object_id",
+            LocationImageAttachmentsTablePanel(
                 weight=300,
-                add_button_route="dcim:location_add_image",
-                add_permissions=["extras.add_imageattachment"],
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Images",
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="location",
+                show_table_config_button=False,
             ),
         )
     )

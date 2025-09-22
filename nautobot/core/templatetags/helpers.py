@@ -14,9 +14,11 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
+from django.utils.translation import gettext as _
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -830,7 +832,6 @@ def label_list(value, suffix=""):
         ((item, suffix) for item in value),
     )
 
-
 @library.filter()
 @register.filter()
 def format_timezone(value):
@@ -838,19 +839,20 @@ def format_timezone(value):
     Return a human-readable representation of a time zone including:
       - Time zone name and UTC offset on the first line
       - Local date and time on the next line (in smaller font)
-
-    Example (rendered in HTML):
-        Africa/Asmara (UTC +0300)<br>
-        <small>Local time: 08/21/2025 01:50 pm</small>
     """
     if not value:
         return HTML_NONE
 
     now = datetime.datetime.now(value)
+
+    # Locale-aware formatting (respects USE_L10N + active locale)
+    local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
+
     result = (
-        f"{value} (UTC {now.strftime('%z')})<br><small>Local time: {now.strftime('%m/%d/%Y %I:%M %p').lower()}</small>"
+        f"{value} (UTC {now.strftime('%z')})<br>"
+        f"<small>{_('Local time')}: {local_time}</small>"
     )
-    return mark_safe(result)  # noqa: S308
+    return format_html(result)
 
 
 #

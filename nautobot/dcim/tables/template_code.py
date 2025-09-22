@@ -98,9 +98,7 @@ TREE_LINK = """
 {% endif %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
-FLAT_LINK = """
-<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
-"""
+
 
 POWERFEED_CABLE = """
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>

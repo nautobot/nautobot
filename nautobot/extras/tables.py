@@ -728,45 +728,6 @@ def log_entry_color_css(record):
     return record.log_level.lower()
 
 
-class ImageAttachmentTable(BaseTable):
-    pk = ToggleColumn()
-
-    name = tables.TemplateColumn(
-        template_code="""
-        <i class="mdi mdi-file-image"></i>
-        <a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
-        """,
-        verbose_name="Name",
-        orderable=False,
-    )
-
-    size = tables.Column(verbose_name="Size", accessor="image.size", empty_values=(), orderable=False)
-
-    created = tables.DateTimeColumn(verbose_name="Created")
-
-    actions = ButtonsColumn(
-        model=ImageAttachment,
-        buttons=("edit", "delete"),
-        verbose_name="",
-    )
-
-    row_attrs = {
-        "class": lambda record: "table-danger" if not getattr(record.image, "size", None) else "",
-    }
-
-    class Meta(BaseTable.Meta):
-        model = ImageAttachment
-        fields = ("pk", "name", "size", "created", "actions")
-        default_columns = ("pk", "name", "size", "created", "actions")
-
-    def render_size(self, value, record):
-        """Render file size in a human-readable format (e.g., 117.7 MB)."""
-        try:
-            return filesizeformat(record.image.size)
-        except Exception:
-            return format_html('<span class="text-danger">Unavailable</span>')
-
-
 class JobTable(BaseTable):
     pk = ToggleColumn()
     source = tables.Column()

@@ -9,12 +9,11 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.dcim.models import Location, LocationType
-from nautobot.dcim.tables.template_code import FLAT_LINK, TREE_LINK
+from nautobot.dcim.tables.template_code import TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
 __all__ = (
-    "FlatLocationTable",
     "LocationTable",
     "LocationTypeTable",
 )
@@ -84,21 +83,4 @@ class LocationTable(StatusTableMixin, BaseTable):
         default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
 
 
-class FlatLocationTable(LocationTable):
-    name = tables.TemplateColumn(
-        template_code=FLAT_LINK,
-        verbose_name="Name",
-        attrs={"td": {"class": "text-nowrap"}},
-    )
 
-    class Meta(LocationTable.Meta):
-        default_columns = (
-            "pk",
-            "name",
-            "status",
-            "parent",
-            "tenant",
-            "description",
-            "tags",
-            "actions",
-        )
