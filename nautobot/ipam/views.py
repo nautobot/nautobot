@@ -347,7 +347,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Namespace),
-                InstanceBreadcrumbItem(instance=lambda context: context["object"].namespace),
+                InstanceBreadcrumbItem(instance=context_object_attr("namespace")),
                 ModelBreadcrumbItem(
                     model=Prefix,
                     reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
@@ -644,7 +644,7 @@ class IPAddressView(generic.ObjectView):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("parent.namespace")),
             ]
         }
@@ -1213,10 +1213,8 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
-                InstanceParentBreadcrumbItem(
-                    parent_key="vlan_group", parent_query_param="vlan_group", parent_lookup_key="name"
-                ),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="vlan_group", parent_lookup_key="name"),
             ]
         }
     )
@@ -1357,7 +1355,7 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("parent")),
             ]
         }

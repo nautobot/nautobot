@@ -19,10 +19,9 @@ class RackBreadcrumbs(Breadcrumbs):
 
         rack = context["object"]
         base_items = [
-            ModelBreadcrumbItem(model_key="object"),
+            ModelBreadcrumbItem(),
             InstanceParentBreadcrumbItem(
                 parent_key="location",
-                parent_query_param="location",
             ),
         ]
         detail_item = InstanceBreadcrumbItem()

@@ -119,10 +119,8 @@ class TenantUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
-                InstanceParentBreadcrumbItem(
-                    parent_key="tenant_group", parent_query_param="tenant_group", parent_lookup_key="name"
-                ),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="tenant_group", parent_lookup_key="name"),
             ]
         }
     )

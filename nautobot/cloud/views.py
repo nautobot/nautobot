@@ -54,9 +54,9 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceParentBreadcrumbItem(
-                    parent_key="provider", parent_query_param="provider", parent_lookup_key="provider_id"
+                    parent_key="provider",
                 ),
             ]
         }
@@ -85,10 +85,13 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model_key="object"),
-                InstanceBreadcrumbItem(instance=context_object_attr("parent")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent"), should_render=context_object_attr("parent")
+                ),
             ]
         }
     )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -225,11 +228,12 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
-                InstanceParentBreadcrumbItem(parent_key="provider", parent_query_param="provider"),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
             ]
         }
     )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -313,7 +317,7 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("cloud_resource_type")),
             ]
         }

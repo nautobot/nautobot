@@ -16,7 +16,6 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
-from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
@@ -40,7 +39,6 @@ from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
-    BreadcrumbItemsType,
     Breadcrumbs,
     context_object_attr,
     InstanceBreadcrumbItem,
@@ -148,7 +146,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from .ui import LocationsBreadcrumbs
+from .ui import LocationsBreadcrumbs, RackBreadcrumbs
 
 logger = logging.getLogger(__name__)
 
@@ -666,7 +664,7 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("rack")),
             ]
         }
@@ -934,10 +932,8 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
-                InstanceParentBreadcrumbItem(
-                    parent_key="manufacturer", parent_query_param="manufacturer", parent_lookup_key="name"
-                ),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
             ]
         }
     )
@@ -1151,10 +1147,8 @@ class ModuleTypeUIViewSet(
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
-                InstanceParentBreadcrumbItem(
-                    parent_key="manufacturer", parent_query_param="manufacturer", parent_lookup_key="name"
-                ),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
             ]
         }
     )
@@ -3786,7 +3780,8 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 # Breadcrumb path if ModuleBay is linked with device
                 ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].parent_device),
                 InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_device, should_render=lambda c: c["object"].parent_device
+                    instance=context_object_attr("parent_device"),
+                    should_render=context_object_attr("parent_device"),
                 ),
                 ViewNameBreadcrumbItem(
                     view_name_key="device_breadcrumb_url",
@@ -3797,7 +3792,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 # Breadcrumb path if ModuleBay is linked with module
                 ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].parent_device is None),
                 InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_module,
+                    instance=context_object_attr("parent_module"),
                     should_render=lambda c: c["object"].parent_device is None,
                 ),
                 ViewNameBreadcrumbItem(
@@ -4522,9 +4517,11 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("location")),
-                InstanceBreadcrumbItem(instance=context_object_attr("rack_group")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("rack_group"), should_render=context_object_attr("rack_group")
+                ),
             ]
         }
     )
@@ -4605,12 +4602,12 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("power_panel.location")),
                 InstanceBreadcrumbItem(instance=context_object_attr("power_panel")),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("rack"),
-                    should_render=lambda c: hasattr(c["object"], "rack") and c["object"].rack is not None,
+                    should_render=context_object_attr("rack"),
                 ),
             ]
         }
@@ -5334,7 +5331,7 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model_key="object"),
+                ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(instance=context_object_attr("device")),
             ]
         }

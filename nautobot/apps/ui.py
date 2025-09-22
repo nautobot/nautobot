@@ -59,7 +59,6 @@ __all__ = (
     "Button",
     "ButtonColorChoices",
     "Component",
-    "context_object_attr",
     "DataTablePanel",
     "DistinctViewTab",
     "DropdownButton",
@@ -93,5 +92,6 @@ __all__ = (
     "TextPanel",
     "Titles",
     "ViewNameBreadcrumbItem",
+    "context_object_attr",
     "render_component_template",
 )

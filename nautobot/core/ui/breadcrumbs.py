@@ -232,7 +232,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
 
     Attributes:
         model (Union[str, Type[Model], None, Callable[[Context], Union[str, Type[Model], None]]): Django model class, instance, or dotted path string or callable that returns one of this.
-        model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string.
+        model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string. By default: "object".
         action (str): Action to use when resolving a model-based route (default: "list").
         label_type (Literal["singular", "plural"]): Whether to use `verbose_name` or `verbose_name_plural`.
         reverse_kwargs (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
@@ -251,7 +251,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
     """
 
     model: Union[ModelType, Callable[[Context], ModelType]] = None
-    model_key: Optional[str] = None
+    model_key: Optional[str] = "object"
     action: str = "list"
     label_type: ModelLabelType = "plural"
     reverse_kwargs: ReverseParams = None
@@ -300,12 +300,14 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
         return ""
 
     def get_model(self, context: Context) -> ModelType:
-        if self.model_key:
-            return context.get(self.model_key)
         if self.model:
             if callable(self.model):
                 return self.model(context)
             return self.model
+
+        if self.model_key:
+            return context.get(self.model_key)
+
         return None
 
 
@@ -318,7 +320,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     Label will be generated from object, but you can still override it.
 
     Attributes:
-        instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
+        instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb. Default: "object".
         instance (Callable[[Context], Optional[Model]): Callable to fetch the instance from context. If
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
@@ -331,7 +333,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         ("/dcim/devices/1234", "Custom Device Label")  # Assuming that under "object" there is a Device instance
     """
 
-    instance_key: str = "object"
+    instance_key: Optional[str] = "object"
     instance: Optional[Callable[[Context], Optional[Model]]] = None
     label: Union[Callable[[Context], str], WithStr, None] = None
 
@@ -378,10 +380,12 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         if self.instance:
             if callable(self.instance):
                 return self.instance(context)
-
             return self.instance
 
-        return context.get(self.instance_key)
+        if self.instance_key:
+            return context.get(self.instance_key)
+
+        return None
 
     def as_pair(self, context: Context) -> tuple[str, str]:
         """
@@ -403,10 +407,33 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
 @dataclass
 class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
+    """
+    Breadcrumb item prepared to be "parent" or "group" of given model.
+
+    It will create a breadcrumb item to the object list but will try to filter it by given parent.
+
+    Attributes:
+        parent_key (str): Instance attribute to get the parent instance. Default: "parent".
+        parent_query_param (Optional[str]): Query param name under which parent lookup key will be added into breadcrumb url. If None, will be the same as `parent_key`.
+        parent_lookup_key (Optional[str]): Parent attribute which will be used to build the url and filter the instance list url.
+
+    Examples:
+        >>> InstanceParentBreadcrumbItem()
+        ("/dcim/devices?parent=<parent.pk>", "Parent")  # Assuming that under "object" there is a Device instance and has "parent"
+        >>> InstanceParentBreadcrumbItem(parent_key="group", parent_lookup_key="name")
+        ("/dcim/devices?group=<group_name>", "Group")  # Assuming that under "object" there is a Device instance and has "group"
+    """
+
     parent_key: str = "parent"
-    parent_query_param: str = "parent"
+    parent_query_param: Optional[str] = None
     parent_lookup_key: str = "pk"
-    direct_link: bool = False
+
+    def __post_init__(self):
+        """
+        Set `parent_query_param` if not filled.
+        """
+        if self.parent_query_param is None:
+            self.parent_query_param = self.parent_key
 
     def get_url(self, context: Context) -> Optional[str]:
         """
@@ -422,9 +449,6 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         parent = self.get_parent_attr(instance)
         if not instance or not parent:
             return None
-
-        if self.direct_link:
-            return get_absolute_url(parent)
 
         view_name = lookup.get_route_for_model(instance, "list")
         return self.reverse_view_name(view_name, context, reverse_query_params=self.get_reverse_query_params(parent))
