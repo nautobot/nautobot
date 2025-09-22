@@ -8,11 +8,26 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock breadcrumbs %}
+{% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
-{% block title %}{% render_title %}{% endblock %}{% saved_view_title %}
+{% block breadcrumbs_wrapper %}
+    {% captureas default_breadcrumbs %}
+        {% if list_url %}
+            <li class="breadcrumb-item"><a href="{% url list_url %}">{{ title }}</a></li>
+        {% endif %}
+    {% endcaptureas %}
+
+    {% captureas block_breadcrumbs %}
+        {% block breadcrumbs %}
+            {% if list_url %}
+                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ title }}</a></li>
+            {% endif %}
+            {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+        {% endblock breadcrumbs %}
+    {% endcaptureas %}
+
+    {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+{% endblock breadcrumbs_wrapper %}
 
 {% block content %}
 <div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">

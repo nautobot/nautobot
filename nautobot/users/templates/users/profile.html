@@ -3,8 +3,12 @@
 
 {% block title %}User Profile{% endblock %}
 
+{% block page_title %}
+    {% include 'inc/page_title.html' with title='User Profile' %}
+{% endblock %}
+
 {% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' with title='User Profile' %}
+    {% include 'inc/breadcrumbs.html' %}
 {% endblock %}
 
 {% block usercontent %}

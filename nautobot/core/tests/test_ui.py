@@ -15,7 +15,7 @@ from nautobot.core.ui.echarts import (
     queryset_to_nested_dict_keys_as_series,
     queryset_to_nested_dict_records_as_series,
 )
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
+from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectFieldsPanel, ObjectsTablePanel, Panel
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.ipam.models import Prefix
@@ -75,6 +75,19 @@ class DataTablePanelTest(TestCase):
             ).get_column_headers(context),
             ["One", "Three"],
         )
+
+
+class ObjectFieldsPanelTest(TestCase):
+    def test_get_data_ignore_nonexistent_fields(self):
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=True)
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+        context = Context({"object": redundancy_group})
+        data = panel.get_data(context)
+        self.assertEqual(data, {"name": redundancy_group.name})  # no keys for nonexistent fields
+
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=False)
+        with self.assertRaises(AttributeError):
+            data = panel.get_data(context)
 
 
 class BaseTextPanelTest(TestCase):

@@ -96,9 +96,14 @@ add "&raw" to the end of the URL within a browser.
       <div class="container-fluid mb-12 mt-16">
           <div class="row row-cols-3">
               <div class="col">
-                  {% block breadcrumbs %}
-                      {% include 'inc/breadcrumbs.html' with title='GraphiQL' %}
-                  {% endblock breadcrumbs %}
+                  <div>
+                      {% block page_title %}
+                          {% include 'inc/page_title.html' with title='GraphiQL' %}
+                      {% endblock page_title %}
+                      {% block breadcrumbs %}
+                          {% include 'inc/breadcrumbs.html' %}
+                      {% endblock breadcrumbs %}
+                  </div>
               </div>
               {% include 'inc/header.html' %}
           </div>

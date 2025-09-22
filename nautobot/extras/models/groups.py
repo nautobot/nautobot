@@ -806,7 +806,16 @@ class DynamicGroup(PrimaryModel):
     def _get_group_queryset(self):
         """Construct the queryset representing dynamic membership of this group."""
         query = self.generate_query()
-        return self.model.objects.filter(query)
+        # https://github.com/nautobot/nautobot/issues/7631
+        #     Some queries may result in duplicate records, hence the need for `.distinct()`.
+        #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
+        #     filters that can be applied, support for both MySQL and PostgreSQL, and limitations of the Django ORM,
+        #     I don't see a clear alternative at this time.
+        #
+        #     Additionally, due to the use of `.distinct()`, in combination with our use of `.only("id")`
+        #     on this queryset, e.g. in `_set_members()`, we also need to override any default model ordering on the
+        #     queryset in order to avoid SQL errors like "each EXCEPT query must have the same number of columns"
+        return self.model.objects.filter(query).order_by("id").distinct()
 
     # TODO: unused in core
     def add_child(self, child, operator, weight):
