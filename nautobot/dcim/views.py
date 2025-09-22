@@ -148,6 +148,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .ui import LocationsBreadcrumbs
 
 logger = logging.getLogger(__name__)
 
@@ -229,24 +230,6 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
         if selected_object and selected_object.module_type:
             return selected_object.module_type.display
         return ""
-
-
-#
-# LocationsBreadcrumbs
-#
-
-
-class LocationsBreadcrumbs(Breadcrumbs):
-    def get_items_for_action(
-        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
-    ) -> list[BaseBreadcrumbItem]:
-        if detail:
-            object = context.get("object")
-            ancestors = [
-                InstanceBreadcrumbItem(instance=ancestor, label=ancestor.name) for ancestor in object.ancestors()
-            ]
-            return [ModelBreadcrumbItem(model_key="object"), *ancestors, InstanceBreadcrumbItem()]
-        return super().get_items_for_action(items, action, detail, context)
 
 
 #
@@ -570,28 +553,6 @@ class RackGroupUIViewSet(NautobotUIViewSet):
 #
 # Racks
 #
-
-
-class RackBreadcrumbs(Breadcrumbs):
-    def get_items_for_action(
-        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
-    ) -> list[BaseBreadcrumbItem]:
-        if detail:
-            if rack := context.get("object", None):
-                breadcrumbs = [
-                    ModelBreadcrumbItem(model_key="object"),
-                    InstanceParentBreadcrumbItem(
-                        parent_key="location",
-                        parent_query_param="location",
-                    ),
-                ]
-                if rack.rack_group:
-                    ancestors = [InstanceBreadcrumbItem(instance=ancestor) for ancestor in rack.rack_group.ancestors()]
-                    breadcrumbs.extend(ancestors)
-                    breadcrumbs.append(InstanceBreadcrumbItem(instance=rack.rack_group))
-                breadcrumbs.append(InstanceBreadcrumbItem())
-                return breadcrumbs
-        return super().get_items_for_action(items, action, detail, context)
 
 
 class RackUIViewSet(NautobotUIViewSet):

@@ -260,19 +260,20 @@ class BreadcrumbsTestCase(TestCase):
             "list": [ViewNameBreadcrumbItem(view_name="", label="List Item")],
             "detail": [ViewNameBreadcrumbItem(view_name="", label="Detail Item")],
         }
+        context = Context({})
 
         # Test specific action found
-        result = Breadcrumbs.get_items_for_action(test_items, "list", False)
+        result = Breadcrumbs().get_items_for_action(test_items, "list", False, context)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].label, "List Item")
 
         # Test fallback to detail when action not found and detail=True
-        result = Breadcrumbs.get_items_for_action(test_items, "nonexistent", True)
+        result = Breadcrumbs().get_items_for_action(test_items, "nonexistent", True, context)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].label, "Detail Item")
 
         # Test no fallback when detail=False
-        result = Breadcrumbs.get_items_for_action(test_items, "nonexistent", False)
+        result = Breadcrumbs().get_items_for_action(test_items, "nonexistent", False, context)
         self.assertEqual(len(result), 0)
         self.assertEqual(result, [])
 
