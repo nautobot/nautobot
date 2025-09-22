@@ -7,6 +7,7 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
 
@@ -81,6 +82,17 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
+
     object_detail_content = ui.ObjectDetailContent(
         panels=(
             ui.ObjectFieldsPanel(
@@ -235,6 +247,16 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
 
 
 class ViewToBeOverridden(views.GenericView):

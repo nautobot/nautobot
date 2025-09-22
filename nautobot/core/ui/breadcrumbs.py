@@ -415,7 +415,7 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
     Attributes:
         parent_key (str): Instance attribute to get the parent instance. Default: "parent".
         parent_query_param (Optional[str]): Query param name under which parent lookup key will be added into breadcrumb url. If None, will be the same as `parent_key`.
-        parent_lookup_key (Optional[str]): Parent attribute which will be used to build the url and filter the instance list url.
+        parent_lookup_key (Optional[str]): Parent attribute which will be used to build the url and filter the instance list url. Can be set to None to use parent as key.
 
     Examples:
         >>> InstanceParentBreadcrumbItem()
@@ -426,7 +426,7 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
 
     parent_key: str = "parent"
     parent_query_param: Optional[str] = None
-    parent_lookup_key: str = "pk"
+    parent_lookup_key: Optional[str] = "pk"
 
     def __post_init__(self):
         """
@@ -472,6 +472,9 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         return getattr(parent, "display", str(parent))
 
     def get_reverse_query_params(self, parent: Model) -> Optional[dict]:
+        if self.parent_lookup_key is None:
+            return {self.parent_query_param: parent}
+
         if hasattr(parent, self.parent_lookup_key) and getattr(parent, self.parent_lookup_key):
             return {self.parent_query_param: getattr(parent, self.parent_lookup_key)}
         return {}
