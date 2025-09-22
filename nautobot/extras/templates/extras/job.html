@@ -63,8 +63,8 @@
                         </div>
                     </div>
                 {% endblock job_form_wrapper %}
-                <div class="card mb-16">
-                    <div class="card-header">
+                <div class="card mb-16 {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
+                    <div class="card-header {% if job_model.has_sensitive_variables %}bg-warning-subtle border-warning{% endif %}">
                         <strong>Job Execution</strong>
                     </div>
                     <div class="card-body job_execution">
@@ -75,8 +75,7 @@
                     {% if job_model.has_sensitive_variables %}
                         <div class="card-footer">
                             <span class="form-text">
-                                <span aria-hidden="true" class="mdi mdi-information-outline"></span>
-                                This job may have sensitive input variables and therefore can only be executed immediately — it cannot be scheduled for later execution or submitted for approval before execution as those processes may expose sensitive information. If this categorization is inaccurate, it may be appropriate to update the job to set `has_sensitive_variables` to `False` if appropriate.
+                                This job may have sensitive input variables and therefore can only be executed immediately — it cannot be scheduled for later execution or submitted for approval before execution as those processes may expose sensitive information. <p>If this categorization is inaccurate, it may be appropriate to update the job to set <code>has_sensitive_variables</code> to <code>False</code> if appropriate.
                             </span>
                         </div>
                     {% endif %}
