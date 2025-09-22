@@ -63,28 +63,23 @@
                         </div>
                     </div>
                 {% endblock job_form_wrapper %}
-                {% if job_model.has_sensitive_variables %}
-                    <div class="card mb-16">
-                        <div class="card-header">
-                            <strong>Job Execution</strong>
-                        </div>
+                <div class="card mb-16">
+                    <div class="card-header">
+                        <strong>Job Execution</strong>
+                    </div>
+                    <div class="card-body job_execution">
+                        {% block schedule_form %}
+                            {% render_form schedule_form %}
+                        {% endblock %}
+                    </div>
+                    {% if job_model.has_sensitive_variables %}
                         <div class="card-footer">
                             <span class="form-text">
                                 <span aria-hidden="true" class="mdi mdi-information-outline"></span>
                                 This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
                             </span>
                         </div>
-                    </div>
-                {% endif %}
-                <div class="card job_execution mb-16">
-                    <div class="card-header">
-                        <strong>Job Execution</strong>
-                    </div>
-                    <div class="card-body">
-                        {% block schedule_form %}
-                            {% render_form schedule_form %}
-                        {% endblock %}
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
