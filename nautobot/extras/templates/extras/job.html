@@ -19,94 +19,86 @@
         {% if job_model.read_only %}
             <span class="badge bg-body-secondary border">Read-only</span>
         {% endif %}
-            <p>{{ job_model.description | render_markdown }}</p>
-        </div>
-        <ul class="nav nav-tabs" role="tablist">
-        <li role="presentation" class="nav-item">
-            <a href="#run" role="tab" data-bs-toggle="tab" class="nav-link active">Run</a>
-        </li>
-    </ul>
-    <div class="tab-content flex-fill">
-        <div role="tabpanel" class="tab-pane fade show active h-100 pt-16" id="run">
-            <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
-                {% csrf_token %}
-                <div class="row align-content-start flex-fill">
-                    <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
-                        {% if not perms.extras.run_job %}
-                            <div class="alert alert-warning">
-                                <span aria-hidden="true" class="mdi mdi-alert"></span>
-                                You do not have permission to run jobs.
-                            </div>
-                        {% endif %}
-                        {% if not job_model.installed or job_model.job_class is None %}
-                            <div class="alert alert-warning">
-                                <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not presently installed and cannot be run.
-                            </div>
-                        {% elif not job_model.enabled %}
-                            <div class="alert alert-warning">
-                                <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not enabled to be run.
-                            </div>
-                        {% endif %}
-                        {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                            <div class="card border-danger mb-16">
-                                <div class="card-header bg-danger-subtle border-danger text-body">
-                                    <strong>Errors</strong>
-                                </div>
-                                <div class="card-body">
-                                    {{ job_form.non_field_errors }}
-                                    {{ schedule_form.non_field_errors }}
-                                </div>
-                            </div>
-                        {% endif %}
-                        <div class="card mb-16">
-                            <div class="card-header">
-                                <strong>Job Data</strong>
-                            </div>
-                            <div class="card-body">
-                                {% block job_form %}
-                                    {% render_form job_form excluded_fields="[]" %}
-                                {% endblock %}
-                            </div>
-                            {% if job_model.has_sensitive_variables %}
-                                <div class="card-footer">
-                                    <span class="form-text">
-                                        <span aria-hidden="true" class="mdi mdi-information-outline"></span>
-                                        This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
-                                    </span>
-                                </div>
-                            {% endif %}
+        <p>{{ job_model.description | render_markdown }}</p>
+    </div>
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
+        {% csrf_token %}
+        <div class="row align-content-start flex-fill">
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+                {% if not perms.extras.run_job %}
+                    <div class="alert alert-warning">
+                        <span aria-hidden="true" class="mdi mdi-alert"></span>
+                        You do not have permission to run jobs.
+                    </div>
+                {% endif %}
+                {% if not job_model.installed or job_model.job_class is None %}
+                    <div class="alert alert-warning">
+                        <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not presently installed and cannot be run.
+                    </div>
+                {% elif not job_model.enabled %}
+                    <div class="alert alert-warning">
+                        <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not enabled to be run.
+                    </div>
+                {% endif %}
+                {% if job_form.non_field_errors or schedule_form.non_field_errors %}
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
                         </div>
-                        <div class="card job_execution mb-16">
-                            <div class="card-header">
-                                <strong>Job Execution</strong>
-                            </div>
-                            <div class="card-body">
-                                {% block schedule_form %}
-                                    {% render_form schedule_form %}
-                                {% endblock %}
-                            </div>
+                        <div class="card-body">
+                            {{ job_form.non_field_errors }}
+                            {{ schedule_form.non_field_errors }}
                         </div>
                     </div>
+                {% endif %}
+                {% block job_form_wrapper %}
+                    <div class="card mb-16">
+                        <div class="card-header">
+                            <strong>Job Data</strong>
+                        </div>
+                        <div class="card-body">
+                            {% block job_form %}
+                                {% render_form job_form excluded_fields="[]" %}
+                            {% endblock %}
+                        </div>
+                    </div>
+                {% endblock job_form_wrapper %}
+                <div class="card mb-16 {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
+                    <div class="card-header {% if job_model.has_sensitive_variables %}bg-warning-subtle border-warning{% endif %}">
+                        <strong>Job Execution</strong>
+                    </div>
+                    <div class="card-body job_execution">
+                        {% block schedule_form %}
+                            {% render_form schedule_form %}
+                        {% endblock %}
+                    </div>
+                    {% if job_model.has_sensitive_variables %}
+                        <div class="card-footer">
+                            <span class="form-text">
+                                This job may have sensitive input variables and therefore can only be executed immediately — it cannot be scheduled for later execution or submitted for approval before execution as those processes may expose sensitive information. <p>If this categorization is inaccurate, it may be appropriate to update the job to set <code>has_sensitive_variables</code> to <code>False</code> if appropriate.
+                            </span>
+                        </div>
+                    {% endif %}
                 </div>
-                <div class="nb-form-sticky-footer">
-                    <button
-                        class="btn btn-primary"
-                        id="id__run"
-                        name="_run"
-                        type="submit"
-                        {% if not perms.extras.run_job or not job_model.runnable %}disabled="disabled"{% endif %}
-                    >
-                        <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
-                        -->Run Job Now
-                    </button>
-                    <a href="{% url 'extras:job_list' %}" class="btn btn-secondary">
-                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                        -->Cancel
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
+        <div class="nb-form-sticky-footer">
+            <button
+                class="btn btn-primary"
+                id="id__run"
+                name="_run"
+                type="submit"
+                {% if not perms.extras.run_job or not job_model.runnable %}disabled="disabled"{% endif %}
+            >
+                <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
+                -->Run Job Now
+            </button>
+            <a href="{% url 'extras:job_list' %}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
+        </div>
+    </form>
 </div>
 {% endblock %}
 {% block javascript %}
