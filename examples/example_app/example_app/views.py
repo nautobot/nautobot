@@ -10,6 +10,7 @@ from nautobot.circuits.views import CircuitUIViewSet
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
+from nautobot.dcim.views import DeviceUIViewSet
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -40,6 +41,12 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
+
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context["active_tab"] = "example_app_device_detail_tab_1"
+        return extra_context
 
 
 class DeviceDetailAppTabTwoView(views.ObjectView):
@@ -49,6 +56,7 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
 
 
 class ExampleAppHomeView(views.GenericView):

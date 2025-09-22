@@ -68,7 +68,7 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 
 
-class GenericView(LoginRequiredMixin, UIComponentsMixin, View):
+class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
     """
     Base class for non-object-related views.
 
@@ -76,7 +76,7 @@ class GenericView(LoginRequiredMixin, UIComponentsMixin, View):
     """
 
 
-class ObjectView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
+class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     """
     Retrieve a single object for display.
 
@@ -141,7 +141,7 @@ class ObjectView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
         return render(request, self.get_template_name(), context)
 
 
-class ObjectListView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
+class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     """
     List a series of objects.
 
@@ -421,7 +421,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, UIComponentsMixin, View):
         return {}
 
 
-class ObjectEditView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Create or edit a single object.
 
@@ -569,7 +569,7 @@ class ObjectEditView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequi
         )
 
 
-class ObjectDeleteView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class ObjectDeleteView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Delete a single object.
 
@@ -646,7 +646,7 @@ class ObjectDeleteView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionReq
         )
 
 
-class BulkCreateView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class BulkCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Create new objects in bulk.
 
@@ -760,7 +760,7 @@ class BulkCreateView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequi
         )
 
 
-class ObjectImportView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class ObjectImportView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Import a single object (YAML or JSON format).
 
@@ -908,7 +908,7 @@ class ObjectImportView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionReq
 
 
 class BulkImportView(
-    GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 ):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
@@ -1019,7 +1019,7 @@ class BulkImportView(
 
 
 class BulkEditView(
-    GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
 ):
     """
     Edit objects in bulk.
@@ -1116,7 +1116,7 @@ class BulkEditView(
         return {}
 
 
-class BulkRenameView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     An extendable view for renaming objects in bulk.
     """
@@ -1217,7 +1217,7 @@ class BulkRenameView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequi
 
 
 class BulkDeleteView(
-    GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
 ):
     """
     Delete objects in bulk.
@@ -1329,7 +1329,7 @@ class BulkDeleteView(
 
 
 # TODO: Replace with BulkCreateView
-class ComponentCreateView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
@@ -1435,7 +1435,7 @@ class ComponentCreateView(GetReturnURLMixin, UIComponentsMixin, ObjectPermission
         )
 
 
-class BulkComponentCreateView(GetReturnURLMixin, UIComponentsMixin, ObjectPermissionRequiredMixin, View):
+class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """
