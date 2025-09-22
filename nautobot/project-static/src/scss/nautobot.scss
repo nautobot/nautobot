@@ -1754,7 +1754,6 @@ body {
       }
     }
 
-    &.nb-sidenav-list-item-active,
     &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 
