@@ -44,5 +44,80 @@ You may have to change this setting multiple times to find what works best in yo
 !!! warning
     Modifying your concurrency setting may increase the CPU and will increase the memory load on your Celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
 
-!!! tip
-    If you have long-running Jobs in general, you may also want to adjust the [`CELERY_WORKER_PREFETCH_MULTIPLIER` setting](../configuration/settings.md#celery_worker_prefetch_multiplier) so that a worker executing one long-running Job doesn't prefetch and reserve other tasks, preventing those tasks from executing until the current Job is completed.
+## Queuing Optimizations
+
+By default, a Celery worker will queue up to 4 times the number of tasks it can run concurrently. For example, with a `concurrency` set to 2, a worker will reserve up to 8 tasks from the queue at a time.
+
+```mermaid
+graph LR
+    subgraph "Nautobot Worker"
+        direction LR
+        Prefetch1[ ] --> Prefetch2[ ] --> Prefetch3[ ] --> Prefetch4[ ] --> Prefetch5[ ] --> Prefetch6[ ] --> Prefetch7[ ] --> Prefetch8[ ]
+        Prefetch8 -- "execute" --> Exec1[ ] --> Exec2[ ]
+    end
+
+    Redis["fa:fa-redis Redis"] -- "prefetch X tasks, *X=concurrency * multiplier*" --> Prefetch1
+
+    %% --- Style Definitions ---
+    style Redis fill:#FD6D3C,stroke:#333,stroke-width:2px,color:#fff
+
+    classDef prefetch fill:#87CEEB,stroke:#333,stroke-width:1px,border-radius:3px,color:#333
+    classDef execution fill:#90EE90,stroke:#333,stroke-width:1px,border-radius:3px,color:#333
+
+    %% --- Class Assignments ---
+    class Prefetch1,Prefetch2,Prefetch3,Prefetch4,Prefetch5,Prefetch6,Prefetch7,Prefetch8 prefetch
+    class Exec1,Exec2 execution
+```
+
+Figure: *Celery queuing with concurrency set to 2, default prefetch multiplier of 4*
+
+This behavior may be controlled by the [`CELERY_WORKER_PREFETCH_MULTIPLIER`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier) setting. If you have longer running jobs that are blocking short-lived jobs from running, you may want to consider reducing the prefetch multiplier to 1 so that a worker will only reserve as many tasks as it can run concurrently.
+
+That said, even with the [`CELERY_WORKER_PREFETCH_MULTIPLIER`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier) set to 1, Nautobot workers will still prefetch an amount of tasks equal to the `concurrency` setting. So a worker with `concurrency` set to 2 and [`CELERY_WORKER_PREFETCH_MULTIPLIER`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier) set to 1 will still reserve up to 2 tasks from the queue at a time.
+
+```mermaid
+graph LR
+    subgraph "Nautobot Worker"
+        direction LR
+        Prefetch1[ ] --> Prefetch2[ ]
+        Prefetch2 -- "execute" --> Exec1[ ] --> Exec2[ ]
+    end
+
+    Redis["fa:fa-redis Redis"] -- "prefetch X tasks, *X=concurrency * multiplier*" --> Prefetch1
+
+    %% --- Style Definitions ---
+    style Redis fill:#FD6D3C,stroke:#333,stroke-width:2px,color:#fff
+
+    classDef prefetch fill:#87CEEB,stroke:#333,stroke-width:1px,border-radius:3px,color:#333
+    classDef execution fill:#90EE90,stroke:#333,stroke-width:1px,border-radius:3px,color:#333
+
+    %% --- Class Assignments ---
+    class Prefetch1,Prefetch2 prefetch
+    class Exec1,Exec2 execution
+```
+
+Figure: *Celery queuing with concurrency set to 2, prefetch multiplier set to 1*
+
+!!! warning
+    A value of zero is also valid and means "no limit". Effectively, the worker will keep consuming messages, not respecting that there may be other available worker nodes that may be able to process them sooner, or that the messages may not even fit in memory.
+
+In order to completely disable prefetching on Nautobot workers, you will need to also set the [`CELERY_TASK_ACKS_LATE`](https://docs.celeryq.dev/en/stable/userguide/optimizing.html#reserve-one-task-at-a-time) setting to `True`. In short, this setting will ensure that tasks are only acknowledged after they have been completed. As a result, each worker will only pull tasks from the queue as it is ready to process them.
+
+```mermaid
+graph LR
+    subgraph "Nautobot Worker"
+        direction LR
+        Exec1[ ] --> Exec2[ ]
+    end
+
+    Redis["fa:fa-redis Redis"] -- "execute" --> Exec1[ ]
+
+    %% --- Style Definitions ---
+    style Redis fill:#FD6D3C,stroke:#333,stroke-width:2px,color:#fff
+    classDef execution fill:#90EE90,stroke:#333,stroke-width:1px,border-radius:3px,color:#333
+    class Exec1,Exec2 execution
+```
+
+Figure: *Celery queuing with concurrency set to 2, prefetch multiplier set to 1, late acknowledgments enabled*
+
+Enabling late acknowledgments may have implications on the way tasks are processed. Most importantly, if a worker is killed while processing a task, that task will be re-queued and executed by another available worker. This may lead to tasks being partially executed more than once, which may not be desirable for all types of tasks. This concern is best addressed by ensuring that tasks are idempotent, meaning that running the same task multiple times will not have unintended side effects - a best practice regardless of whether late acknowledgments are enabled or not.
