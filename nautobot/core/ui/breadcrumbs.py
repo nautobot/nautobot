@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import logging
+from operator import attrgetter
 from typing import Any, Callable, Literal, Optional, Protocol, Type, Union
 from urllib.parse import urlencode
 
@@ -25,6 +26,15 @@ ModelType = Union[str, Model, Type[Model], None]
 LabelType = Union[Callable[[Context], str], WithStr, None]
 BreadcrumbItemsType = dict[str, list["BaseBreadcrumbItem"]]
 ReverseParams = Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]
+
+
+def context_object_attr(attr_path: str, context_key: str = "object"):
+    """
+    Helper function that creates callable to easily fetch the object from context and then some nested object.
+
+    Useful for composing breadcrumbs, when we need to add `location` in breadcrumbs path.
+    """
+    return lambda context: attrgetter(attr_path)(context[context_key]) if context.get(context_key) else None
 
 
 @dataclass
@@ -366,9 +376,86 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
             Optional[Model]: Instance from context.
         """
         if self.instance:
-            return self.instance(context)
+            if callable(self.instance):
+                return self.instance(context)
+
+            return self.instance
 
         return context.get(self.instance_key)
+
+    def as_pair(self, context: Context) -> tuple[str, str]:
+        """
+        Construct the (URL, label) pair for the breadcrumb.
+
+        Combines `get_url()` and `get_label()` and applies title casing to the label.
+
+        Args:
+            context (Context): Context object used to resolve the breadcrumb parts.
+
+        Returns:
+            tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
+            if unresolved, and label is title-cased.
+        """
+        url = self.get_url(context) or ""
+        label = self.get_label(context)
+        return url, label
+
+
+@dataclass
+class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
+    parent_key: str = "parent"
+    parent_query_param: str = "parent"
+    parent_lookup_key: str = "pk"
+    direct_link: bool = False
+
+    def get_url(self, context: Context) -> Optional[str]:
+        """
+        Resolve the URL for the breadcrumb item based on the instance and provided parent.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
+        """
+        instance = self.get_instance(context)
+        parent = self.get_parent_attr(instance)
+        if not instance or not parent:
+            return None
+
+        if self.direct_link:
+            return get_absolute_url(parent)
+
+        view_name = lookup.get_route_for_model(instance, "list")
+        return self.reverse_view_name(view_name, context, reverse_query_params=self.get_reverse_query_params(parent))
+
+    def get_label(self, context: Context) -> str:
+        """
+        Get the label (display text) for the breadcrumb from instance and provided parent.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            str: Label as a string.
+        """
+        if self.label or self.label_key:
+            return super().get_label(context)
+        instance = self.get_instance(context)
+        parent = self.get_parent_attr(instance)
+        if not instance or not parent:
+            return ""
+        return getattr(parent, "display", str(parent))
+
+    def get_reverse_query_params(self, parent: Model) -> Optional[dict]:
+        if hasattr(parent, self.parent_lookup_key) and getattr(parent, self.parent_lookup_key):
+            return {self.parent_query_param: getattr(parent, self.parent_lookup_key)}
+        return {}
+
+    def get_parent_attr(self, instance: Model) -> Optional[Model]:
+        if hasattr(instance, self.parent_key) and getattr(instance, self.parent_key):
+            return getattr(instance, self.parent_key)
+        return None
 
 
 class Breadcrumbs:
@@ -455,7 +542,7 @@ class Breadcrumbs:
         """
         action = context.get("view_action", "")
         detail = context.get("detail", False)
-        items = self.get_items_for_action(self.items, action, detail)
+        items = self.get_items_for_action(self.items, action, detail, context)
         return [item.as_pair(context) for item in items if item.should_render(context)]
 
     def filter_breadcrumbs_items(self, items: list[tuple[str, str]], context: Context) -> list[tuple[str, str]]:
@@ -484,8 +571,9 @@ class Breadcrumbs:
         """
         return label and label.strip()
 
-    @staticmethod
-    def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
+    def get_items_for_action(
+        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
+    ) -> list[BaseBreadcrumbItem]:
         """
         Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
 
@@ -493,6 +581,7 @@ class Breadcrumbs:
             items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
             action (str): Current action name (e.g., "list", "detail").
             detail (bool): Whether this is a detail view (for fallback).
+            context (Context): The view or template context.
 
         Returns:
             list[BaseBreadcrumbItem]: List of breadcrumb items for the action.

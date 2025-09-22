@@ -5,7 +5,12 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags import helpers
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -191,6 +196,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceParentBreadcrumbItem(parent_key="provider", parent_query_param="provider"),
+            ]
+        }
+    )
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
@@ -364,6 +377,14 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceParentBreadcrumbItem(parent_key="provider", parent_query_param="provider"),
+            ]
+        }
+    )
 
     object_detail_content = ObjectDetailContent(
         panels=(

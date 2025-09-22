@@ -25,7 +25,13 @@ from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import DEFAULT_TITLES
 from nautobot.core.utils.config import get_settings_or_config
@@ -635,6 +641,14 @@ class IPAddressListView(generic.ObjectListView):
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent.namespace")),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -1196,6 +1210,16 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     serializer_class = serializers.VLANSerializer
     table_class = tables.VLANDetailTable
     queryset = VLAN.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceParentBreadcrumbItem(
+                    parent_key="vlan_group", parent_query_param="vlan_group", parent_lookup_key="name"
+                ),
+            ]
+        }
+    )
 
     class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
@@ -1330,6 +1354,14 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

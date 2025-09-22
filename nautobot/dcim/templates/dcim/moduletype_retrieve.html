@@ -2,10 +2,6 @@
 {% load buttons %}
 {% load helpers %}
 
-{% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
-{% endblock extra_breadcrumbs %}
-
 {% block extra_buttons %}
         {% if perms.dcim.change_moduletype %}
             <div class="btn-group">
