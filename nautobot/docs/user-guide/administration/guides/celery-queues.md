@@ -98,7 +98,7 @@ graph LR
 
 Figure: *Celery queuing with concurrency set to 2, prefetch multiplier set to 1*
 
-!!! warning
+!!! warning "Zero means unlimited, not disabled"
     A value of zero is also valid and means "no limit". Effectively, the worker will keep consuming messages, not respecting that there may be other available worker nodes that may be able to process them sooner, or that the messages may not even fit in memory.
 
 In order to completely disable prefetching on Nautobot workers, you will need to also set the [`CELERY_TASK_ACKS_LATE`](https://docs.celeryq.dev/en/stable/userguide/optimizing.html#reserve-one-task-at-a-time) setting to `True`. In short, this setting will ensure that tasks are only acknowledged after they have been completed. As a result, each worker will only pull tasks from the queue as it is ready to process them.
