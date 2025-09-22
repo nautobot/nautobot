@@ -5,7 +5,9 @@ from nautobot.core.ui.base import PermissionsMixin
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
     Breadcrumbs,
+    context_object_attr,
     InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
@@ -57,6 +59,7 @@ __all__ = (
     "Button",
     "ButtonColorChoices",
     "Component",
+    "context_object_attr",
     "DataTablePanel",
     "DistinctViewTab",
     "DropdownButton",
@@ -66,6 +69,7 @@ __all__ = (
     "HomePageItem",
     "HomePagePanel",
     "InstanceBreadcrumbItem",
+    "InstanceParentBreadcrumbItem",
     "KeyValueTablePanel",
     "LayoutChoices",
     "ModelBreadcrumbItem",
