@@ -220,4 +220,4 @@ def convert_querydict_to_dict(request_querydict):
         >>> convert_querydict_to_dict(QueryDict('foo=1&bar=2&bar=3&baz='))
         >>> {'foo': ['1'], 'bar': ['2', '3'], 'baz': ['']}
     """
-    return {key: value for key, value in request_querydict.lists()}
+    return {key: value for key, value in request_querydict.lists()}  # pylint: disable=unnecessary-comprehension

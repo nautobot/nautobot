@@ -43,7 +43,11 @@ from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils import lookup, permissions
-from nautobot.core.utils.requests import convert_querydict_to_dict, get_filterable_params_from_filter_params, normalize_querydict
+from nautobot.core.utils.requests import (
+    convert_querydict_to_dict,
+    get_filterable_params_from_filter_params,
+    normalize_querydict,
+)
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_bulk_queryset_from_view,
@@ -1108,6 +1112,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         else:
             return self.form_invalid(form)
 
+
 class BulkEditAndBulkDeleteModelMixin:
     """
     UI mixin to bulk destroy and bulk edit all model instances.
@@ -1190,8 +1195,6 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
             self.logger.info("Caught ProtectedError while attempting to delete objects")
             handle_protectederror(queryset, request, e)
             self.success_url = self.get_return_url(request)
-
-
 
     def bulk_destroy(self, request, *args, **kwargs):
         """

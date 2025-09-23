@@ -3,7 +3,6 @@ import urllib.parse
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.db import ProgrammingError
-from django.http import QueryDict
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -16,7 +15,7 @@ from nautobot.core.views.utils import (
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, InventoryItem, Location, Manufacturer
 from nautobot.extras.models import Role, SavedView, Status
-from nautobot.ipam.models import VRF
+from nautobot.ipam.models import Namespace, VRF
 from nautobot.users.models import ObjectPermission, User
 
 
@@ -235,10 +234,12 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         super().setUp()
         self.user = User.objects.create_user(username="testuser", password="testpass", is_superuser=True)  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
         self.vrfs = []
+        namespace = Namespace.objects.create(name="test-namespace")
         for i in range(10):
             vrf = VRF.objects.create(
                 name=f"VRF {i}",
                 description=f"desc-{i % 3}",  # 3 unique descriptions, repeated
+                namespace=namespace,
             )
             self.vrfs.append(vrf)
         # SavedView filters by name of VRF 5
@@ -248,27 +249,15 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             view="ipam:vrf_list",
             config={"filter_params": {"name": self.vrfs[5].name}},
         )
+        self.content_type = ContentType.objects.get_for_model(VRF)
 
     def test_not_is_all_and_pk_list(self):
         """!is_all and pk_list: Return queryset filtered by pk_list"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=False,
+            content_type=self.content_type,
+            edit_all=False,
             filter_query_params={},
-            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],
-            saved_view_id=None,
-            action="change",
-        )
-        self.assertQuerysetEqual(qs, [self.vrfs[2], self.vrfs[4]], ordered=False)
-
-        # Same test but with empty QueryDict
-        filter_query_params = QueryDict(mutable=True)
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=False,
-            filter_query_params=filter_query_params,
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],
             saved_view_id=None,
             action="change",
@@ -279,21 +268,9 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         """!is_all and !pk_list: Return empty queryset. This should not normally happen in practice."""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=False,
+            content_type=self.content_type,
+            edit_all=False,
             filter_query_params={},
-            pk_list=[],
-            saved_view_id=None,
-            action="change",
-        )
-        self.assertEqual(qs.count(), 0)
-
-        filter_query_params = QueryDict(mutable=True)
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=False,
-            filter_query_params=filter_query_params,
             pk_list=[],
             saved_view_id=None,
             action="change",
@@ -304,48 +281,22 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         """is_all and !saved_view_id and ~filter_query_params: Return all objects"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=True,
+            content_type=self.content_type,
+            edit_all=True,
             filter_query_params={},
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, self.vrfs, ordered=False)
-
-        filter_query_params = QueryDict(mutable=True)
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params=filter_query_params,
-            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
-            saved_view_id=None,
-            action="change",
-        )
-        self.assertQuerysetEqual(qs, self.vrfs, ordered=False)
+        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_is_all_and_filter_query_params(self):
         """is_all and filter_query_params: Return queryset filtered by filter_query_params (description)"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params={"description": "desc-1"},
-            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
-            saved_view_id=None,
-            action="change",
-        )
-        self.assertQuerysetEqual(qs, VRF.objects.filter(description="desc-1"), ordered=False)
-
-        # Same test but with QueryDict
-        filter_query_params = QueryDict(mutable=True)
-        filter_query_params.update({"description": "desc-1"})
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params=filter_query_params,
+            content_type=self.content_type,
+            edit_all=True,
+            filter_query_params={"description": ["desc-1"]},
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=None,
             action="change",
@@ -356,21 +307,9 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         """is_all and saved_view_id: Return queryset filtered by saved_view_filter_params (name)"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=True,
+            content_type=self.content_type,
+            edit_all=True,
             filter_query_params={},
-            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
-            saved_view_id=self.saved_view.id,
-            action="change",
-        )
-        self.assertQuerysetEqual(qs, [self.vrfs[5]], ordered=False)
-
-        filter_query_params = QueryDict(mutable=True)
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params=filter_query_params,
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=self.saved_view.id,
             action="change",
@@ -381,23 +320,9 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params={"name": self.vrfs[7].name},
-            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
-            saved_view_id=None,
-            action="change",
-        )
-        self.assertQuerysetEqual(qs, [self.vrfs[7]], ordered=False)
-
-        # Same test but with QueryDict
-        filter_query_params = QueryDict(mutable=True)
-        filter_query_params.update({"name": self.vrfs[7].name})
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            model=VRF,
-            is_all=True,
-            filter_query_params=filter_query_params,
+            content_type=self.content_type,
+            edit_all=True,
+            filter_query_params={"name": [self.vrfs[7].name]},
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=None,
             action="change",
@@ -419,40 +344,81 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             actions=["view", "change", "delete", "add"],
         )
         obj_perm.users.add(limited_permissions_user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(VRF))
+        obj_perm.object_types.add(self.content_type)
 
         qs = get_bulk_queryset_from_view(
             user=limited_permissions_user,
-            model=VRF,
-            is_all=True,
+            content_type=self.content_type,
+            edit_all=True,
             filter_query_params={},
             pk_list=[self.vrfs[3].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs.order_by("pk"),
-            VRF.objects.filter(name=self.vrfs[2].name).order_by("pk"),
-            transform=lambda x: x,
-        )
+        self.assertQuerysetEqual(qs, VRF.objects.filter(name=self.vrfs[2].name), ordered=False)
 
     def test_querydict_ignores(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
-        filter_query_params = QueryDict(mutable=True)
-        filter_query_params.update({"name": self.vrfs[7].name})
-        filter_query_params.update({"per_page": 10})
-
+        filter_query_params = {"name": [self.vrfs[7].name], "per_page": [10]}
         qs = get_bulk_queryset_from_view(
             user=self.user,
-            model=VRF,
-            is_all=True,
+            content_type=self.content_type,
+            edit_all=True,
             filter_query_params=filter_query_params,
             pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(
-            qs,
-            VRF.objects.filter(name=self.vrfs[7].name),
-            transform=lambda x: x,
+        self.assertQuerysetEqual(qs, VRF.objects.filter(name=self.vrfs[7].name), ordered=False)
+
+    def test_no_valid_operation_found_raises(self):
+        """If no valid operation is found, raise RuntimeError."""
+        # Simulate a situation where all logic branches are skipped
+        with self.assertRaises(RuntimeError):
+            get_bulk_queryset_from_view(
+                user=self.user,
+                content_type=self.content_type,
+                filter_query_params=None,
+                pk_list=[],
+                saved_view_id=None,
+                action="change",
+                edit_all=None,  # Not True, so not valid for 'change'
+            )
+
+    def test_all_filters_removed_flag_ignores_saved_view(self):
+        """
+        If filter_query_params contains 'all_filters_removed', the saved view is ignored and all objects are returned.
+        """
+        # Pass the all_filters_removed flag in filter_query_params
+        qs = get_bulk_queryset_from_view(
+            user=self.user,
+            content_type=self.content_type,
+            filter_query_params={"all_filters_removed": [True], "saved_view": [self.saved_view.id]},
+            pk_list=[],
+            saved_view_id=self.saved_view.id,
+            action="change",
+            edit_all=True,
         )
+        # Should return all VRFs, not just the one from the saved view
+        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+
+    def test_runtime_error_when_all_param_missing(self):
+        """Raise RuntimeError if required *_all param is not provided for the action."""
+        with self.assertRaises(RuntimeError):
+            get_bulk_queryset_from_view(
+                user=self.user,
+                content_type=self.content_type,
+                filter_query_params={},
+                pk_list=[],
+                saved_view_id=None,
+                action="delete",  # delete_all is missing
+            )
+        with self.assertRaises(RuntimeError):
+            get_bulk_queryset_from_view(
+                user=self.user,
+                content_type=self.content_type,
+                filter_query_params={},
+                pk_list=[],
+                saved_view_id=None,
+                action="change",  # edit_all is missing
+            )

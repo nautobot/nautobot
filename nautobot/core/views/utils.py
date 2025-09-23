@@ -8,7 +8,6 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
-from django.http import QueryDict
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -529,14 +528,17 @@ def generate_latest_with_cache(registry=REGISTRY):
     return "".join(output).encode("utf-8")
 
 
-def get_bulk_queryset_from_view(user, content_type, filter_query_params, pk_list, saved_view_id, action, delete_all=None, edit_all=None, log=None):
+def get_bulk_queryset_from_view(
+    user, content_type, filter_query_params, pk_list, saved_view_id, action, delete_all=None, edit_all=None, log=None
+):
     """
     Return a queryset for bulk operations based on the provided parameters.
 
     Args:
         user: The user performing the bulk operation.
         model: The model class on which the bulk operation is being performed.
-        is_all: Boolean indicating whether the operation applies to pk_list or not.
+        delete_all: Boolean indicating whether the operation applies to pk_list or not.
+        edit_all: Boolean indicating whether the operation applies to pk_list or not.
         filter_query_params: A request.GET or dictionary of filter parameters to apply to the queryset.
         pk_list: A list of primary keys to include, when not using a filter.
         saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
@@ -558,13 +560,21 @@ def get_bulk_queryset_from_view(user, content_type, filter_query_params, pk_list
     if not log:
         log = logger
 
+    action_valid = (action == "delete" and delete_all is not None) or (action == "change" and edit_all is not None)
+    if not action_valid:
+        raise RuntimeError(
+            f"Invalid parameters *_all param for action {action}, got: delete_all={delete_all}, edit_all={edit_all}"
+        )
+
+    view_name = None
+    is_all = None
+    # Based on action_valid one of these must be True
     if action == "delete":
         view_name = "BulkDelete"
         is_all = delete_all
     elif action == "change":
         view_name = "BulkEdit"
         is_all = edit_all
-    
 
     # The view_class is determined from model on purpose, as view_class the view as a param, will not work
     # with a job. It is better to be consistent with each with sending the same params that will
@@ -656,5 +666,5 @@ def get_bulk_queryset_from_view(user, content_type, filter_query_params, pk_list
         log.debug("Saved view with no filters specified, returning all objects")
         return queryset
 
-    log.debug("Filtering by None, as no valid operation was found.")
+    log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")

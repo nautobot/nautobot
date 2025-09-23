@@ -43,7 +43,7 @@ class BulkEditObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
-        hidden=True
+        hidden = True
 
     def _update_objects(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
         base_queryset = model.objects.restrict(self.user, "change")
@@ -197,7 +197,7 @@ class BulkDeleteObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
-        hidden=True
+        hidden = True
 
     def run(  # pylint: disable=arguments-differ
         self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view=None
