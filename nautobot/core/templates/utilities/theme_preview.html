@@ -863,6 +863,41 @@ This:
         </div>
     </div><!-- /.col-sm-4 -->
 </div>
+<h2>Card with Nav Tabs</h2>
+<div class="row">
+    <div class="col-sm-4">
+        <div class="card mb-16">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab1" role="tab" aria-controls="tab1" aria-selected="true">Tab 1</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab2" role="tab" aria-controls="tab2" aria-selected="false">Tab 2</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab3" role="tab" aria-controls="tab3" aria-selected="false">Tab 3</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                        Tab 1 content
+                    </div>
+                    <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                        Tab 2 content
+                    </div>
+                    <div class="tab-pane fade" id="tab3" role="tabpanel" aria-labelledby="tab3-tab">
+                        Tab 3 content
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /.col-sm-4 -->
+</div>
+
+
 <hr>
 <h1>Utilization graphs</h1>
 <p><i>Note: These progress bars use the <code>utilization_graph</code> template tags.</i></p>
