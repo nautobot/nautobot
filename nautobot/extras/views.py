@@ -2497,7 +2497,6 @@ class NoteUIViewSet(
         return obj
 
 
-
 class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
