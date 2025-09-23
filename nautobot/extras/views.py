@@ -2463,6 +2463,15 @@ class NoteUIViewSet(
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
+    
+    def form_valid(self, form):
+        """
+        Called after the form is validated. Overrides to ensure
+        the note's user/user_name are set before saving.
+        """
+        # Apply alter_obj before saving
+        self.obj = self.alter_obj(form.instance, self.request, None, None)
+        return super().form_valid(form)
 
 
 class ObjectNotesView(generic.GenericView):
