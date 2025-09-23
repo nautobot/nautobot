@@ -677,7 +677,7 @@ class AncestorsBreadcrumbs(Breadcrumbs):
         self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
     ) -> list[BaseBreadcrumbItem]:
         if not detail:
-            super().get_items_for_action(items, action, detail, context)
+            return super().get_items_for_action(items, action, detail, context)
 
         return self.get_detail_items(context)
 
