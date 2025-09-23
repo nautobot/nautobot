@@ -33,9 +33,9 @@
     </div>
 
     <button type="button"
-        class="btn btn-default accordion-toggle-all"
-        data-target="#job_accordion"
-        {% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+            class="btn btn-default accordion-toggle-all"
+            data-target="#job_accordion"
+            {% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
 {% endblock %}
 
 {% block table_config_button %}
@@ -82,5 +82,5 @@
             queryParams.set('display', button.dataset.display);
             button.setAttribute('href', `?${queryParams.toString()}`);
         });
-     </script>
+    </script>
 {% endblock %}
