@@ -312,10 +312,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = f'<li role="presentation" class="nav-item"><a href="{url}" class="nav-link active">IP Addresses <span class="badge">2</span></a></li>'
+        ip_address_tab = f'<li class="nav-item" role="presentation"><a class="nav-link active" aria-current="page" href="{url}" aria-controls="ip-addresses" role="tab">IP Addresses <span class="badge bg-primary">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
         # Checks if the button is in the content.
-        self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address""", content)
+        add_ip_link = (
+            reverse("ipam:ipaddress_add")
+            + "?"
+            + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
+        )
+        add_ip_button = f'<a href="{add_ip_link}" class="btn btn-primary"><span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address</a>'
+        self.assertInHTML(add_ip_button, content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_child_prefixes_table_list(self):
@@ -339,8 +345,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.0/30", strip_tags(content))
-        ip_address_tab = f'<li role="presentation" class="active"><a href="{url}">Child Prefixes <span class="badge">1</span></a></li>'
-        self.assertInHTML(ip_address_tab, content)
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Child Prefixes <span class="badge bg-primary">1</span></a></li>'
+        self.assertInHTML(prefixes_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
 

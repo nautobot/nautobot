@@ -1,5 +1,5 @@
-{% if object.last_updated %}
-    <p class="flex-grow-1 m-0">
+<p class="flex-grow-1 m-0">
+    {% if object.last_updated %}
         <small class="align-items-center d-inline-flex gap-4 text-secondary">
             {% if object.created %}
                 <i class="mdi mdi-bookmark-plus"></i> {{ object.created }}
@@ -7,5 +7,5 @@
             {% endif %}
             <i class="mdi mdi-clock"></i> {{ object.last_updated|timesince }} ago
         </small>
-    </p>
-{% endif %}
+    {% endif %}
+</p>

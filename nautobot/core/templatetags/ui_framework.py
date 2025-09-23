@@ -40,6 +40,7 @@ def render_table_config_forms(context, tabs):
             (
                 [panel.render_table_config_form(context)]
                 for tab in tabs
+                if tab.should_render_content(context)
                 for panel in tab.panels
                 if hasattr(panel, "render_table_config_form")
             ),

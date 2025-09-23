@@ -463,6 +463,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
+                render_on_tab_id="prefixes",
             ),
             ui.AddIPAddressButton(
                 weight=300,
@@ -471,6 +472,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
+                render_on_tab_id="ip-addresses",
             ),
         ],
     )

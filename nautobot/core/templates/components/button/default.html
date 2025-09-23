@@ -1,5 +1,5 @@
 {% if link %}<a href="{{ link }}" {% else %}<button type="button"{% endif %}
-class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}""
+class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}"
 {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}>
 
 {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
