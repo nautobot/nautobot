@@ -1,1 +1,1 @@
-Add DjHTML to the project and run it against all Django template files. Include this additional check in pre-commit script and pull request CI workflow.
+Add DjHTML and djLint to the project and run it against all Django template files. Include this additional check in pre-commit script and pull request CI workflow.
