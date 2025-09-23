@@ -118,7 +118,6 @@ class ApprovalWorkflowDefinitionViewTestCase(
     # This is almost like ViewTestCases.PrimaryObjectViewTestCase, but without BulkEditObjectsViewTestCase,
     # because ApprovalWorkflowDefinition doesn't have any fields that support bulk editing.
     # Currently, `model_content_type` only accepts one content type: ScheduledJob.
-    # See nautobot/extras/constants.py:APPROVAL_WORKFLOW_MODELS for details.
 ):
     """Test the ApprovalWorkflowDefinition views."""
 

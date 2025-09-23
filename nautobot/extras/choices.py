@@ -31,7 +31,7 @@ class ApprovalWorkflowStateChoices(ChoiceSet):
         PENDING: "info",
         APPROVED: "success",
         DENIED: "danger",
-        CANCELED: "canceled",
+        CANCELED: "warning",
     }
 
 

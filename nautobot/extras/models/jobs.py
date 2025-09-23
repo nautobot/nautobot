@@ -1113,6 +1113,7 @@ class ScheduledJobs(models.Model):
             return None
 
 
+@extras_features("approval_workflows")
 class ScheduledJob(ApprovableModelMixin, BaseModel):
     """Model representing a periodic task."""
 

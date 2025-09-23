@@ -13,8 +13,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
-from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.users.models import User
 
 
@@ -71,7 +70,7 @@ class ApprovalWorkflowDefinition(PrimaryModel):
         to=ContentType,
         on_delete=models.PROTECT,
         related_name="+",
-        limit_choices_to=APPROVAL_WORKFLOW_MODELS,
+        limit_choices_to=FeatureQuery("approval_workflows"),
     )
     model_constraints = models.JSONField(
         blank=True,
@@ -171,7 +170,7 @@ class ApprovalWorkflow(OrganizationalModel):
         to=ContentType,
         on_delete=models.PROTECT,
         related_name="+",
-        limit_choices_to=APPROVAL_WORKFLOW_MODELS,
+        limit_choices_to=FeatureQuery("approval_workflows"),
     )
     object_under_review_object_id = models.UUIDField(db_index=True)
     current_state = models.CharField(

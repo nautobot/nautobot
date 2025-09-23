@@ -4,10 +4,12 @@ import uuid
 
 from django import forms as django_forms
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db import connection
+from django.db.models import CASCADE, CharField, ForeignKey, Model, Q
 from django.http import QueryDict
 from django.test import override_settings
 
@@ -275,6 +277,53 @@ class FlattenIterableTest(TestCase):
 
 class GetFooForModelTest(TestCase):
     """Tests for the various `get_foo_for_model()` functions."""
+
+    @classmethod
+    def setUpTestData(cls):
+        # Define some simple models dynamically for testing
+        class UserModelTest(Model):  # noqa: DJ008 test model, no __str__ needed
+            user = ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=CASCADE)
+
+            class Meta:
+                app_label = "tests"
+
+        class CreatorModelTest(Model):  # noqa: DJ008 test model, no __str__ needed
+            creator = ForeignKey(settings.AUTH_USER_MODEL, on_delete=CASCADE)
+
+            class Meta:
+                app_label = "tests"
+
+        class NoUserModelTest(Model):  # noqa: DJ008 test model, no __str__ needed
+            name = CharField(max_length=50)
+
+            class Meta:
+                app_label = "tests"
+
+        cls.UserModelTest = UserModelTest
+        cls.CreatorModelTest = CreatorModelTest
+        cls.NoUserModelTest = NoUserModelTest
+
+        # Migrate test models
+        with connection.schema_editor() as schema_editor:
+            schema_editor.create_model(UserModelTest)
+            schema_editor.create_model(CreatorModelTest)
+            schema_editor.create_model(NoUserModelTest)
+
+    def test_field_named_user(self):
+        instance = self.UserModelTest.objects.create(user=self.user)
+        self.assertEqual(lookup.get_user_from_instance(instance), self.user)
+
+    def test_null_user_field(self):
+        instance = self.UserModelTest.objects.create(user=None)
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
+    def test_field_named_creator(self):
+        instance = self.CreatorModelTest.objects.create(creator=self.user)
+        self.assertEqual(lookup.get_user_from_instance(instance), self.user)
+
+    def test_no_user_field(self):
+        instance = self.NoUserModelTest.objects.create(name="no user here")
+        self.assertIsNone(lookup.get_user_from_instance(instance))
 
     def test_get_filterset_for_model(self):
         """

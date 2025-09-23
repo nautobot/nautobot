@@ -2,43 +2,14 @@
 Class-modifying mixins that need to be standalone to avoid circular imports.
 """
 
-from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model, get_user_from_instance
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
-
-
-def get_user_from_instance(instance):
-    """
-    Retrieve the user object from a model instance, regardless of the field name.
-
-    This function inspects the given model instance to find a ForeignKey that points
-    to the current AUTH_USER_MODEL (as defined in Django settings). It does not require
-    the user-related field to have a fixed name (e.g., "user", "creator", "owner").
-
-    Args:
-        instance (models.Model): A Django model instance that may contain a ForeignKey
-            to the configured user model.
-
-    Returns:
-        User instance if a user-related ForeignKey exists and is populated,
-        otherwise None.
-
-    Example:
-        >>> schedule = ScheduledJob.objects.first()
-        >>> user = get_user_from_instance(schedule)
-        >>> print(user.username)
-    """
-    UserModel = settings.AUTH_USER_MODEL
-    for field in instance._meta.get_fields():
-        if isinstance(field, models.ForeignKey) and field.related_model._meta.label == UserModel:
-            return getattr(instance, field.name, None)
-    return None
 
 
 class ApprovableModelMixin(models.Model):
