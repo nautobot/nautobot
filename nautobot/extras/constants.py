@@ -3,7 +3,6 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 
 # Registerable extras features
 EXTRAS_FEATURES = [
-    "approval_workflows",
     "cable_terminations",
     "config_context_owners",
     "custom_fields",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
