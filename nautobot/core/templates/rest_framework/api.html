@@ -39,10 +39,6 @@
         {% block content %}
             {{ block.super }}
         {% endblock %}
-
-        {% if filter_form %}
-          {{ filter_form }}
-        {% endif %}
     </main>
     {% include 'inc/footer.html' %}
     <style>
