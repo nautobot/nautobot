@@ -32,6 +32,22 @@ def render_components(context, components):
 
 
 @register.simple_tag(takes_context=True)
+def render_table_config_forms(context, tabs):
+    if tabs is not None:
+        return format_html_join(
+            "\n",
+            "{}",
+            (
+                [panel.render_table_config_form(context)]
+                for tab in tabs
+                for panel in tab.panels
+                if hasattr(panel, "render_table_config_form")
+            ),
+        )
+    return ""
+
+
+@register.simple_tag(takes_context=True)
 def render_title(context, mode="plain"):
     """
     Render the title passed in the context. Due to backwards compatibility in most of the Generic views,

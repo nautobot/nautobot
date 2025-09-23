@@ -37,6 +37,7 @@ from nautobot.core.templatetags.helpers import (
     render_json,
     render_markdown,
     slugify,
+    table_config_form,
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
@@ -882,6 +883,16 @@ class ObjectsTablePanel(Panel):
                     body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
 
         return body_content_table_add_url
+
+    def render_table_config_form(self, context: Context):
+        if not self.should_render(context):
+            return ""
+        if not self.show_table_config_button:
+            return ""
+        context = self.get_extra_context(context)
+        return render_to_string(
+            "utilities/templatetags/table_config_form.html", table_config_form(context["body_content_table"])
+        )
 
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.

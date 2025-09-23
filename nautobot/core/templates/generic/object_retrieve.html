@@ -117,6 +117,12 @@
     </div>
 {% endblock header %}
 
+{% block drawer %}
+    {% if object_detail_content %}
+        {% render_table_config_forms object_detail_content.tabs %}
+    {% endif %}
+{% endblock drawer %}
+
 {% block content %}
     <div class="tab-content">
       {% if object_detail_content %}
