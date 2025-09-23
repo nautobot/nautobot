@@ -941,9 +941,9 @@ class NautobotGetViewNameTest(TestCase):
 class RenderJinjaViewTest(testing.APITestCase):
     """Test case for the RenderJinjaView API view."""
 
-    def test_render_jinja_template(self):
+    def test_render_jinja_template_with_json_context(self):
         """
-        Test rendering a valid Jinja template.
+        Test rendering a valid Jinja template with JSON context.
         """
         interfaces = ["Ethernet1/1", "Ethernet1/2", "Ethernet1/3"]
 
@@ -987,6 +987,187 @@ class RenderJinjaViewTest(testing.APITestCase):
         )
         self.assertEqual(response.data["rendered_template"], expected_response)
         self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+
+    def test_render_jinja_template_with_object_context(self):
+        """
+        Test rendering a valid Jinja template with object context across different object types.
+        """
+        test_cases = [
+            ("dcim.location", dcim_models.Location.objects.first(), "Location: {{ obj.name }}"),
+            ("dcim.device", dcim_models.Device.objects.first(), "Device: {{ obj.name }}"),
+            ("dcim.interface", dcim_models.Interface.objects.first(), "Interface: {{ obj.name }}"),
+        ]
+        
+        for content_type, obj, template_code in test_cases:
+            with self.subTest(content_type=content_type):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": template_code,
+                        "content_type": content_type,
+                        "object_uuid": str(obj.pk),
+                    },
+                    format="json",
+                    **self.header,
+                )
+                
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertSequenceEqual(
+                    list(response.data.keys()),
+                    ["rendered_template", "rendered_template_lines", "template_code", "context"],
+                )
+                
+                expected_response = f"{content_type.split('.')[1].title()}: {obj.name}"
+                self.assertEqual(response.data["rendered_template"], expected_response)
+                self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+                
+                # Verify context contains expected object data
+                self.assertIn("obj", response.data["context"])
+                self.assertEqual(response.data["context"]["obj"]["name"], obj.name)
+
+    def test_render_jinja_template_object_context_variables(self):
+        """
+        Test that object context includes all expected variables.
+        """
+        # Use existing location from test database
+        location = dcim_models.Location.objects.first()
+        
+        template_code = "\n".join([
+            "Object: {{ obj.name }}",
+            "User: {{ user.username }}",
+            "Debug: {{ debug }}",
+            "Has perms: {{ perms|length > 0 }}",
+        ])
+        
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": template_code,
+                "content_type": "dcim.location",
+                "object_uuid": str(location.pk),
+            },
+            format="json",
+            **self.header,
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify context contains all expected variables
+        context = response.data["context"]
+        self.assertIn("obj", context)
+        self.assertIn("user", context)
+        self.assertIn("debug", context)
+        self.assertIn("perms", context)
+        
+        # Verify context structure
+        self.assertEqual(context["obj"]["name"], location.name)
+        self.assertEqual(context["user"]["username"], self.user.username)
+        self.assertIsInstance(context["debug"], bool)
+        self.assertIsInstance(context["perms"], list)
+
+    def test_render_jinja_template_validation_missing_both(self):
+        """Test validation error when neither context nor object fields provided."""
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {"template_code": "{{ obj.name }}"},  # Only template, no context or object
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Either 'context' or object selection", str(response.data))
+
+    def test_render_jinja_template_validation_both_provided(self):
+        """Test validation error when both context and object fields provided."""
+        location = dcim_models.Location.objects.first()
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "context": {"test": "data"},  # Both context AND object fields
+                "content_type": "dcim.location",
+                "object_uuid": str(location.pk),
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot specify both", str(response.data))
+
+    def test_render_jinja_template_validation_incomplete_object(self):
+        """Test validation when object mode fields are incomplete."""
+        test_cases = [
+            {"content_type": "dcim.location"},  # Missing object_uuid
+            {"object_uuid": str(uuid.uuid4())},  # Missing content_type
+        ]
+        
+        for data in test_cases:
+            with self.subTest(data):
+                data["template_code"] = "{{ obj.name }}"
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    data,
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("Either 'context' or object selection", str(response.data))
+
+    def test_render_jinja_template_invalid_content_type(self):
+        """Test error handling for invalid content types."""
+        test_cases = {
+            "invalid": "not enough values to unpack",  # Not app_label.model format
+            "nonexistent.model": "matching query does not exist",  # App doesn't exist
+            "dcim.nonexistent": "matching query does not exist",  # Model doesn't exist
+        }
+        
+        for content_type, expected_error in test_cases.items():
+            with self.subTest(content_type=content_type):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": "{{ obj.name }}",
+                        "content_type": content_type,
+                        "object_uuid": str(uuid.uuid4()),
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(expected_error, response.data["detail"])
+
+    def test_render_jinja_template_nonexistent_object(self):
+        """Test error handling for non-existent object UUID."""
+        fake_uuid = str(uuid.uuid4())
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "content_type": "dcim.location",
+                "object_uuid": fake_uuid,
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Object not found", response.data["detail"])
+
+    def test_render_jinja_template_wrong_object_type(self):
+        """Test error when valid content_type and UUID but UUID is for different object type."""
+        location = dcim_models.Location.objects.first()
+        
+        # Try to get a Device using a Location's UUID
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "content_type": "dcim.device",  # Looking for Device
+                "object_uuid": str(location.pk),  # But using Location UUID
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Object not found", response.data["detail"])
 
     def test_render_jinja_template_failures(self):
         """

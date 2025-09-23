@@ -338,3 +338,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
             "-85 dBm",
         )
         self.assertEqual(helpers.dbm(None), helpers.placeholder(None))
+
+    def test_content_type_identifier_filter(self):
+        """Test the content_type_identifier template filter."""
+        from nautobot.core.templatetags.helpers import content_type_identifier
+        
+        # Test with valid objects
+        location = models.Location.objects.first()
+        self.assertEqual(content_type_identifier(location), "dcim.location")
+        
+        device = models.Device.objects.first()
+        self.assertEqual(content_type_identifier(device), "dcim.device")
+        
+        interface = models.Interface.objects.first()
+        self.assertEqual(content_type_identifier(interface), "dcim.interface")
+        
+        # Test with None
+        self.assertEqual(content_type_identifier(None), "")
