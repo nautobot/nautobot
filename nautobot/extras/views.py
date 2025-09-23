@@ -2463,7 +2463,7 @@ class NoteUIViewSet(
     def alter_obj(self, obj, request, url_args, url_kwargs):
         obj.user = request.user
         return obj
-    
+
     def form_valid(self, form):
         """
         Called after the form is validated. Overrides to ensure
