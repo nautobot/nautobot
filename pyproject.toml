@@ -211,10 +211,10 @@ mkdocstrings = "~0.30.0"
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
-# Code static analysis
-pylint = "~3.3.8"
 # Django template files indenter
 djhtml = ">=3.0.8,<4.0.0"
+# Code static analysis
+pylint = "~3.3.8"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
