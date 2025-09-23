@@ -44,6 +44,7 @@ from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
+    convert_querydict_to_dict,
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
     normalize_querydict,
@@ -1058,22 +1059,26 @@ class BulkEditView(
             raise RuntimeError("self.queryset, self.form, and self.table must not be None")
         model = self.queryset.model
         pk_list = list(request.POST.getlist("pk"))
-        is_all = bool(self.request.POST.get("_all"))
+        edit_all = bool(self.request.POST.get("_all"))
         saved_view_id = request.GET.get("saved_view", "")
 
-        queryset = get_bulk_queryset_from_view(
-            request.user, model, is_all, request.GET, pk_list, saved_view_id, "change"
-        )
+        self.key_params = {
+            "content_type": ContentType.objects.get_for_model(model),
+            "edit_all": edit_all,
+            "filter_query_params": convert_querydict_to_dict(request.GET),
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
+        queryset = get_bulk_queryset_from_view(user=request.user, action="change", **self.key_params)
 
         if "_apply" in request.POST:
-            form = self.form(model, request.POST, edit_all=is_all)  # pylint: disable=not-callable
+            form = self.form(model, request.POST, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                return self.send_bulk_edit_objects_to_job(
-                    request, form.cleaned_data, pk_list, model, is_all, saved_view_id
-                )
+                return self.send_bulk_edit_objects_to_job(request, form.cleaned_data)
             else:
                 logger.debug("Form validation failed")
 
@@ -1089,12 +1094,12 @@ class BulkEditView(
             elif "device_type" in request.GET:
                 initial_data["device_type"] = request.GET.get("device_type")
 
-            form = self.form(model, initial=initial_data, edit_all=is_all)  # pylint: disable=not-callable
+            form = self.form(model, initial=initial_data, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
         table = None
-        if not is_all:
+        if not edit_all:
             table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
             if not table.rows:
                 messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
@@ -1248,24 +1253,30 @@ class BulkDeleteView(
             raise RuntimeError("self.queryset and self.table must not be None")
         model = self.queryset.model
         pk_list = list(request.POST.getlist("pk"))
-        is_all = bool(request.POST.get("_all"))
+        delete_all = bool(request.POST.get("_all"))
         saved_view_id = request.GET.get("saved_view", "")
 
-        queryset = get_bulk_queryset_from_view(
-            request.user, model, is_all, request.GET, pk_list, saved_view_id, "delete"
-        )
+        self.key_params = {
+            "content_type": ContentType.objects.get_for_model(model),
+            "delete_all": delete_all,
+            "filter_query_params": convert_querydict_to_dict(request.GET),
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
+        queryset = get_bulk_queryset_from_view(user=request.user, action="delete", **self.key_params)
 
         form_cls = self.get_form()
 
         if "_confirm" in request.POST:
             form = form_cls(request.POST)
             # Set pk field requirement here instead of BulkDeleteForm since get_form() may return a different form class
-            if is_all:
+            if delete_all:
                 form.fields["pk"].required = False
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                return self.send_bulk_delete_objects_to_job(request, pk_list, model, is_all, saved_view_id)
+                return self.send_bulk_delete_objects_to_job(request)
             else:
                 logger.debug("Form validation failed")
 
@@ -1279,7 +1290,7 @@ class BulkDeleteView(
 
         # Retrieve objects being deleted
         table = None
-        if not is_all:
+        if not delete_all:
             table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
             if not table.rows:
                 messages.warning(
@@ -1297,7 +1308,7 @@ class BulkDeleteView(
             "table": table,
             "return_url": self.get_return_url(request),
             "total_objs_to_delete": queryset.count(),
-            "delete_all": is_all,
+            "delete_all": delete_all,
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)

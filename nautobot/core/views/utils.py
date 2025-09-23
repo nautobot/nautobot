@@ -529,7 +529,7 @@ def generate_latest_with_cache(registry=REGISTRY):
     return "".join(output).encode("utf-8")
 
 
-def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_list, saved_view_id, action, log=None):
+def get_bulk_queryset_from_view(user, content_type, filter_query_params, pk_list, saved_view_id, action, delete_all=None, edit_all=None, log=None):
     """
     Return a queryset for bulk operations based on the provided parameters.
 
@@ -554,15 +554,17 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         ├── is_all and not saved_view_id: Return queryset filtered by saved_view_filter_params
         └── else: raise RuntimeError
     """
+    model = content_type.model_class()
     if not log:
         log = logger
 
     if action == "delete":
         view_name = "BulkDelete"
+        is_all = delete_all
     elif action == "change":
         view_name = "BulkEdit"
-    else:
-        view_name = "List"
+        is_all = edit_all
+    
 
     # The view_class is determined from model on purpose, as view_class the view as a param, will not work
     # with a job. It is better to be consistent with each with sending the same params that will
@@ -583,13 +585,12 @@ def get_bulk_queryset_from_view(user, model, is_all, filter_query_params, pk_lis
         log.debug(f"No filterset_class found for model {model}, returning all objects")
         return queryset
 
-    if isinstance(filter_query_params, QueryDict):
-        filterset_class = lookup.get_filterset_for_model(model)
-        if filterset_class:
-            filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
-            log.debug(f"Normalized filter_query_params: {filter_query_params}")
-        else:
-            filter_query_params = {}
+    filterset_class = lookup.get_filterset_for_model(model)
+    if filterset_class:
+        filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+        log.debug(f"Normalized filter_query_params: {filter_query_params}")
+    else:
+        filter_query_params = {}
 
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.

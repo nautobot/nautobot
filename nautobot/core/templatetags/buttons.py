@@ -195,7 +195,7 @@ def consolidate_bulk_action_buttons(context):
 
     if render_edit_button:
         query_string = ""
-        if hasattr(context["request"], "GET"):
+        if hasattr(context["request"], "GET") and context["request"].GET:
             query_string = "?" + context["request"].GET.urlencode()
         bulk_action_buttons.append(
             format_html(
@@ -235,7 +235,7 @@ def consolidate_bulk_action_buttons(context):
 
     if render_delete_button:
         query_string = ""
-        if hasattr(context["request"], "GET"):
+        if hasattr(context["request"], "GET") and context["request"].GET:
             query_string = "?" + context["request"].GET.urlencode()
         bulk_action_buttons.append(
             format_html(

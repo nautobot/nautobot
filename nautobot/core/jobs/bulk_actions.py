@@ -43,12 +43,11 @@ class BulkEditObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
+        hidden=True
 
     def _update_objects(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
         base_queryset = model.objects.restrict(self.user, "change")
-        queryset = get_bulk_queryset_from_view(
-            self.user, model, edit_all, filter_query_params, pk_list, saved_view_id, "change", self.logger
-        )
+        queryset = get_bulk_queryset_from_view(user=self.user, action="change", log=self.logger, **self.key_params)
 
         with deferred_change_logging_for_bulk_operation():
             updated_objects_pk = []
@@ -133,10 +132,19 @@ class BulkEditObjects(Job):
         saved_view_id = saved_view.pk if saved_view is not None else None
         if not filter_query_params:
             filter_query_params = {}
-        # self.pk_list = pk_list or []
+
         if not self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to update %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have change permissions on the requested content-type")
+
+        self.key_params = {
+            "content_type": content_type,
+            "edit_all": edit_all,
+            "filter_query_params": filter_query_params,
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
         model = content_type.model_class()
         if model is None:
             self.logger.error(
@@ -189,6 +197,7 @@ class BulkDeleteObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
+        hidden=True
 
     def run(  # pylint: disable=arguments-differ
         self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view=None
@@ -200,6 +209,14 @@ class BulkDeleteObjects(Job):
             self.logger.error('User "%s" does not have permission to delete %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have delete permissions on the requested content-type")
 
+        key_params = {
+            "content_type": content_type,
+            "delete_all": delete_all,
+            "filter_query_params": filter_query_params,
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
         model = content_type.model_class()
         if model is None:
             self.logger.error(
@@ -208,11 +225,8 @@ class BulkDeleteObjects(Job):
                 content_type.model,
             )
             raise RunJobTaskFailed("Model not found")
-        # import here to avoid circular import
 
-        queryset = get_bulk_queryset_from_view(
-            self.user, model, delete_all, filter_query_params, pk_list, saved_view_id, "delete", self.logger
-        )
+        queryset = get_bulk_queryset_from_view(user=self.user, action="delete", log=self.logger, **key_params)
 
         verbose_name_plural = model._meta.verbose_name_plural
 
