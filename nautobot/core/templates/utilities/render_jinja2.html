@@ -104,15 +104,15 @@
             const jsonGroup = document.getElementById("json_context_group");
             const contentTypeGroup = document.getElementById("object_content_type_group");
             const uuidGroup = document.getElementById("object_uuid_group");
-            
+
             if (mode === "object") {
                 jsonGroup.style.display = "none";
                 contentTypeGroup.style.display = "block";
                 uuidGroup.style.display = "block";
-                
+
                 // Clear JSON context and make it not required
                 document.getElementById("id_context").value = "{}";
-                
+
                 // Make object fields required
                 document.getElementById("id_content_type").setAttribute("required", "");
                 document.getElementById("id_object_uuid").setAttribute("required", "");
@@ -120,7 +120,7 @@
                 jsonGroup.style.display = "block";
                 contentTypeGroup.style.display = "none";
                 uuidGroup.style.display = "none";
-                
+
                 // Clear object fields and make them not required
                 document.getElementById("id_content_type").value = "";
                 document.getElementById("id_object_uuid").value = "";
@@ -135,7 +135,7 @@
 
             const mode = document.querySelector("input[name=\"context_mode\"]:checked").value;
             const template_code = document.getElementById("id_template_code").value;
-            
+
             let data = {
                 template_code: template_code
             };
@@ -144,7 +144,7 @@
                 // Object mode - send content_type and object_uuid
                 data.content_type = document.getElementById("id_content_type").value;
                 data.object_uuid = document.getElementById("id_object_uuid").value;
-                
+
                 if (!data.content_type || !data.object_uuid) {
                     alert("Please select an object type and enter a UUID.");
                     return;
@@ -194,10 +194,10 @@
                     toggleContextMode(this.value);
                 });
             });
-            
+
             // Check if form was pre-populated with object mode (from Django form initial data)
             const contextModeSelected = document.querySelector("input[name=\"context_mode\"]:checked");
-            
+
             if (contextModeSelected && contextModeSelected.value === "object") {
                 // Form was pre-populated with object mode - toggle UI to show object fields
                 toggleContextMode("object");

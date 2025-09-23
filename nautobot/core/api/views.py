@@ -1052,7 +1052,6 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
 
         for key, value in context.items():
             if key in ("obj", "user"):
-                logger.debug(f"Serializing {key} with value {value}")
                 serializable_context[key] = serialize_object_v2(value)
             elif key == "perms":
                 # Convert permissions set to list (always works)
