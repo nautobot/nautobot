@@ -30,9 +30,26 @@ ReverseParams = Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]
 
 def context_object_attr(attr_path: str, context_key: str = "object"):
     """
-    Helper function that creates callable to easily fetch the object from context and then some nested object.
+    Helper function that creates callable to fetch the object from context and then nested attributes.
 
-    Useful for composing breadcrumbs, when we need to add `location` in breadcrumbs path.
+    Useful for composing breadcrumbs. For example:
+    ```
+    context = Context({"object": Device.objects.first()})
+    breadcrumbs = Breadcrumbs(items={"detail": [
+        InstanceBreadcrumbItem(instance=context_object_attr("location.location_type")),
+        InstanceBreadcrumbItem(instance=context_object_attr("location")),
+    ]})
+    ```
+    Will render:
+    - url to the device.location.location_type detail page
+    - url to the device.location detail page
+
+    Examples:
+        >>> context_object_attr("location.name")
+        lambda context: context['object'].location.name
+        >>> context_object_attr("location.name", context_key="device")
+        lambda context: context['device'].location.name
+
     """
     return lambda context: attrgetter(attr_path)(context[context_key]) if context.get(context_key) else None
 
@@ -138,7 +155,7 @@ class BaseBreadcrumbItem:
         """
         Construct the (URL, label) pair for the breadcrumb.
 
-        Combines `get_url()` and `get_label()` and applies title casing to the label.
+        Combines `get_url()` and `get_label()` and applies formatting to the label.
 
         Args:
             context (Context): Context object used to resolve the breadcrumb parts.
@@ -148,8 +165,14 @@ class BaseBreadcrumbItem:
             if unresolved, and label is title-cased.
         """
         url = self.get_url(context) or ""
-        label = helpers.bettertitle(self.get_label(context))
+        label = self.format_label(self.get_label(context))
         return url, label
+
+    def format_label(self, label: str) -> str:
+        """
+        Add title-case formatting.
+        """
+        return helpers.bettertitle(label)
 
 
 @dataclass
@@ -321,7 +344,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
     Attributes:
         instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb. Default: "object".
-        instance (Callable[[Context], Optional[Model]): Callable to fetch the instance from context. If
+        instance (Union[Callable[[Context], Optional[Model]], Model, None]): Callable to fetch the instance from context. If
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         label_key (Optional[str]): Optional key to take label from the context.
@@ -334,7 +357,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     """
 
     instance_key: Optional[str] = "object"
-    instance: Optional[Callable[[Context], Optional[Model]]] = None
+    instance: Union[Callable[[Context], Optional[Model]], Model, None] = None
     label: Union[Callable[[Context], str], WithStr, None] = None
 
     def get_url(self, context: Context) -> Optional[str]:
@@ -387,22 +410,11 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
 
         return None
 
-    def as_pair(self, context: Context) -> tuple[str, str]:
+    def format_label(self, label: str) -> str:
         """
-        Construct the (URL, label) pair for the breadcrumb.
-
-        Combines `get_url()` and `get_label()` and applies title casing to the label.
-
-        Args:
-            context (Context): Context object used to resolve the breadcrumb parts.
-
-        Returns:
-            tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
-            if unresolved, and label is title-cased.
+        Remove default title-case formatting, because for instances we want label to be exact representation of instance.
         """
-        url = self.get_url(context) or ""
-        label = self.get_label(context)
-        return url, label
+        return label
 
 
 @dataclass
@@ -475,13 +487,14 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         if self.parent_lookup_key is None:
             return {self.parent_query_param: parent}
 
-        if hasattr(parent, self.parent_lookup_key) and getattr(parent, self.parent_lookup_key):
-            return {self.parent_query_param: getattr(parent, self.parent_lookup_key)}
+        if hasattr(parent, self.parent_lookup_key):
+            if query_param := getattr(parent, self.parent_lookup_key):
+                return {self.parent_query_param: query_param}
         return {}
 
     def get_parent_attr(self, instance: Model) -> Optional[Model]:
-        if hasattr(instance, self.parent_key) and getattr(instance, self.parent_key):
-            return getattr(instance, self.parent_key)
+        if hasattr(instance, self.parent_key):
+            return getattr(instance, self.parent_key) or None
         return None
 
 
@@ -657,3 +670,27 @@ class Breadcrumbs:
             (dict): A dictionary of extra context variables.
         """
         return {}
+
+
+class AncestorsBreadcrumbs(Breadcrumbs):
+    def get_items_for_action(
+        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
+    ) -> list[BaseBreadcrumbItem]:
+        if not detail:
+            super().get_items_for_action(items, action, detail, context)
+
+        return self.get_detail_items(context)
+
+    def get_detail_items(self, context: Context) -> list[BaseBreadcrumbItem]:
+        instance = self.get_instance(context)
+        return [
+            ModelBreadcrumbItem(model=instance),
+            *self.get_ancestors_items(instance),
+            InstanceBreadcrumbItem(instance=instance),
+        ]
+
+    def get_ancestors_items(self, instance: Any) -> list[BaseBreadcrumbItem]:
+        return [InstanceBreadcrumbItem(instance=ancestor) for ancestor in instance.ancestors()]
+
+    def get_instance(self, context: Context) -> Any:
+        return context["object"]

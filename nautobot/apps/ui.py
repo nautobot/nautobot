@@ -3,6 +3,7 @@
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
 from nautobot.core.ui.breadcrumbs import (
+    AncestorsBreadcrumbs,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -51,6 +52,7 @@ from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
+    "AncestorsBreadcrumbs",
     "Banner",
     "BannerClassChoices",
     "BaseBreadcrumbItem",

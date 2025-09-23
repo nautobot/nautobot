@@ -38,6 +38,7 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
+    AncestorsBreadcrumbs,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -75,6 +76,7 @@ from nautobot.core.views.utils import common_detail_view_context, get_obj_from_c
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.ui import RackBreadcrumbs
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
@@ -149,7 +151,6 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from .ui import LocationsBreadcrumbs, RackBreadcrumbs
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +247,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = LocationsBreadcrumbs()
+    breadcrumbs = AncestorsBreadcrumbs()
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -290,7 +291,7 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = LocationsBreadcrumbs()
+    breadcrumbs = AncestorsBreadcrumbs()
 
     def get_extra_context(self, request, instance):
         if instance is None:
