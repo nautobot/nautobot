@@ -36,12 +36,42 @@
                                 <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label" for="id_context">Data</label>
-                            <div class="col-md-9">
-                                <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
-                                <span class="help-block">Enter data in <a href="https://json.org/">JSON</a> format.</span>
-                            </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label">Context Mode</label>
+                        <div class="col-md-9">
+                            <label class="radio-inline">
+                                <input type="radio" name="context_mode" value="json" checked onchange="toggleContextMode('json')"> JSON Data
+                            </label>
+                            <label class="radio-inline">
+                                <input type="radio" name="context_mode" value="object" onchange="toggleContextMode('object')"> Nautobot Object
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="json_context_group">
+                        <label class="col-md-3 control-label" for="id_context">Data</label>
+                        <div class="col-md-9">
+                            <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
+                            <span class="help-block">Enter data in <a href="https://json.org/">JSON</a> format.</span>
+                        </div>
+                    </div>
+                    <div class="form-group" id="object_content_type_group" style="display: none;">
+                        <label class="col-md-3 control-label required" for="id_content_type">Content Type</label>
+                        <div class="col-md-9">
+                            <select class="form-control" id="id_content_type">
+                                <option value="">---------</option>
+                                {% for ct in content_types %}
+                                    <option value="{{ ct.value }}">{{ ct.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="help-block">Choose the type of object to use as template context.</span>
+                        </div>
+                    </div>
+                    <div class="form-group" id="object_uuid_group" style="display: none;">
+                        <label class="col-md-3 control-label required" for="id_object_uuid">Object UUID</label>
+                        <div class="col-md-9">
+                            <input type="text" class="form-control" id="id_object_uuid" placeholder="Enter object UUID">
+                            <span class="help-block">Enter the UUID of the object to use as template context.</span>
                         </div>
                     </div>
                 </div>
@@ -73,35 +103,80 @@
         const sanitize = function(string) {
             return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         };
-        async function handleFormSubmit(event) {
-            event.preventDefault(); // Prevent default form submission
 
-            // Check that the context is valid JSON
-            const context = document.getElementById("id_context");
-            var parsed_context;
-            try {
-                parsed_context = JSON.parse(context.value);
-            } catch (error) {
-                context.setCustomValidity("Invalid JSON");
-                context.reportValidity();
-                context.setCustomValidity("");
-                return error;
+        function toggleContextMode(mode) {
+            const jsonGroup = document.getElementById("json_context_group");
+            const contentTypeGroup = document.getElementById("object_content_type_group");
+            const uuidGroup = document.getElementById("object_uuid_group");
+            
+            if (mode === "object") {
+                jsonGroup.style.display = "none";
+                contentTypeGroup.style.display = "block";
+                uuidGroup.style.display = "block";
+                
+                // Clear JSON context and make it not required
+                document.getElementById("id_context").value = "{}";
+                
+                // Make object fields required
+                document.getElementById("id_content_type").setAttribute("required", "");
+                document.getElementById("id_object_uuid").setAttribute("required", "");
+            } else {
+                jsonGroup.style.display = "block";
+                contentTypeGroup.style.display = "none";
+                uuidGroup.style.display = "none";
+                
+                // Clear object fields and make them not required
+                document.getElementById("id_content_type").value = "";
+                document.getElementById("id_object_uuid").value = "";
+                document.getElementById("id_content_type").removeAttribute("required");
+                document.getElementById("id_object_uuid").removeAttribute("required");
+            }
+        }
+
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const mode = document.querySelector("input[name=\"context_mode\"]:checked").value;
+            const template_code = document.getElementById("id_template_code").value;
+            
+            let data = {
+                template_code: template_code
+            };
+
+            if (mode === "object") {
+                // Object mode - send content_type and object_uuid
+                data.content_type = document.getElementById("id_content_type").value;
+                data.object_uuid = document.getElementById("id_object_uuid").value;
+                
+                if (!data.content_type || !data.object_uuid) {
+                    alert("Please select an object type and enter a UUID.");
+                    return;
+                }
+            } else {
+                // JSON mode - send context
+                const context = document.getElementById("id_context");
+                try {
+                    data.context = JSON.parse(context.value);
+                } catch (error) {
+                    context.setCustomValidity("Invalid JSON");
+                    context.reportValidity();
+                    context.setCustomValidity("");
+                    return;
+                }
             }
 
             try {
                 const rendered_template = document.getElementById("rendered_template");
                 rendered_template.innerHTML = "Loading...";
-                const template_code = document.getElementById("id_template_code").value;
                 const url = "{% url 'core-api:render_jinja_template' %}";
-                const data = {
-                    template_code: template_code,
-                    context: parsed_context
-                }
+
                 const response = await fetch(url, {
                     method: "POST",
                     body: JSON.stringify(data),
                     headers: {"Content-Type": "application/json", "X-CSRFTOKEN": "{{ csrf_token }}"}
                 });
+
                 const responseData = await response.json();
                 if (!response.ok) {
                     const msg = responseData.detail ? responseData.detail : response.statusText;
@@ -113,5 +188,25 @@
                 rendered_template.innerHTML = sanitize(`An error occurred:\n\n${error.message}`);
             }
         }
+
+        // Check for preselected values on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            // Check if object was preselected via URL parameters (from Django context)
+            const preselectedContentType = "{{ preselected_content_type|default:'' }}";
+            const preselectedObjectUuid = "{{ preselected_object_uuid|default:'' }}";
+            
+            if (preselectedContentType && preselectedObjectUuid) {
+                // Switch to object mode
+                document.querySelector("input[name=\"context_mode\"][value=\"object\"]").checked = true;
+                toggleContextMode("object");
+                
+                // Pre-populate fields
+                document.getElementById("id_content_type").value = preselectedContentType;
+                document.getElementById("id_object_uuid").value = preselectedObjectUuid;
+                
+                // Show notification
+                console.log("Object pre-selected from URL");
+            }
+        });
     </script>
 {% endblock javascript %}

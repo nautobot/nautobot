@@ -1926,7 +1926,7 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
         weight=150,
         label="Data Provenance",
         section=SectionChoices.LEFT_HALF,
-        fields=("created", "last_updated", "created_by", "last_updated_by", "api_url"),
+        fields=("created", "last_updated", "created_by", "last_updated_by", "api_url", "jinja_url"),
         ignore_nonexistent_fields=True,
         **kwargs,
     ):
@@ -1947,15 +1947,27 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
         data["last_updated_by"] = context["last_updated_by"]
         with contextlib.suppress(AttributeError):
             data["api_url"] = get_obj_from_context(context, self.context_object_key).get_absolute_url(api=True)
+
+        # Add Jinja Renderer URL
+        with contextlib.suppress(AttributeError):
+            obj = get_obj_from_context(context, self.context_object_key)
+            content_type_identifier = obj._meta.label_lower
+            jinja_base_url = reverse("render_jinja_template")
+            data["jinja_url"] = f"{jinja_base_url}?content_type={content_type_identifier}&object_uuid={obj.pk}"
+
         return data
 
     def render_key(self, key, value, context: Context):
         if key == "api_url":
             return "View in API Browser"
+        elif key == "jinja_url":
+            return "Test with Jinja Renderer"
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context: Context):
         if key == "api_url":
+            return format_html('<a href="{}" target="_blank"><span class="mdi mdi-open-in-new"></span></a>', value)
+        elif key == "jinja_url":
             return format_html('<a href="{}" target="_blank"><span class="mdi mdi-open-in-new"></span></a>', value)
         return super().render_value(key, value, context)
 

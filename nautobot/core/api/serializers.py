@@ -889,6 +889,29 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     """Serializer for RenderJinjaView."""
 
     template_code = serializers.CharField(required=True)
-    context = serializers.DictField(default=dict)
+
+    # JSON context (required for JSON mode, mutually exclusive with object fields)
+    context = serializers.DictField(default=dict, required=False)
+
+    # Object selection fields (both required for object mode, mutually exclusive with context)
+    content_type = serializers.CharField(required=False, allow_blank=True)  # "app_label.model" format
+    object_uuid = serializers.UUIDField(required=False, allow_null=True)
+
+    # Read-only response fields
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
+
+    def validate(self, data):
+        """Ensure either context OR object fields are provided, but not both."""
+        has_context = bool(data.get("context"))
+        has_object = bool(data.get("content_type") and data.get("object_uuid"))
+
+        if not has_context and not has_object:
+            raise ValidationError(
+                "Either 'context' or object selection ('content_type' and 'object_uuid') must be provided."
+            )
+
+        if has_context and has_object:
+            raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
+
+        return data

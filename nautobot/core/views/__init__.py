@@ -48,6 +48,7 @@ from rest_framework.views import APIView
 from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
+from nautobot.core.models import BaseModel
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
@@ -568,3 +569,32 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
+
+    def get_context_data(self, **kwargs):
+        """Add available content types and URL parameters to template context."""
+        context = super().get_context_data(**kwargs)
+
+        # Get all BaseModel content types for the dropdown
+
+        content_types = []
+        for ct in ContentType.objects.all():
+            model_class = ct.model_class()
+            if model_class and issubclass(model_class, BaseModel):
+                content_types.append({"value": model_class._meta.label_lower, "label": ct.app_labeled_name})
+
+        # Sort by label for better UX
+        context["content_types"] = sorted(content_types, key=lambda x: x["label"])
+
+        # Extract URL parameters for object pre-selection
+        content_type = self.request.GET.get("content_type")
+        object_uuid = self.request.GET.get("object_uuid")
+
+        if content_type and object_uuid:
+            context.update(
+                {
+                    "preselected_content_type": content_type,
+                    "preselected_object_uuid": object_uuid,
+                }
+            )
+
+        return context

@@ -85,6 +85,14 @@
                         </tr>
                     {% endif %}
                 {% endwith %}
+                <tr>
+                    <td>Test with Jinja Renderer</td>
+                    <td>
+                        <a href="{% url 'render_jinja_template' %}?content_type={{ object|content_type_identifier }}&object_uuid={{ object.pk }}" target="_blank">
+                            <span class="mdi mdi-open-in-new"></span>
+                        </a>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
