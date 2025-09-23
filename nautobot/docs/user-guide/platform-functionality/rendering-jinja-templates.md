@@ -29,7 +29,7 @@ The default mode allows you to provide custom JSON data as context for your temp
 
 The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc.
 
-When using object mode, your template will have access to the same context variables as [Custom Links](./customlink.md) and [Job Buttons](./jobs/jobbutton.md):
+#### Context Data
 
 | Variable | Description |
 |----------|-------------|
@@ -39,9 +39,41 @@ When using object mode, your template will have access to the same context varia
 | `user`     | The current user (if authenticated) |
 | `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
 
+All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
+
 ### Quick Access from Object Views
 
-You can quickly test templates against any object by navigating to the object's detail page, clicking on the "Advanced" tab, and selecting "Test with Jinja Renderer". This will open the Jinja renderer with the object pre-selected.
+You can quickly test templates against any object by navigating to the object's detail page, clicking on the "Advanced" tab, and selecting "Test with Jinja Renderer":
+![Image of Advanced object info with Jinja2 link](../../img/object_advanced_jinja2_link.png)
+
+
+This will open the Jinja renderer with the object pre-selected:
+
+![Image of Jinja Renderer UI with Content Type and UUID prepopulated](../../img/object_jinja_renderer_form.png)
+
+## Conditional Rendering
+
+Only links which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a link gets rendered.
+
+For example, if you only want to display a link for active devices, you could set the link text to
+
+```jinja2
+{% if obj.status.name == 'Active' %}View NMS{% endif %}
+```
+
+The link will not appear when viewing a device with any status other than "active."
+
+As another example, if you wanted to show only devices belonging to a certain manufacturer, you could do something like this:
+
+```jinja2
+{% if obj.device_type.manufacturer.name == 'Cisco' %}View NMS{% endif %}
+```
+
+The link will only appear when viewing a device with a manufacturer name of "Cisco."
+
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
+    
 
 ## Examples
 
