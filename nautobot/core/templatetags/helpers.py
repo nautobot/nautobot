@@ -1376,14 +1376,6 @@ def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
     return title
 
 
-@register.filter()
-def content_type_identifier(obj):
-    """Return the content type identifier (app_label.model_name) for an object."""
-    if not obj:
-        return ""
-    return obj._meta.label_lower
-
-
 # https://www.djangosnippets.org/snippets/545/
 @register.tag(name="captureas")
 def do_captureas(parser, token):

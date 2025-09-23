@@ -24,54 +24,50 @@
 
 
 {% block content %}
-    <form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
-        <div class="row">
-            <div class="col-lg-6 col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Template</strong></div>
-                    <div class="panel-body">
+<form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
+    <div class="row">
+        <div class="col-lg-6 col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Template</strong></div>
+                <div class="panel-body">
+                    {% render_field form.template_code %}
+                    
+                    <div class="form-group">
+                        <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
+                        <div class="col-md-9">
+                            {% for choice in form.context_mode %}
+                                <label class="radio-inline">
+                                    {{ choice.tag }} {{ choice.choice_label }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div id="json_context_group">
+                        {% render_field form.context %}
+                    </div>
+                    
+                    <div id="object_content_type_group" style="display: none;">
                         <div class="form-group">
-                            <label class="col-md-3 control-label required" for="id_template_code">Jinja Template</label>
+                            <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
                             <div class="col-md-9">
-                                <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
+                                {{ form.content_type }}
+                                {% if form.content_type.help_text %}
+                                    <span class="help-block">{{ form.content_type.help_text }}</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="col-md-3 control-label">Context Mode</label>
-                        <div class="col-md-9">
-                            <label class="radio-inline">
-                                <input type="radio" name="context_mode" value="json" checked onchange="toggleContextMode('json')"> JSON Data
-                            </label>
-                            <label class="radio-inline">
-                                <input type="radio" name="context_mode" value="object" onchange="toggleContextMode('object')"> Nautobot Object
-                            </label>
-                        </div>
-                    </div>
-                    <div class="form-group" id="json_context_group">
-                        <label class="col-md-3 control-label" for="id_context">Data</label>
-                        <div class="col-md-9">
-                            <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
-                            <span class="help-block">Enter data in <a href="https://json.org/">JSON</a> format.</span>
-                        </div>
-                    </div>
-                    <div class="form-group" id="object_content_type_group" style="display: none;">
-                        <label class="col-md-3 control-label required" for="id_content_type">Content Type</label>
-                        <div class="col-md-9">
-                            <select class="form-control" id="id_content_type">
-                                <option value="">---------</option>
-                                {% for ct in content_types %}
-                                    <option value="{{ ct.value }}">{{ ct.label }}</option>
-                                {% endfor %}
-                            </select>
-                            <span class="help-block">Choose the type of object to use as template context.</span>
-                        </div>
-                    </div>
-                    <div class="form-group" id="object_uuid_group" style="display: none;">
-                        <label class="col-md-3 control-label required" for="id_object_uuid">Object UUID</label>
-                        <div class="col-md-9">
-                            <input type="text" class="form-control" id="id_object_uuid" placeholder="Enter object UUID">
-                            <span class="help-block">Enter the UUID of the object to use as template context.</span>
+                    
+                    <div id="object_uuid_group" style="display: none;">
+                        <div class="form-group">
+                            <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
+                            <div class="col-md-9">
+                                {{ form.object_uuid }}
+                                {% if form.object_uuid.help_text %}
+                                    <span class="help-block">{{ form.object_uuid.help_text }}</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -191,20 +187,20 @@
 
         // Check for preselected values on page load
         document.addEventListener("DOMContentLoaded", function() {
-            // Check if object was preselected via URL parameters (from Django context)
-            const preselectedContentType = "{{ preselected_content_type|default:'' }}";
-            const preselectedObjectUuid = "{{ preselected_object_uuid|default:'' }}";
+            // Add event listeners to Django-generated radio buttons
+            const radioButtons = document.querySelectorAll("input[name=\"context_mode\"]");
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener("change", function() {
+                    toggleContextMode(this.value);
+                });
+            });
             
-            if (preselectedContentType && preselectedObjectUuid) {
-                // Switch to object mode
-                document.querySelector("input[name=\"context_mode\"][value=\"object\"]").checked = true;
+            // Check if form was pre-populated with object mode (from Django form initial data)
+            const contextModeSelected = document.querySelector("input[name=\"context_mode\"]:checked");
+            
+            if (contextModeSelected && contextModeSelected.value === "object") {
+                // Form was pre-populated with object mode - toggle UI to show object fields
                 toggleContextMode("object");
-                
-                // Pre-populate fields
-                document.getElementById("id_content_type").value = preselectedContentType;
-                document.getElementById("id_object_uuid").value = preselectedObjectUuid;
-                
-                // Show notification
                 console.log("Object pre-selected from URL");
             }
         });

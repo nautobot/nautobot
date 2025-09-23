@@ -25,7 +25,7 @@ from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
-from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
+from nautobot.core.api.fields import ContentTypeField, LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
@@ -891,20 +891,28 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     template_code = serializers.CharField(required=True)
 
     # JSON context (required for JSON mode, mutually exclusive with object fields)
-    context = serializers.DictField(default=dict, required=False)
+    context = serializers.DictField(required=False)
 
     # Object selection fields (both required for object mode, mutually exclusive with context)
-    content_type = serializers.CharField(required=False, allow_blank=True)  # "app_label.model" format
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        required=False,
+        allow_null=True,
+    )
     object_uuid = serializers.UUIDField(required=False, allow_null=True)
 
     # Read-only response fields
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Ensure either context OR object fields are provided, but not both."""
-        has_context = bool(data.get("context"))
-        has_object = bool(data.get("content_type") and data.get("object_uuid"))
+        has_context = "context" in attrs  # Check presence, not truthiness (allows empty {})
+
+        # Check for meaningful object fields (not just presence)
+        content_type = attrs.get("content_type")
+        object_uuid = attrs.get("object_uuid")
+        has_object = bool(content_type and object_uuid)
 
         if not has_context and not has_object:
             raise ValidationError(
@@ -914,4 +922,4 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         if has_context and has_object:
             raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
 
-        return data
+        return attrs
