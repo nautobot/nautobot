@@ -878,7 +878,7 @@ def djhtml(context, fix=False):
     """Indent Django template files."""
     command = "djhtml nautobot/*/templates --tabwidth 4"
     if not fix:
-        command += ' --check'
+        command += " --check"
     run_command(context, command)
 
 
