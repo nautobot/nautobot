@@ -673,15 +673,47 @@ class Breadcrumbs:
 
 
 class AncestorsBreadcrumbs(Breadcrumbs):
+    """
+    Breadcrumbs class which can render list of ancestors of given instance.
+
+    Default behavior:
+    - render breadcrumb item with link to the list view
+    - dynamically add list of `InstanceBreadcrumbItem` from `ancestors()`
+    - adds standard breadcrumb item with link to the details
+    """
+
     def get_items_for_action(
         self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
     ) -> list[BaseBreadcrumbItem]:
+        """
+        Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
+
+        For detail action it calls `self.get_detail_items()` method. For other actions, it calls parent class method.
+
+        Args:
+            items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
+            action (str): Current action name (e.g., "list", "detail").
+            detail (bool): Whether this is a detail view (for fallback).
+            context (Context): The view or template context.
+
+        Returns:
+            list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
+        """
         if not detail:
             return super().get_items_for_action(items, action, detail, context)
 
         return self.get_detail_items(context)
 
     def get_detail_items(self, context: Context) -> list[BaseBreadcrumbItem]:
+        """
+        Build breadcrumb items for a detail view, including the model, its ancestors, and the instance itself.
+
+        Args:
+            context (Context): Template or view context containing the current object.
+
+        Returns:
+            list[BaseBreadcrumbItem]: Ordered breadcrumb items for the given instance.
+        """
         instance = self.get_instance(context)
         return [
             ModelBreadcrumbItem(model=instance),
@@ -690,7 +722,25 @@ class AncestorsBreadcrumbs(Breadcrumbs):
         ]
 
     def get_ancestors_items(self, instance: Any) -> list[BaseBreadcrumbItem]:
+        """
+        Create breadcrumb items for all ancestor objects of the given instance.
+
+        Args:
+            instance (Any): Object supporting an `.ancestors()` method.
+
+        Returns:
+            list[BaseBreadcrumbItem]: Breadcrumb items for each ancestor of the instance.
+        """
         return [InstanceBreadcrumbItem(instance=ancestor) for ancestor in instance.ancestors()]
 
     def get_instance(self, context: Context) -> Any:
+        """
+        Retrieve the current object instance from the given context. By default "object" from context.
+
+        Args:
+            context (Context): Template or view context containing the object.
+
+        Returns:
+            Any: The object stored under the "object" key in the context.
+        """
         return context["object"]
