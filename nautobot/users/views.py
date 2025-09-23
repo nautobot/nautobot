@@ -143,7 +143,7 @@ def is_django_auth_user(request):
 
 class ProfileView(GenericView):
     template_name = "users/profile.html"
-    titles = Titles(titles={"*": "User Profile"})
+    view_titles = Titles(titles={"*": "User Profile"})
 
     def get(self, request):
         return render(
@@ -160,7 +160,7 @@ class ProfileView(GenericView):
 
 class UserConfigView(GenericView):
     template_name = "users/preferences.html"
-    titles = Titles(titles={"*": "User Preferences"})
+    view_titles = Titles(titles={"*": "User Preferences"})
 
     def get(self, request):
         tzname = request.user.get_config("timezone", get_default_timezone_name())
