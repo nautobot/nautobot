@@ -988,6 +988,21 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.assertEqual(response.data["rendered_template"], expected_response)
         self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
 
+    def test_render_jinja_template_with_empty_context(self):
+        """Test that empty context {} is valid for static templates."""
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "Hello world",  # Static template, no variables
+                "context": {},  # Empty but present
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["rendered_template"], "Hello world")
+        self.assertEqual(response.data["context"], {})
+
     def test_render_jinja_template_with_object_context(self):
         """
         Test rendering a valid Jinja template with object context across different object types.
@@ -997,7 +1012,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             ("dcim.device", dcim_models.Device.objects.first(), "Device: {{ obj.name }}"),
             ("dcim.interface", dcim_models.Interface.objects.first(), "Interface: {{ obj.name }}"),
         ]
-        
+
         for content_type, obj, template_code in test_cases:
             with self.subTest(content_type=content_type):
                 response = self.client.post(
@@ -1010,17 +1025,17 @@ class RenderJinjaViewTest(testing.APITestCase):
                     format="json",
                     **self.header,
                 )
-                
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertSequenceEqual(
                     list(response.data.keys()),
                     ["rendered_template", "rendered_template_lines", "template_code", "context"],
                 )
-                
+
                 expected_response = f"{content_type.split('.')[1].title()}: {obj.name}"
                 self.assertEqual(response.data["rendered_template"], expected_response)
                 self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
-                
+
                 # Verify context contains expected object data
                 self.assertIn("obj", response.data["context"])
                 self.assertEqual(response.data["context"]["obj"]["name"], obj.name)
@@ -1031,14 +1046,16 @@ class RenderJinjaViewTest(testing.APITestCase):
         """
         # Use existing location from test database
         location = dcim_models.Location.objects.first()
-        
-        template_code = "\n".join([
-            "Object: {{ obj.name }}",
-            "User: {{ user.username }}",
-            "Debug: {{ debug }}",
-            "Has perms: {{ perms|length > 0 }}",
-        ])
-        
+
+        template_code = "\n".join(
+            [
+                "Object: {{ obj.name }}",
+                "User: {{ user.username }}",
+                "Debug: {{ debug }}",
+                "Has perms: {{ perms|length > 0 }}",
+            ]
+        )
+
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
             {
@@ -1049,16 +1066,16 @@ class RenderJinjaViewTest(testing.APITestCase):
             format="json",
             **self.header,
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Verify context contains all expected variables
         context = response.data["context"]
         self.assertIn("obj", context)
         self.assertIn("user", context)
         self.assertIn("debug", context)
         self.assertIn("perms", context)
-        
+
         # Verify context structure
         self.assertEqual(context["obj"]["name"], location.name)
         self.assertEqual(context["user"]["username"], self.user.username)
@@ -1099,7 +1116,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             {"content_type": "dcim.location"},  # Missing object_uuid
             {"object_uuid": str(uuid.uuid4())},  # Missing content_type
         ]
-        
+
         for data in test_cases:
             with self.subTest(data):
                 data["template_code"] = "{{ obj.name }}"
@@ -1112,14 +1129,127 @@ class RenderJinjaViewTest(testing.APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertIn("Either 'context' or object selection", str(response.data))
 
+    def test_render_jinja_template_validation_empty_strings(self):
+        """Test that validation properly handles empty strings and whitespace."""
+        # Test cases that should be caught by field validation
+        field_validation_cases = [
+            {
+                "data": {"content_type": "  ", "object_uuid": str(uuid.uuid4())},
+                "expected_error": "Invalid value. Specify a content type",
+                "description": "Whitespace-only content_type",
+            },
+            {
+                "data": {"content_type": "dcim.location", "object_uuid": ""},
+                "expected_error": "Must be a valid UUID",
+                "description": "Empty object_uuid string",
+            },
+            {
+                "data": {"content_type": "dcim.location", "object_uuid": "   "},
+                "expected_error": "Must be a valid UUID",
+                "description": "Whitespace-only object_uuid",
+            },
+        ]
+
+        # Test cases that should be caught by our custom validation
+        custom_validation_cases = [
+            {
+                "data": {"content_type": "", "object_uuid": str(uuid.uuid4())},
+                "description": "Empty content_type string",
+            },
+        ]
+
+        # Test field validation catches format/type issues
+        for case in field_validation_cases:
+            with self.subTest(description=case["description"]):
+                case["data"]["template_code"] = "{{ obj.name }}"
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    case["data"],
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                # Field validation should catch these
+                self.assertIn(case["expected_error"], str(response.data))
+
+        # Test custom validation catches business logic issues
+        for case in custom_validation_cases:
+            with self.subTest(description=case["description"]):
+                case["data"]["template_code"] = "{{ obj.name }}"
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    case["data"],
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                # Our validation should catch these as incomplete
+                self.assertIn("Either 'context' or object selection", str(response.data))
+
+    def test_render_jinja_template_validation_wrong_data_types(self):
+        """Test that validation handles wrong data types appropriately."""
+        # Field validation catches these
+        field_validation_cases = [
+            {
+                "data": {"content_type": 123, "object_uuid": str(uuid.uuid4())},
+                "expected_error": "Invalid value. Specify a content type",
+                "description": "Integer content_type",
+            },
+            {
+                "data": {"content_type": ["dcim.location"], "object_uuid": str(uuid.uuid4())},
+                "expected_error": "Invalid value. Specify a content type",
+                "description": "List content_type",
+            },
+            {
+                "data": {"content_type": "dcim.location", "object_uuid": {}},
+                "expected_error": "Must be a valid UUID",
+                "description": "Dict object_uuid",
+            },
+        ]
+
+        # Object lookup catches these (UUIDField converts integers to UUIDs)
+        object_lookup_cases = [
+            {
+                "data": {"content_type": "dcim.location", "object_uuid": 123},
+                "expected_error": "Object not found",
+                "description": "Integer object_uuid (converted to valid UUID but object doesn't exist)",
+            },
+        ]
+
+        # Test field validation
+        for case in field_validation_cases:
+            with self.subTest(description=case["description"]):
+                case["data"]["template_code"] = "{{ obj.name }}"
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    case["data"],
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(case["expected_error"], str(response.data))
+
+        # Test object lookup validation
+        for case in object_lookup_cases:
+            with self.subTest(description=case["description"]):
+                case["data"]["template_code"] = "{{ obj.name }}"
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    case["data"],
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(case["expected_error"], str(response.data))
+
     def test_render_jinja_template_invalid_content_type(self):
         """Test error handling for invalid content types."""
         test_cases = {
-            "invalid": "not enough values to unpack",  # Not app_label.model format
-            "nonexistent.model": "matching query does not exist",  # App doesn't exist
-            "dcim.nonexistent": "matching query does not exist",  # Model doesn't exist
+            "invalid": "Invalid value. Specify a content type",  # Not app_label.model format
+            "nonexistent.model": "Invalid content type: nonexistent.model",  # App doesn't exist
+            "dcim.nonexistent": "Invalid content type: dcim.nonexistent",  # Model doesn't exist
         }
-        
+
         for content_type, expected_error in test_cases.items():
             with self.subTest(content_type=content_type):
                 response = self.client.post(
@@ -1133,7 +1263,7 @@ class RenderJinjaViewTest(testing.APITestCase):
                     **self.header,
                 )
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertIn(expected_error, response.data["detail"])
+                self.assertIn(expected_error, str(response.data))
 
     def test_render_jinja_template_nonexistent_object(self):
         """Test error handling for non-existent object UUID."""
@@ -1149,12 +1279,12 @@ class RenderJinjaViewTest(testing.APITestCase):
             **self.header,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Object not found", response.data["detail"])
+        self.assertIn("Object not found", str(response.data))
 
     def test_render_jinja_template_wrong_object_type(self):
         """Test error when valid content_type and UUID but UUID is for different object type."""
         location = dcim_models.Location.objects.first()
-        
+
         # Try to get a Device using a Location's UUID
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
@@ -1167,7 +1297,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             **self.header,
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Object not found", response.data["detail"])
+        self.assertIn("Object not found", str(response.data))
 
     def test_render_jinja_template_failures(self):
         """
