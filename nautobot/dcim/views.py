@@ -247,7 +247,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs()
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -291,7 +291,7 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs()
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     def get_extra_context(self, request, instance):
         if instance is None:

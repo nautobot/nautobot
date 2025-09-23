@@ -8,10 +8,12 @@ from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse
 
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.utils import get_absolute_url, render_component_template
 from nautobot.core.utils import lookup
 from nautobot.core.utils.lookup import get_model_for_view_name, get_model_from_name
+from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
 
@@ -545,6 +547,7 @@ class Breadcrumbs:
         self,
         items: BreadcrumbItemsType = None,
         template: str = "components/breadcrumbs.html",
+        detail_item_label: LabelType = None,
     ):
         """
         Initialize the Breadcrumbs configuration.
@@ -552,8 +555,10 @@ class Breadcrumbs:
         Args:
             items (Optional[dict[str, list[BreadcrumbItem]]]): Default breadcrumb items for each action.
             template (str): The template used to render the breadcrumbs.
+            detail_item_label (Union[Callable[[Context], str], WithStr, None]): Custom label for last built-in breadcrumb item with link to the object details.
         """
         self.template = template
+        self.detail_item_label = detail_item_label
 
         # Set the default breadcrumbs
         self.items = {
@@ -566,7 +571,7 @@ class Breadcrumbs:
             self.items = {**self.items, **items}
 
         # Built-in feature: always add the instance details at the end of breadcrumbs path
-        self.items["detail"].append(InstanceBreadcrumbItem())
+        self.items["detail"].append(InstanceBreadcrumbItem(label=detail_item_label))
 
     def get_breadcrumbs_items(self, context: Context) -> list[tuple[str, str]]:
         """
@@ -714,33 +719,21 @@ class AncestorsBreadcrumbs(Breadcrumbs):
         Returns:
             list[BaseBreadcrumbItem]: Ordered breadcrumb items for the given instance.
         """
-        instance = self.get_instance(context)
+        instance = get_obj_from_context(context)
         return [
             ModelBreadcrumbItem(model=instance),
             *self.get_ancestors_items(instance),
-            InstanceBreadcrumbItem(instance=instance),
+            InstanceBreadcrumbItem(instance=instance, label=self.detail_item_label),
         ]
 
-    def get_ancestors_items(self, instance: Any) -> list[BaseBreadcrumbItem]:
+    def get_ancestors_items(self, instance: TreeModel) -> list[BaseBreadcrumbItem]:
         """
         Create breadcrumb items for all ancestor objects of the given instance.
 
         Args:
-            instance (Any): Object supporting an `.ancestors()` method.
+            instance (TreeModel): Object from context.
 
         Returns:
             list[BaseBreadcrumbItem]: Breadcrumb items for each ancestor of the instance.
         """
-        return [InstanceBreadcrumbItem(instance=ancestor) for ancestor in instance.ancestors()]
-
-    def get_instance(self, context: Context) -> Any:
-        """
-        Retrieve the current object instance from the given context. By default "object" from context.
-
-        Args:
-            context (Context): Template or view context containing the object.
-
-        Returns:
-            Any: The object stored under the "object" key in the context.
-        """
-        return context["object"]
+        return [InstanceBreadcrumbItem(instance=ancestor, label=ancestor.name) for ancestor in instance.ancestors()]

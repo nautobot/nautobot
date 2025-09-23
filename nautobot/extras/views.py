@@ -2174,7 +2174,8 @@ class JobResultUIViewSet(
                     should_render=lambda c: c["result"].job_model is None and c["job"] is None,
                 ),
             ]
-        }
+        },
+        detail_item_label=context_object_attr("date_created"),
     )
 
     def get_extra_context(self, request, instance):
