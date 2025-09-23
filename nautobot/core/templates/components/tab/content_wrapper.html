@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {% load buttons %}
 {% load custom_links %}
 {% load job_buttons %}
@@ -21,5 +22,8 @@
             </div>
         </div>
     {% endif %}
+=======
+<div id="{{ tab_id }}" role="tabpanel" class="tab-pane {% if request.GET.tab == tab_id or active_tab == tab_id %}active{% else %}fade{% endif %}">
+>>>>>>> develop
     {{ tab_content }}
 </div>

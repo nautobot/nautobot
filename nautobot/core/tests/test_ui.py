@@ -6,6 +6,7 @@ from django.db.models import Sum
 from django.template import Context
 from django.test import RequestFactory
 
+<<<<<<< HEAD
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
@@ -17,6 +18,23 @@ from nautobot.core.ui.echarts import (
 )
 from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectFieldsPanel, ObjectsTablePanel, Panel
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
+=======
+from nautobot.cloud.models import CloudNetwork, CloudResourceType
+from nautobot.cloud.tables import CloudServiceTable
+from nautobot.core.templatetags.helpers import HTML_NONE
+from nautobot.core.testing import TestCase
+from nautobot.core.ui.object_detail import (
+    BaseTextPanel,
+    DataTablePanel,
+    DistinctViewTab,
+    ObjectDetailContent,
+    ObjectFieldsPanel,
+    ObjectsTablePanel,
+    Panel,
+    SectionChoices,
+)
+from nautobot.dcim.models import DeviceRedundancyGroup
+>>>>>>> develop
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.ipam.models import Prefix
 
@@ -224,6 +242,7 @@ class ObjectsTablePanelTest(TestCase):
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
 
 
+<<<<<<< HEAD
 class EChartsBaseTests(TestCase):
     def setUp(self):
         self.data_normalized = {"x": ["A", "B"], "series": [{"name": "S1", "data": [1, 2]}]}
@@ -417,3 +436,99 @@ class QuerySetToNestedDictTests(TestCase):
             Location.objects.none(), record_key="name", value_keys=["device_count"]
         )
         self.assertEqual(data, {"device_count": {}})
+=======
+class ObjectDetailContentExtraTabsTest(TestCase):
+    """
+    Test suite for verifying the behavior of ObjectDetailContent when rendering default and extra tabs.
+    """
+
+    user_permissions = ["cloud.view_cloudresourcetype", "cloud.view_cloudservice", "cloud.view_cloudnetwork"]
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory()
+        self.request = self.factory.get("/")
+        self.request.user = self.user
+        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata"]
+
+    def test_default_extra_tabs_exist(self):
+        """
+        Test the default set of tabs (main, advanced, contacts, dynamic_groups, object_metadata) is present.
+        """
+        content = ObjectDetailContent(
+            panels=[],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id))
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_extra_tabs_exist(self):
+        """
+        Test that extra tabs (e.g. "services") can be injected via the `extra_tabs` argument.
+        Validating that tab IDs are correctly combined when extra tabs are provided.
+        """
+        content = ObjectDetailContent(
+            panels=[],
+            extra_tabs=[
+                DistinctViewTab(
+                    weight=1000,
+                    tab_id="services",
+                    label="Cloud Services",
+                    url_name="cloud:cloudresourcetype_services",
+                    related_object_attribute="cloud_services",
+                    panels=(
+                        ObjectsTablePanel(
+                            section=SectionChoices.FULL_WIDTH,
+                            weight=100,
+                            table_class=CloudServiceTable,
+                            table_filter="cloud_resource_type",
+                            tab_id="services",
+                        ),
+                    ),
+                ),
+            ],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id) + 1)
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.default_tabs_id.append("services")
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_extra_tab_panel_context(self):
+        """
+        Confirming that extra tab panels produce the correct context,
+        including `url` and `body_content_table` populated with the expected related objects.
+        """
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        cn = CloudNetwork.objects.filter(cloud_resource_type=cloud_resource_type)[0]
+        cloud_services = cn.cloud_services.filter(cloud_resource_type=cloud_resource_type)
+
+        tab = DistinctViewTab(
+            weight=1000,
+            tab_id="services",
+            label="Cloud Services",
+            url_name="cloud:cloudresourcetype_services",
+            related_object_attribute="cloud_services",
+            panels=(
+                ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=100,
+                    table_class=CloudServiceTable,
+                    table_filter="cloud_resource_type",
+                    tab_id="services",
+                ),
+            ),
+        )
+        context = {"request": self.request, "object": cloud_resource_type}
+        extra_context = tab.get_extra_context(context)
+        self.assertIn("url", extra_context)
+        self.assertTrue(extra_context["url"].endswith("/services/"))
+
+        panel = tab.panels[0]
+        panel_context = panel.get_extra_context(context)
+
+        self.assertIn("body_content_table", panel_context)
+        table = panel_context["body_content_table"]
+        self.assertQuerySetEqual(cloud_services, table.data)
+>>>>>>> develop

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {% if not disabled_message %}
     <li class="nav-item" role="presentation">
         <a class="nav-link{% if active_tab == 'status' %} active{% endif %}" href="{% url 'dcim:device_status' pk=object.pk %}">Status</a>
@@ -13,3 +14,6 @@
     <li class="nav-item" role="presentation"><a class="nav-link disabled" href="#" title="{{ disabled_message }}">LLDP Neighbors</a></li>
     <li class="nav-item" role="presentation"><a class="nav-link disabled" href="#" title="{{ disabled_message }}">Configuration</a></li>
 {% endif %}
+=======
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
+>>>>>>> develop

@@ -10,9 +10,11 @@ from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
 from django.template.defaultfilters import date, timesince
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
@@ -146,6 +148,10 @@ class ViewTestCases:
         """
 
         custom_action_required_permissions = {}
+        # TODO: Expand to other relevant view types, e.g. 'list'.
+        allowed_number_of_tree_queries_per_view_type = {
+            "retrieve": 0,
+        }
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
@@ -182,7 +188,8 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            response = self.client.get(instance.get_absolute_url())
+            with CaptureQueriesContext(connection) as capture_queries_context:
+                response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
@@ -210,6 +217,22 @@ class ViewTestCases:
                             self.assertBodyContains(response, escape(str(value)))
                     else:
                         self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
+
+            # Check that no more than the appropriate number of tree CTE queries have been run.
+            captured_tree_cte_queries = [
+                query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+            self.assertEqual(
+                len(captured_tree_cte_queries),
+                self.allowed_number_of_tree_queries_per_view_type["retrieve"],
+                f"The CTE tree was calculated a different number of times ({len(captured_tree_cte_queries)})"
+                f" than allowed ({self.allowed_number_of_tree_queries_per_view_type['retrieve']}). The allowed number"
+                f" can be configured on the viewset with the `allowed_number_of_tree_queries_per_view_type` dictionary."
+                f" Care should be taken to only increase these numbers where necessary - tree queries can become really"
+                f" slow with bigger datasets."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
             return response  # for consumption by child test cases if desired
 

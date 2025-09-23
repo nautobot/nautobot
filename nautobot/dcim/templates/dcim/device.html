@@ -2,6 +2,7 @@
 {% load buttons %}
 {% load custom_links %}
 {% load helpers %}
+<<<<<<< HEAD
 {% load job_buttons %}
 {% load plugins %}
 {% load render_table from django_tables2 %}
@@ -444,3 +445,10 @@
 {% endif %}
 </div>
 {% endblock content %}
+=======
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% versioned_static 'js/connection_toggles.js' %}"></script>
+{% endblock javascript %}
+>>>>>>> develop

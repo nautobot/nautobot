@@ -19,7 +19,44 @@
 {% block breadcrumbs_wrapper %}
     {% captureas default_breadcrumbs %}
         {% with list_url=object|validated_viewname:"list" %}
+<<<<<<< HEAD
             <li class="breadcrumb-item"><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+=======
+        <div class="col-sm-8 col-md-9">
+        {% captureas default_breadcrumbs %}
+            {% if list_url %}
+                <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+            {% endif %}
+            <li>{{ object|hyperlinked_object }}</li>
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
+            {% block breadcrumbs %}
+                {% if list_url %}
+                    <li><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+                <li>{{ object|hyperlinked_object }}</li>
+            {% endblock %}
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+        </div>
+        {% if list_url %}
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url list_url %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search {{ verbose_name_plural }}" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+>>>>>>> develop
         {% endwith %}
     {% endcaptureas %}
 
