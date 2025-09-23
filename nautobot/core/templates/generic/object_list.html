@@ -4,18 +4,29 @@
 {% load perms %}
 {% load plugins %}
 {% load static %}
+{% load ui_framework %}
+
+{% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
 {% block header %}
     <div class="row noprint">
         <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
-            <ol class="breadcrumb">
+        {% captureas default_breadcrumbs %}
+            {% if list_url %}
+                <li><a href="{% url list_url %}">{{ title }}</a></li>
+            {% endif %}
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
             {% block breadcrumbs %}
                 {% if list_url %}
-                <li><a href="{% url list_url %}">{{ title }}</a></li>
+                    <li><a href="{% url list_url %}">{{ title }}</a></li>
                 {% endif %}
                 {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
             {% endblock breadcrumbs %}
-            </ol>
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
         </div>
         {% if search_form %}
         <div class="col-sm-4 col-md-3">
@@ -146,18 +157,7 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}
-    {{ title }}
-        {% if current_saved_view %}
-            —
-            {% if new_changes_not_applied %}
-                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
-            {% else %}
-                {{ current_saved_view.name }}
-            {% endif %}
-        {% endif %}
-    {% endblock %}
-</h1>
+<h1>{% block title %}{% render_title %}{% endblock %}{% saved_view_title %}</h1>
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">

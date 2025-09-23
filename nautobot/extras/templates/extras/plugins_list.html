@@ -1,15 +1,12 @@
 {% extends "base.html" %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
 
 {% block content %}
     <div class="row noprint">
         <div class="col-md-12">
-            <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
-                {% endblock breadcrumbs %}
-            </ol>
+            {% render_breadcrumbs %}
         </div>
     </div>
 
@@ -34,7 +31,7 @@
         <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
     </div>
 
-    <h1>{% block title %}Installed Apps{% endblock %}</h1>
+    <h1>{% block page_heading %}{% render_title %}{% endblock %}</h1>
 
     <div class="row">
         <div class="col-md-12">

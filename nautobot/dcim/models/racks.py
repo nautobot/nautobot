@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
@@ -14,7 +14,7 @@ from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
-from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
+from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
@@ -153,7 +153,7 @@ class Rack(PrimaryModel):
     u_height = models.PositiveSmallIntegerField(
         default=RACK_U_HEIGHT_DEFAULT,
         verbose_name="Height (U)",
-        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        validators=[MinValueValidator(1), MaxValueValidator(RACK_U_HEIGHT_MAXIMUM)],
         help_text="Height in rack units",
     )
     desc_units = models.BooleanField(
@@ -426,6 +426,7 @@ class Rack(PrimaryModel):
         Returns:
             UtilizationData: (numerator, denominator)
         """
+
         powerfeeds = PowerFeed.objects.filter(rack=self)
         available_power_total = sum(pf.available_power for pf in powerfeeds)
         if not available_power_total:
@@ -435,13 +436,15 @@ class Rack(PrimaryModel):
             _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
             _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
         )
-        direct_allocated_draw = pf_powerports.aggregate(Sum("allocated_draw"))["allocated_draw__sum"] or 0
+        direct_allocated_draw = int(
+            pf_powerports.aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"] or 0
+        )
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
-        allocated_draw_total = (
+        allocated_draw_total = int(
             PowerPort.objects.filter(
                 _cable_peer_type=ContentType.objects.get_for_model(PowerOutlet),
                 _cable_peer_id__in=poweroutlets.values_list("id", flat=True),
-            ).aggregate(Sum("allocated_draw"))["allocated_draw__sum"]
+            ).aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"]
             or 0
         )
         allocated_draw_total += direct_allocated_draw

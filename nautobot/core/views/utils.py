@@ -2,12 +2,16 @@ import datetime
 from io import BytesIO
 import urllib.parse
 
+from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
+from prometheus_client import REGISTRY
+from prometheus_client.utils import floatToGoString
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
@@ -19,6 +23,11 @@ from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_fo
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+
+METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
+always_generated_metrics = [
+    "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
+]
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -123,7 +132,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             from nautobot.extras.choices import CustomFieldTypeChoices
             from nautobot.extras.models import CustomField
 
-            cfs = CustomField.objects.get_for_model(serializer_class.Meta.model)
+            cfs = CustomField.objects.get_for_model(serializer_class.Meta.model, get_queryset=False)
             for cf in cfs:
                 cf_form_field = cf.to_form_field(set_initial=False)
                 field_info = {
@@ -134,13 +143,13 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                     "help_text": cf_form_field.help_text,
                 }
                 if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
+                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
-                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
                     field_info["choices"] = {value: value for value in cf.choices}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                    field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
+                    field_info["format"] = mark_safe('<code>"value,value"</code>')
                     field_info["choices"] = {value: value for value in cf.choices}
                 fields.append(field_info)
             continue
@@ -153,29 +162,29 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             "help_text": field.help_text,
         }
         if isinstance(field, serializers.BooleanField):
-            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
+            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
         elif isinstance(field, serializers.DateField):
-            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
+            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
         elif isinstance(field, TimeZoneSerializerField):
-            field_info["format"] = mark_safe(  # noqa: S308
+            field_info["format"] = mark_safe(
                 '<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>'
             )
         elif isinstance(field, serializers.ManyRelatedField):
             if field.field_name == "tags":
-                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')
             elif isinstance(field.child_relation, ContentTypeField):
-                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
             else:
                 field_info["foreign_key"] = field.child_relation.queryset.model._meta.label_lower
-                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')  # noqa: S308
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
-                field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
+                field_info["format"] = mark_safe("<code>app_label.model</code>")
             else:
                 field_info["foreign_key"] = field.queryset.model._meta.label_lower
-                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")  # noqa: S308
+                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
-            field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
+            field_info["format"] = mark_safe('<code>"value,value"</code>')
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
             pass  # Not trivial to specify a format as it could be a JSON dict or a comma-separated string
 
@@ -348,6 +357,7 @@ def common_detail_view_context(request, instance):
     created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
     context["created_by"] = created_by
     context["last_updated_by"] = last_updated_by
+    context["detail"] = True
 
     if getattr(instance, "is_contact_associable_model", False):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
@@ -398,3 +408,111 @@ def get_saved_views_for_user(user, list_url):
         return shared_saved_views | user_owned_saved_views
 
     return shared_saved_views
+
+
+def is_metrics_experimental_caching_enabled():
+    """Return True if METRICS_EXPERIMENTAL_CACHING_DURATION is set to a positive integer."""
+    return settings.METRICS_EXPERIMENTAL_CACHING_DURATION > 0
+
+
+def generate_latest_with_cache(registry=REGISTRY):
+    """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics."""
+
+    def sample_line(line):
+        if line.labels:
+            labelstr = "{{{0}}}".format(
+                ",".join(
+                    [
+                        '{}="{}"'.format(k, v.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\""))
+                        for k, v in sorted(line.labels.items())
+                    ]
+                )
+            )
+        else:
+            labelstr = ""
+        timestamp = ""
+        if line.timestamp is not None:
+            # Convert to milliseconds.
+            timestamp = f" {int(float(line.timestamp) * 1000):d}"
+        return f"{line.name}{labelstr} {floatToGoString(line.value)}{timestamp}\n"
+
+    cached_lines = []
+    output = []
+    # NOTE: In the original prometheus_client code the lines are written to output directly,
+    # here we are going to cache some lines so we need to build each metric's output separately.
+    # So instead of `output.append(line)` we do
+    # `this_metric_output.append(line)` and then `output.extend(this_metric_output)`
+    for metric in registry.collect():
+        this_metric_output = []
+        try:
+            mname = metric.name
+            mtype = metric.type
+            # Munging from OpenMetrics into Prometheus format.
+            if mtype == "counter":
+                mname = mname + "_total"
+            elif mtype == "info":
+                mname = mname + "_info"
+                mtype = "gauge"
+            elif mtype == "stateset":
+                mtype = "gauge"
+            elif mtype == "gaugehistogram":
+                # A gauge histogram is really a gauge,
+                # but this captures the structure better.
+                mtype = "histogram"
+            elif mtype == "unknown":
+                mtype = "untyped"
+
+            this_metric_output.append(
+                "# HELP {} {}\n".format(mname, metric.documentation.replace("\\", r"\\").replace("\n", r"\n"))
+            )
+            this_metric_output.append(f"# TYPE {mname} {mtype}\n")
+
+            om_samples = {}
+            for s in metric.samples:
+                for suffix in ["_created", "_gsum", "_gcount"]:
+                    if s.name == metric.name + suffix:
+                        # OpenMetrics specific sample, put in a gauge at the end.
+                        om_samples.setdefault(suffix, []).append(sample_line(s))
+                        break
+                else:
+                    this_metric_output.append(sample_line(s))
+        except Exception as exception:
+            exception.args = (exception.args or ("",)) + (metric,)
+            raise
+
+        for suffix, lines in sorted(om_samples.items()):
+            this_metric_output.append(
+                "# HELP {}{} {}\n".format(
+                    metric.name, suffix, metric.documentation.replace("\\", r"\\").replace("\n", r"\n")
+                )
+            )
+            this_metric_output.append(f"# TYPE {metric.name}{suffix} gauge\n")
+            this_metric_output.extend(lines)
+
+        # BEGIN Nautobot-specific logic
+        # If the metric name starts with nautobot_, we cache the lines
+        if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
+            cached_lines.extend(this_metric_output)
+        # END Nautobot-specific logic
+
+        # Always add the metric output to the final output
+        output.extend(this_metric_output)
+
+    # BEGIN Nautobot-specific logic
+    # Add in any previously cached metrics.
+    # Note that this is mutually-exclusive with the above block, that is to say,
+    # either cached_lines will be populated OR collector.local_cache will be populated,
+    # never both at the same time.
+    for collector in registry._collector_to_names:
+        # This is to avoid a race condition where between the time to collect the metrics and
+        # the time to generate the output, the cache is expired and we miss some metrics.
+        if hasattr(collector, "local_cache") and collector.local_cache:
+            output.extend(collector.local_cache)
+            del collector.local_cache  # avoid re-using stale data on next call
+
+    # If we have any cached lines, and the cache is empty or expired, update the cache.
+    if cached_lines and not cache.get(METRICS_CACHE_KEY):
+        cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
+    # END Nautobot-specific logic
+
+    return "".join(output).encode("utf-8")

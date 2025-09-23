@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -17,7 +17,6 @@ import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor, OrderBy, OrderByTuple
-from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -80,14 +79,14 @@ class BaseTable(django_tables2.Table):
                 reverse_lookup="static_group_associations__associated_object_id",
             )
 
-        for cf in models.CustomField.objects.get_for_model(model):
+        for cf in models.CustomField.objects.get_for_model(model, get_queryset=False):
             name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.get_for_model(model):
+        for cpf in models.ComputedField.objects.get_for_model(model, get_queryset=False):
             self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.get_for_model_source(model):
+        for relationship in models.Relationship.objects.get_for_model_source(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
@@ -97,7 +96,7 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.get_for_model_destination(model):
+        for relationship in models.Relationship.objects.get_for_model_destination(model, get_queryset=False):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
@@ -106,6 +105,12 @@ class BaseTable(django_tables2.Table):
 
         if order_by is None and saved_view is not None:
             order_by = saved_view.config.get("sort_order", None)
+
+        # Don't show hierarchy if we're sorted
+        if order_by is not None and hide_hierarchy_ui is None:
+            hide_hierarchy_ui = True
+
+        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
@@ -117,12 +122,6 @@ class BaseTable(django_tables2.Table):
                 *self.exclude,
                 *[column.name for column in self.columns if isinstance(column.column, LinkedCountColumn)],
             ]
-
-        # Don't show hierarchy if we're sorted
-        if order_by is not None and hide_hierarchy_ui is None:
-            hide_hierarchy_ui = True
-
-        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
@@ -304,6 +303,10 @@ class BaseTable(django_tables2.Table):
         Arguments:
             value: iterable or comma separated string of order by aliases.
         """
+        # The below block of code is copied from Table.order_by()
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+
         # collapse empty values to ()
         order_by = () if not value else value
         # accept string
@@ -316,22 +319,40 @@ class BaseTable(django_tables2.Table):
                 valid.append(alias)
         self._order_by = OrderByTuple(valid)
 
-        # The above block of code is copied from super().order_by
-        # due to limitations in directly calling parent class methods within a property setter.
-        # See Python bug report: https://bugs.python.org/issue14965
-        model = getattr(self.Meta, "model", None)
-        if model and issubclass(model, TreeNode):
-            # Use the TreeNode model's approach to sorting
-            queryset = self.data.data
-            # If the data passed into the Table is a list (as in cases like BulkImport post),
-            # convert this list to a queryset.
-            # This ensures consistent behavior regardless of the input type.
-            if isinstance(self.data.data, list):
-                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
-            self.data.data = queryset.extra(order_by=self._order_by)
-        else:
-            # Otherwise, use the default sorting method
-            self.data.order_by(self._order_by)
+        # Nautobot-specific logic begins here
+        if self._order_by:
+            self.hide_hierarchy_ui = True
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "without_tree_fields"):
+                self.data.data = self.data.data.without_tree_fields()
+        elif not self.hide_hierarchy_ui:
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "with_tree_fields"):
+                self.data.data = self.data.data.with_tree_fields()
+
+        # Resume base class implementation
+        self.data.order_by(self._order_by)
+
+    def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
+        """Conditionally prefetch the specified database column if the related table field is visible.
+
+        Args:
+            table_field (str): Name of the field on the table to check for visibility. Also used as the prefetch field
+                               if neither db_column nor prefetch is specified.
+            db_column (str): Optionally specify the db column to prefetch. Mutually exclusive with prefetch.
+            prefetch (Prefetch): Optionally specify a prefetch object. Mutually exclusive with db_column.
+        """
+        if db_column and prefetch:
+            raise ValueError(
+                "BaseTable.add_conditional_prefetch called with both db_column and prefetch, this is not allowed."
+            )
+        if not db_column:
+            db_column = table_field
+        if table_field in self.columns and self.columns[table_field].visible and isinstance(self.data.data, QuerySet):
+            if prefetch:
+                self.data = TableData.from_data(self.data.data.prefetch_related(prefetch))
+            else:
+                self.data = TableData.from_data(self.data.data.prefetch_related(db_column))
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
 
 
 #
@@ -353,7 +374,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
 
 
 class BooleanColumn(django_tables2.Column):
