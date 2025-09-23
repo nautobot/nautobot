@@ -883,6 +883,13 @@ def djhtml(context, fix=False):
 
 
 @task
+def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
+    """Lint and check Django template files formatting ."""
+    command = "djlint . --lint"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -1057,6 +1064,7 @@ def lint(context):
     ruff(context)
     pylint(context)
     djhtml(context)
+    djlint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)
