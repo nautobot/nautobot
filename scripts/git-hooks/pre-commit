@@ -41,6 +41,9 @@ invoke ruff || EXIT=1
 echo "Check static analysis via pylint..."
 invoke pylint || EXIT=1
 
+echo "Check Django template file indentations via DjHTML..."
+invoke djhtml || EXIT=1
+
 if [ $EXIT != 0 ]; then
 	printf "${RED}COMMIT FAILED${NOCOLOR}\n"
 fi

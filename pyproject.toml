@@ -221,6 +221,8 @@ pymarkdownlnt = "~0.9.32"
 ruff = "~0.12.12"
 # YAML linting
 yamllint = "~1.37.1"
+# Django template files indenter
+djhtml = ">=3.0.8,<4.0.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420

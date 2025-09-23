@@ -1132,6 +1132,20 @@ files = [
 django = ">=4.2"
 
 [[package]]
+name = "djhtml"
+version = "3.0.9"
+description = "Django/Jinja template indenter"
+optional = false
+python-versions = "*"
+files = [
+    {file = "djhtml-3.0.9-py3-none-any.whl", hash = "sha256:1bcde56d0d469546f391a269d84c71df4054c7df73ad5c51572b38a611156dc4"},
+    {file = "djhtml-3.0.9.tar.gz", hash = "sha256:b21d7e6836b5aa8fb415233eb853ad14fdc26694f19ed17158ba71c97fa23f39"},
+]
+
+[package.extras]
+dev = ["nox", "pre-commit"]
+
+[[package]]
 name = "drf-spectacular"
 version = "0.28.0"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
@@ -4791,4 +4805,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.2,<3.13"
-content-hash = "c0410013d27b0105dcfe51c83b2d502734f80d514a18b69c96592ac3815f6e08"
+content-hash = "6a89f8472429d6b61e9133d61a3097a61526cb250b1c5d592673ed5ab4414c81"
