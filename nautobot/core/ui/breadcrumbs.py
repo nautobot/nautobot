@@ -164,17 +164,11 @@ class BaseBreadcrumbItem:
 
         Returns:
             tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
-            if unresolved, and label is title-cased.
+            if unresolved, and label.
         """
         url = self.get_url(context) or ""
-        label = self.format_label(self.get_label(context))
+        label = self.get_label(context)
         return url, label
-
-    def format_label(self, label: str) -> str:
-        """
-        Add title-case formatting.
-        """
-        return helpers.bettertitle(label)
 
 
 @dataclass
@@ -230,7 +224,7 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
             try:
                 model = get_model_for_view_name(self.get_view_name(context))
                 if model is not None:
-                    return model._meta.verbose_name_plural
+                    return helpers.bettertitle(model._meta.verbose_name_plural)
             except ValueError:
                 # `get_model_for_view_name` is not working properly with some proper paths like "home"
                 # and because by default we're trying to resolve label by using `list_url` this error may occur in some apps
@@ -316,13 +310,16 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
 
         model_obj = self.get_model(context)
         name_attr = "verbose_name" if self.label_type == "singular" else "verbose_name_plural"
+        label = ""
 
         if model_obj is not None:
             if isinstance(model_obj, str):
                 model_cls = get_model_from_name(model_obj)
-                return getattr(model_cls._meta, name_attr)
-            return getattr(model_obj._meta, name_attr)
-        return ""
+                label = getattr(model_cls._meta, name_attr)
+            else:
+                label = getattr(model_obj._meta, name_attr)
+
+        return helpers.bettertitle(label)
 
     def get_model(self, context: Context) -> ModelType:
         if self.model:
@@ -411,12 +408,6 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
             return context.get(self.instance_key)
 
         return None
-
-    def format_label(self, label: str) -> str:
-        """
-        Remove default title-case formatting, because for instances we want label to be exact representation of instance.
-        """
-        return label
 
 
 @dataclass

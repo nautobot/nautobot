@@ -1993,11 +1993,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Device),
-                ModelBreadcrumbItem(
-                    model=Device,
-                    label=lambda c: c["object"].location,
-                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
-                ),
+                InstanceParentBreadcrumbItem(parent_key="location"),
                 InstanceBreadcrumbItem(
                     instance=lambda c: c["object"].parent_bay.device,
                     should_render=lambda c: hasattr(c["object"], "parent_bay"),

@@ -32,7 +32,7 @@ class BreadcrumbItemsTestCase(TestCase):
 
     def test_view_name_item(self):
         """Test breadcrumb view name item."""
-        item = ViewNameBreadcrumbItem(view_name="home", label="home")
+        item = ViewNameBreadcrumbItem(view_name="home", label="Home")
         context = Context({})
 
         url, label = item.as_pair(context)
@@ -152,6 +152,13 @@ class BreadcrumbItemsTestCase(TestCase):
 
                 self.assertEqual(url, test_case["expected_url"])
                 self.assertEqual(label, test_case["expected_label"])
+
+    def test_model_item_not_format_custom_label(self):
+        item = ModelBreadcrumbItem(model_key="object", label="custom LaBeL")
+        context = Context({"object": self.location_type})
+
+        _, label = item.as_pair(context)
+        self.assertEqual(label, "custom LaBeL")
 
     def test_model_item_from_context(self):
         """Test breadcrumb item with model from context."""
