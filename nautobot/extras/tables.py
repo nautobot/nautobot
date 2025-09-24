@@ -44,6 +44,7 @@ from .models import (
     ExternalIntegration,
     GitRepository,
     GraphQLQuery,
+    ImageAttachment,
     Job as JobModel,
     JobButton,
     JobHook,
@@ -135,6 +136,13 @@ GITREPOSITORY_BUTTONS = """
     </button>
 </li>
 """
+
+IMAGEATTACHMENT_NAME = """
+<span class="mdi mdi-file-image"></span>
+<a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+"""
+
+IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
 <li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a>
@@ -1037,6 +1045,18 @@ class GraphQLQueryTable(BaseTable):
             "pk",
             "name",
         )
+
+
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=IMAGEATTACHMENT_NAME, verbose_name="Name")
+    size = tables.TemplateColumn(template_code=IMAGEATTACHMENT_SIZE)
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(ImageAttachment, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
 
 
 def log_object_link(value, record):

@@ -60,7 +60,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
+        {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
     {% endif %}
     {% if interface_table %}
         <div class="panel panel-default">
@@ -76,7 +76,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
+        {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
     {% endif %}
     {% if rack_table %}
         <div class="panel panel-default">
@@ -92,7 +92,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=rack_table.paginator page=rack_table.page %}
+        {% include 'inc/paginator.html' with paginator=rack_table.paginator page=rack_table.page %}
     {% endif %}
     {% if ipaddress_table %}
         <div class="panel panel-default">
@@ -108,7 +108,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=ipaddress_table.paginator page=ipaddress_table.page %}
+        {% include 'inc/paginator.html' with paginator=ipaddress_table.paginator page=ipaddress_table.page %}
     {% endif %}
     {% if prefix_table %}
         <div class="panel panel-default">
@@ -124,7 +124,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=prefix_table.paginator page=prefix_table.page %}
+        {% include 'inc/paginator.html' with paginator=prefix_table.paginator page=prefix_table.page %}
     {% endif %}
     {% if virtual_machine_table %}
         <div class="panel panel-default">
@@ -140,7 +140,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
+        {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
     {% endif %}
     {% if vminterface_table %}
         <div class="panel panel-default">
@@ -156,7 +156,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
+        {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
     {% endif %}
     {% if vlan_table %}
         <div class="panel panel-default">
@@ -172,9 +172,9 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+        {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
     {% endif %}
-     <div class="row"></div>
+    <div class="row"></div>
     {% if controller_table %}
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -189,7 +189,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
+        {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
     {% endif %}
     {% if module_table %}
         <div class="panel panel-default">
@@ -205,7 +205,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
+        {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
     {% endif %}
     {% if vdc_table %}
         <div class="panel panel-default">
@@ -221,6 +221,6 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
+        {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
     {% endif %}
- {% endblock content_full_width_page %}
+{% endblock content_full_width_page %}

@@ -2,15 +2,13 @@
 {% load helpers %}
 {% load static %}
 
-{% block title %}{{ block.super }} - Config Context{% endblock %}
-
 {% block content %}
     <div class="row">
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Rendered Context</strong>
-                    {% include 'extras/inc/json_format.html' %}
+                    {% include 'extras/inc/configcontext_format.html' %}
                 </div>
                 <div class="panel-body">
                     {% include 'extras/inc/json_data.html' with data=rendered_context format=format %}

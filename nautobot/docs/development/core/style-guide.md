@@ -8,6 +8,8 @@ Nautobot generally follows the [Django style guide](https://docs.djangoproject.c
 * [PyMarkdown](https://github.com/jackdewinter/pymarkdown) is used to lint and validate Markdown (documentation) files.
 * [ESLint](https://github.com/eslint/eslint) is used to lint and validate JavaScript files.
 * [Prettier](https://github.com/prettier/prettier) is used to format and validate JavaScript files.
+* [DjHTML](https://github.com/rtts/djhtml) is used to indent Django template files.
+* [djLint](https://github.com/djlint/djlint) is used to lint and check Django template files formatting.
 
 Nautobot-specific configuration of these tools is maintained in the `pyproject.toml` file as appropriate to the individual tool.
 
@@ -28,6 +30,8 @@ invoke ruff
 invoke pylint
 invoke eslint
 invoke prettier
+invoke djhtml
+invoke djlint
 ```
 
 or, as a single command:

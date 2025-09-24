@@ -1,3 +1,17 @@
-<li class="nav-item" role="presentation">
-    <a class="nav-link{% if request.GET.tab == tab_id %} active{% endif %}" href="{{ url }}?tab={{ tab_id }}">{{ label }}</a>
-</li>
+{% comment %}disabled_message is not part of the default render context but a tab can define it if needed.{% endcomment %}
+{% if disabled_message %}
+    <li class="nav-item" role="presentation" title="{{ disabled_message }}">
+        <a class="nav-link disabled" href="#">{{ label }}</a>
+    </li>
+{% else %}
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if active_tab == tab_id or request.GET.tab == tab_id %} active{% endif %}"
+           {% if active_tab == tab_id or request.GET.tab == tab_id %} aria-current="page"{% endif %}
+           href="{{ url }}"
+           aria-controls="{{ tab_id }}"
+           role="tab"
+        >
+            {{ label }}
+        </a>
+    </li>
+{% endif %}

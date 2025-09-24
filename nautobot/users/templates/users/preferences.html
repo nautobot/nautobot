@@ -40,14 +40,14 @@
             {% endif %}
             <div class="col-md-8 offset-md-2">
                 {% if form.non_field_errors %}
-                <div class="card border-danger mb-16">
-                    <div class="card-header bg-danger-subtle border-danger text-body">
-                        <strong>Errors</strong>
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
+                            {{ form.non_field_errors }}
+                        </div>
                     </div>
-                    <div class="card-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
                 {% endif %}
                 <div class="card mb-16">
                     <div class="card-header"><strong>Preference Settings</strong></div>

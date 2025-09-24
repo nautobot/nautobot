@@ -674,13 +674,18 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
     def get_extra_context(self, request, instance=None):
         """
         Return any additional context data for the template.
-        request: The current request
-        instance: The object being viewed
+
+        Args:
+            request (Request): The current request
+            instance (Model, optional): The specific object being viewed, if any
         """
         if instance is not None:
+            default_tab = "main"
+            if hasattr(self, "action") and self.action != "retrieve":
+                default_tab = self.action
             return {
                 "object_detail_content": getattr(self, "object_detail_content", None),
-                "active_tab": request.GET.get("tab", "main"),
+                "active_tab": request.GET.get("tab", default_tab),
             }
         return {}
 

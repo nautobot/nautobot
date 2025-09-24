@@ -4,57 +4,57 @@
 {% load ui_framework %}
 
 {% block extra_styles %}
-<style>
-    .nb-tiles .nb-tile .nb-tile-header {
-        display: block;
-        min-height: 5.125rem;  /* 82px - allow room for two rows of tags. */
-    }
+    <style>
+        .nb-tiles .nb-tile .nb-tile-header {
+            display: block;
+            min-height: 5.125rem;  /* 82px - allow room for two rows of tags. */
+        }
 
-    .nb-tiles .nb-tile .nb-tile-header h2 {
-        margin-bottom: 0.5rem; /* 8px */
-        margin-top: 0;
-    }
+        .nb-tiles .nb-tile .nb-tile-header h2 {
+            margin-bottom: 0.5rem; /* 8px */
+            margin-top: 0;
+        }
 
-    .nb-tiles .nb-tile .nb-tile-actions-placeholder {
-        height: 2rem; /* 32px */
-        margin-left: 0.25rem; /* 4px */
-        width: 2rem; /* 32px */
-    }
+        .nb-tiles .nb-tile .nb-tile-actions-placeholder {
+            height: 2rem; /* 32px */
+            margin-left: 0.25rem; /* 4px */
+            width: 2rem; /* 32px */
+        }
 
-    .nb-tiles .nb-tile .nb-tile-description {
-        margin-top: 0.5rem; /* 8px */
-        min-height: 3.5rem;  /* 56px - allow room for three rows of text. */
-    }
+        .nb-tiles .nb-tile .nb-tile-description {
+            margin-top: 0.5rem; /* 8px */
+            min-height: 3.5rem;  /* 56px - allow room for three rows of text. */
+        }
 
-    .nb-tile-actions {
-        position: absolute;
-        right: 1.0625rem; /* 17px */
-        top: 0.8125rem; /* 13px */
-    }
+        .nb-tile-actions {
+            position: absolute;
+            right: 1.0625rem; /* 17px */
+            top: 0.8125rem; /* 13px */
+        }
 
-    .nb-tile-actions .btn {
-        padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px. */
-    }
+        .nb-tile-actions .btn {
+            padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px. */
+        }
 
-    .nb-app-details {
-        column-gap: 1rem;
-        display: flex;
-        flex-wrap: wrap;
-    }
+        .nb-app-details {
+            column-gap: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+        }
 
-    .nb-app-details dt {
-        margin-top: 1.25rem;
-    }
+        .nb-app-details dt {
+            margin-top: 1.25rem;
+        }
 
-    .nb-app-details ul {
-        list-style: none;
-        padding: 0;
-    }
+        .nb-app-details ul {
+            list-style: none;
+            padding: 0;
+        }
 
-    .nb-app-details > :last-child {
-        flex: 1;
-    }
-</style>
+        .nb-app-details > :last-child {
+            flex: 1;
+        }
+    </style>
 {% endblock %}
 
 {% block document_title %}{% render_title "plain" %}{% endblock %}
@@ -121,9 +121,9 @@
                             {% else %}
                                 <a href="" class="btn btn-info btn-sm disabled" target="_blank" data-bs-title="No docs provided">
                             {% endif %}
-                                <span class="mdi mdi-book-open-page-variant"></span>
-                            </a>
-                        </div>
+                            <span class="mdi mdi-book-open-page-variant"></span>
+                        </a>
+                    </div>
                     </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
@@ -231,60 +231,60 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script>
-    (function () {
-        let previousApp = new URLSearchParams(window.location.search).get("app");
-        function toggleAppModal(app, action) {
-            if (app) {
-                const appModal = app ? document.querySelector(`#modal-${app}`) : null;
-                const isShown = $(appModal).data("bs.modal")?.isShown;
+    {{ block.super }}
+    <script>
+        (function () {
+            let previousApp = new URLSearchParams(window.location.search).get("app");
+            function toggleAppModal(app, action) {
+                if (app) {
+                    const appModal = app ? document.querySelector(`#modal-${app}`) : null;
+                    const isShown = $(appModal).data("bs.modal")?.isShown;
 
-                if (action === "hide" ? isShown : !isShown) {
-                    $(appModal).modal(action);
+                    if (action === "hide" ? isShown : !isShown) {
+                        $(appModal).modal(action);
+                    }
+
+                    previousApp = action === "hide" ? null : app;
                 }
-
-                previousApp = action === "hide" ? null : app;
             }
-        }
 
-        const appTilesContainer = document.querySelector(".nb-tiles");
-        const appModals = appTilesContainer.querySelectorAll(".modal");
-        const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
+            const appTilesContainer = document.querySelector(".nb-tiles");
+            const appModals = appTilesContainer.querySelectorAll(".modal");
+            const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
 
-        for (const appModal of appModals) {
-            $(appModal).on("hide.bs.modal", function () {
+            for (const appModal of appModals) {
+                $(appModal).on("hide.bs.modal", function () {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
+                        searchParams.delete('app');
+                        const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
+                        const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+                        history.pushState(history.state, "", nextURL);
+                    }
+
+                    previousApp = null;
+                });
+            }
+
+            for (const appModalLink of appModalLinks) {
+                appModalLink.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    history.pushState(history.state, "", appModalLink.href);
+
+                    toggleAppModal(previousApp, "hide");
+                    toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
+                });
+            }
+
+            window.addEventListener("popstate", function onPopState() {
                 const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
-                    searchParams.delete('app');
-                    const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
-                    const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
-                    history.pushState(history.state, "", nextURL);
-                }
+                const currentApp = searchParams.get("app");
 
-                previousApp = null;
+                toggleAppModal(previousApp, 'hide');
+                toggleAppModal(currentApp, 'show');
             });
-        }
 
-        for (const appModalLink of appModalLinks) {
-            appModalLink.addEventListener("click", (event) => {
-                event.preventDefault();
-                history.pushState(history.state, "", appModalLink.href);
-
-                toggleAppModal(previousApp, "hide");
-                toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
-            });
-        }
-
-        window.addEventListener("popstate", function onPopState() {
-            const searchParams = new URLSearchParams(window.location.search);
-            const currentApp = searchParams.get("app");
-
-            toggleAppModal(previousApp, 'hide');
-            toggleAppModal(currentApp, 'show');
-        });
-
-        toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
-    })();
-</script>
+            toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
+        })();
+    </script>
 {% endblock javascript %}
