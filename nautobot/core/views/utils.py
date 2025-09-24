@@ -550,7 +550,7 @@ def get_bulk_queryset_from_view(
         Start
         ├── !is_all and pk_list: Return queryset filtered by pk_list
         ├── !is_all and !pk_list: Return empty queryset
-        ├── is_all and !saved_view_id and ~filter_query_params: Return all objects
+        ├── is_all and !saved_view_id and !filter_query_params: Return all objects
         ├── is_all and filter_query_params: Return queryset filtered by filter_query_params
         ├── is_all and saved_view_id: Return queryset filtered by saved_view_filter_params
         ├── is_all and not saved_view_id: Return queryset filtered by saved_view_filter_params

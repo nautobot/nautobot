@@ -251,6 +251,9 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             view="ipam:vrf_list",
             config={"filter_params": {"name": self.vrfs[5].name}},
         )
+        self.saved_view_empty = SavedView.objects.create(
+            name="NO Filter Params", owner=self.user, view="ipam:vrf_list", config={"per_page": 50, "sort_order": []}
+        )
         self.content_type = ContentType.objects.get_for_model(VRF)
 
     def test_not_is_all_and_pk_list(self):
@@ -280,7 +283,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
         self.assertEqual(qs.count(), 0)
 
     def test_is_all_and_no_saved_view_and_no_filter_query_params(self):
-        """is_all and !saved_view_id and ~filter_query_params: Return all objects"""
+        """is_all and !saved_view_id and !filter_query_params: Return all objects"""
         qs = get_bulk_queryset_from_view(
             user=self.user,
             content_type=self.content_type,
@@ -424,3 +427,29 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
                 saved_view_id=None,
                 action="change",  # edit_all is missing
             )
+
+    def test_is_all_and_saved_view__with_no_filter_params(self):
+        """is_all and saved_view_id with no filter_params in saved view: Return all objects"""
+        qs = get_bulk_queryset_from_view(
+            user=self.user,
+            content_type=self.content_type,
+            edit_all=True,
+            filter_query_params={},
+            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
+            saved_view_id=self.saved_view_empty.id,
+            action="change",
+        )
+        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+
+    def test_bad_saved_view(self):
+        """Test with a saved view ID that does not exist: Return no objects"""
+        qs = get_bulk_queryset_from_view(
+            user=self.user,
+            content_type=self.content_type,
+            edit_all=True,
+            filter_query_params={},
+            pk_list=[self.vrfs[2].pk, self.vrfs[4].pk],  # should be ignored but is sent anyway by form
+            saved_view_id="00000000-0000-4000-8000-000000000000",  # valid UUID but does not exist
+            action="change",
+        )
+        self.assertQuerysetEqual(qs, VRF.objects.none(), ordered=False)
