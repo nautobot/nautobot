@@ -1,0 +1,2 @@
+Fixed the `InstanceBreadcrumbsItem` and `InstanceParentBreadcrumbsItem` to not format label with title-casing.
+Fixed the Breadcrumbs Items classes to not format label with title-casing for custom labels.
