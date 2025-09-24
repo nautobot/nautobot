@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 
-<<<<<<< HEAD
 {% block header %}
     <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -25,38 +24,4 @@
 
 {% block content %}
     {% block usercontent %}{% endblock %}
-=======
-{% block content %}
-    <div class="row">
-        <div class="col-sm-12 col-md-10 col-md-offset-1">
-            <h1>{% block title %}{% endblock %}</h1>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-3 col-md-2 col-md-offset-1">
-            <ul class="nav nav-pills nav-stacked">
-                <li{% if active_tab == "profile" %} class="active"{% endif %}>
-                    <a href="{% url 'user:profile' %}">Profile</a>
-                </li>
-                <li{% if active_tab == "preferences" %} class="active"{% endif %}>
-                    <a href="{% url 'user:preferences' %}">Preferences</a>
-                </li>
-                {% if is_django_auth_user %}
-                    <li{% if active_tab == "change_password" %} class="active"{% endif %}>
-                        <a href="{% url 'user:change_password' %}">Change Password</a>
-                    </li>
-                {% endif %}
-                <li{% if active_tab == "api_tokens" %} class="active"{% endif %}>
-                    <a href="{% url 'user:token_list' %}">API Tokens</a>
-                </li>
-                <li{% if active_tab == "advanced_settings" %} class="active"{% endif %}>
-                    <a href="{% url 'user:advanced_settings_edit' %}">Advanced Settings</a>
-                </li>
-            </ul>
-        </div>
-        <div class="col-sm-9 col-md-8">
-            {% block usercontent %}{% endblock %}
-        </div>
-    </div>
->>>>>>> develop
 {% endblock %}

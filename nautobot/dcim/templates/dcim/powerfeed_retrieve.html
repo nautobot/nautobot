@@ -1,17 +1,9 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% block extra_breadcrumbs %}
-<<<<<<< HEAD
-                <li class="breadcrumb-item">{{ object.power_panel.location|hyperlinked_object }}</li>
-                <li class="breadcrumb-item">{{ object.power_panel|hyperlinked_object }}</li>
-                {% if object.rack %}
-                    <li class="breadcrumb-item">{{ object.rack|hyperlinked_object }}</li>
-                {% endif %}
-=======
-    <li>{{ object.power_panel.location|hyperlinked_object }}</li>
-    <li>{{ object.power_panel|hyperlinked_object }}</li>
+    <li class="breadcrumb-item">{{ object.power_panel.location|hyperlinked_object }}</li>
+    <li class="breadcrumb-item">{{ object.power_panel|hyperlinked_object }}</li>
     {% if object.rack %}
-        <li>{{ object.rack|hyperlinked_object }}</li>
+        <li class="breadcrumb-item">{{ object.rack|hyperlinked_object }}</li>
     {% endif %}
->>>>>>> develop
 {% endblock extra_breadcrumbs %}

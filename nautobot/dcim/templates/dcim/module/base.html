@@ -39,116 +39,59 @@
 {% endblock extra_buttons %}
 
 {% block extra_nav_tabs %}
-<<<<<<< HEAD
-        {% if modulebay_count %}
-            <li class="nav-item" role="presentation">
-                <a href="{% url 'dcim:module_modulebays' pk=object.pk %}" class="nav-link{% if active_tab == 'module-bays' %} active{% endif %}">Modules {% badge module_count %}</a>
-            </li>
-        {% endif %}
-        {% with interface_count=object.interfaces.count %}
-            {% if interface_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_interfaces' pk=object.pk %}" class="nav-link{% if active_tab == 'interfaces' %} active{% endif %}">Interfaces {% badge interface_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with frontport_count=object.front_ports.count %}
-            {% if frontport_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_frontports' pk=object.pk %}" class="nav-link{% if active_tab == 'front-ports' %} active{% endif %}">Front Ports {% badge frontport_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with rearport_count=object.rear_ports.count %}
-            {% if rearport_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_rearports' pk=object.pk %}" class="nav-link{% if active_tab == 'rear-ports' %} active{% endif %}">Rear Ports {% badge rearport_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with consoleport_count=object.console_ports.count %}
-            {% if consoleport_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_consoleports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-ports' %} active{% endif %}">Console Ports {% badge consoleport_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with consoleserverport_count=object.console_server_ports.count %}
-            {% if consoleserverport_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_consoleserverports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-server-ports' %} active{% endif %}">Console Server Ports {% badge consoleserverport_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with powerport_count=object.power_ports.count %}
-            {% if powerport_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_powerports' pk=object.pk %}" class="nav-link{% if active_tab == 'power-ports' %} active{% endif %}">Power Ports {% badge powerport_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-        {% with poweroutlet_count=object.power_outlets.count %}
-            {% if poweroutlet_count %}
-                <li class="nav-item" role="presentation">
-                    <a href="{% url 'dcim:module_poweroutlets' pk=object.pk %}" class="nav-link{% if active_tab == 'power-outlets' %} active{% endif %}">Power Outlets {% badge poweroutlet_count %}</a>
-                </li>
-            {% endif %}
-        {% endwith %}
-=======
     {% if modulebay_count %}
-        <li role="presentation" {% if active_tab == 'module-bays' %} class="active"{% endif %}>
-            <a href="{% url 'dcim:module_modulebays' pk=object.pk %}">Modules {% badge module_count %}</a>
+        <li class="nav-item" role="presentation">
+            <a href="{% url 'dcim:module_modulebays' pk=object.pk %}" class="nav-link{% if active_tab == 'module-bays' %} active{% endif %}">Modules {% badge module_count %}</a>
         </li>
     {% endif %}
     {% with interface_count=object.interfaces.count %}
         {% if interface_count %}
-            <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_interfaces' pk=object.pk %}">Interfaces {% badge interface_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_interfaces' pk=object.pk %}" class="nav-link{% if active_tab == 'interfaces' %} active{% endif %}">Interfaces {% badge interface_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with frontport_count=object.front_ports.count %}
         {% if frontport_count %}
-            <li role="presentation" {% if active_tab == 'front-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_frontports' pk=object.pk %}">Front Ports {% badge frontport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_frontports' pk=object.pk %}" class="nav-link{% if active_tab == 'front-ports' %} active{% endif %}">Front Ports {% badge frontport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with rearport_count=object.rear_ports.count %}
         {% if rearport_count %}
-            <li role="presentation" {% if active_tab == 'rear-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_rearports' pk=object.pk %}">Rear Ports {% badge rearport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_rearports' pk=object.pk %}" class="nav-link{% if active_tab == 'rear-ports' %} active{% endif %}">Rear Ports {% badge rearport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with consoleport_count=object.console_ports.count %}
         {% if consoleport_count %}
-            <li role="presentation" {% if active_tab == 'console-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_consoleports' pk=object.pk %}">Console Ports {% badge consoleport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_consoleports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-ports' %} active{% endif %}">Console Ports {% badge consoleport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with consoleserverport_count=object.console_server_ports.count %}
         {% if consoleserverport_count %}
-            <li role="presentation" {% if active_tab == 'console-server-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_consoleserverports' pk=object.pk %}">Console Server Ports {% badge consoleserverport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_consoleserverports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-server-ports' %} active{% endif %}">Console Server Ports {% badge consoleserverport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with powerport_count=object.power_ports.count %}
         {% if powerport_count %}
-            <li role="presentation" {% if active_tab == 'power-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_powerports' pk=object.pk %}">Power Ports {% badge powerport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_powerports' pk=object.pk %}" class="nav-link{% if active_tab == 'power-ports' %} active{% endif %}">Power Ports {% badge powerport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with poweroutlet_count=object.power_outlets.count %}
         {% if poweroutlet_count %}
-            <li role="presentation" {% if active_tab == 'power-outlets' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_poweroutlets' pk=object.pk %}">Power Outlets {% badge poweroutlet_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_poweroutlets' pk=object.pk %}" class="nav-link{% if active_tab == 'power-outlets' %} active{% endif %}">Power Outlets {% badge poweroutlet_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
->>>>>>> develop
 
 {% endblock extra_nav_tabs %}

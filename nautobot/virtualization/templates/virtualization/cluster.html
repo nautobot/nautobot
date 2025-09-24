@@ -6,19 +6,6 @@
         <div class="panel-heading">
             <strong>Cluster</strong>
         </div>
-<<<<<<< HEAD
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Comments</strong>
-            </div>
-            <div class="panel-body nb-rendered-markdown">
-                {% if object.comments %}
-                    {{ object.comments|render_markdown }}
-                {% else %}
-                    <span class="text-muted">None</span>
-                {% endif %}
-            </div>
-=======
         <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Name</td>
@@ -49,9 +36,8 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Comments</strong>
->>>>>>> develop
         </div>
-        <div class="panel-body rendered-markdown">
+        <div class="panel-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
@@ -62,36 +48,9 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-<<<<<<< HEAD
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Host Devices</strong>
-            </div>
-            {% if perms.virtualization.change_cluster %}
-                <form action="{% url 'virtualization:cluster_remove_devices' pk=object.pk %}" method="post">
-                {% csrf_token %}
-            {% endif %}
-            {% include 'responsive_table.html' with table=device_table %}
-            {% if perms.virtualization.change_cluster %}
-                <div class="panel-footer d-print-none">
-                    <div class="pull-right">
-                        <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-xs">
-                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-                            Add devices
-                        </a>
-                    </div>
-                    <button type="submit" name="_remove" class="btn btn-danger primary btn-xs">
-                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                        Remove devices
-                    </button>
-                </div>
-                </form>
-            {% endif %}
-=======
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Host Devices</strong>
->>>>>>> develop
         </div>
         {% if perms.virtualization.change_cluster %}
             <form action="{% url 'virtualization:cluster_remove_devices' pk=object.pk %}" method="post">
@@ -99,7 +58,7 @@
         {% endif %}
         {% include 'responsive_table.html' with table=device_table %}
         {% if perms.virtualization.change_cluster %}
-            <div class="panel-footer noprint">
+            <div class="panel-footer d-print-none">
                 <div class="pull-right">
                     <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>

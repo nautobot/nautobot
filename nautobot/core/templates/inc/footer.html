@@ -2,7 +2,6 @@
 {% load helpers %}
 {% load plugins %}
 
-<<<<<<< HEAD
 <footer id="footer">
     <div class="container-fluid bg-body-secondary border-top text-secondary">
         <div class="row row-cols-1 row-cols-lg-3">
@@ -98,53 +97,6 @@
                     >
                         <i class="mdi mdi-lifebuoy"></i>
                     </a>
-=======
-<style>
-    /* Styles for viewports narrower than 1232px, i.e. bootstrap 'xs' and 'sm' layouts */
-    @media (max-width: 1232px) {
-        .footer-col-1, .footer-col-2, .footer-col-3 {
-            text-align: center !important;
-        }
-    }
-    @media (max-width: 767px) {
-        .footer .footer-links {
-            white-space: normal !important;
-        }
-    }
-
-</style>
-<footer class="footer" id="footer">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-xl-4 col-lg-4 col-md-3 col-sm-12 col-xs-12 text-left footer-col-1 no-wrap">
-                {% if request.user.is_authenticated %}
-                    <p class="text-muted">
-                        {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
-                        {{ settings.HOSTNAME }} {% if request.user.is_authenticated %} (v{{ settings.VERSION }}) {% endif %}
-                    </p>
-                {% endif %}
-            </div>
-            <div class="col-xl-4 col-lg-3 col-md-3 col-sm-12 col-xs-12 text-center footer-col-2">
-                <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
-            </div>
-            <div class="col-xl-4 col-lg-5 col-md-6 col-sm-12 col-xs-12 text-right footer-col-3 noprint">
-                {% if request.user.is_authenticated %}
-                    <p class="text-muted footer-links">
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
-                        {% if settings.BRANDING_URLS.docs %}
-                            <a href="{{ settings.BRANDING_URLS.docs }}" target="_blank">Docs</a>
-                        {% else %}
-                            <a href="{% static 'docs/index.html' %}" target="_blank">Docs</a>
-                        {% endif %}
-                        &middot;
-                        <img src="{% static 'img/jinja_logo.svg' %}" style="height:20px"> <a href="{% url 'render_jinja_template' %}">Jinja Renderer</a> &middot;
-                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
-                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}" target="_blank">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}" target="_blank">Help</a>
-                    </p>
->>>>>>> develop
                 {% endif %}
             </div>
         </div>

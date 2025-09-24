@@ -32,7 +32,6 @@
         </a>
     </div>
 
-<<<<<<< HEAD
     <button
         aria-expanded="true"
         class="btn btn-secondary"
@@ -43,16 +42,6 @@
     >
         Collapse All
     </button>
-=======
-    <button type="button"
-            class="btn btn-default accordion-toggle-all"
-            data-target="#job_accordion"
-            {% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
-{% endblock %}
-
-{% block table_config_button %}
-    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"{% if display == "tiles" %} disabled="disabled"{% endif %}><i class="mdi mdi-cog"></i> Configure</button>
->>>>>>> develop
 {% endblock %}
 
 {% block javascript %}
@@ -66,42 +55,5 @@
                 button.setAttribute('href', `?${queryParams.toString()}`);
             });
         });
-<<<<<<< HEAD
-=======
-        // Toggle v -. >
-        $("#job_accordion .accordion-toggle").click(function() {
-            $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-        });
-        $('.accordion-toggle-all').each(function () {
-            $(this).data("lastState", 0); // assume expanded by default
-        });
-        // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-        $('.accordion-toggle-all').on('click', function () {
-            const $button = $(this);
-            const target = $button.data("target");
-            const isExpanded = $button.data("lastState") === 0;
-
-            if (isExpanded) {
-                // Collapse all
-                $(`${target} .collapse.in`).collapse('hide');
-                $(`${target} .accordion-toggle`).addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-                $button.text("Expand All");
-                $button.data("lastState", 1);
-            } else {
-                // Expand all
-                $(`${target} .collapse:not(.in)`).collapse('show');
-                $(`${target} .accordion-toggle`).addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-                $button.text("Collapse All");
-                $button.data("lastState", 0);
-            }
-        });
-
-        // Set display anchor links without losing other potentially active query params such as applied filters.
-        [...document.querySelectorAll('.set-job_list-display')].forEach(button => {
-            const queryParams = new URLSearchParams(window.location.search);
-            queryParams.set('display', button.dataset.display);
-            button.setAttribute('href', `?${queryParams.toString()}`);
-        });
->>>>>>> develop
     </script>
 {% endblock %}

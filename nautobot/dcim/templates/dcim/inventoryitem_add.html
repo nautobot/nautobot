@@ -5,19 +5,11 @@
 {% block title %}Create {{ component_type }}{% endblock %}
 
 {% block form %}
-<<<<<<< HEAD
     <div class="card mb-16">
         <div class="card-header">
             <strong>{{ component_type|title }}</strong>
         </div>
         <div class="card-body">
-=======
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>{{ component_type|title }}</strong>
-        </div>
-        <div class="panel-body">
->>>>>>> develop
             {% for field in form.hidden_fields %}{{ field }}{% endfor %}
             {% render_field form.device %}
             {% render_field form.parent %}
@@ -28,11 +20,7 @@
             <div class="form-group" id="software_version_image_container" style="display:none">
                 <div class="col-md-3"></div>
                 <div class="col-md-9">
-<<<<<<< HEAD
                     <span class="form-text">
-=======
-                    <span class="help-block">
->>>>>>> develop
                         <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
                         <ul id="software_version_image_list">
                             <li> Software images for the selected software version will appear here </li>
@@ -50,7 +38,6 @@
     {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 {% endblock %}
 {% block buttons %}
-<<<<<<< HEAD
     <button type="submit" name="_create" class="btn btn-primary">
         <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
         -->Create
@@ -63,11 +50,6 @@
         <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
         -->Cancel
     </a>
-=======
-    <button type="submit" name="_create" class="btn btn-primary">Create</button>
-    <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
->>>>>>> develop
 {% endblock %}
 
 {% block javascript %}

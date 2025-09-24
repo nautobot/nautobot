@@ -291,12 +291,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-=======
       - "djhtml"
       - "djlint"
->>>>>>> develop
   tests-mysql-plus-coverage:
     name: "Unit tests (MySQL and Python 3.13) plus test coverage reporting"
     runs-on: "ubuntu-24.04"
@@ -363,8 +360,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
+      - "djhtml"
+      - "djlint"
   # tests-doltsql:
   #   name: "Unit tests (DoltSQL and Python 3.13)"
   #   runs-on: "ubuntu-24.04"
@@ -409,10 +407,8 @@ jobs:
   #     - "ruff"
   #     - "yamllint"
   #     - "ui-code-check"
-=======
-      - "djhtml"
-      - "djlint"
->>>>>>> develop
+  #     - "djhtml"
+  #     - "djlint"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
@@ -454,12 +450,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-=======
       - "djhtml"
       - "djlint"
->>>>>>> develop
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
@@ -498,12 +491,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-=======
       - "djhtml"
       - "djlint"
->>>>>>> develop
   integration-test:
     runs-on: "ubuntu-24.04"
     env:
@@ -548,12 +538,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-=======
       - "djhtml"
       - "djlint"
->>>>>>> develop
   changelog:
     if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
     runs-on: "ubuntu-24.04"
@@ -582,12 +569,9 @@ jobs:
       - "markdownlint"
       - "ruff"
       - "yamllint"
-<<<<<<< HEAD
       - "ui-code-check"
-=======
       - "djhtml"
       - "djlint"
->>>>>>> develop
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"

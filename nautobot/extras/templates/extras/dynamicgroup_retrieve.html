@@ -2,19 +2,11 @@
 {% load helpers %}
 
 {% block extra_nav_tabs %}
-<<<<<<< HEAD
-        <li class="nav-item" role="presentation">
-            <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'members' %} active{% endif %}">
-                Members {% badge object.count %}
-            </a>
-        </li>
-=======
-    <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'members' %} active{% endif %}">
             Members {% badge object.count %}
         </a>
     </li>
->>>>>>> develop
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}

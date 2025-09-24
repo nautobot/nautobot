@@ -1119,13 +1119,10 @@ def lint(context):
     yamllint(context)
     ruff(context)
     pylint(context)
-<<<<<<< HEAD
     eslint(context)
     prettier(context)
-=======
     djhtml(context)
     djlint(context)
->>>>>>> develop
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

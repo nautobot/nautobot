@@ -2,15 +2,9 @@
 
 <strong>{{ body_content_table_verbose_name_plural|bettertitle }}</strong>
 {% if body_content_table_list_url %}
-<<<<<<< HEAD
     <a href="{{ body_content_table_list_url }}" class="badge bg-primary">{% if badge_count_override %}{{ badge_count_override }}{% else %}{{ body_content_table.rows|length }}{% endif %}</a>
-{%  elif body_content_table or badge_count_override %}
-    <span class="badge bg-primary">
-=======
-    <a href="{{ body_content_table_list_url }}" class="badge badge-primary">{% if badge_count_override %}{{ badge_count_override }}{% else %}{{ body_content_table.rows|length }}{% endif %}</a>
 {% elif body_content_table or badge_count_override %}
-    <span class="badge badge-primary">
->>>>>>> develop
+    <span class="badge bg-primary">
         {% if badge_count_override %}
             {{ badge_count_override }}
         {% else %}

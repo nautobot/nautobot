@@ -4,111 +4,57 @@
 {% load ui_framework %}
 
 {% block extra_styles %}
-<<<<<<< HEAD
-<style>
-    .nb-tiles .nb-tile .nb-tile-header {
-        display: block;
-        min-height: 5.125rem;  /* 82px - allow room for two rows of tags. */
-    }
-
-    .nb-tiles .nb-tile .nb-tile-header h2 {
-        margin-bottom: 0.5rem; /* 8px */
-        margin-top: 0;
-    }
-
-    .nb-tiles .nb-tile .nb-tile-actions-placeholder {
-        height: 2rem; /* 32px */
-        margin-left: 0.25rem; /* 4px */
-        width: 2rem; /* 32px */
-    }
-
-    .nb-tiles .nb-tile .nb-tile-description {
-        margin-top: 0.5rem; /* 8px */
-        min-height: 3.5rem;  /* 56px - allow room for three rows of text. */
-    }
-
-    .nb-tile-actions {
-        position: absolute;
-        right: 1.0625rem; /* 17px */
-        top: 0.8125rem; /* 13px */
-    }
-
-    .nb-tile-actions .btn {
-        padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px. */
-    }
-
-    .nb-app-details {
-        column-gap: 1rem;
-        display: flex;
-        flex-wrap: wrap;
-    }
-
-    .nb-app-details dt {
-        margin-top: 1.25rem;
-    }
-
-    .nb-app-details ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .nb-app-details > :last-child {
-        flex: 1;
-    }
-</style>
-=======
     <style>
-        .tile-header {
+        .nb-tiles .nb-tile .nb-tile-header {
             display: block;
-            min-height: 85px;  /* allow room for two rows of tags */
+            min-height: 5.125rem;  /* 82px - allow room for two rows of tags. */
         }
 
-        .tile-header h2 {
-            margin-bottom: 5px;
+        .nb-tiles .nb-tile .nb-tile-header h2 {
+            margin-bottom: 0.5rem; /* 8px */
             margin-top: 0;
         }
 
-        .tile-actions-placeholder {
-            height: 30px;
-            margin-left: 3px;
-            width: 35px;
+        .nb-tiles .nb-tile .nb-tile-actions-placeholder {
+            height: 2rem; /* 32px */
+            margin-left: 0.25rem; /* 4px */
+            width: 2rem; /* 32px */
         }
 
-        .tile-description {
-            margin-top: 10px;
-            min-height: 72px;  /* allow room for three rows of text */
+        .nb-tiles .nb-tile .nb-tile-description {
+            margin-top: 0.5rem; /* 8px */
+            min-height: 3.5rem;  /* 56px - allow room for three rows of text. */
         }
 
-        .tile-actions {
+        .nb-tile-actions {
             position: absolute;
-            right: 21px;
-            top: 21px;
+            right: 1.0625rem; /* 17px */
+            top: 0.8125rem; /* 13px */
         }
 
-        .tile-actions .btn {
-            padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
+        .nb-tile-actions .btn {
+            padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px. */
         }
 
-        .app-details {
-            column-gap: 20px;
+        .nb-app-details {
+            column-gap: 1rem;
             display: flex;
             flex-wrap: wrap;
         }
 
-        .app-details dt {
-            margin-top: 20px;
+        .nb-app-details dt {
+            margin-top: 1.25rem;
         }
 
-        .app-details ul {
+        .nb-app-details ul {
             list-style: none;
             padding: 0;
         }
 
-        .app-details > :last-child {
+        .nb-app-details > :last-child {
             flex: 1;
         }
     </style>
->>>>>>> develop
 {% endblock %}
 
 {% block document_title %}{% render_title "plain" %}{% endblock %}
@@ -175,15 +121,9 @@
                             {% else %}
                                 <a href="" class="btn btn-info btn-sm disabled" target="_blank" data-bs-title="No docs provided">
                             {% endif %}
-<<<<<<< HEAD
-                                <span class="mdi mdi-book-open-page-variant"></span>
-                            </a>
-                        </div>
-=======
-                            <i class="mdi mdi-book-open-page-variant"></i>
+                            <span class="mdi mdi-book-open-page-variant"></span>
                         </a>
                     </div>
->>>>>>> develop
                     </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
@@ -308,15 +248,9 @@
                 }
             }
 
-<<<<<<< HEAD
-        const appTilesContainer = document.querySelector(".nb-tiles");
-        const appModals = appTilesContainer.querySelectorAll(".modal");
-        const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
-=======
-            const appTilesContainer = document.querySelector(".tiles");
+            const appTilesContainer = document.querySelector(".nb-tiles");
             const appModals = appTilesContainer.querySelectorAll(".modal");
             const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
->>>>>>> develop
 
             for (const appModal of appModals) {
                 $(appModal).on("hide.bs.modal", function () {

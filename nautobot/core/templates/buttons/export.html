@@ -38,13 +38,8 @@
                         <input type="hidden" name="export_template" value="{{ et.pk }}">
                         <input type="hidden" name="query_string" value="{{ query_string }}">
                         <input type="hidden" name="_schedule_type" value="immediately">
-<<<<<<< HEAD
                         <button class="dropdown-item" type="submit"
-                            {% if et.description %}title="{{ et.description }}"{% endif %}
-=======
-                        <button type="submit"
                                 {% if et.description %}title="{{ et.description }}"{% endif %}
->>>>>>> develop
                         ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>
                 </li>
@@ -97,13 +92,8 @@
                                     <input type="hidden" name="export_template" value="{{ et.pk }}">
                                     <input type="hidden" name="query_string" value="{{ query_string }}">
                                     <input type="hidden" name="_schedule_type" value="immediately">
-<<<<<<< HEAD
                                     <button type="submit" class="dropdown-item"
-                                        {% if et.description %}title="{{ et.description }}"{% endif %}
-=======
-                                    <button type="submit" class="btn btn-link"
                                             {% if et.description %}title="{{ et.description }}"{% endif %}
->>>>>>> develop
                                     >{{ et.name }}</button>
                                 </form>
                             </li>

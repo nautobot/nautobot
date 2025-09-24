@@ -40,16 +40,10 @@
 {% endif %}
 
 {% block object-tools %}
-<<<<<<< HEAD
-{% block search %}{% search_form cl %}{% endblock %}
-<div id="content-navbar-collapse" class="navbar-collapse collapse">
-    {% block object-tools-items %}
-        {% if has_add_permission %}
-=======
+    {% block search %}{% search_form cl %}{% endblock %}
     <div id="content-navbar-collapse" class="navbar-collapse collapse">
         {% block object-tools-items %}
             {% if has_add_permission %}
->>>>>>> develop
                 {% url cl.opts|admin_urlname:'add' as add_url %}
                 <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
                     <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add{% endblocktrans %}

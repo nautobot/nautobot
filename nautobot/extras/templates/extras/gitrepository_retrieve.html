@@ -21,15 +21,9 @@
 {% endblock extra_buttons %}
 
 {% block extra_nav_tabs %}
-<<<<<<< HEAD
-        <li class="nav-item" role="presentation">
-            <a href="{% url 'extras:gitrepository_result' pk=object.pk %}" class="nav-link{% if active_tab == 'result' %} active{% endif %}">Synchronization Status</a>
-        </li>
-=======
-    <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
-        <a href="{% url 'extras:gitrepository_result' pk=object.pk %}">Synchronization Status</a>
+    <li class="nav-item" role="presentation">
+        <a href="{% url 'extras:gitrepository_result' pk=object.pk %}" class="nav-link{% if active_tab == 'result' %} active{% endif %}">Synchronization Status</a>
     </li>
->>>>>>> develop
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}

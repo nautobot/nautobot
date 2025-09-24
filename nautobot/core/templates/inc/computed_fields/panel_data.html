@@ -15,39 +15,24 @@
         </div>
         <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in computed_fields.items %}
-<<<<<<< HEAD
-            {% with forloop.counter0 as count %}
-                {% if grouping != "" %}
-                    <tr>
-                        <td class="position-relative" colspan="2">
-                            <button
-                                aria-expanded="true"
-                                class="btn float-none fs-4 fw-medium stretched-link nb-collapse-toggle"
-                                data-bs-target=".collapseme-computed-{{ count }}"
-                                data-bs-toggle="collapse"
-                                name="grouping.{{ grouping }}"
-                                type="button"
-                            >
-                                <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
-                                -->{{ grouping }}
-                            </button>
-                        </td>
-                    </tr>
-                {% endif %}
-=======
                 {% with forloop.counter0 as count %}
                     {% if grouping != "" %}
                         <tr>
-                            <td colspan="2"><strong>
-                                <button type="button" class="accordion-toggle mdi mdi-chevron-down"
-                                        name="grouping.{{ grouping }}" data-toggle="collapse"
-                                        data-target=".collapseme-computed-{{ count }}">
-                                    {{ grouping }}
-                                </button></strong>
+                            <td class="position-relative" colspan="2">
+                                <button
+                                    aria-expanded="true"
+                                    class="btn float-none fs-4 fw-medium stretched-link nb-collapse-toggle"
+                                    data-bs-target=".collapseme-computed-{{ count }}"
+                                    data-bs-toggle="collapse"
+                                    name="grouping.{{ grouping }}"
+                                    type="button"
+                                >
+                                    <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->{{ grouping }}
+                                </button>
                             </td>
                         </tr>
                     {% endif %}
->>>>>>> develop
                     {% for field, value in fields %}
                         <tr class="collapseme-computed-{{ count }} collapse show nb-transition-none">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>

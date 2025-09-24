@@ -2,72 +2,38 @@
 {% load static %}
 
 {% block extra_styles %}
-<<<<<<< HEAD
-<style>
-    .nb-tiles .nb-tile .nb-tile-header {
-        display: block;
-    }
-
-    .nb-tiles .nb-tile .nb-tile-header h2 {
-        margin-bottom: 0.5rem; /* 8px */
-        margin-top: 0;
-    }
-
-    .nb-tiles .nb-tile .nb-tile-actions-placeholder {
-        height: 2rem; /* 32px */
-        margin-left: 0.25rem; /* 4px */
-    }
-
-    .nb-tiles .nb-tile .nb-tile-description {
-        margin-top: 0.5rem; /* 8px */
-        min-height: 3.5rem;  /* 56px - allow room for three rows of text */
-    }
-
-    .nb-tile-actions {
-        display: flex;
-        gap: 0.25rem; /* 4px */
-        position: absolute;
-        right: 1.0625rem; /* 17px */
-        top: 0.8125rem; /* 13px */
-    }
-
-    .nb-tile-actions .btn {
-        padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px */
-    }
-</style>
-=======
     <style>
-        .tile-header {
-            align-items: flex-start;
+        .nb-tiles .nb-tile .nb-tile-header {
             display: block;
         }
 
-        .tile-header h2 {
-            margin-bottom: 5px;
+        .nb-tiles .nb-tile .nb-tile-header h2 {
+            margin-bottom: 0.5rem; /* 8px */
             margin-top: 0;
         }
 
-        .tile-actions-placeholder {
-            height: 30px;
-            margin-left: 3px;
+        .nb-tiles .nb-tile .nb-tile-actions-placeholder {
+            height: 2rem; /* 32px */
+            margin-left: 0.25rem; /* 4px */
         }
 
-        .tile-description {
-            margin-top: 10px;
-            min-height: 72px;  /* allow room for three rows of text */
+        .nb-tiles .nb-tile .nb-tile-description {
+            margin-top: 0.5rem; /* 8px */
+            min-height: 3.5rem;  /* 56px - allow room for three rows of text */
         }
 
-        .tile-actions {
+        .nb-tile-actions {
+            display: flex;
+            gap: 0.25rem; /* 4px */
             position: absolute;
-            right: 21px;
-            top: 21px;
+            right: 1.0625rem; /* 17px */
+            top: 0.8125rem; /* 13px */
         }
 
-        .tile-actions .btn {
-            padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
+        .nb-tile-actions .btn {
+            padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px */
         }
     </style>
->>>>>>> develop
 {% endblock %}
 
 <section class="nb-tiles">

@@ -17,15 +17,9 @@
         </div>
     {% endif %}
     <div class="panel-body">
-<<<<<<< HEAD
-    {% if fieldset.description %}
-        <div class="nb-description">{{ fieldset.description|safe }}</div>
-    {% endif %}
-=======
         {% if fieldset.description %}
-            <div class="description">{{ fieldset.description|safe }}</div>
+            <div class="nb-description">{{ fieldset.description|safe }}</div>
         {% endif %}
->>>>>>> develop
         {% for line in fieldset %}
             <div class="row">
                 <div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">

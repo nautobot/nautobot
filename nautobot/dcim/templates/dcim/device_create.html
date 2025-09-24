@@ -130,16 +130,6 @@
         const software_version_image_list = document.querySelector('ul#software_version_image_list');
         const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
 
-<<<<<<< HEAD
-    function retrieve_software_images(software_version_id, device_type_id) {
-        $.when(
-            $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'device_types': device_type_id}}),
-            $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'default_image': 'true'}})
-        ).then(
-            (device_type_images, default_image) => {
-                if (default_image[0].count == 0 && device_type_images[0].count == 0) {
-                    software_version_image_description.innerHTML = `
-=======
         function retrieve_software_images(software_version_id, device_type_id) {
             $.when(
                 $.ajax({url: software_image_url, method: "GET", data: {'software_version': software_version_id, 'device_types': device_type_id}}),
@@ -147,94 +137,91 @@
             ).then(
                 (device_type_images, default_image) => {
                     if (default_image[0].count == 0 && device_type_images[0].count == 0) {
-                        (device_type_images, default_image) => {
-                            if (default_image[0].count == 0 && device_type_images[0].count == 0) {
-                                software_version_image_description.innerHTML = `
->>>>>>> develop
-                        No software images found for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>
-                    `;
+                        software_version_image_description.innerHTML = `
+                            No software images found for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>
+                        `;
 
-                            } else if (device_type_images[0].count == 0) {
-                                software_version_image_description.innerHTML = `
-                        Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides no software images
-                        for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>. The default image is:
-                    `;
+                    } else if (device_type_images[0].count == 0) {
+                        software_version_image_description.innerHTML = `
+                Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides no software images
+                for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>. The default image is:
+            `;
 
-                                let li = document.createElement('li');
-                                let a = document.createElement('a');
-                                let linkText = document.createTextNode(default_image[0].results[0].image_file_name);
-                                a.title = default_image[0].results[0].image_file_name;
-                                a.href = default_image[0].results[0].url.replace('api/', '');
-                                li.appendChild(a);
-                                a.appendChild(linkText);
-                                software_version_image_list.appendChild(li);
+                        let li = document.createElement('li');
+                        let a = document.createElement('a');
+                        let linkText = document.createTextNode(default_image[0].results[0].image_file_name);
+                        a.title = default_image[0].results[0].image_file_name;
+                        a.href = default_image[0].results[0].url.replace('api/', '');
+                        li.appendChild(a);
+                        a.appendChild(linkText);
+                        software_version_image_list.appendChild(li);
 
-                            } else {
-                                software_version_image_description.innerHTML = `
-                        Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
-                        for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>:
-                    `;
-
-                                for (result of device_type_images[0].results) {
-                                    let li = document.createElement('li');
-                                    let a = document.createElement('a');
-                                    let linkText = document.createTextNode(result.image_file_name);
-                                    a.title = result.image_file_name;
-                                    a.href = result.url.replace('api/', '');
-                                    li.appendChild(a);
-                                    a.appendChild(linkText);
-                                    software_version_image_list.appendChild(li);
-                                }
-                            }
-                        },
-                        err => {
-                            software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
-                        }
-                    );
-                }
-
-                function clear_software_image_list() {
-                    software_version_image_list.innerHTML = '';
-                }
-
-                function hide_software_image_container(){
-                    software_version_image_container.style.display = 'none';
-                    software_version_image_description.innerHTML = '';
-                    clear_software_image_list();
-                }
-
-                function populate_software_image_list(software_version_id) {
-                    clear_software_image_list();
-                    software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
-                    software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
-                    software_version_image_container.style.display = 'block';
-                    let device_type_id = $('select#id_device_type').find(':selected')[0].value;
-                    if (!device_type_id) {
-                        software_version_image_description.innerHTML = '<b>Unable to display software image list. Select a device type first.</b>';
                     } else {
-                        retrieve_software_images(software_version_id, device_type_id);
-                        software_version_image_list.style.visibility = 'visible';
+                        software_version_image_description.innerHTML = `
+                Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
+                for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>:
+            `;
+
+                        for (result of device_type_images[0].results) {
+                            let li = document.createElement('li');
+                            let a = document.createElement('a');
+                            let linkText = document.createTextNode(result.image_file_name);
+                            a.title = result.image_file_name;
+                            a.href = result.url.replace('api/', '');
+                            li.appendChild(a);
+                            a.appendChild(linkText);
+                            software_version_image_list.appendChild(li);
+                        }
                     }
+                },
+                err => {
+                    software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
                 }
+            );
+        }
 
-    // on select
-    // jQuery required for triggering on select2 jQuery events
-                $('select#id_software_version').on('select2:select', function (e) {
-                    populate_software_image_list(e.params.data.id);
-                });
+        function clear_software_image_list() {
+            software_version_image_list.innerHTML = '';
+        }
 
-    // on unselect
-    // jQuery required for triggering on select2 jQuery events
-                $('select#id_software_version').on('select2:unselect', hide_software_image_container);
+        function hide_software_image_container(){
+            software_version_image_container.style.display = 'none';
+            software_version_image_description.innerHTML = '';
+            clear_software_image_list();
+        }
 
-    // initialize on document load
-                document.addEventListener("DOMContentLoaded", function() {
-                    $('select#id_software_version').select2();
-                    var selected_version = $('select#id_software_version').select2('data')[0].id;
-                    if (selected_version) {
-                        populate_software_image_list(selected_version);
-                    }
-                });
+        function populate_software_image_list(software_version_id) {
+            clear_software_image_list();
+            software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
+            software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
+            software_version_image_container.style.display = 'block';
+            let device_type_id = $('select#id_device_type').find(':selected')[0].value;
+            if (!device_type_id) {
+                software_version_image_description.innerHTML = '<b>Unable to display software image list. Select a device type first.</b>';
+            } else {
+                retrieve_software_images(software_version_id, device_type_id);
+                software_version_image_list.style.visibility = 'visible';
+            }
+        }
+
+// on select
+// jQuery required for triggering on select2 jQuery events
+        $('select#id_software_version').on('select2:select', function (e) {
+            populate_software_image_list(e.params.data.id);
+        });
+
+// on unselect
+// jQuery required for triggering on select2 jQuery events
+        $('select#id_software_version').on('select2:unselect', hide_software_image_container);
+
+// initialize on document load
+        document.addEventListener("DOMContentLoaded", function() {
+            $('select#id_software_version').select2();
+            var selected_version = $('select#id_software_version').select2('data')[0].id;
+            if (selected_version) {
+                populate_software_image_list(selected_version);
+            }
+        });
 
     </script>
 {% endblock %}

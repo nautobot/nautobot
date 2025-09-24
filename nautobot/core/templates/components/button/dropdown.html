@@ -1,13 +1,7 @@
 <div class="btn-group">
-<<<<<<< HEAD
     <button type="button" class="btn btn-{{ color }} dropdown-toggle" data-bs-toggle="dropdown"
-        aria-haspopup="true" aria-expanded="false"
-        {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
-=======
-    <button type="button" class="btn btn-{{ color }} dropdown-toggle" data-toggle="dropdown"
             aria-haspopup="true" aria-expanded="false"
             {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
->>>>>>> develop
     >
         {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
         {{ label }}
