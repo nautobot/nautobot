@@ -156,7 +156,7 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
     does not inherently preserve multiple values as lists.
 
     Args:
-        querydict (QueryDict): The QueryDict to be normalized.
+        querydict (QueryDict): The QueryDict or dictionary as produced by `convert_querydict_to_dict` to be normalized.
         form_class (forms.Form, optional): A form class to identify fields that should be treated as
             lists (e.g., `MultipleChoiceField` or `ModelMultipleChoiceField`).
         filterset (django_filters.FilterSet, optional): A FilterSet instance to identify filters that
@@ -171,7 +171,7 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
     result = {}
 
     if querydict:
-        # check if true QueryDict or standard dict in format of querydict
+        # check if true QueryDict or standard dict in format of querydict, e.g. from `convert_querydict_to_dict`
         if hasattr(querydict, "lists"):
             items = querydict.lists()
         else:
@@ -211,10 +211,12 @@ def convert_querydict_to_dict(request_querydict):
     Convert QueryDict to standard json serializable dictionary.
 
     This is useful when you want to serialize a QueryDict to JSON format such as
-    when sending to a Job form or sending it over an API.
+    when sending to a Job form or sending it over an API. This is not the same as
+    `normalize_querydict` which preserves single values as singletons and multi-values
+    as lists. This function preserves all values as lists.
 
     Args:
-        request_querydict (QueryDict): QueryDict to convert
+        request_querydict (QueryDict): QueryDict to convert.
 
     Examples:
         >>> convert_querydict_to_dict(QueryDict('foo=1&bar=2&bar=3&baz='))

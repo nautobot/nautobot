@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import ProgrammingError
 
 from nautobot.core.models.querysets import count_related
-from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing import TestCase
 from nautobot.core.views.utils import (
     check_filter_for_display,
     get_bulk_queryset_from_view,
@@ -179,7 +179,7 @@ class CheckPrepareClonedFields(TestCase):
                 self.assertTrue(query_params["description"][0] == description)
 
 
-class GetSavedViewsForUserTestCase(TransactionTestCase):
+class GetSavedViewsForUserTestCase(TestCase):
     """
     Class to test `get_saved_views_for_user`.
     """
@@ -192,6 +192,8 @@ class GetSavedViewsForUserTestCase(TransactionTestCase):
 
     def setUp(self):
         super().setUp()
+        # We want a clean slate for SavedViews
+        SavedView.objects.all().delete()
         self.user2 = User.objects.create_user(username="second_user")
         self.create_saved_view(name="saved_view")
         self.create_saved_view(name="saved_view_shared", is_shared=True)
@@ -227,7 +229,7 @@ class GetSavedViewsForUserTestCase(TransactionTestCase):
         self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
 
 
-class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
+class GetBulkQuerysetFromViewTestCase(TestCase):
     """Class to test get_bulk_queryset_from_view with VRF."""
 
     def setUp(self):
@@ -288,6 +290,23 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
             saved_view_id=None,
             action="change",
         )
+        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+
+    def test_all_filters_removed_flag_ignores_saved_view(self):
+        """
+        If filter_query_params contains 'all_filters_removed', the saved view is ignored and all objects are returned.
+        """
+        # Pass the all_filters_removed flag in filter_query_params
+        qs = get_bulk_queryset_from_view(
+            user=self.user,
+            content_type=self.content_type,
+            filter_query_params={"all_filters_removed": [True], "saved_view": [self.saved_view.id]},
+            pk_list=[],
+            saved_view_id=self.saved_view.id,
+            action="change",
+            edit_all=True,
+        )
+        # Should return all VRFs, not just the one from the saved view
         self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_is_all_and_filter_query_params(self):
@@ -384,23 +403,6 @@ class GetBulkQuerysetFromViewTestCase(TransactionTestCase):
                 action="change",
                 edit_all=None,  # Not True, so not valid for 'change'
             )
-
-    def test_all_filters_removed_flag_ignores_saved_view(self):
-        """
-        If filter_query_params contains 'all_filters_removed', the saved view is ignored and all objects are returned.
-        """
-        # Pass the all_filters_removed flag in filter_query_params
-        qs = get_bulk_queryset_from_view(
-            user=self.user,
-            content_type=self.content_type,
-            filter_query_params={"all_filters_removed": [True], "saved_view": [self.saved_view.id]},
-            pk_list=[],
-            saved_view_id=self.saved_view.id,
-            action="change",
-            edit_all=True,
-        )
-        # Should return all VRFs, not just the one from the saved view
-        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_runtime_error_when_all_param_missing(self):
         """Raise RuntimeError if required *_all param is not provided for the action."""

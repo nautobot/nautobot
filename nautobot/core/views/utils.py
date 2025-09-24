@@ -539,7 +539,7 @@ def get_bulk_queryset_from_view(
         model: The model class on which the bulk operation is being performed.
         delete_all: Boolean indicating whether the operation applies to pk_list or not.
         edit_all: Boolean indicating whether the operation applies to pk_list or not.
-        filter_query_params: A request.GET or dictionary of filter parameters to apply to the queryset.
+        filter_query_params: A dictionary of filter parameters to apply to the queryset as produced by convert_querydict_to_dict(request.GET).
         pk_list: A list of primary keys to include, when not using a filter.
         saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
 
