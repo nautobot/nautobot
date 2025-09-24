@@ -911,7 +911,7 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_hidden(self):
         params = {"hidden": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_read_only(self):
         params = {"read_only": True}
