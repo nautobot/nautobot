@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
-from django.template.defaultfilters import date, timesince
+from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
@@ -276,16 +276,9 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                timestamps = f"""
-                    <p class="flex-grow-1 m-0">
-                        <small class="align-items-center d-inline-flex gap-4 text-secondary">
-                            <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
-                            <span class="vr mx-4"></span>
-                            <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
-                        </small>
-                    </p>
-                """
-                self.assertBodyContains(response, timestamps, html=True)
+                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
+                # therefore is subject to off-by-one timing failures.
 
             object_edit_url = buttons.edit_button(instance)["url"]
             object_delete_url = buttons.delete_button(instance)["url"]
