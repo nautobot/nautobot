@@ -798,7 +798,8 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={"per_page": 2},
+            filter_query_params={"per_page": [2]},
+            pk_list=pk_list,
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
@@ -818,7 +819,8 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={"sort": "name"},
+            pk_list=pk_list,
+            filter_query_params={"sort": ["name"]},
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
@@ -872,6 +874,7 @@ class BulkEditTestCase(TransactionTestCase):
             content_type=self.namespace_ct.id,
             edit_all=False,
             filter_query_params={},
+            pk_list=pk_list,
             form_data={
                 "pk": pk_list,
                 "description": "Example description for bulk edit",
@@ -969,15 +972,16 @@ class BulkEditTestCase(TransactionTestCase):
             "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.status_ct.id,
-            edit_all=False,
-            filter_query_params={"name__isw": "A", "sort": "name"},
+            edit_all=True,
+            filter_query_params={"name__isw": ["A"], "sort": ["name"]},
+            pk_list=[str(statuses[0].pk)],
             form_data={
                 "pk": [str(statuses[0].pk)],
                 "color": "aa1409",
             },
             username=self.user.username,
         )
-        self._common_no_error_test_assertion(Status, job_result, 1, name__istartswith="A", color="aa1409")
+        self._common_no_error_test_assertion(Status, job_result, len(statuses), name__istartswith="A", color="aa1409")
         self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_objects_passing_in_both_pk_list_and_edit_all(self):
@@ -994,7 +998,7 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.status_ct.id,
             edit_all=True,
-            filter_query_params={"name__isw": "A"},
+            filter_query_params={"name__isw": ["A"]},
             # pk ignored if edit_all is True
             form_data={
                 "pk": [str(statuses[0].pk)],
@@ -1110,9 +1114,12 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
-            content_type=self.status_ct.id,
-            pk_list=statuses_to_delete,
             username=self.user.username,
+            content_type=self.status_ct.id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=statuses_to_delete,
+            saved_view_id=None,
         )
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
@@ -1129,19 +1136,19 @@ class BulkDeleteTestCase(TransactionTestCase):
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
-
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
-            content_type=self.status_ct.id,
-            pk_list=statuses_to_delete,
             username=self.user.username,
+            content_type=self.status_ct.id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=statuses_to_delete,
+            saved_view_id=None,
         )
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-        self.assertEqual(
-            error_log.message, "You do not have permissions to delete some of the objects provided in `pk_list`."
-        )
+        self.assertIn("Cannot delete some instances of model", error_log.message)
         self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
 
     def test_bulk_delete_objects_select_all(self):
@@ -1155,11 +1162,12 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
+            username=self.user.username,
             content_type=ContentType.objects.get_for_model(Circuit).id,
             delete_all=True,
-            filter_query_params={"per_page": 10},
+            filter_query_params={"per_page": [10]},
             pk_list=[],
-            username=self.user.username,
+            saved_view_id=None,
         )
         self._common_no_error_test_assertion(Circuit, job_result)
 
@@ -1174,11 +1182,12 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
+            username=self.user.username,
             content_type=self.role_ct.id,
             delete_all=False,
             filter_query_params={},
             pk_list=roles_pks,
-            username=self.user.username,
+            saved_view_id=None,
         )
         self._common_no_error_test_assertion(Role, job_result, pk__in=roles_pks)
         self.assertTrue(Role.objects.filter(name=roles_to_ignore.name).exists())
@@ -1192,10 +1201,12 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
+            username=self.user.username,
             content_type=self.status_ct.id,
             delete_all=True,
-            filter_query_params={"name__isw": "Example Status", "sort": "name"},
-            username=self.user.username,
+            filter_query_params={"name__isw": ["Example Status"], "sort": ["name"]},
+            pk_list=[],
+            saved_view_id=None,
         )
         self._common_no_error_test_assertion(Status, job_result, name__istartswith="Example Status")
         self.assertTrue(Status.objects.filter(name=status_to_ignore.name).exists())
@@ -1211,11 +1222,12 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
+            username=self.user.username,
             content_type=self.role_ct.id,
             delete_all=False,
-            filter_query_params={"name__isw": "Example Status"},
+            filter_query_params={"name__isw": ["Example Status"]},
             pk_list=roles_pks,
-            username=self.user.username,
+            saved_view_id=None,
         )
         self._common_no_error_test_assertion(Role, job_result, pk__in=roles_pks)
         self.assertTrue(Role.objects.filter(name=roles_to_ignore.name).exists())
@@ -1228,10 +1240,11 @@ class BulkDeleteTestCase(TransactionTestCase):
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
+            username=self.user.username,
             content_type=self.status_ct.pk,
             delete_all=True,
-            filter_query_params={"name__isw": "Example Status", "sort": "name"},
+            filter_query_params={"name__isw": ["Example Status"]},
             pk_list=[str(Status.objects.first().pk)],
-            username=self.user.username,
+            saved_view_id=None,
         )
         self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
