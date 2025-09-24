@@ -1,6 +1,7 @@
 {% load static %}
 {% load helpers %}
 {% load plugins %}
+<<<<<<< HEAD
     <link rel="stylesheet" id="template-theme"
           href="{% url 'template_css' %}">
     <link rel="stylesheet"
@@ -10,18 +11,54 @@
           href="{% static 'dist/css/materialdesignicons.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=dist/css/materialdesignicons.css'">
     {% if settings.BRANDING_FILEPATHS.css %}
+=======
+
+<link rel="stylesheet" id="template-theme"
+      href="{% url 'template_css' %}">
+<link rel="stylesheet"
+      href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
+<link rel="stylesheet"
+      href="{% static 'materialdesignicons-7.4.47/css/materialdesignicons.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-7.4.47/css/materialdesignicons.min.css'">
+<link rel="stylesheet"
+      href="{% static 'jquery-ui-1.13.2/jquery-ui.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.2/jquery-ui.min.css'">
+<link rel="stylesheet"
+      href="{% static 'select2-4.0.13/select2.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.css'">
+<link rel="stylesheet"
+      href="{% static 'select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css'">
+<link rel="stylesheet"
+      href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+<link rel="stylesheet"
+      href="{% static 'highlight.js-11.9.0/github.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github.min.css'"{% if request.COOKIES|get_item:"theme" == 'dark' %} disabled="disabled"{% endif %} >
+<link rel="stylesheet"
+      href="{% static 'highlight.js-11.9.0/github-dark.min.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github-dark.min.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
+<link rel="stylesheet" id="dark-theme"
+      href="{% versioned_static 'css/dark.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
+<link rel="stylesheet" id="base-theme"
+      href="{% versioned_static 'css/base.css' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+{% if settings.BRANDING_FILEPATHS.css %}
+>>>>>>> develop
     <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' None %}">
-    {% endif %}
-    <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
-    <link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
-    <link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
-    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
-    <meta name="msapplication-TileColor" content="#2d89ef">
-    <meta name="theme-color" content="#ffffff">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
-    {% if settings.PUBLISH_ROBOTS_TXT %}
+{% endif %}
+<link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+<link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+<link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
+<link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
+<link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
+<meta name="msapplication-TileColor" content="#2d89ef">
+<meta name="theme-color" content="#ffffff">
+<meta charset="UTF-8">
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+{% if settings.PUBLISH_ROBOTS_TXT %}
     <meta name="robots" content="noindex, nofollow">
-    {% endif %}
+{% endif %}

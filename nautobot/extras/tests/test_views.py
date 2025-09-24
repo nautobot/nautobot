@@ -4611,8 +4611,13 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
+<<<<<<< HEAD
                         self.assertIn(
                             f'<strong>{result}</strong>\n                                    <div class="pull-right d-print-none">\n',
+=======
+                        self.assertInHTML(
+                            f'<strong>{result}</strong><div class="pull-right noprint">',
+>>>>>>> develop
                             response_body,
                         )
                         # ContactAssociationTable related to this role instances should not be there.
@@ -4623,4 +4628,4 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                     else:
                         self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
-                    self.assertIn(f"<strong>{result}</strong>", response_body)
+                    self.assertInHTML(f"<strong>{result}</strong>", response_body)

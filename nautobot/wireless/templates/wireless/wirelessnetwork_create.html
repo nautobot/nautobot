@@ -72,17 +72,17 @@
 {% endblock form %}
 
 {% block javascript %}
-{{ block.super }}
-<script src="{% static 'jquery/jquery.formset.js' %}"></script>
-<script type="text/javascript">
-    $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: '{{ controller_managed_device_groups.prefix }}',
-        formCssClass: 'dynamic-formset-{{ controller_managed_device_groups.prefix }}',
-        added: jsify_form
-    });
-</script>
+    {{ block.super }}
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ controller_managed_device_groups.prefix }}',
+            formCssClass: 'dynamic-formset-{{ controller_managed_device_groups.prefix }}',
+            added: jsify_form
+        });
+    </script>
 {% endblock javascript %}

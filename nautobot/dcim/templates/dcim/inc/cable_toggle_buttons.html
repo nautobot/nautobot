@@ -16,10 +16,16 @@
     {% endif %}
 {% endif %}
 {% if perms.dcim.delete_cable %}
+<<<<<<< HEAD
     <li>
         <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
             <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
             Remove cable
         </a>
     </li>
+=======
+    <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" title="Remove cable" class="btn btn-danger btn-xs">
+        <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i>
+    </a>
+>>>>>>> develop
 {% endif %}

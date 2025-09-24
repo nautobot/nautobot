@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <p class="flex-grow-1 m-0">
     {% if object.last_updated %}
         <small class="align-items-center d-inline-flex gap-4 text-secondary">
@@ -9,3 +10,15 @@
         </small>
     {% endif %}
 </p>
+=======
+{% if object.last_updated %}
+    <p>
+        <small class="text-muted">
+            {% if object.created %}
+                <span title="{{ object.created }}"><i class="mdi mdi-bookmark-plus"></i> {{ object.created }}</span> |
+            {% endif %}
+            <span title="{{ object.last_updated }}"><i class="mdi mdi-clock"></i> {{ object.last_updated|timesince }}</span> ago
+        </small>
+    </p>
+{% endif %}
+>>>>>>> develop

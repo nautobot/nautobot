@@ -4,6 +4,7 @@
 {% load ui_framework %}
 
 {% block extra_styles %}
+<<<<<<< HEAD
 <style>
     .nb-tiles .nb-tile .nb-tile-header {
         display: block;
@@ -55,6 +56,59 @@
         flex: 1;
     }
 </style>
+=======
+    <style>
+        .tile-header {
+            display: block;
+            min-height: 85px;  /* allow room for two rows of tags */
+        }
+
+        .tile-header h2 {
+            margin-bottom: 5px;
+            margin-top: 0;
+        }
+
+        .tile-actions-placeholder {
+            height: 30px;
+            margin-left: 3px;
+            width: 35px;
+        }
+
+        .tile-description {
+            margin-top: 10px;
+            min-height: 72px;  /* allow room for three rows of text */
+        }
+
+        .tile-actions {
+            position: absolute;
+            right: 21px;
+            top: 21px;
+        }
+
+        .tile-actions .btn {
+            padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
+        }
+
+        .app-details {
+            column-gap: 20px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .app-details dt {
+            margin-top: 20px;
+        }
+
+        .app-details ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .app-details > :last-child {
+            flex: 1;
+        }
+    </style>
+>>>>>>> develop
 {% endblock %}
 
 {% block document_title %}{% render_title "plain" %}{% endblock %}
@@ -121,9 +175,15 @@
                             {% else %}
                                 <a href="" class="btn btn-info btn-sm disabled" target="_blank" data-bs-title="No docs provided">
                             {% endif %}
+<<<<<<< HEAD
                                 <span class="mdi mdi-book-open-page-variant"></span>
                             </a>
                         </div>
+=======
+                            <i class="mdi mdi-book-open-page-variant"></i>
+                        </a>
+                    </div>
+>>>>>>> develop
                     </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
@@ -231,60 +291,66 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script>
-    (function () {
-        let previousApp = new URLSearchParams(window.location.search).get("app");
-        function toggleAppModal(app, action) {
-            if (app) {
-                const appModal = app ? document.querySelector(`#modal-${app}`) : null;
-                const isShown = $(appModal).data("bs.modal")?.isShown;
+    {{ block.super }}
+    <script>
+        (function () {
+            let previousApp = new URLSearchParams(window.location.search).get("app");
+            function toggleAppModal(app, action) {
+                if (app) {
+                    const appModal = app ? document.querySelector(`#modal-${app}`) : null;
+                    const isShown = $(appModal).data("bs.modal")?.isShown;
 
-                if (action === "hide" ? isShown : !isShown) {
-                    $(appModal).modal(action);
+                    if (action === "hide" ? isShown : !isShown) {
+                        $(appModal).modal(action);
+                    }
+
+                    previousApp = action === "hide" ? null : app;
                 }
-
-                previousApp = action === "hide" ? null : app;
             }
-        }
 
+<<<<<<< HEAD
         const appTilesContainer = document.querySelector(".nb-tiles");
         const appModals = appTilesContainer.querySelectorAll(".modal");
         const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
+=======
+            const appTilesContainer = document.querySelector(".tiles");
+            const appModals = appTilesContainer.querySelectorAll(".modal");
+            const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
+>>>>>>> develop
 
-        for (const appModal of appModals) {
-            $(appModal).on("hide.bs.modal", function () {
+            for (const appModal of appModals) {
+                $(appModal).on("hide.bs.modal", function () {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
+                        searchParams.delete('app');
+                        const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
+                        const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+                        history.pushState(history.state, "", nextURL);
+                    }
+
+                    previousApp = null;
+                });
+            }
+
+            for (const appModalLink of appModalLinks) {
+                appModalLink.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    history.pushState(history.state, "", appModalLink.href);
+
+                    toggleAppModal(previousApp, "hide");
+                    toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
+                });
+            }
+
+            window.addEventListener("popstate", function onPopState() {
                 const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
-                    searchParams.delete('app');
-                    const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
-                    const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
-                    history.pushState(history.state, "", nextURL);
-                }
+                const currentApp = searchParams.get("app");
 
-                previousApp = null;
+                toggleAppModal(previousApp, 'hide');
+                toggleAppModal(currentApp, 'show');
             });
-        }
 
-        for (const appModalLink of appModalLinks) {
-            appModalLink.addEventListener("click", (event) => {
-                event.preventDefault();
-                history.pushState(history.state, "", appModalLink.href);
-
-                toggleAppModal(previousApp, "hide");
-                toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
-            });
-        }
-
-        window.addEventListener("popstate", function onPopState() {
-            const searchParams = new URLSearchParams(window.location.search);
-            const currentApp = searchParams.get("app");
-
-            toggleAppModal(previousApp, 'hide');
-            toggleAppModal(currentApp, 'show');
-        });
-
-        toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
-    })();
-</script>
+            toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
+        })();
+    </script>
 {% endblock javascript %}

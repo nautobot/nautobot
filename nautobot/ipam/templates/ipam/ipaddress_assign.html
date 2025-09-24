@@ -31,9 +31,15 @@
                         </div>
                     </div>
                 {% endif %}
+<<<<<<< HEAD
                 <div class="card mb-16">
                     <div class="card-header"><strong>Select IP Address</strong></div>
                     <div class="card-body">
+=======
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Select IP Address</strong></div>
+                    <div class="panel-body">
+>>>>>>> develop
                         {% render_field form.q %}
                     </div>
                 </div>
@@ -73,11 +79,11 @@
 {% endblock %}
 
 {% block javascript %}
-<script>
-    var clipboard = new ClipboardJS('.btn');
+    <script>
+        var clipboard = new ClipboardJS('.btn');
 
-    clipboard.on('success', function (e) {console.log("success")});
+        clipboard.on('success', function (e) {console.log("success")});
 
-    clipboard.on('error', function (e) {console.log("failed")});
-</script>
+        clipboard.on('error', function (e) {console.log("failed")});
+    </script>
 {% endblock %}

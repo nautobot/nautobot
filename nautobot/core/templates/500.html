@@ -4,6 +4,7 @@
 {% block title %}Server Error{% endblock %}
 
 {% block content %}
+<<<<<<< HEAD
 <div class="row justify-content-center" style="margin-top: 9.375rem;">
     <div class="col-sm-4 col-sm-offset-4">
         <div class="card">
@@ -20,12 +21,31 @@
                 <p>
                     The complete exception is provided below:
                 </p>
+=======
+    <div class="row" style="margin-top: 150px;">
+        <div class="col-sm-4 col-sm-offset-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong><i class="mdi mdi-alert"></i>Server Error</strong>
+                </div>
+                <div class="panel-body">
+                    {% block message %}
+                        <p>
+                            There was a problem with your request. Please contact an administrator.
+                        </p>
+                    {% endblock %}
+                    <hr />
+                    <p>
+                        The complete exception is provided below:
+                    </p>
+>>>>>>> develop
 <pre><strong>{{ exception }}</strong><br />
 {{ error }}
 
 Python version: {{ python_version }}
 Nautobot version: {{ nautobot_version }}
 </pre>
+<<<<<<< HEAD
                 {% support_message %}
             </div>
             <div class="card-footer bg-body text-center">
@@ -35,3 +55,14 @@ Nautobot version: {{ nautobot_version }}
     </div>
 </div>
 {% endblock %}
+=======
+                    {% support_message %}
+                </div>
+                <div class="panel-footer text-right">
+                    <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+>>>>>>> develop

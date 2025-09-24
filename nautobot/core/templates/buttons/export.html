@@ -38,8 +38,13 @@
                         <input type="hidden" name="export_template" value="{{ et.pk }}">
                         <input type="hidden" name="query_string" value="{{ query_string }}">
                         <input type="hidden" name="_schedule_type" value="immediately">
+<<<<<<< HEAD
                         <button class="dropdown-item" type="submit"
                             {% if et.description %}title="{{ et.description }}"{% endif %}
+=======
+                        <button type="submit"
+                                {% if et.description %}title="{{ et.description }}"{% endif %}
+>>>>>>> develop
                         ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>
                 </li>
@@ -57,7 +62,7 @@
                     <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                     <input type="hidden" name="query_string" value="{{ query_string }}">
                     <input type="hidden" name="export_format"
-                        value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
+                           value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
                     <input type="hidden" name="_schedule_type" value="immediately">
                 </form>
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -92,8 +97,13 @@
                                     <input type="hidden" name="export_template" value="{{ et.pk }}">
                                     <input type="hidden" name="query_string" value="{{ query_string }}">
                                     <input type="hidden" name="_schedule_type" value="immediately">
+<<<<<<< HEAD
                                     <button type="submit" class="dropdown-item"
                                         {% if et.description %}title="{{ et.description }}"{% endif %}
+=======
+                                    <button type="submit" class="btn btn-link"
+                                            {% if et.description %}title="{{ et.description }}"{% endif %}
+>>>>>>> develop
                                     >{{ et.name }}</button>
                                 </form>
                             </li>

@@ -79,6 +79,83 @@
                             </span>
                         </div>
                     {% endif %}
+<<<<<<< HEAD
+=======
+                    {% if job_model.has_sensitive_variables and job_model.approval_required %}
+                        <div class="alert alert-danger">
+                            <i class="mdi mdi-alert"></i>
+                            This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.
+                            One of these two flags must be removed before this job can be run.
+                        </div>
+                    {% endif %}
+                    {% if not job_model.installed or job_model.job_class is None %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not presently installed and cannot be run.
+                        </div>
+                    {% elif not job_model.enabled %}
+                        <div class="alert alert-warning">
+                            <i class="mdi mdi-alert"></i> This job is not enabled to be run.
+                        </div>
+                    {% endif %}
+                    <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+                        {% if job_form.non_field_errors or schedule_form.non_field_errors %}
+                            <div class="panel panel-danger">
+                                <div class="panel-heading"><strong>Errors</strong></div>
+                                <div class="panel-body">
+                                    {{ job_form.non_field_errors }}
+                                    {{ schedule_form.non_field_errors }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% csrf_token %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <strong>Job Data</strong>
+                            </div>
+                            <div class="panel-body">
+                                {% block job_form %}
+                                    {% render_form job_form excluded_fields="[]" %}
+                                {% endblock %}
+                            </div>
+                            {% if job_model.has_sensitive_variables %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job may have sensitive variables and can only be executed immediately. This can be changed in the Job edit view to set `has_sensitive_variables` to `False` if appropriate.
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="panel panel-default job_execution">
+                            <div class="panel-heading">
+                                <strong>Job Execution</strong>
+                            </div>
+                            <div class="panel-body">
+                                {% block schedule_form %}
+                                    {% render_form schedule_form %}
+                                {% endblock %}
+                            </div>
+                            {% if job_model.approval_required %}
+                                <div class="panel-footer">
+                                    <span class="help-block">
+                                        <i class="mdi mdi-information-outline"></i>
+                                        This job requires approval to run or schedule.
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="pull-right">
+                            <button type="submit" name="_run" id="id__run" class="btn btn-primary"
+                                    {% if not perms.extras.run_job or not job_model.runnable %}
+                                        disabled="disabled"
+                                    {% endif %}
+                            >
+                                <i class="mdi mdi-play"></i> Run Job Now
+                            </button>
+                            <a href="{% url 'extras:job_list' %}" class="btn btn-default">Cancel</a>
+                        </div>
+                    </form>
+>>>>>>> develop
                 </div>
             </div>
         </div>
@@ -102,6 +179,7 @@
 </div>
 {% endblock %}
 {% block javascript %}
+<<<<<<< HEAD
 {{ block.super }}
 <script type="text/javascript">
     (() => {
@@ -175,4 +253,84 @@
     })();
 </script>
 {{ job_form.media }}
+=======
+    {{ block.super }}
+    <script type="text/javascript">
+        var requires_approval = {{ job_model.approval_required|yesno:"true,false" }};
+        var run_now_text;
+        var schedule_text;
+        var dry_run_text = "Run Job Now (DRYRUN)";
+        var schedule_dry_run_text = "Schedule Job (DRYRUN)";
+
+        if (requires_approval) {
+            run_now_text = "Request to Run Job Now";
+            schedule_text = "Request to Schedule Job";
+        } else {
+            run_now_text = "Run Job Now";
+            schedule_text = "Schedule Job";
+        }
+
+        function toggleExecutionType() {
+        /**
+         * Toggle form elements based on the job execution type.
+         * If the type is `immediately` (the default), don't show
+         * any of the scheduling related elements, else, show them.
+         * If dryrun is selected, the job may run without approval.
+         **/
+            var dryrun = false;
+            if ($("#id_dryrun").prop("type") === "checkbox") {
+                dryrun = $("#id_dryrun").prop("checked")
+            } else if ($("#id_dryrun").prop("type") === "hidden") {
+                dryrun = ($("#id_dryrun").val() === "True")
+            }
+            if ($("#id__schedule_type").val() == "immediately") {
+            // Toggle run button
+                if (dryrun){
+                    $("#id__run").html('<i class="mdi mdi-play"></i> ' + dry_run_text);
+                } else {
+                    $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
+                }
+                $("#id__run").addClass("btn-primary");
+                $("#id__run").removeClass("btn-warning");
+
+            // Toggle schedule fields
+                $("#id__schedule_name").parent().parent().hide();
+                $("#id__schedule_start_date").parent().parent().hide();
+                $("#id__schedule_start_time").parent().parent().hide();
+            } else {
+            // Toggle run button
+                if (dryrun){
+                    $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_dry_run_text);
+                } else {
+                    $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
+                }
+                $("#id__run").addClass("btn-warning");
+                $("#id__run").removeClass("btn-primary");
+
+            // Toggle schedule fields
+                $("#id__schedule_name").parent().parent().show();
+                $("#id__schedule_start_date").parent().parent().show();
+                $("#id__schedule_start_time").parent().parent().show();
+            }
+        // Toggle custom crontab field
+            if ($("#id__schedule_type").val() != "custom") {
+                $("#id__recurrence_custom_time").parent().parent().hide();
+            } else {
+                $("#id__recurrence_custom_time").parent().parent().show();
+            }
+        }
+
+        $(document).ready(function() {
+            {% if not job_model.has_sensitive_variables %}
+                $("#id__schedule_type").change(toggleExecutionType);
+            {% else %}
+                $("#id__schedule_type").val("immediately");
+                $(".job_execution").hide();
+            {% endif %}
+            $("#id_dryrun").change(toggleExecutionType);
+            toggleExecutionType();
+        });
+    </script>
+    {{ job_form.media }}
+>>>>>>> develop
 {% endblock %}

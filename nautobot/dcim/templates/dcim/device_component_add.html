@@ -4,6 +4,7 @@
 {% block title %}Create {{ component_type }}{% endblock %}
 
 {% block content %}
+<<<<<<< HEAD
 <form action="" method="post" class="h-100 vstack">
     {% csrf_token %}
     <div class="row align-content-start flex-fill">
@@ -25,9 +26,32 @@
                 <div class="card-body">
                     {% render_form form %}
                 </div>
+=======
+    <form action="" method="post" class="form form-horizontal">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                {% if form.non_field_errors %}
+                    <div class="panel panel-danger">
+                        <div class="panel-heading"><strong>Errors</strong></div>
+                        <div class="panel-body">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>{{ component_type|title }}</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% render_form form %}
+                    </div>
+                </div>
+                {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
+>>>>>>> develop
             </div>
-            {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
         </div>
+<<<<<<< HEAD
     </div>
     <div class="nb-form-sticky-footer">
         <button type="submit" name="_create" class="btn btn-primary">
@@ -44,4 +68,14 @@
         </a>
     </div>
 </form>
+=======
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
+                <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
+                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+            </div>
+        </div>
+    </form>
+>>>>>>> develop
 {% endblock %}

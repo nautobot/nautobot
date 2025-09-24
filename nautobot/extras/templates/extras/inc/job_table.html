@@ -21,10 +21,11 @@
             </tr>
         </thead>
     {% endif %}
-{% load helpers %}
+    {% load helpers %}
     <tbody>
         {% for row in table.page.object_list|default:table.rows %}
             {% ifchanged row.record.grouping %}
+<<<<<<< HEAD
             <tr>
                 <th class="position-relative" colspan="{{ table.columns|length }}">
                     <button
@@ -40,6 +41,17 @@
                     </button>
                 </th>
             </tr>
+=======
+                <tr>
+                    <th colspan="{{ table.columns|length }}">
+                        <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
+                                name="grouping.{{ row.record.grouping }}" data-toggle="collapse"
+                                data-target=".collapseme-{{ row.record.grouping|slugify }}">
+                            {{ row.record.grouping|bettertitle }}
+                        </button>
+                    </th>
+                </tr>
+>>>>>>> develop
             {% endifchanged %}
             <tr class="collapseme-{{ row.record.grouping|slugify }}{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %} collapse show nb-transition-none" {{ row.attrs.as_html }}>
                 {% for column, cell in row.items %}

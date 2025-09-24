@@ -6,12 +6,13 @@
 
 <!DOCTYPE html>
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
-<head>
-    <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
-    {% include 'inc/media.html' %}
-    {% block extrahead %}{% endblock %}
-    {% block extrastyle %}{% endblock %}
+    <head>
+        <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
+        {% include 'inc/media.html' %}
+        {% block extrahead %}{% endblock %}
+        {% block extrastyle %}{% endblock %}
 
+<<<<<<< HEAD
     <style>
         .nb-description {
             padding-bottom: 20px;
@@ -83,10 +84,109 @@
                             {% block breadcrumbs %}{% endblock breadcrumbs %}
                         </nav>
                     </div>
+=======
+        <style>
+            .description {
+                padding-bottom: 20px;
+            }
+            .help-block {
+                white-space: initial;
+                word-wrap: break-word;
+            }
+            .related-widget-wrapper {
+                float: none;
+            }
+            .selectfilter {
+                width: 100%;
+            }
+            .vLargeTextField, .vXMLLargeTextField {
+                width: 100%;
+            }
+            .vTextField {
+                width: 100%;
+            }
+            .related-widget-wrapper > select {
+                width: 100%;
+            }
+            .form-horizontal .control-label {
+                text-align: left;
+            }
+            input[type="checkbox"] {
+                margin-left: 0 !important;
+            }
+            textarea {
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body {% if is_popup %}style="padding-left: 0px;"{% endif %}>
+
+        {% if not is_popup %}
+            {% include 'inc/nav_menu.html' %}
+        {% endif %}
+
+        <div class="container-fluid wrapper" id="main-content" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
+            {% if not is_popup %}
+                {% if "BANNER_TOP"|settings_or_config %}
+                    <div class="alert alert-info text-center" role="alert">
+                        {{ "BANNER_TOP"|settings_or_config|render_markdown }}
+                    </div>
+                {% endif %}
+                {% if settings.MAINTENANCE_MODE %}
+                    <div class="alert alert-warning text-center" role="alert">
+                        <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
+                        <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
+                    </div>
+                {% endif %}
+                {% plugin_banners %}
+            {% endif %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span>&times;</span>
+                    </button>
+                    {{ message }}
+                </div>
+            {% endfor %}
+    <!-- Content -->
+            <div class="container-fluid wrapper">
+                {% if not is_popup %}
+                    <div class="row noprint">
+                        {% block breadcrumbs %}
+                        {% endblock %}
+                    </div>
+                {% endif %}
+                <div>
+                    <div>
+                        {% block pretitle %}{% endblock %}
+                        <div class="pull-right noprint">
+                            {% block object-tools %}{% endblock %}
+                        </div>
+                        <div>
+                            {% block content_title %}
+                                {% if title %}
+                                    <h1>{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</h1>
+                                    <ul class="nav nav-tabs"></ul>
+                                {% endif %}
+                            {% endblock %}
+                            <br>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid wrapper">
+                    {% block content %}{{ content }}{% endblock %}
+>>>>>>> develop
                 </div>
                 {% include 'inc/header.html' %}
             </div>
+            <div class="push"></div>
+            {% if "BANNER_BOTTOM"|settings_or_config %}
+                <div class="alert alert-info text-center banner-bottom" role="alert">
+                    {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
+                </div>
+            {% endif %}
         </div>
+<<<<<<< HEAD
         {% block header %}{% endblock header %}
     {% endif %}
 </header>
@@ -108,9 +208,15 @@
     {% include 'inc/footer.html' %}
 {% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
+=======
+        {% if not is_popup %}
+            {% include 'inc/footer.html' %}
+        {% endif %}
+        {% include 'modals/modal_theme.html' with name='theme'%}
+>>>>>>> develop
 
-{% block javascript %}
-    {% include 'inc/javascript.html' %}
-{% endblock %}
-</body>
+        {% block javascript %}
+            {% include 'inc/javascript.html' %}
+        {% endblock %}
+    </body>
 </html>
