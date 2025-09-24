@@ -2,6 +2,9 @@
 {% load form_helpers %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
 <style type="text/css">
@@ -15,13 +18,6 @@
 
 </style>
 {% endblock extra_styles %}
-
-{% block header %}
-<h1>{% block title %}Jinja Template Renderer{% endblock %}</h1>
-<hr>
-{% endblock %}
-
-
 
 {% block content %}
 <form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">

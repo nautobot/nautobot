@@ -1,16 +1,6 @@
 {% extends 'users/base.html' %}
 {% load helpers %}
 
-{% block title %}User Profile{% endblock %}
-
-{% block page_title %}
-    {% include 'inc/page_title.html' with title='User Profile' %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock %}
-
 {% block usercontent %}
     <small class="text-muted">User login</small>
     <h5>{{ request.user.username }}</h5>
