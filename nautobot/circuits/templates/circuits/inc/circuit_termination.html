@@ -12,28 +12,28 @@ In a future release, we should delete this file.
     {% if termination %}
         <table class="table table-hover panel-body attr-table">
             {% if termination.location %}
-            <tr>
-                <td>Location</td>
-                <td>
-                    {% include 'dcim/inc/location_hierarchy.html' with location=termination.location %}
-                </td>
-            </tr>
-            <tr>
-                <td>Cable</td>
-                <td>
-                    {% include 'circuits/inc/circuit_termination_cable_fragment.html' %}
-                </td>
-            </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>
+                        {% include 'dcim/inc/location_hierarchy.html' with location=termination.location %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cable</td>
+                    <td>
+                        {% include 'circuits/inc/circuit_termination_cable_fragment.html' %}
+                    </td>
+                </tr>
             {% elif termination.provider_network %}
-            <tr>
-                <td>Provider Network</td>
-                <td>{{ termination.provider_network|hyperlinked_object }}</td>
-            </tr>
+                <tr>
+                    <td>Provider Network</td>
+                    <td>{{ termination.provider_network|hyperlinked_object }}</td>
+                </tr>
             {% else %}
-            <tr>
-                <td>Cloud Network</td>
-                <td>{{ termination.cloud_network|hyperlinked_object }}</td>
-            </tr>
+                <tr>
+                    <td>Cloud Network</td>
+                    <td>{{ termination.cloud_network|hyperlinked_object }}</td>
+                </tr>
             {% endif %}
             <tr>
                 <td>Speed</td>

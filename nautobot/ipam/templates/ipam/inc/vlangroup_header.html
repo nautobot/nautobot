@@ -5,10 +5,10 @@
         </a>
     {% endif %}
     {% if perms.ipam.change_vlangroup %}
-               <a href="{% url 'ipam:vlangroup_edit' pk=object.pk %}" class="btn btn-warning">
-                       <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                       Edit this VLAN Group
-               </a>
+        <a href="{% url 'ipam:vlangroup_edit' pk=object.pk %}" class="btn btn-warning">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span>
+            Edit this VLAN Group
+        </a>
     {% endif %}
 </div>
 <h1>{{ object }}</h1>

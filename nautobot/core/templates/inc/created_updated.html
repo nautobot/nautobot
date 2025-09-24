@@ -1,10 +1,10 @@
 {% if object.last_updated %}
-<p>
-    <small class="text-muted">
-    {% if object.created %}
-    <span title="{{ object.created }}"><i class="mdi mdi-bookmark-plus"></i> {{ object.created }}</span> |
-    {% endif %}
-    <span title="{{ object.last_updated }}"><i class="mdi mdi-clock"></i> {{ object.last_updated|timesince }}</span> ago
-    </small>
-</p>
+    <p>
+        <small class="text-muted">
+            {% if object.created %}
+                <span title="{{ object.created }}"><i class="mdi mdi-bookmark-plus"></i> {{ object.created }}</span> |
+            {% endif %}
+            <span title="{{ object.last_updated }}"><i class="mdi mdi-clock"></i> {{ object.last_updated|timesince }}</span> ago
+        </small>
+    </p>
 {% endif %}

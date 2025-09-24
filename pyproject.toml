@@ -211,6 +211,10 @@ mkdocstrings = "~0.30.0"
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
+# Django template files indenter
+djhtml = ">=3.0.8,<4.0.0"
+# Django template files linter and formatter
+djlint = "~1.36.4"
 # Code static analysis
 pylint = "~3.3.8"
 # Pylint extensions for Django
@@ -260,6 +264,11 @@ omit = [
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+[tool.djlint]
+ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
+profile="django"
+extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
