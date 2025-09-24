@@ -21,25 +21,25 @@
             </tr>
         </thead>
     {% endif %}
-{% load helpers %}
+    {% load helpers %}
     <tbody>
         {% for row in table.page.object_list|default:table.rows %}
             {% ifchanged row.record.grouping %}
-            <tr>
-                <th class="position-relative" colspan="{{ table.columns|length }}">
-                    <button
-                        aria-expanded="true"
-                        class="btn float-none fs-4 stretched-link nb-collapse-toggle"
-                        data-bs-target=".collapseme-{{ row.record.grouping|slugify }}"
-                        data-bs-toggle="collapse"
-                        name="grouping.{{ row.record.grouping }}"
-                        type="button"
-                    >
-                        <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
-                        -->{{ row.record.grouping|bettertitle }}
-                    </button>
-                </th>
-            </tr>
+                <tr>
+                    <th class="position-relative" colspan="{{ table.columns|length }}">
+                        <button
+                            aria-expanded="true"
+                            class="btn float-none fs-4 stretched-link nb-collapse-toggle"
+                            data-bs-target=".collapseme-{{ row.record.grouping|slugify }}"
+                            data-bs-toggle="collapse"
+                            name="grouping.{{ row.record.grouping }}"
+                            type="button"
+                        >
+                            <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
+                            -->{{ row.record.grouping|bettertitle }}
+                        </button>
+                    </th>
+                </tr>
             {% endifchanged %}
             <tr class="collapseme-{{ row.record.grouping|slugify }}{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %} collapse show nb-transition-none" {{ row.attrs.as_html }}>
                 {% for column, cell in row.items %}

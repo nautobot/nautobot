@@ -428,6 +428,39 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 /* 5. Include remainder of required parts */
 @import "bootstrap/scss/maps";
 @import "bootstrap/scss/mixins";
+
+/*
+ * Modify original Bootstrap `color-mode` mixin to fall back to `prefers-color-scheme` media query when `data-bs-theme`
+ * attribute is not explicitly set on document root `<html>` element. This prevents white background flash during page
+ * load when application theme is set to `system` and system theme is `dark`.
+ */
+@mixin color-mode($mode: light, $root: false) {
+  @if $color-mode-type == "media-query" {
+    @if $root == true {
+      @media (prefers-color-scheme: $mode) {
+        :root {
+          @content;
+        }
+      }
+    } @else {
+      @media (prefers-color-scheme: $mode) {
+        @content;
+      }
+    }
+  } @else {
+    [data-bs-theme="#{$mode}"] {
+      @content;
+    }
+    @if $root == true {
+      @media (prefers-color-scheme: $mode) {
+        :root:not([data-bs-theme]) {
+          @content;
+        }
+      }
+    }
+  }
+}
+
 @import "bootstrap/scss/utilities";
 
 $utilities: map-merge(
@@ -1754,7 +1787,6 @@ body {
       }
     }
 
-    &.nb-sidenav-list-item-active,
     &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
       color: $orange-0;
 

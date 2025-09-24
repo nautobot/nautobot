@@ -39,9 +39,9 @@ celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~45.0.6"
+cryptography = "~45.0.7"
 # Fundamental web framework for Nautobot
-Django = "~4.2.23"
+Django = "~4.2.24"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -73,7 +73,7 @@ django-prometheus = "~2.4.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~6.0.0"
 # Django silk for request profiling
-django-silk = "~5.4.2"
+django-silk = "~5.4.3"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
@@ -205,6 +205,10 @@ mkdocstrings = "~0.30.0"
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
+# Django template files indenter
+djhtml = ">=3.0.8,<4.0.0"
+# Django template files linter and formatter
+djlint = "~1.36.4"
 # Code static analysis
 pylint = "~3.3.8"
 # Pylint extensions for Django
@@ -212,7 +216,7 @@ pylint-django = "~2.6.1"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.32"
 # Combination linter and code formatter
-ruff = "~0.12.11"
+ruff = "~0.12.12"
 # YAML linting
 yamllint = "~1.37.1"
 
@@ -254,6 +258,11 @@ omit = [
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+[tool.djlint]
+ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
+profile="django"
+extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"

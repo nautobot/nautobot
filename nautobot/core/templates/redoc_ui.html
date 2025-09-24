@@ -1,55 +1,52 @@
 {% extends "base.html" %}
 {% load static %}
+{% load ui_framework %}
 
-{% block title %}{{ title | default:"Redoc" }}{% endblock title %}
-
-{% block breadcrumbs %}
-    {% include "inc/breadcrumbs.html" %}
-{% endblock %}
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
     <style>
         @font-face {
-          font-display: swap;
-          font-family: 'Montserrat';
-          font-style: normal;
-          font-weight: 300;
-          src: url('{% static 'fonts/Montserrat-v30-Light.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 300;
+            src: url('{% static 'fonts/Montserrat-v30-Light.woff2' %}') format('woff2');
         }
         @font-face {
-          font-display: swap;
-          font-family: 'Montserrat';
-          font-style: normal;
-          font-weight: 400;
-          src: url('{% static 'fonts/Montserrat-v30-Regular.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{% static 'fonts/Montserrat-v30-Regular.woff2' %}') format('woff2');
         }
         @font-face {
-          font-display: swap;
-          font-family: 'Montserrat';
-          font-style: normal;
-          font-weight: 700;
-          src: url('{% static 'fonts/Montserrat-v30-Bold.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{% static 'fonts/Montserrat-v30-Bold.woff2' %}') format('woff2');
         }
         @font-face {
-          font-display: swap;
-          font-family: 'Roboto';
-          font-style: normal;
-          font-weight: 300;
-          src: url('{% static 'fonts/Roboto-v48-Light.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 300;
+            src: url('{% static 'fonts/Roboto-v48-Light.woff2' %}') format('woff2');
         }
         @font-face {
-          font-display: swap;
-          font-family: 'Roboto';
-          font-style: normal;
-          font-weight: 400;
-          src: url('{% static 'fonts/Roboto-v48-Regular.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{% static 'fonts/Roboto-v48-Regular.woff2' %}') format('woff2');
         }
         @font-face {
-          font-display: swap;
-          font-family: 'Roboto';
-          font-style: normal;
-          font-weight: 700;
-          src: url('{% static 'fonts/Roboto-v48-Bold.woff2' %}') format('woff2');
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{% static 'fonts/Roboto-v48-Bold.woff2' %}') format('woff2');
         }
 
         {# Redoc doesn't change outer page styles. #}

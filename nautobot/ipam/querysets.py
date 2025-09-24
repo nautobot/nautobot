@@ -355,7 +355,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
         """
         # Validate that it's a real CIDR
         cidr = self._validate_cidr(cidr)
-        broadcast = str(cidr.broadcast or cidr.ip)
+        broadcast = str(cidr.broadcast or cidr[-1])
         ip_version = cidr.version
 
         try:
@@ -365,7 +365,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
 
         # Prepare the queryset filter
         lookup_kwargs = {
-            "network__lte": cidr.value,
+            "network__lte": cidr.network,
             "prefix_length__gte": shortest_prefix_length,
             "broadcast__gte": broadcast,
             "ip_version": ip_version,
@@ -375,7 +375,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
         # we can choose the first one.
         possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
         if not include_self:
-            possible_ancestors = possible_ancestors.exclude(network=cidr.value, prefix_length=cidr.prefixlen)
+            possible_ancestors = possible_ancestors.exclude(network=cidr.network, prefix_length=cidr.prefixlen)
 
         # If we've got any matches, the first one is our closest parent.
         try:

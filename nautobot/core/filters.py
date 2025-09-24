@@ -185,7 +185,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
         if self.distinct:
             qs = qs.distinct()
@@ -629,7 +629,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.

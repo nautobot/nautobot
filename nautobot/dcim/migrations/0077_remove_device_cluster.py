@@ -3,7 +3,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0075_device_cluster_to_clusters_data_migration"),
+        ("dcim", "0076_device_cluster_to_clusters_data_migration"),
     ]
 
     operations = [

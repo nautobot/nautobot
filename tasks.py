@@ -169,6 +169,9 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
+    if is_truthy(context.nautobot.local):
+        raise Exit("docker_compose task called but context specifies local, i.e. not to use docker compose")
+
     NAUTOBOT_VER = get_nautobot_major_minor_version(context)
     project_name = (
         "development"
@@ -493,7 +496,7 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 @task(help={"service": "If specified, only affect this service."})
 def debug(context, service=None):
     """Start Nautobot and its dependencies in debug mode."""
-    print("Starting Nautobot in debug mode...")
+    print(f"Starting {service or 'Nautobot'} in debug mode...")
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
@@ -503,7 +506,7 @@ def debug(context, service=None):
 @task(help={"service": "If specified, only affect this service."})
 def start(context, service=None):
     """Start Nautobot and its dependencies in detached mode."""
-    print("Starting Nautobot in detached mode...")
+    print(f"Starting {service or 'Nautobot'} in detached mode...")
     docker_compose(context, "up --detach", service=service)
     dump_service_ports_to_disk(context)
 
@@ -511,14 +514,14 @@ def start(context, service=None):
 @task(help={"service": "If specified, only affect this service."})
 def restart(context, service=None):
     """Gracefully restart containers."""
-    print("Restarting Nautobot...")
+    print(f"Restarting {service or 'Nautobot'}...")
     docker_compose(context, "restart", service=service)
 
 
 @task(help={"service": "If specified, only affect this service."})
 def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
-    print("Stopping Nautobot...")
+    print(f"Stopping {service or 'Nautobot'}...")
     if not service:
         docker_compose(context, "--profile '*' down --remove-orphans")
     else:
@@ -925,6 +928,22 @@ def prettier(context, fix=False):
 
 
 @task
+def djhtml(context, fix=False):
+    """Indent Django template files."""
+    command = "djhtml nautobot/*/templates --tabwidth 4"
+    if not fix:
+        command += " --check"
+    run_command(context, command)
+
+
+@task
+def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
+    """Lint and check Django template files formatting."""
+    command = "djlint . --lint"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -998,6 +1017,10 @@ def tests(
     if not skip_docs_build:
         # First build the docs so they are available.
         build_and_check_docs(context)
+
+    if tag and "integration" in tag and not is_truthy(context.nautobot.local):
+        # Integration tests require selenium to be up and running!
+        start(context, service="selenium")
 
     if coverage and not append_coverage:
         run_command(context, "coverage erase")
@@ -1098,6 +1121,8 @@ def lint(context):
     pylint(context)
     eslint(context)
     prettier(context)
+    djhtml(context)
+    djlint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

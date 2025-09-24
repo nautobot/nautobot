@@ -44,7 +44,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
@@ -70,13 +70,17 @@ jobs:
       - name: "Install npm dependencies"
         run: "poetry run invoke npm --command ci"
       - name: "Calculate checksum of originally committed UI dist files"
+        shell: bash
         run: |
-          echo "original_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+          original_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "original_checksum=$original_checksum" >> "$GITHUB_ENV"
       - name: "Build UI from source"
         run: "poetry run invoke ui-build"
       - name: "Re-calculate checksum of UI dist files after the build"
+        shell: bash
         run: |
-          echo "updated_checksum=$(find dist -type f -exec md5sum {} + | sort -k 2 | md5sum)" >> "$GITHUB_ENV"
+          updated_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "updated_checksum=$updated_checksum" >> "$GITHUB_ENV"
       - name: "Compare calculated checksums"
         run: |
           echo "Comparing UI dist files checksums: \"$original_checksum\" and \"$updated_checksum\"."
@@ -114,7 +118,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
@@ -150,7 +154,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.10"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
@@ -184,7 +188,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--extras mysql"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
@@ -215,7 +219,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
@@ -251,7 +255,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
-          poetry-version: "1.8.5"
+          poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work

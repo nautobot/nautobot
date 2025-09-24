@@ -1,22 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
+{% load ui_framework %}
 
-{% block title %}{{ title | default:"Swagger" }}{% endblock title %}
-
-{% block breadcrumbs %}
-    {% include "inc/breadcrumbs.html" %}
-{% endblock %}
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui.css' %}">
     <style>
       /* Manual styling inherited from drf-spectacular */
-      html { box-sizing: border-box; overflow-y: scroll; }
-      *, *:after, *:before { box-sizing: inherit; }
-      body { background: #fafafa; margin: 0; }
+        html { box-sizing: border-box; overflow-y: scroll; }
+        *, *:after, *:before { box-sizing: inherit; }
+        body { background: #fafafa; margin: 0; }
       /* Style overrides to address conflicts between Swagger styling and Nautobot/Bootstrap styling */
-      pre.version { border: none; background: none; }
-      .loading-container .loading { display: block; }
+        pre.version { border: none; background: none; }
+        .loading-container .loading { display: block; }
     </style>
 {% endblock extra_styles %}
 
@@ -28,10 +25,10 @@
     <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-bundle.js' %}"></script>
     <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-standalone-preset.js' %}"></script>
     {% if script_url %}
-    <script src="{{ script_url }}"></script>
+        <script src="{{ script_url }}"></script>
     {% else %}
-    <script>
-{% include './swagger_ui.js' with settings=swagger_settings%}
-    </script>
+        <script>
+            {% include './swagger_ui.js' with settings=swagger_settings%}
+        </script>
     {% endif %}
 {% endblock javascript %}

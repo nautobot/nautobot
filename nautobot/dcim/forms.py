@@ -39,6 +39,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.forms.forms import ConfirmationForm
+from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -614,7 +615,7 @@ class RackBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=100)
+    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=RACK_U_HEIGHT_MAXIMUM)
     desc_units = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Descending units")
     outer_width = forms.IntegerField(required=False, min_value=1)
     outer_depth = forms.IntegerField(required=False, min_value=1)
@@ -5269,6 +5270,8 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
 class SoftwareImageFileForm(NautobotModelForm):
     """SoftwareImageFile credit/edit form."""
 
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all())
+
     device_types = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
@@ -5415,6 +5418,7 @@ class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class SoftwareVersionForm(NautobotModelForm):
     """SoftwareVersion credit/edit form."""
 
+    platform = DynamicModelChoiceField(queryset=Platform.objects.all())
     release_date = NullableDateField(required=False, widget=DatePicker())
     end_of_support_date = NullableDateField(required=False, widget=DatePicker())
     field_order = [

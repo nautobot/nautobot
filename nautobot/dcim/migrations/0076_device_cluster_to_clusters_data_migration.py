@@ -32,7 +32,7 @@ def reverse_migrate_device_cluster_assignments(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0074_add_deviceclusterassignment"),
+        ("dcim", "0075_add_deviceclusterassignment"),
     ]
 
     operations = [

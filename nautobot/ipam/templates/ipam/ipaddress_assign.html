@@ -73,11 +73,11 @@
 {% endblock %}
 
 {% block javascript %}
-<script>
-    var clipboard = new ClipboardJS('.btn');
+    <script>
+        var clipboard = new ClipboardJS('.btn');
 
-    clipboard.on('success', function (e) {console.log("success")});
+        clipboard.on('success', function (e) {console.log("success")});
 
-    clipboard.on('error', function (e) {console.log("failed")});
-</script>
+        clipboard.on('error', function (e) {console.log("failed")});
+    </script>
 {% endblock %}

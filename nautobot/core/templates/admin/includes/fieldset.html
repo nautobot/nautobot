@@ -5,7 +5,7 @@
             {% if 'collapse' in fieldset.classes %}
                 <a data-toggle="collapse" data-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
                     {{ fieldset.name }}
-                &nbsp;<span class="btn btn-xs btn-default"><span class="glyphicon glyphglyphicon glyphicon-resize-full"></i></span>
+                    &nbsp;<span class="btn btn-xs btn-default"><span class="glyphicon glyphglyphicon glyphicon-resize-full"></i></span>
                 </a>
             {% else %}
                 <strong>{{ fieldset.name }}</strong>
@@ -17,9 +17,9 @@
         </div>
     {% endif %}
     <div class="panel-body">
-    {% if fieldset.description %}
-        <div class="nb-description">{{ fieldset.description|safe }}</div>
-    {% endif %}
+        {% if fieldset.description %}
+            <div class="nb-description">{{ fieldset.description|safe }}</div>
+        {% endif %}
         {% for line in fieldset %}
             <div class="row">
                 <div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">

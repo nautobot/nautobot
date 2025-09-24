@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0073_alter_powerport_power_factor_and_more"),
+        ("dcim", "0074_alter_rack_u_height"),
         ("virtualization", "0030_alter_virtualmachine_local_config_context_data_owner_content_type_and_more"),
     ]
 

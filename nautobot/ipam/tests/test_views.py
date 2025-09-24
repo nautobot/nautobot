@@ -303,6 +303,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=ip_status,
             namespace=self.namespace,
         )
+        # add this permission to can test button Add an IP Address
+        self.add_permissions("ipam.add_ipaddress")
         url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
@@ -310,8 +312,43 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = f'<li role="presentation" class="nav-item"><a href="{url}" class="nav-link active">IP Addresses <span class="badge">2</span></a></li>'
+        ip_address_tab = f'<li class="nav-item" role="presentation"><a class="nav-link active" aria-current="page" href="{url}" aria-controls="ip-addresses" role="tab">IP Addresses <span class="badge bg-primary">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
+        # Checks if the button is in the content.
+        add_ip_link = (
+            reverse("ipam:ipaddress_add")
+            + "?"
+            + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
+        )
+        add_ip_button = f'<a href="{add_ip_link}" class="btn btn-primary"><span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address</a>'
+        self.assertInHTML(add_ip_button, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_child_prefixes_table_list(self):
+        instance = Prefix.objects.create(
+            prefix="5.5.10.0/23",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="5.5.10.0/30",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        # add this permission to can test button Add Child Prefix
+        self.add_permissions("ipam.add_prefix")
+        url = reverse("ipam:prefix_prefixes", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
+        self.assertIn("5.5.10.0/30", strip_tags(content))
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Child Prefixes <span class="badge bg-primary">1</span></a></li>'
+        self.assertInHTML(prefixes_tab, content)
+        # Checks if the button is in the content.
+        self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1034,6 +1071,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Service
+    allowed_number_of_tree_queries_per_view_type = {
+        "retrieve": 1,
+    }
 
     @classmethod
     def setUpTestData(cls):

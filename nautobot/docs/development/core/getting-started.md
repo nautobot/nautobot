@@ -183,6 +183,8 @@ Available tasks:
   createsuperuser              Create a new Nautobot superuser account (default: "admin"), will prompt for password.
   debug                        Start Nautobot and its dependencies in debug mode.
   destroy                      Destroy all containers and volumes.
+  djhtml                       Indent Django template files.
+  djlint                       Lint and check Django template files formatting.
   docker-push                  Tags and pushes docker images to the appropriate repos, intended for release use only.
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.
@@ -686,12 +688,6 @@ Integration tests are automated tests written and run to ensure that the Nautobo
 Running integrations tests requires the use of Docker at this time. They can be directly invoked using `nautobot-server test` just as unit tests can, however, a headless Firefox browser provided by Selenium is required. Because Selenium installation and setup is complicated, we have included a configuration for this to work out of the box using Docker.
 
 The Selenium container is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
-
-Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
-
-| Docker Compose Workflow | Virtual Environment Workflow      |
-| ----------------------- | --------------------------------- |
-| (automatic)             | `invoke start --service selenium` |
 
 Integration tests are run by passing `--tag integration` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
 

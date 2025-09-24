@@ -1,3 +1,5 @@
+import { getCookie, removeCookie, setCookie } from './cookie.js';
+
 const THEME_MODAL_ID = 'theme_modal';
 
 const THEME_DARK = 'dark';
@@ -24,11 +26,7 @@ const isValidTheme = (theme) => theme === THEME_DARK || theme === THEME_LIGHT ||
  * @returns {('dark'|'light'|'system')} Detected Nautobot theme.
  */
 const detectTheme = () => {
-  // Cookie getter based on MDN example: https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie#example_2_get_a_sample_cookie_named_test2
-  const cookieTheme = document.cookie
-    .split('; ')
-    .find((cookie) => cookie.startsWith('theme='))
-    ?.split('=')[1];
+  const cookieTheme = getCookie('theme');
   if (isValidTheme(cookieTheme)) {
     return cookieTheme;
   }
@@ -64,10 +62,10 @@ const setTheme = (theme, options) => {
   document.documentElement.dataset.bsTheme = bsTheme;
 
   if (theme === THEME_SYSTEM) {
-    document.cookie = `theme=${theme}; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    removeCookie('theme');
     window.localStorage?.removeItem('theme');
   } else if (isManual) {
-    document.cookie = `theme=${theme}; path=/`;
+    setCookie('theme', theme);
     window.localStorage?.setItem('theme', theme);
   }
 

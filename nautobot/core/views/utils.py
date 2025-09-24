@@ -2,12 +2,16 @@ import datetime
 from io import BytesIO
 import urllib.parse
 
+from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
+from prometheus_client import REGISTRY
+from prometheus_client.utils import floatToGoString
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
@@ -19,6 +23,11 @@ from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_fo
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+
+METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
+always_generated_metrics = [
+    "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
+]
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -404,3 +413,111 @@ def get_saved_views_for_user(user, list_url):
         return shared_saved_views | user_owned_saved_views
 
     return shared_saved_views
+
+
+def is_metrics_experimental_caching_enabled():
+    """Return True if METRICS_EXPERIMENTAL_CACHING_DURATION is set to a positive integer."""
+    return settings.METRICS_EXPERIMENTAL_CACHING_DURATION > 0
+
+
+def generate_latest_with_cache(registry=REGISTRY):
+    """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics."""
+
+    def sample_line(line):
+        if line.labels:
+            labelstr = "{{{0}}}".format(
+                ",".join(
+                    [
+                        '{}="{}"'.format(k, v.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\""))
+                        for k, v in sorted(line.labels.items())
+                    ]
+                )
+            )
+        else:
+            labelstr = ""
+        timestamp = ""
+        if line.timestamp is not None:
+            # Convert to milliseconds.
+            timestamp = f" {int(float(line.timestamp) * 1000):d}"
+        return f"{line.name}{labelstr} {floatToGoString(line.value)}{timestamp}\n"
+
+    cached_lines = []
+    output = []
+    # NOTE: In the original prometheus_client code the lines are written to output directly,
+    # here we are going to cache some lines so we need to build each metric's output separately.
+    # So instead of `output.append(line)` we do
+    # `this_metric_output.append(line)` and then `output.extend(this_metric_output)`
+    for metric in registry.collect():
+        this_metric_output = []
+        try:
+            mname = metric.name
+            mtype = metric.type
+            # Munging from OpenMetrics into Prometheus format.
+            if mtype == "counter":
+                mname = mname + "_total"
+            elif mtype == "info":
+                mname = mname + "_info"
+                mtype = "gauge"
+            elif mtype == "stateset":
+                mtype = "gauge"
+            elif mtype == "gaugehistogram":
+                # A gauge histogram is really a gauge,
+                # but this captures the structure better.
+                mtype = "histogram"
+            elif mtype == "unknown":
+                mtype = "untyped"
+
+            this_metric_output.append(
+                "# HELP {} {}\n".format(mname, metric.documentation.replace("\\", r"\\").replace("\n", r"\n"))
+            )
+            this_metric_output.append(f"# TYPE {mname} {mtype}\n")
+
+            om_samples = {}
+            for s in metric.samples:
+                for suffix in ["_created", "_gsum", "_gcount"]:
+                    if s.name == metric.name + suffix:
+                        # OpenMetrics specific sample, put in a gauge at the end.
+                        om_samples.setdefault(suffix, []).append(sample_line(s))
+                        break
+                else:
+                    this_metric_output.append(sample_line(s))
+        except Exception as exception:
+            exception.args = (exception.args or ("",)) + (metric,)
+            raise
+
+        for suffix, lines in sorted(om_samples.items()):
+            this_metric_output.append(
+                "# HELP {}{} {}\n".format(
+                    metric.name, suffix, metric.documentation.replace("\\", r"\\").replace("\n", r"\n")
+                )
+            )
+            this_metric_output.append(f"# TYPE {metric.name}{suffix} gauge\n")
+            this_metric_output.extend(lines)
+
+        # BEGIN Nautobot-specific logic
+        # If the metric name starts with nautobot_, we cache the lines
+        if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
+            cached_lines.extend(this_metric_output)
+        # END Nautobot-specific logic
+
+        # Always add the metric output to the final output
+        output.extend(this_metric_output)
+
+    # BEGIN Nautobot-specific logic
+    # Add in any previously cached metrics.
+    # Note that this is mutually-exclusive with the above block, that is to say,
+    # either cached_lines will be populated OR collector.local_cache will be populated,
+    # never both at the same time.
+    for collector in registry._collector_to_names:
+        # This is to avoid a race condition where between the time to collect the metrics and
+        # the time to generate the output, the cache is expired and we miss some metrics.
+        if hasattr(collector, "local_cache") and collector.local_cache:
+            output.extend(collector.local_cache)
+            del collector.local_cache  # avoid re-using stale data on next call
+
+    # If we have any cached lines, and the cache is empty or expired, update the cache.
+    if cached_lines and not cache.get(METRICS_CACHE_KEY):
+        cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
+    # END Nautobot-specific logic
+
+    return "".join(output).encode("utf-8")
