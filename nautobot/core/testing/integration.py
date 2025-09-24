@@ -271,8 +271,8 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def click_navbar_entry(self, parent_menu_name, child_menu_name):
         """
         Helper function to click on a parent menu and child menu in the navigation bar.
+        Waits until the child menu is active.
         """
-
         parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
         parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
         if not parent_menu["aria-expanded"] == "true":
@@ -281,6 +281,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         child_menu.click()
 
+        # Wait for the child menu to be active
+        active_child_xpath = f"{child_menu_xpath}[contains(@class, 'active')]"
+        self.browser.find_by_xpath(active_child_xpath, wait_time=10)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
