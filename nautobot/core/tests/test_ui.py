@@ -5,7 +5,7 @@ from unittest.mock import patch
 from django.template import Context
 from django.test import RequestFactory
 
-from nautobot.cloud.models import CloudNetwork, CloudResourceType
+from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
@@ -290,8 +290,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         including `url` and `body_content_table` populated with the expected related objects.
         """
         cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
-        cn = CloudNetwork.objects.filter(cloud_resource_type=cloud_resource_type)[0]
-        cloud_services = cn.cloud_services.filter(cloud_resource_type=cloud_resource_type)
+        cloud_services = CloudService.objects.filter(cloud_resource_type=cloud_resource_type)
 
         tab = DistinctViewTab(
             weight=1000,

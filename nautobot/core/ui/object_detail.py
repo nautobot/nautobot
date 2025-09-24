@@ -197,6 +197,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
+        render_on_tab_id="main",
         **kwargs,
     ):
         """
@@ -216,6 +217,7 @@ class Button(Component):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on.
         """
         self.label = label
         self.color = color
@@ -227,6 +229,7 @@ class Button(Component):
         self.size = size
         self.link_includes_pk = link_includes_pk
         self.context_object_key = context_object_key
+        self.render_on_tab_id = render_on_tab_id
         super().__init__(**kwargs)
 
     def get_link(self, context: Context):
@@ -253,6 +256,11 @@ class Button(Component):
             "attributes": self.attributes,
             "size": self.size,
         }
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -405,9 +413,20 @@ class Tab(Component):
         """
         return self.label
 
+    def should_render_content(self, context: Context):
+        """
+        Only render a main-view Tab if the active request is for the main object view rather than a separate action.
+        """
+        if not self.should_render(context):
+            return False
+
+        request = context["request"]
+        obj = get_obj_from_context(context)
+        return request.path == obj.get_absolute_url()
+
     def render(self, context: Context):
         """Render the tab's contents (layout and panels) to HTML."""
-        if not self.should_render(context):
+        if not self.should_render(context) or not self.should_render_content(context):
             return ""
 
         with context.update(
@@ -478,6 +497,17 @@ class DistinctViewTab(Tab):
         if self.hide_if_empty and not self.related_object_count:
             return False
         return True
+
+    def should_render_content(self, context: Context):
+        """
+        A DistinctViewTab should only render its content if the view in question is active.
+        """
+        if not self.should_render(context):
+            return False
+
+        with context.update(self.get_extra_context(context)):
+            request = context["request"]
+            return request.path == context["url"]
 
     def render_label(self, context: Context):
         if not self.related_object_attribute or not self.related_object_count:
