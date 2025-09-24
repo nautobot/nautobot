@@ -11,14 +11,14 @@ Leaving it here for now in case apps are making use of it.
         .tab-content {
             display: flex;
         }
-        
+
         .tab-content > .tab-pane {
             display: block; /* undo "display: none;" */
             visibility: hidden;
             margin-right: -100%;
             width: 100%;
         }
-        
+
         .tab-content > .active {
             visibility: visible;
         }
@@ -26,7 +26,7 @@ Leaving it here for now in case apps are making use of it.
 {% endblock %}
 
 {% block content %}
-{% block tabs %}{% endblock %}
+    {% block tabs %}{% endblock %}
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
             <h1>{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>

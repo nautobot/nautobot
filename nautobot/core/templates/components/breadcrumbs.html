@@ -7,11 +7,11 @@
         {% else %}
             {% for url, title in breadcrumbs_items %}
                 <li>
-                {% if url %}
-                    <a href="{{ url }}">{{ title }}</a>
-                {% else %}
-                    {{ title }}
-                {% endif %}
+                    {% if url %}
+                        <a href="{{ url }}">{{ title }}</a>
+                    {% else %}
+                        {{ title }}
+                    {% endif %}
                 </li>
             {% endfor %}
         {% endif %}
