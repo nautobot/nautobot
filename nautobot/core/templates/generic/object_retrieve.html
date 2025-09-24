@@ -308,39 +308,16 @@
 
     // Set initial history state
     if (window.location.pathname === '{{ object.get_absolute_url }}') {
-        // Viewing one of the common-view detail tabs - main, advanced, etc.
-        // In this case we need to make sure the correct tab is shown.
         const tab_url = window.location.origin + window.location.pathname + window.location.search;
         const search_params = new URLSearchParams(window.location.search);
 
-        // These tabs may be identified in various cases by either search params or by fragment, e.g.:
-        // /dcim/devices/<pk>/?tab=advanced OR /dcim/devices/<pk>/#advanced
-        var tab_id = DEFAULT_TAB_ID;
-        if (search_params.has('tab')) {
-            tab_id = search_params.get('tab');
-        } else if (window.location.hash !== "") {
-            tab_id = window.location.hash.slice(1);
-        }
+        const tab_id = search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
 
         window.history.replaceState({ id: tab_id }, document.title, tab_url);
         show_tab(tab_id);
-    } else {
-        // Viewing a distinct-view tab.
-        // In this case, the correct tab is already shown as active,
-        // but we need to make sure that the "common-view" tabs act as links rather than toggleable tabs in this view.
-        // We achieve that by removing the 'data-bs-toggle="tab"' attribute from them:
-        document.querySelectorAll('a[data-bs-toggle="tab"]').forEach((tab) => {
-            delete tab.dataset.bsToggle;
-            // HACK: if tab link ends in #main, we strip that away here so that the view doesn't jump to mid-page on load
-            if (tab.href.endsWith(`#${DEFAULT_TAB_ID}`)) {
-                tab.href = tab.href.slice(0, -5);
-            }
-        });
     }
 
-    window.addEventListener('popstate', (event) => {
-        show_tab(event.state.id);
-    });
+    window.addEventListener('popstate', (event) => show_tab(event.state.id));
 </script>
 <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
 {% endblock javascript %}
