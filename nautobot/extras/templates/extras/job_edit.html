@@ -101,67 +101,67 @@
 {% endblock form %}
 
 {% block javascript %}
-{{ block.super }}
-{{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
-<script>
-    const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
-    const description_default = $("#id_description").val();
+    {{ block.super }}
+    {{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
+    <script>
+        const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
+        const description_default = $("#id_description").val();
     /* All id_*_override fields */
-    $("[id^=id_][id$=_override]").change(function() {
-        const override_id = $(this).attr("id");
+        $("[id^=id_][id$=_override]").change(function() {
+            const override_id = $(this).attr("id");
         /* What's the form field this is an override for? */
-        const field_id = override_id.slice(0, -9);
-        const field = $("#" + field_id);
-        const field_name = field_id.slice(3);
-        if ($(this).prop("checked")) {
-            field.attr("readonly", null);
-            field.prop("disabled", false);
-        } else {
+            const field_id = override_id.slice(0, -9);
+            const field = $("#" + field_id);
+            const field_name = field_id.slice(3);
+            if ($(this).prop("checked")) {
+                field.attr("readonly", null);
+                field.prop("disabled", false);
+            } else {
             /* Revert the field to its default value */
-            if (field.attr("type") == "checkbox") {
+                if (field.attr("type") == "checkbox") {
                 /* Do we have a job class object to derive properties from? */
-                if (job_class_properties != "") {
-                    field.prop("checked", job_class_properties[field_name]);
-                } else {
+                    if (job_class_properties != "") {
+                        field.prop("checked", job_class_properties[field_name]);
+                    } else {
                     /* No, we don't - it's probably not installed */
-                    field.prop("checked", field.attr("checked"));
-                }
+                        field.prop("checked", field.attr("checked"));
+                    }
                 /*
                  * Checkboxes can't be "readonly" in HTML :-(
                  * Note that "disabled" fields aren't included in form submission, so we have to be sure to
                  * re-enable them at form submission time.
                  */
-                field.prop("disabled", true);
-            } else {
-                /* Do we have a job class object to derive properties from? */
-                if (job_class_properties != "") {
-                    if (field_name != "job_queues" && field_name != "default_job_queue") {
-                        field.val(job_class_properties[field_name]);
-                    }
-                } else if (field_name != "description") {
-                    /* No, we don't - it's probably not installed */
-                    field.val(field.attr("value"));
-                } else {
-                    /* Textarea fields don't have a "value" attribute */
-                    field.val(description_default);
-                }
-                if (field_name == "job_queues" || field_name == "default_job_queue") {
                     field.prop("disabled", true);
                 } else {
-                    field.attr("readonly", "readonly");
+                /* Do we have a job class object to derive properties from? */
+                    if (job_class_properties != "") {
+                        if (field_name != "job_queues" && field_name != "default_job_queue") {
+                            field.val(job_class_properties[field_name]);
+                        }
+                    } else if (field_name != "description") {
+                    /* No, we don't - it's probably not installed */
+                        field.val(field.attr("value"));
+                    } else {
+                    /* Textarea fields don't have a "value" attribute */
+                        field.val(description_default);
+                    }
+                    if (field_name == "job_queues" || field_name == "default_job_queue") {
+                        field.prop("disabled", true);
+                    } else {
+                        field.attr("readonly", "readonly");
+                    }
                 }
             }
-        }
-    });
-    $("[id^=id_][id$=_override]").change();
+        });
+        $("[id^=id_][id$=_override]").change();
 
     /* As mentioned above, we need to re-enable all checkboxes, job_queues and default_job_queue fields on form submission so they get included */
-    $("form").submit(function() {
-        $('input[type="checkbox"]:disabled').each(function() {
-            $(this).prop("disabled", false);
+        $("form").submit(function() {
+            $('input[type="checkbox"]:disabled').each(function() {
+                $(this).prop("disabled", false);
+            });
+            $('#id_job_queues').prop("disabled", false);
+            $('#id_default_job_queues').prop("disabled", false);
         });
-        $('#id_job_queues').prop("disabled", false);
-        $('#id_default_job_queues').prop("disabled", false);
-    });
-</script>
+    </script>
 {% endblock javascript %}

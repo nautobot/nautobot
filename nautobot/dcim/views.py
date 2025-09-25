@@ -39,9 +39,12 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
+    AncestorsBreadcrumbs,
     BaseBreadcrumbItem,
     Breadcrumbs,
+    context_object_attr,
     InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
@@ -74,6 +77,7 @@ from nautobot.core.views.utils import common_detail_view_context, get_obj_from_c
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
+from nautobot.dcim.ui import RackBreadcrumbs
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
@@ -244,6 +248,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -385,6 +390,7 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -699,6 +705,7 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+    breadcrumbs = RackBreadcrumbs()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -798,6 +805,14 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackReservationSerializer
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("rack")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -1068,6 +1083,14 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceTypeSerializer
     table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -1275,6 +1298,14 @@ class ModuleTypeUIViewSet(
         "front-ports": forms.FrontPortTemplateImportForm,
         "module-bays": forms.ModuleBayTemplateImportForm,
     }
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
+            ]
+        }
+    )
 
     def get_required_permission(self):
         view_action = self.get_action()
@@ -2102,11 +2133,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Device),
-                ModelBreadcrumbItem(
-                    model=Device,
-                    label=lambda c: c["object"].location,
-                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
-                ),
+                InstanceParentBreadcrumbItem(parent_key="location"),
                 InstanceBreadcrumbItem(
                     instance=lambda c: c["object"].parent_bay.device,
                     should_render=lambda c: hasattr(c["object"], "parent_bay"),
@@ -4299,7 +4326,8 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 # Breadcrumb path if ModuleBay is linked with device
                 ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].parent_device),
                 InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_device, should_render=lambda c: c["object"].parent_device
+                    instance=context_object_attr("parent_device"),
+                    should_render=context_object_attr("parent_device"),
                 ),
                 ViewNameBreadcrumbItem(
                     view_name_key="device_breadcrumb_url",
@@ -4310,7 +4338,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                 # Breadcrumb path if ModuleBay is linked with module
                 ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].parent_device is None),
                 InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].parent_module,
+                    instance=context_object_attr("parent_module"),
                     should_render=lambda c: c["object"].parent_device is None,
                 ),
                 ViewNameBreadcrumbItem(
@@ -5032,6 +5060,17 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PowerPanelSerializer
     table_class = tables.PowerPanelTable
     queryset = PowerPanel.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("location")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("rack_group"), should_render=context_object_attr("rack_group")
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -5106,6 +5145,19 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     queryset = PowerFeed.objects.all()
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("power_panel.location")),
+                InstanceBreadcrumbItem(instance=context_object_attr("power_panel")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("rack"),
+                    should_render=context_object_attr("rack"),
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -5822,6 +5874,14 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("device")),
+            ]
+        }
+    )
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
