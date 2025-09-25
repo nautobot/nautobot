@@ -80,7 +80,7 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
 
         # Click the bulk-edit button (it uses formaction)
         bulk_url = reverse("dcim:device_bulk_edit")
-        btn_xpath = f'//button[@type="submit" and @formaction="{bulk_url}"]'
+        btn_xpath = f'//button[@type="submit" and starts-with(@formaction, "{bulk_url}")]'
         bulk_btn = WebDriverWait(self.browser.driver, 2).until(
             expected_conditions.element_to_be_clickable((By.XPATH, btn_xpath))
         )

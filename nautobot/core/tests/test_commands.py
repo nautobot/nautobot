@@ -31,3 +31,39 @@ class ManagementCommandTestCase(TestCase):
                         200,
                         f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200",
                     )
+
+    def test_check_job_approval_status_no_jobs(self):
+        out = StringIO()
+        # update all jobs to not have approval_required=True
+        Job.objects.update(approval_required=False)
+        call_command("check_job_approval_status", stdout=out)
+        output = out.getvalue()
+        self.assertIn("No approval_required jobs or scheduled jobs found.", output)
+
+    def test_check_job_approval_status_with__with_approval_required_jobs(self):
+        out = StringIO()
+        self.assertTrue(Job.objects.filter(approval_required=True).exists())
+        self.assertFalse(ScheduledJob.objects.filter(approval_required=True).exists())
+        call_command("check_job_approval_status", stdout=out)
+        output = out.getvalue()
+        self.assertIn("Following jobs still have `approval_required=True`.", output)
+
+    def test_check_job_approval_status_with_approval_required_scheduled_jobs(self):
+        job = Job.objects.first()
+        scheduled_job = ScheduledJob.objects.create(
+            name="Scheduled Job",
+            task="test_managment_command.TestManagmentCommand",
+            job_model=job,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            approval_required=True,
+            start_time=now(),
+        )
+        self.assertTrue(ScheduledJob.objects.filter(approval_required=True).exists())
+        with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
+            call_command("check_job_approval_status")
+
+        self.assertIn(
+            "These need to be approved (and run) or denied before upgrading to Nautobot v3", str(cm.exception)
+        )
+        self.assertIn(scheduled_job.name, str(cm.exception))

@@ -2,10 +2,6 @@
 {% load helpers %}
 {% load render_table from django_tables2 %}
 
-{% block extra_breadcrumbs %}
-    <li class="breadcrumb-item">{{ object.parent.namespace|hyperlinked_object }}</li>
-{% endblock extra_breadcrumbs %}
-
 {% block extra_nav_tabs %}
     {% with interface_count=object.interfaces.count %}
         {% if interface_count %}

@@ -4,12 +4,6 @@
 {% load helpers %}
 {% load tz %}
 
-{% block extra_breadcrumbs %}
-    {% for ancestor in object.ancestors %}
-        <li class="breadcrumb-item">{{ ancestor|hyperlinked_object:"name"}}</li>
-    {% endfor %}
-{% endblock %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
