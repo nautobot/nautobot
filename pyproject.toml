@@ -200,19 +200,19 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.18"
+mkdocs-material = "~9.6.20"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.0"
+mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
-djhtml = ">=3.0.8,<4.0.0"
+djhtml = ">=3.0.9,<4.0.0"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
