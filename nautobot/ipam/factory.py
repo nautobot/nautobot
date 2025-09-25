@@ -278,13 +278,15 @@ class NamespaceFactory(PrimaryModelFactory):
 
     class Meta:
         model = Namespace
-        exclude = ("has_tenant",)
+        exclude = ("has_tenant", "has_description")
 
     name = UniqueFaker("text", max_nb_chars=20)  # could be up to CHARFIELD_MAX_LENGTH but that gets unwieldy fast
 
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
 class PrefixFactory(PrimaryModelFactory):
     """Create random Prefix objects with randomized data.
