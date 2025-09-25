@@ -284,6 +284,393 @@ class IPAddressToInterfaceTest(TestCase):
         self.assertEqual(remaining_assignments.count(), 1)
         self.assertIn(assignment_nested_module, remaining_assignments)
 
+    def test_ip_address_to_interface_delete_signal_no_save_when_device_has_no_primary_ips(self):
+        """
+        Test that Device is not saved when removing an IP from an interface and the device
+        has no primary IPs assigned.
+        """
+        # Create an IP address
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+
+        # Assign IP to interface
+        assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_addr)
+
+        # Mock the device save method to verify it's not called
+        with patch.object(self.test_device, "save") as mock_save:
+            # Remove the IP assignment from interface - this should NOT trigger a device save
+            assignment_device_int1.delete()
+
+            # Assert save was not called since no primary IPs were affected
+            mock_save.assert_not_called()
+
+    def test_ip_address_to_interface_delete_signal_no_save_when_removing_non_primary_ip_from_device(self):
+        """
+        Test that Device is not saved when removing an IP from an interface and the IP
+        is not the device's primary IP.
+        """
+        # Test removing non-primary IPv4 assignment
+        with self.subTest("IPv4 non-primary IP removal"):
+            # Create IPv4 addresses
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+            other_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.2/24", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IP to interface first (required before setting as primary)
+            IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv4_addr)
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip4 = primary_ipv4_addr
+            self.test_device.save()
+
+            # Assign the other IP to a different interface
+            assignment_other_ipv4 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=other_ipv4_addr
+            )
+
+            with patch.object(self.test_device, "save") as mock_save:
+                assignment_other_ipv4.delete()
+                mock_save.assert_not_called()
+
+        # Test removing non-primary IPv6 assignment
+        with self.subTest("IPv6 non-primary IP removal"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create IPv6 addresses
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+            other_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::2/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IP to interface first (required before setting as primary)
+            IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv6_addr)
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip6 = primary_ipv6_addr
+            self.test_device.save()
+
+            # Assign the other IP to a different interface
+            assignment_other_ipv6 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=other_ipv6_addr
+            )
+
+            with patch.object(self.test_device, "save") as mock_save:
+                assignment_other_ipv6.delete()
+                mock_save.assert_not_called()
+
+    def test_ip_address_to_interface_delete_signal_save_when_removing_primary_ip_from_device(self):
+        """
+        Test that Device is saved when removing an IP from an interface and the IP is the device's
+        primary IP and no other assignments exist.
+        """
+        # Test removing primary IPv4 assignment
+        with self.subTest("IPv4 primary IP removal"):
+            # Create primary IPv4 address
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv4 to an interface first
+            assignment_primary_ipv4 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv4_addr
+            )
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip4 = primary_ipv4_addr
+            self.test_device.save()
+
+            # Mock the device save method to verify it's called
+            with patch.object(self.test_device, "save") as mock_save:
+                # Remove the primary IP assignment - this SHOULD trigger a device save
+                assignment_primary_ipv4.delete()
+
+                # Assert save was called to nullify primary_ip4
+                mock_save.assert_called_once()
+
+        # Test removing primary IPv6 assignment
+        with self.subTest("IPv6 primary IP removal"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create primary IPv6 address
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv6 to an interface first
+            assignment_primary_ipv6 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv6_addr
+            )
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip6 = primary_ipv6_addr
+            self.test_device.save()
+
+            # Mock the device save method to verify it's called
+            with patch.object(self.test_device, "save") as mock_save:
+                # Remove the primary IP assignment - this SHOULD trigger a device save
+                assignment_primary_ipv6.delete()
+
+                # Assert save was called to nullify primary_ip6
+                mock_save.assert_called_once()
+
+    def test_ip_address_to_interface_delete_signal_no_save_when_device_primary_ip_has_multiple_assignments(self):
+        """
+        Test that Device is not saved when removing an IP from an interface and the IP is the device's
+        primary IP but is assigned to other interfaces on that device.
+        """
+        # Test IPv4 primary IP with multiple assignments
+        with self.subTest("IPv4 primary IP with multiple assignments"):
+            # Create primary IPv4 address
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+            # Assign primary IPv4 to multiple interfaces
+            assignment_ipv4_int1 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv4_addr
+            )
+            IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv4_addr)
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip4 = primary_ipv4_addr
+            self.test_device.save()
+
+            # Mock the device save method to verify it's not called
+            with patch.object(self.test_device, "save") as mock_save:
+                # Remove primary IP from one interface - should NOT trigger save since other assignment exists
+                assignment_ipv4_int1.delete()
+
+                # Assert save was not called since IP is still assigned to test_int2
+                mock_save.assert_not_called()
+
+        # Test IPv6 primary IP with multiple assignments
+        with self.subTest("IPv6 primary IP with multiple assignments"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create primary IPv6 address
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv6 to multiple interfaces
+            assignment_ipv6_int1 = IPAddressToInterface.objects.create(
+                interface=self.test_int1, ip_address=primary_ipv6_addr
+            )
+            IPAddressToInterface.objects.create(interface=self.test_int2, ip_address=primary_ipv6_addr)
+
+            # Set it as the device's primary IP
+            self.test_device.primary_ip6 = primary_ipv6_addr
+            self.test_device.save()
+
+            # Mock the device save method to verify it's not called
+            with patch.object(self.test_device, "save") as mock_save:
+                # Remove primary IP from one interface - should NOT trigger save since other assignment exists
+                assignment_ipv6_int1.delete()
+
+                # Assert save was not called since IP is still assigned to test_int2
+                mock_save.assert_not_called()
+
+    def test_ip_address_to_interface_delete_signal_no_save_when_vm_has_no_primary_ips(self):
+        """
+        Test that VM is not saved when removing an IP from a VM interface and the VM
+        has no primary IPs assigned.
+        """
+        # Create an IP address
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+
+        # VM has no primary IPs by default (both are None)
+
+        # Assign IP to VM interface
+        assignment_vm_int1 = IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+
+        # Mock the VM save method to verify it's not called
+        with patch.object(self.test_vm, "save") as mock_save:
+            # Remove the IP assignment from VM interface - this should NOT trigger a VM save
+            assignment_vm_int1.delete()
+
+            # Assert save was not called since no primary IPs were affected
+            mock_save.assert_not_called()
+
+    def test_ip_address_to_interface_delete_signal_no_save_when_removing_non_primary_ip_from_vm(self):
+        """
+        Test that VM is not saved when removing an IP from a VM interface and the IP
+        is not the VM's primary IP.
+        """
+        # Test removing non-primary IPv4 assignment
+        with self.subTest("IPv4 non-primary IP removal"):
+            # Create IPv4 addresses
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+            other_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.2/24", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IP to VM interface first (required before setting as primary)
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv4_addr)
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip4 = primary_ipv4_addr
+            self.test_vm.save()
+
+            # Assign the other IP to a different VM interface
+            assignment_vm_int1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=other_ipv4_addr
+            )
+
+            with patch.object(self.test_vm, "save") as mock_save:
+                assignment_vm_int1.delete()
+                mock_save.assert_not_called()
+
+        # Test removing non-primary IPv6 assignment
+        with self.subTest("IPv6 non-primary IP removal"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create IPv6 addresses
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+            other_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::2/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IP to VM interface first (required before setting as primary)
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv6_addr)
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip6 = primary_ipv6_addr
+            self.test_vm.save()
+
+            # Assign the other IP to a different VM interface
+            assignment_vm_int1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=other_ipv6_addr
+            )
+
+            with patch.object(self.test_vm, "save") as mock_save:
+                assignment_vm_int1.delete()
+                mock_save.assert_not_called()
+
+    def test_ip_address_to_interface_delete_signal_save_when_removing_primary_ip_from_vm(self):
+        """
+        Test that VM is saved when removing an IP from a VM interface and the IP is the VM's
+        primary IP and no other assignments exist.
+        """
+        # Test removing primary IPv4 assignment
+        with self.subTest("IPv4 primary IP removal"):
+            # Create primary IPv4 address
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv4 to VM interface first
+            assignment_primary_ipv4 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr
+            )
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip4 = primary_ipv4_addr
+            self.test_vm.save()
+
+            # Mock the VM save method to verify it's called
+            with patch.object(self.test_vm, "save") as mock_save:
+                # Remove the primary IP assignment - this SHOULD trigger a VM save
+                assignment_primary_ipv4.delete()
+
+                # Assert save was called to nullify primary_ip4
+                mock_save.assert_called_once()
+
+        # Test removing primary IPv6 assignment
+        with self.subTest("IPv6 primary IP removal"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create primary IPv6 address
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv6 to VM interface first
+            assignment_primary_ipv6 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr
+            )
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip6 = primary_ipv6_addr
+            self.test_vm.save()
+
+            # Mock the VM save method to verify it's called
+            with patch.object(self.test_vm, "save") as mock_save:
+                # Remove the primary IP assignment - this SHOULD trigger a VM save
+                assignment_primary_ipv6.delete()
+
+                # Assert save was called to nullify primary_ip6
+                mock_save.assert_called_once()
+
+    def test_ip_address_to_interface_delete_signal_no_save_when_vm_primary_ip_has_multiple_assignments(self):
+        """
+        Test that VM is not saved when removing an IP from a VM interface and the IP is the VM's
+        primary IP but is assigned to other VM interfaces on that VM.
+        """
+        # Test IPv4 primary IP with multiple assignments
+        with self.subTest("IPv4 primary IP with multiple assignments"):
+            # Create primary IPv4 address
+            primary_ipv4_addr = IPAddress.objects.create(
+                address="192.0.2.1/24", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv4 to multiple VM interfaces
+            assignment_ipv4_vmint1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv4_addr
+            )
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv4_addr)
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip4 = primary_ipv4_addr
+            self.test_vm.save()
+
+            # Mock the VM save method to verify it's not called
+            with patch.object(self.test_vm, "save") as mock_save:
+                # Remove primary IP from one VM interface - should NOT trigger save since other assignment exists
+                assignment_ipv4_vmint1.delete()
+
+                # Assert save was not called since IP is still assigned to test_vmint2
+                mock_save.assert_not_called()
+
+        # Test IPv6 primary IP with multiple assignments
+        with self.subTest("IPv6 primary IP with multiple assignments"):
+            # Create IPv6 prefix first
+            Prefix.objects.create(prefix="2001:db8::/64", status=self.status, namespace=self.namespace)
+
+            # Create primary IPv6 address
+            primary_ipv6_addr = IPAddress.objects.create(
+                address="2001:db8::1/64", status=self.status, namespace=self.namespace
+            )
+
+            # Assign primary IPv6 to multiple VM interfaces
+            assignment_ipv6_vmint1 = IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, ip_address=primary_ipv6_addr
+            )
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint2, ip_address=primary_ipv6_addr)
+
+            # Set it as the VM's primary IP
+            self.test_vm.primary_ip6 = primary_ipv6_addr
+            self.test_vm.save()
+
+            # Mock the VM save method to verify it's not called
+            with patch.object(self.test_vm, "save") as mock_save:
+                # Remove primary IP from one VM interface - should NOT trigger save since other assignment exists
+                assignment_ipv6_vmint1.delete()
+
+                # Assert save was not called since IP is still assigned to test_vmint2
+                mock_save.assert_not_called()
+
 
 class TestVarbinaryIPField(TestCase):
     """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
@@ -406,17 +793,20 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.status = self.statuses.first()
         self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
         self.root = Prefix.objects.create(
-            prefix="101.102.0.0/24", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix="101.102.0.0/16", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
         )
         self.parent = Prefix.objects.create(
-            prefix="101.102.0.0/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix="101.102.103.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
         )
-        self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
-        self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
+        self.child1 = Prefix.objects.create(prefix="101.102.103.0/26", status=self.status, namespace=self.namespace)
+        self.child2 = Prefix.objects.create(prefix="101.102.103.104/32", status=self.status, namespace=self.namespace)
 
     def test_parent_exists_after_model_clean(self):
         prefix = Prefix(
-            prefix="101.102.0.128/26",
+            prefix="101.102.1.0/24",
             status=self.status,
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_CONTAINER,
@@ -455,7 +845,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         for location in locations:
             location.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
         for i in range(10):
-            pfx = Prefix.objects.create(prefix=f"1.1.1.{4*i}/30", status=self.status, namespace=self.namespace)
+            pfx = Prefix.objects.create(prefix=f"1.1.1.{4 * i}/30", status=self.status, namespace=self.namespace)
             if i > 4:
                 pfx.locations.set(locations)
 
@@ -626,18 +1016,18 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # siblings()
         self.assertEqual(list(self.child1.siblings()), [self.child2])
         self.assertEqual(list(self.child1.siblings(include_self=True)), [self.child1, self.child2])
-        parent2 = Prefix.objects.create(prefix="101.102.0.128/25", status=self.status, namespace=self.namespace)
+        parent2 = Prefix.objects.create(prefix="101.102.128.0/24", status=self.status, namespace=self.namespace)
         self.assertEqual(list(self.parent.siblings()), [parent2])
         self.assertEqual(list(self.parent.siblings(include_self=True)), [self.parent, parent2])
 
-    def test_reparenting(self):
+    def test_reparenting_on_create_and_delete(self):
         """Test that reparenting algorithm works in its most basic form."""
         # tree hierarchy
         self.assertIsNone(self.root.parent)
         self.assertEqual(self.parent.parent, self.root)
         self.assertEqual(self.child1.parent, self.parent)
 
-        # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
+        # Delete the parent (/24); child1/child2 now have root (/16) as their parent.
         num_deleted, _ = self.parent.delete()
         self.assertEqual(num_deleted, 1)
 
@@ -648,9 +1038,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.child2.parent, self.root)
         self.assertEqual(list(self.child1.ancestors()), [self.root])
 
-        # Add /25 back in as a parent and assert that child1/child2 now have it as their parent, and
-        # /24 is its parent.
-        self.parent.save()  # This creates another Prefix using the same instance.
+        # Add /24 back in as a parent and assert that child1/child2 now have it as their parent, and
+        # /16 is its parent.
+        self.parent = Prefix.objects.create(
+            prefix="101.102.103.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+        )
         self.child1.refresh_from_db()
         self.child2.refresh_from_db()
         self.assertEqual(self.child1.parent, self.parent)
@@ -687,12 +1082,265 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # Add /25 back in as a parent and assert that child1/child2 now have it as their parent, and
         # /24 is its parent.
-        parent.save()  # This creates another Prefix using the same instance.
+        parent = Prefix.objects.create(
+            prefix="101.102.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
         child1.refresh_from_db()
         child2.refresh_from_db()
         self.assertEqual(child1.parent, parent)
         self.assertEqual(child2.parent, parent)
         self.assertEqual(list(child1.ancestors()), [root, parent])
+
+    def test_reparenting_on_field_updates(self):
+        """Test that reparenting occurs when network, prefix_length, etc. are updated."""
+        self.assertIsNone(self.root.parent)
+        self.assertEqual(self.parent.parent, self.root)
+        self.assertEqual(self.child1.parent, self.parent)
+        self.assertEqual(self.child2.parent, self.parent)
+
+        ip1 = IPAddress.objects.create(address="101.102.103.127/32", status=self.status, namespace=self.namespace)
+        ip2 = IPAddress.objects.create(address="101.102.103.128/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(ip1.parent, self.parent)
+        self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Decrease prefix_length, gaining children"):
+            self.child1.prefix_length = 25
+            self.child1.save()
+            self.child1.refresh_from_db()
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.child1)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.child1)
+
+        with self.subTest("Increase prefix_length, losing children"):
+            self.child1.prefix_length = 26
+            self.child1.save()
+            self.child1.refresh_from_db()
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+
+        with self.subTest("Broaden prefix, becoming parent of former parent"):
+            self.parent.prefix = "101.0.0.0/8"
+            self.parent.save()
+            self.assertIsNone(self.parent.parent)
+            # Former root is now a child of parent
+            self.root.refresh_from_db()
+            self.assertEqual(self.root.parent, self.parent)
+            # Former children are now children of former root
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.root)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.root)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.root)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.root)
+
+        with self.subTest("Narrow prefix, becoming child of former child"):
+            self.parent.prefix = "101.102.103.0/24"
+            self.parent.save()
+            self.assertEqual(self.parent.parent, self.root)
+            # Former root is now again root
+            self.root.refresh_from_db()
+            self.assertIsNone(self.root.parent)
+            # Former children are again children of parent
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.parent)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Change former root on multiple dimensions"):
+            self.root.network = "101.102.103.0"
+            self.root.prefix_length = 25
+            self.root.save()
+            self.assertEqual(self.root.parent, self.parent)
+            self.parent.refresh_from_db()
+            self.assertEqual(self.parent.parent, None)
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.root)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.root)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.root)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+        with self.subTest("Reclaim root position"):
+            self.root.network = "101.0.0.0"
+            self.root.prefix_length = 8
+            self.root.save()
+            self.assertIsNone(self.root.parent)
+            self.parent.refresh_from_db()
+            self.assertEqual(self.parent.parent, self.root)
+            self.child1.refresh_from_db()
+            self.assertEqual(self.child1.parent, self.parent)
+            self.child2.refresh_from_db()
+            self.assertEqual(self.child2.parent, self.parent)
+            ip1.refresh_from_db()
+            self.assertEqual(ip1.parent, self.parent)
+            ip2.refresh_from_db()
+            self.assertEqual(ip2.parent, self.parent)
+
+    def test_clean_fails_if_would_orphan_ips(self):
+        """Test that clean() fails if reparenting would orphan IPs."""
+        self.ip = IPAddress.objects.create(address="101.102.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(
+            f"1 existing IP addresses (including {self.ip.host}) would no longer have a valid parent", str(cm.exception)
+        )
+        self.root.refresh_from_db()
+        self.ip2 = IPAddress.objects.create(address="101.102.1.2/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(self.ip2.parent, self.root)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.prefix = "102.103.0.0/16"
+            self.root.clean()
+        self.assertIn(
+            f"2 existing IP addresses (including {self.ip.host}) would no longer have a valid parent",
+            str(cm.exception),
+        )
+
+    def test_clean_fails_if_namespace_changed_and_vrfs_involved(self):
+        vrf = VRF.objects.create(name="VRF Red", namespace=self.namespace)
+        vrf.add_prefix(self.root)
+
+        new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+
+        self.root.namespace = new_namespace
+        with self.assertRaises(ValidationError) as cm:
+            self.root.clean()
+        self.assertIn("Cannot move to a different Namespace while associated to VRFs", str(cm.exception))
+
+        vrf.remove_prefix(self.root)
+        self.root.clean()
+
+        vrf.add_prefix(self.parent)
+        with self.assertRaises(ValidationError) as cm:
+            self.root.clean()
+        self.assertIn(
+            "Cannot move to a different Namespace with descendant Prefixes associated to VRFs", str(cm.exception)
+        )
+
+    def test_namespace_change_success_updates_descendants_and_claims_new_children(self):
+        new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+        new_catchall = Prefix.objects.create(prefix="0.0.0.0/0", status=self.status, namespace=new_namespace)
+        new_parent = Prefix.objects.create(prefix="101.102.200.0/24", status=self.status, namespace=new_namespace)
+        new_child = Prefix.objects.create(prefix="101.102.103.64/26", status=self.status, namespace=new_namespace)
+        new_grandchild = Prefix.objects.create(prefix="101.102.103.0/27", status=self.status, namespace=new_namespace)
+        new_ip = IPAddress.objects.create(address="101.102.150.200/32", status=self.status, namespace=new_namespace)
+
+        # Before:
+        # self.namespace
+        #   self.root        101.102.0.0/16
+        #     self.parent    101.102.103.0/24
+        #       self.child1  101.102.103.0/26
+        #       self.child2  101.102.103.104/32
+        # new_namespace
+        #   new_catchall      0.0.0.0/0
+        #     new_grandchild  101.102.103.0/27
+        #     new_child       101.102.103.64/26
+        #     new_ip          101.102.150.200/32
+        #     new_parent      101.102.200.0/24
+        #
+        # After:
+        # new_namespace
+        #   new_catchall            0.0.0.0/0
+        #     self.root             101.102.0.0/16
+        #       self.parent         101.102.103.0/24
+        #         self.child1       101.102.103.0/26
+        #           new_grandchild  101.102.103.0/27
+        #         new_child         101.102.103.64/26
+        #           self.child2     101.102.103.104/32
+        #       new_ip              101.102.150.200/32
+        #       new_parent          101.102.200.0/24
+
+        self.root.namespace = new_namespace
+        self.root.save()
+        self.assertEqual(self.root.namespace, new_namespace)
+        self.assertEqual(self.root.parent, new_catchall)  # automatically updated
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.namespace, new_namespace)  # automatically updated
+        self.assertEqual(self.parent.parent, self.root)  # unchanged
+        self.child1.refresh_from_db()
+        self.assertEqual(self.child1.namespace, new_namespace)  # automatically updated
+        self.assertEqual(self.child1.parent, self.parent)  # unchanged
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child2.namespace, new_namespace)  # automatically updated
+        self.assertEqual(self.child2.parent, new_child)  # automatically updated
+        new_parent.refresh_from_db()
+        self.assertEqual(new_parent.namespace, new_namespace)  # unchanged
+        self.assertEqual(new_parent.parent, self.root)  # automatically updated
+        new_child.refresh_from_db()
+        self.assertEqual(new_child.namespace, new_namespace)  # unchanged
+        self.assertEqual(new_child.parent, self.parent)  # automatically updated
+        new_grandchild.refresh_from_db()
+        self.assertEqual(new_grandchild.namespace, new_namespace)  # unchanged
+        self.assertEqual(new_grandchild.parent, self.child1)  # automatically updated
+        new_ip.refresh_from_db()
+        self.assertEqual(new_ip.parent, self.root)
+
+    def test_namespace_change_results_in_merge_collisions(self):
+        new_namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+        new_root = Prefix.objects.create(prefix="101.102.0.0/16", status=self.status, namespace=new_namespace)
+
+        self.root.namespace = new_namespace
+        with self.assertRaises(IntegrityError):
+            self.root.save()
+        self.root.refresh_from_db()
+        self.assertEqual(self.root.namespace, self.namespace)
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.namespace, self.namespace)
+        self.child1.refresh_from_db()
+        self.assertEqual(self.child1.namespace, self.namespace)
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child2.namespace, self.namespace)
+
+        new_root.delete()
+        new_parent = Prefix.objects.create(prefix="101.102.103.0/24", status=self.status, namespace=new_namespace)
+
+        self.root.namespace = new_namespace
+        with self.assertRaises(IntegrityError):
+            self.root.save()
+        self.root.refresh_from_db()
+        self.assertEqual(self.root.namespace, self.namespace)
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.namespace, self.namespace)
+        self.child1.refresh_from_db()
+        self.assertEqual(self.child1.namespace, self.namespace)
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child2.namespace, self.namespace)
+
+        new_parent.delete()
+
+        existing_ip = IPAddress.objects.create(address="101.102.103.1/32", status=self.status, namespace=self.namespace)
+        new_prefix = Prefix.objects.create(prefix="0.0.0.0/0", status=self.status, namespace=new_namespace)
+        new_ip = IPAddress.objects.create(address="101.102.103.1/32", status=self.status, namespace=new_namespace)
+        self.assertEqual(new_ip.parent, new_prefix)
+
+        self.root.namespace = new_namespace
+        with self.assertRaises(IntegrityError):
+            self.root.save()
+        self.root.refresh_from_db()
+        self.assertIsNone(self.root.parent)
+        self.assertEqual(self.root.namespace, self.namespace)
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.namespace, self.namespace)
+        self.child1.refresh_from_db()
+        self.assertEqual(self.child1.namespace, self.namespace)
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child2.namespace, self.namespace)
+        existing_ip.refresh_from_db()
+        self.assertEqual(existing_ip.parent, self.child1)
+        new_ip.refresh_from_db()
+        self.assertEqual(new_ip.parent, new_prefix)
 
     def test_descendants(self):
         prefixes = (
@@ -901,8 +1549,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertEqual(slash25.get_utilization(), (4, 128))
 
         # When the pool does not overlap with broadcast or network address, the denominator decrements by 2
-        pool.network = "10.0.0.132"
-        pool.save()
+        pool.delete()
+        pool = Prefix.objects.create(
+            prefix="10.0.0.132/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
+        )
         self.assertEqual(slash25.get_utilization(), (4, 126))
 
         # Further distinguishing between get_child_ips() and get_all_ips():
@@ -1026,85 +1676,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        # 3.0 TODO: replace with the commented below once type enforcement is enabled
-        # pool_prefix = Prefix.objects.create(
         Prefix.objects.create(
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
-
-        # 3.0 TODO: uncomment the below tests once type enforcement is enabled
-
-        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a network"):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a network"):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a container"):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a pool"):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting container)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting container)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting network)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting network)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (container parenting pool)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        #     )
-
-        # with self.assertRaises(
-        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting pool)"
-        # ):
-        #     Prefix.objects.create(
-        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
-        #     )
 
         with self.subTest("Test that valid parents can be created"):
             Prefix.objects.create(
@@ -1124,14 +1698,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix.objects.create(
                 prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
             )
-
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ValidationError,
-        #     msg="Test that modifying a prefix's type fails if it would result in an invalid parent/child relationship",
-        # ):
-        #     pool_prefix.type = PrefixTypeChoices.TYPE_NETWORK
-        #     pool_prefix.validated_save()
 
         with self.subTest(
             "Test that modifying a prefix's type is allowed if it does not create an invalid relationship"
@@ -1159,13 +1725,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
 
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ProtectedError,
-        #     msg="Test that deleting a network prefix that would make a pool prefix's parent a container raises a ProtectedError",
-        # ):
-        #     network.delete()
-
         with self.subTest("Test that deleting a parent prefix properly reparents the child prefixes"):
             container.delete()
             root.refresh_from_db()
@@ -1178,17 +1737,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         ip = IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
 
         with self.subTest("Test that deleting a pool prefix containing IPs succeeds"):
-            self.assertEqual(ip.parent, pool)  # 3.0 TODO: change this to ", network)" once IP-to-pool is disallowed
+            self.assertEqual(ip.parent, pool)
             pool.delete()
             ip.refresh_from_db()
             self.assertEqual(ip.parent, network)
-
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(
-        #     ProtectedError,
-        #     msg="Test that deleting a network prefix that would make an IP's parent a container raises a ProtectedError",
-        # ):
-        #     network.delete()
 
         with self.subTest("Test that deleting the root prefix succeeds"):
             root.delete()
@@ -1433,17 +1985,11 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
 
-        # 3.0 TODO: uncomment once type enforcement is enabled
-        # with self.assertRaises(ValidationError, msg="IP Address parent cannot be a container"):
-        #     IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
-
-        # with self.assertRaises(Prefix.DoesNotExist, msg="IP Address parent cannot be a pool"):
-        #     IPAddress.objects.create(address="12.0.0.1/32", status=self.status, namespace=namespace)
-
         with self.assertRaises(ValidationError) as err:
             IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)
         self.assertEqual(
-            err.exception.message_dict["namespace"][0], "No suitable parent Prefix exists in this Namespace"
+            err.exception.message_dict["namespace"][0],
+            "No suitable parent Prefix for 13.0.0.1 exists in Namespace test_parenting_constraints",
         )
 
         with self.subTest("Test that IP address can be assigned to a valid parent"):
@@ -1483,7 +2029,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertIn("namespace", err.exception.message_dict)
         self.assertEqual(
             err.exception.message_dict["namespace"][0],
-            "No suitable parent Prefix exists in this Namespace",
+            "No suitable parent Prefix for 1976:2023::1 exists in Namespace Global",
         )
 
         # Appropriate parent exists in the default namespace --> no error
@@ -1522,6 +2068,15 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         ip._namespace = namespaces[0]
         ip.validated_save()
         self.assertEqual(ip.parent, prefixes[0])
+
+    def test_change_host(self):
+        ip = IPAddress.objects.create(address="192.0.2.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(ip.parent, self.prefix)
+
+        ip.host = "192.168.1.1"
+        with self.assertRaises(ValidationError) as cm:
+            ip.validated_save()
+        self.assertIn("Host address cannot be changed once created", str(cm.exception))
 
     def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
         # Assert that an error is triggered when the host is not provided.

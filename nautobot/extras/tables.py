@@ -38,6 +38,7 @@ from .models import (
     ExternalIntegration,
     GitRepository,
     GraphQLQuery,
+    ImageAttachment,
     Job as JobModel,
     JobButton,
     JobHook,
@@ -56,6 +57,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -111,6 +113,13 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
+
+IMAGEATTACHMENT_NAME = """
+<span class="mdi mdi-file-image"></span>
+<a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+"""
+
+IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
@@ -696,6 +705,18 @@ class GraphQLQueryTable(BaseTable):
         )
 
 
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=IMAGEATTACHMENT_NAME, verbose_name="Name")
+    size = tables.TemplateColumn(template_code=IMAGEATTACHMENT_SIZE)
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(ImageAttachment, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
+
+
 def log_object_link(value, record):
     return record.absolute_url or None
 
@@ -735,11 +756,12 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
+                {{ value.date_created|date:SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}
         """,
+        extra_context={"SHORT_DATETIME_FORMAT": settings.SHORT_DATETIME_FORMAT},
         linkify=lambda value: value.get_absolute_url() if value else None,
     )
     last_status = tables.TemplateColumn(
@@ -890,6 +912,8 @@ class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_started = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_done = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -903,12 +927,13 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
+    duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Only calculate log counts for "summary" column if it's actually visible.
-        if self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
+        if "summary" in self.columns and self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
             self.data = TableData.from_data(
                 self.data.data.annotate(
                     debug_log_count=count_related(
@@ -961,6 +986,8 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "date_created",
+            "date_started",
+            "date_done",
             "name",
             "job_model",
             "scheduled_job",
@@ -1064,7 +1091,7 @@ class ObjectMetadataTable(BaseTable):
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
-    value = tables.Column(empty_values=[])
+    value = tables.Column(empty_values=[], order_by=("_value",))
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
@@ -1193,6 +1220,11 @@ class ObjectChangeTable(BaseTable):
             "request_id",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
+        self.add_conditional_prefetch("object_repr", "changed_object")
+
 
 #
 # Relationship
@@ -1319,6 +1351,17 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
+
+
+class SecretsGroupAssociationTable(BaseTable):
+    secret = tables.Column(linkify=True)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("access_type", "secret_type", "secret")
+        default_columns = ("access_type", "secret_type", "secret")
+        # Avoid extra UI clutter
+        attrs = {"class": "table table-condensed"}
 
 
 #

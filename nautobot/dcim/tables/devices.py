@@ -154,6 +154,30 @@ class PlatformTable(BaseTable):
 #
 
 
+class VirtualChassisMembersTable(BaseTable):
+    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK, verbose_name="Device")
+    vc_position = tables.TemplateColumn(
+        verbose_name="Position", template_code='<span class="badge badge-default">{{ record.vc_position }}</span>'
+    )
+    master = BooleanColumn(accessor="is_vc_master", verbose_name="Master")
+    vc_priority = tables.Column(verbose_name="Priority")
+
+    class Meta(BaseTable.Meta):
+        model = Device
+        fields = (
+            "name",
+            "vc_position",
+            "master",
+            "vc_priority",
+        )
+        default_columns = (
+            "name",
+            "vc_position",
+            "master",
+            "vc_priority",
+        )
+
+
 class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
@@ -181,6 +205,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
+    manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
@@ -213,6 +238,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "controller_managed_device_group",
             "secrets_group",
             "capabilities",
+            "manufacturer",
             "tags",
             "actions",
         )
@@ -532,6 +558,7 @@ class PowerPortTable(ModularDeviceComponentTable, PathEndpointTable):
             "description",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "cable",
             "cable_peer",
             "connection",
@@ -568,6 +595,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "cable",
             "cable_peer",

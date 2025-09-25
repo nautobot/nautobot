@@ -9,18 +9,18 @@
         </div>
         <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in computed_fields.items %}
-            {% with forloop.counter0 as count %}
-                {% if grouping != "" %}
-                    <tr>
-                        <td colspan="2"><strong>
-                            <button type="button" class="accordion-toggle mdi mdi-chevron-down"
-                                    name="grouping.{{ grouping }}" data-toggle="collapse"
-                                    data-target=".collapseme-computed-{{ count }}">
-                                {{ grouping }}
-                            </button></strong>
-                        </td>
-                    </tr>
-                {% endif %}
+                {% with forloop.counter0 as count %}
+                    {% if grouping != "" %}
+                        <tr>
+                            <td colspan="2"><strong>
+                                <button type="button" class="accordion-toggle mdi mdi-chevron-down"
+                                        name="grouping.{{ grouping }}" data-toggle="collapse"
+                                        data-target=".collapseme-computed-{{ count }}">
+                                    {{ grouping }}
+                                </button></strong>
+                            </td>
+                        </tr>
+                    {% endif %}
                     {% for field, value in fields %}
                         <tr class="collapseme-computed-{{ count }} collapse in" data-parent="#accordion">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
@@ -28,7 +28,7 @@
                         </tr>
                     {% endfor %}
                 {% endwith %}
-                {% endfor %}
+            {% endfor %}
         </table>
     </div>
 {% endif %}

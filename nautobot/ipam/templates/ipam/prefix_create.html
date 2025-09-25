@@ -1,0 +1,34 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Prefix</strong></div>
+        <div class="panel-body">
+            {% render_field form.prefix %}
+            {% render_field form.namespace %}
+            {% render_field form.type %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.rir %}
+            {% render_field form.date_allocated %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VRF Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.vrfs %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Location/VLAN Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.locations %}
+            {% render_field form.vlan_group %}
+            {% render_field form.vlan %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}

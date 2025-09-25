@@ -292,6 +292,7 @@ plugins:
 
         # Post 2.x redirects
         "overview/index.md": "index.md"
+        "development/apps/api/platform-features/populating-extensibility-features.md": "development/apps/api/platform-features/prepopulating-data.md"
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
         "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
@@ -464,7 +465,6 @@ nav:
                   - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
                   - Front Port: "user-guide/core-data-model/dcim/frontport.md"
                   - Interface: "user-guide/core-data-model/dcim/interface.md"
-                  - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
                   - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
@@ -598,7 +598,7 @@ nav:
               - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
               - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
               - Jobs: "development/apps/api/platform-features/jobs.md"
-              - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
+              - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
@@ -650,6 +650,7 @@ nav:
                   - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
+                  - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:

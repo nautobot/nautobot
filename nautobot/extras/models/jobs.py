@@ -48,7 +48,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -543,6 +543,12 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+        indexes = [
+            models.Index(
+                name="extras_joblog_jr_created_idx",
+                fields=["job_result", "created"],
+            )
+        ]
 
 
 #
@@ -625,7 +631,7 @@ class JobQueueAssignment(BaseModel):
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel, CustomFieldModel):
+class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     """
     This model stores the results from running a Job.
     """
@@ -644,6 +650,7 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
     date_created = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_started = models.DateTimeField(null=True, blank=True, db_index=True)
     date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
@@ -708,7 +715,7 @@ class JobResult(BaseModel, CustomFieldModel):
     natural_key_field_names = ["id"]
 
     def __str__(self):
-        return f"{self.name} started at {self.date_created} ({self.status})"
+        return f"{self.name} created at {self.date_created} ({self.status})"
 
     def as_dict(self):
         """This is required by the django-celery-results DB backend."""
@@ -730,7 +737,8 @@ class JobResult(BaseModel, CustomFieldModel):
         if not self.date_done:
             return None
 
-        duration = self.date_done - self.date_created
+        # Older records may not have a date_started value, so we use date_created as a fallback.
+        duration = self.date_done - (self.date_started or self.date_created)
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
@@ -748,7 +756,8 @@ class JobResult(BaseModel, CustomFieldModel):
             # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
             # have a related job model, so this shouldn't be too tight of a restriction.
             if self.job_model:
-                duration = self.date_done - self.date_created
+                # Older records may not have a date_started value, so we use date_created as a fallback.
+                duration = self.date_done - (self.date_started or self.date_created)
                 JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
                     duration.total_seconds()
                 )
@@ -878,6 +887,7 @@ class JobResult(BaseModel, CustomFieldModel):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
+            job_result.date_started = timezone.now()
             job_result.save()
 
             # setup synchronous task logging

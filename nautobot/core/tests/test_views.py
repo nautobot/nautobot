@@ -8,6 +8,7 @@ import urllib.parse
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
@@ -23,6 +24,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, Status
@@ -98,8 +100,8 @@ class HomeViewTestCase(TestCase):
         difference = [model for model in existing_models if model not in global_searchable_models]
         if difference:
             self.fail(
-                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
-                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
+                f"Existing model/models {','.join(difference)} are not included in the searchable_models attribute of the app config.\n"
+                "If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants."
             )
 
     def make_request(self):
@@ -566,6 +568,49 @@ class MetricsViewTestCase(TestCase):
         metric_names_with_app.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_app, metric_names_without_app)
 
+    def test_enabled_metrics_cache_disabled(self):
+        """Assert that when cache is disabled the cache enabled function doesn't get called."""
+        with mock.patch("nautobot.core.views.utils.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
+
+    @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
+    def test_enabled_metrics_cache_enabled(self):
+        """Assert that multiple calls to metrics with caching returns expected response."""
+        test_metric_name = "nautobot_example_metric_count"
+        metrics_with_app = self.query_and_parse_metrics()
+        metrics_with_app_cached = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        metric_names_with_app_cached = {metric.name for metric in metrics_with_app_cached}
+        self.assertIn(test_metric_name, metric_names_with_app)
+        self.assertIn(test_metric_name, metric_names_with_app_cached)
+
+        # In some circumstances (e.g. if this test is run first) metrics_with_app may not have
+        # metrics from Django like total view counts. Since metrics_with_app_cached is called
+        # second, it should have everything that metrics_with_app has (plus potentially more).
+        # We at least want to ensure the cached version has everything the non-cached version has.
+        self.assertTrue(
+            metric_names_with_app.issubset(metric_names_with_app_cached),
+            msg="Cached metrics should be a superset of non-cached metrics.",
+        )
+        with mock.patch("nautobot.core.views.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.query_and_parse_metrics()
+            self.assertEqual(mock_generate_latest_with_cache.call_count, 2)
+
+        from example_app.metrics import metric_example
+
+        cache.delete(METRICS_CACHE_KEY)  # Ensure we start with a clean cache for the next part of the test
+        # Assert that the metric function only gets called once even though we scrape metrics twice
+
+        mock_metric_function = mock.Mock(name="mock_metric_function", side_effect=metric_example)
+        with mock.patch.dict("nautobot.core.views.registry", app_metrics=[mock_metric_function]):
+            self.query_and_parse_metrics()
+            first_call_count = mock_metric_function.call_count
+            self.query_and_parse_metrics()
+            second_call_count = mock_metric_function.call_count
+            self.assertEqual(first_call_count, second_call_count)
+
 
 class AuthenticateMetricsTestCase(APITestCase):
     def test_metrics_authentication(self):
@@ -764,11 +809,11 @@ class TestObjectDetailView(TestCase):
         url = reverse("circuits:provider", args=(provider.pk,))
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
-        response_data = response.content.decode(response.charset)
+        response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn

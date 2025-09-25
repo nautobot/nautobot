@@ -1,5 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, Q
+from django.utils.encoding import force_str
+from django.utils.text import capfirst
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import verbose_lookup_expr
@@ -74,7 +76,9 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
-        custom_fields = CustomField.objects.get_for_model(self._meta.model, exclude_filter_disabled=True)
+        custom_fields = CustomField.objects.get_for_model(
+            self._meta.model, exclude_filter_disabled=True, get_queryset=False
+        )
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
             new_filter_name = cf.add_prefix_to_cf_key()
@@ -129,11 +133,21 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
+
+            # Based on logic in BaseFilterSet._generate_lookup_expression_filters
+            verbose_expression = (
+                ["exclude", custom_field.label] if lookup_name.startswith("n") else [custom_field.label]
+            )
+            if isinstance(lookup_expr, str):
+                verbose_expression.append(verbose_lookup_expr(lookup_expr))
+            verbose_expression = [force_str(part) for part in verbose_expression if part]
+            label = capfirst(" ".join(verbose_expression))
+
             new_filter = filter_type(
                 field_name=custom_field.key,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
-                label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
+                label=label,
                 exclude=lookup_name.startswith("n"),
             )
 
@@ -195,7 +209,7 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
-        if not value or any(v in EMPTY_VALUES for v in value):
+        if not value or any(v in EMPTY_VALUES for v in value) or (hasattr(value, "exists") and not value.exists()):
             return qs
 
         query = self.generate_query(value)
@@ -220,13 +234,13 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=model, hidden=False)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(
+            model=model, hidden=False, get_queryset=False
+        )
 
-        for rel in src_relationships:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+        self._append_relationships_side(src_relationships, RelationshipSideChoices.SIDE_SOURCE, model)
 
-        for rel in dst_relationships:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
+        self._append_relationships_side(dst_relationships, RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """
@@ -295,6 +309,7 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
                 field_name="role",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )
+            cls.declared_filters["role"] = filters["role"]  # pylint: disable=no-member
 
         return filters
 
@@ -324,5 +339,6 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
                 field_name="status",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )
+            cls.declared_filters["status"] = filters["status"]  # pylint: disable=no-member
 
         return filters

@@ -31,6 +31,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -616,7 +617,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
+    location = random_instance(lambda: Location.objects.get_for_model(Rack), allow_null=False)
 
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
@@ -634,7 +635,7 @@ class RackFactory(PrimaryModelFactory):
     type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
 
     width = factory.Faker("random_element", elements=RackWidthChoices.values())
-    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    u_height = factory.Faker("pyint", min_value=10, max_value=RACK_U_HEIGHT_MAXIMUM)
     desc_units = NautobotBoolIterator()
 
     has_outer_width = NautobotBoolIterator()

@@ -1,7 +1,9 @@
+from decimal import Decimal
 import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -35,6 +37,7 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
+from nautobot.dcim.utils import convert_watts_to_va
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
@@ -123,7 +126,7 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
-        ordering = ("device", "module", "_name")
+        ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
                 fields=("device", "name"),
@@ -397,6 +400,13 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
+    power_factor = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=Decimal("0.95"),
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
+    )
 
     def clean(self):
         super().clean()
@@ -421,16 +431,19 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
                 maximum_draw_total=Sum("maximum_draw"),
                 allocated_draw_total=Sum("allocated_draw"),
             )
-            numerator = utilization["allocated_draw_total"] or 0
-            denominator = utilization["maximum_draw_total"] or 0
+
+            # Convert watts to VA for aggregated values
+            allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+            maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
+
             ret = {
-                "allocated": utilization["allocated_draw_total"] or 0,
-                "maximum": utilization["maximum_draw_total"] or 0,
+                "allocated": allocated_va,
+                "maximum": maximum_va,
                 "outlet_count": len(outlet_ids),
                 "legs": [],
                 "utilization_data": UtilizationData(
-                    numerator=numerator,
-                    denominator=denominator,
+                    numerator=allocated_va,
+                    denominator=maximum_va,
                 ),
             }
 
@@ -445,11 +458,16 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
                         maximum_draw_total=Sum("maximum_draw"),
                         allocated_draw_total=Sum("allocated_draw"),
                     )
+
+                    # Convert watts to VA for leg values
+                    leg_allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+                    leg_maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
+
                     ret["legs"].append(
                         {
                             "name": leg_name,
-                            "allocated": utilization["allocated_draw_total"] or 0,
-                            "maximum": utilization["maximum_draw_total"] or 0,
+                            "allocated": leg_allocated_va,
+                            "maximum": leg_maximum_va,
                             "outlet_count": len(outlet_ids),
                         }
                     )
@@ -461,13 +479,16 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         else:
             denominator = 0
 
-        # Default to administratively defined values
+        # Convert administratively defined values from watts to VA
+        allocated_va = convert_watts_to_va(self.allocated_draw, self.power_factor)
+        maximum_va = convert_watts_to_va(self.maximum_draw, self.power_factor)
+
         return {
-            "allocated": self.allocated_draw or 0,
-            "maximum": self.maximum_draw or 0,
+            "allocated": allocated_va,
+            "maximum": maximum_va,
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
-            "utilization_data": UtilizationData(numerator=self.allocated_draw or 0, denominator=denominator),
+            "utilization_data": UtilizationData(numerator=allocated_va, denominator=denominator),
         }
 
 
@@ -646,7 +667,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", "module", CollateAsChar("_name"))
+        ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
 
     def clean(self):
         super().clean()
@@ -1311,3 +1332,10 @@ class ModuleBay(PrimaryModel):
             self.position = self.name
 
     clean.alters_data = True
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.parent_device is not None:
+            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
+            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
