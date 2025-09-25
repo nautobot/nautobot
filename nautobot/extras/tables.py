@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db.models import QuerySet
-from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.data import TableData

@@ -93,7 +93,6 @@ __all__ = (
     "DeviceRedundancyGroupTable",
     "DeviceTable",
     "DeviceTypeTable",
-    "FlatLocationTable",
     "FrontPortTable",
     "FrontPortTemplateTable",
     "InterfaceConnectionTable",

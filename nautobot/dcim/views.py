@@ -19,9 +19,8 @@ from django.forms import (
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
-from django.utils.functional import cached_property
 from django.utils.html import format_html, format_html_join, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
@@ -78,8 +77,7 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -275,6 +273,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 # Locations
 #
 
+
 class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
     def get_data(self, context):
         data = super().get_data(context)
@@ -294,8 +293,11 @@ class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
             return helpers.HTML_NONE
 
         return super().render_value(key, value, context)
-class LocationRackGroupsPanel(object_detail.ObjectFieldsPanel):
+
+
+class LocationRackGroupsPanel(object_detail.Panel):
     def render_rack_row(self, indent_px, url, name, count, elevation_url):
+        """Render a single <tr> for a rack group or summary row."""
         return format_html(
             """
             <tr>
@@ -318,8 +320,9 @@ class LocationRackGroupsPanel(object_detail.ObjectFieldsPanel):
             elevation_url,
         )
 
-    def render(self, context):
-        obj = get_obj_from_context(context, self.context_object_key or "object")
+    def render_body_content(self, context):
+        """Render the <tbody> content for the Rack Groups table."""
+        obj = get_obj_from_context(context)
         if not obj:
             return ""
 
@@ -338,6 +341,7 @@ class LocationRackGroupsPanel(object_detail.ObjectFieldsPanel):
                 )
             )
 
+        # Add "All racks" row
         rows.append(
             self.render_rack_row(
                 10,
@@ -348,15 +352,7 @@ class LocationRackGroupsPanel(object_detail.ObjectFieldsPanel):
             )
         )
 
-        return format_html(
-            """
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Rack Groups</strong></div>
-                <table class="table table-hover panel-body">{}</table>
-            </div>
-            """,
-            format_html_join("", "{}", ((row,) for row in rows)),
-        )
+        return format_html_join("", "{}", ((row,) for row in rows))
 
 
 class LocationImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
@@ -374,8 +370,6 @@ class LocationImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
         if not request.user.has_perms(["extras.add_imageattachment"]):
             return None
         return reverse("dcim:location_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
-
-
 
 
 class LocationUIViewSet(NautobotUIViewSet):
@@ -457,17 +451,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
-            ),
-            object_detail.ObjectsTablePanel(
-                section=SectionChoices.FULL_WIDTH,
-                weight=100,
-                table_title="Children",
-                table_class=tables.LocationTable,
-                table_attribute="children",
-                related_field_name="parent",
-                order_by_fields=["name"],
-                hide_hierarchy_ui=True
-               
+                body_wrapper_template_path="components/panel/body_wrapper_generic_table.html",
             ),
             LocationImageAttachmentsTablePanel(
                 weight=300,
@@ -478,6 +462,16 @@ class LocationUIViewSet(NautobotUIViewSet):
                 related_field_name="location",
                 show_table_config_button=False,
             ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_title="Children",
+                table_class=tables.LocationTable,
+                table_attribute="children",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                hide_hierarchy_ui=True,
+            ),
         )
     )
 
@@ -485,57 +479,9 @@ class LocationUIViewSet(NautobotUIViewSet):
         if instance is None:
             return super().get_extra_context(request, instance)
 
-        # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
-        # ensure it is only performed once rather than as a subquery for each of the different count stats.
-        related_locations = list(
+        related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
-        prefix_count_queryset = Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        vlan_count_queryset = VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        circuit_count_queryset = Circuit.objects.restrict(request.user, "view").filter(
-            circuit_terminations__location__in=related_locations
-        )
-        # When there is more than one location, the models that can be assigned to more then one location at the same
-        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
-        # a performance penalty.
-        if len(related_locations) > 1:
-            prefix_count_queryset = prefix_count_queryset.distinct()
-            vlan_count_queryset = vlan_count_queryset.distinct()
-            circuit_count_queryset = circuit_count_queryset.distinct()
-        stats = {
-            "prefix_count": prefix_count_queryset.count(),
-            "vlan_count": vlan_count_queryset.count(),
-            "circuit_count": circuit_count_queryset.count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location__in=related_locations)
-            .count(),
-        }
-        rack_groups = (
-            RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
-            .restrict(request.user, "view")
-            .filter(location__in=related_locations)
-        )
-        children = (
-            Location.objects.restrict(request.user, "view")
-            # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-            # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
-            # automatically issue a second query (similar to behavior for
-            # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-            .without_tree_fields()
-            .filter(parent=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
 
         return {
             "rack_groups": RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))

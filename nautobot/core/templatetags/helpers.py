@@ -832,6 +832,7 @@ def label_list(value, suffix=""):
         ((item, suffix) for item in value),
     )
 
+
 @library.filter()
 @register.filter()
 def format_timezone(value):
@@ -848,10 +849,7 @@ def format_timezone(value):
     # Locale-aware formatting (respects USE_L10N + active locale)
     local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
 
-    result = (
-        f"{value} (UTC {now.strftime('%z')})<br>"
-        f"<small>{_('Local time')}: {local_time}</small>"
-    )
+    result = f"{value} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
     return format_html(result)
 
 
