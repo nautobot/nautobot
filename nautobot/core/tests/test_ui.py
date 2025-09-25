@@ -363,7 +363,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         context_data["view_action"] = "networks"
         context = Context(context_data)
         for tab in content.tabs:
-            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_networks":
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_networks":  # pylint: disable=no-member
                 with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
                     self.assertNotEqual(tab.render(context), "")
                     panel_render.assert_called()
@@ -379,7 +379,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         context_data["view_action"] = "services"
         context = Context(context_data)
         for tab in content.tabs:
-            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_services":
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_services":  # pylint: disable=no-member
                 with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
                     self.assertNotEqual(tab.render(context), "")
                     panel_render.assert_called()
