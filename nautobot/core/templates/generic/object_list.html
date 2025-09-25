@@ -243,7 +243,7 @@
                             {% endif %}
                             {% include table_template|default:'panel_table.html' %}
 
-                            <div class="pull-left noprint">
+                            <div class="pull-left noprint" id="bulk-action-buttons">
                                 {% consolidate_bulk_action_buttons %}
                                 {% block bulk_buttons %}{% endblock %}
 
