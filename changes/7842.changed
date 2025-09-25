@@ -1,3 +1,4 @@
 The `has_approval_workflow_definition` method has been moved to `ApprovableModelMixin` from `ScheduledJob` so that it can be used by any model that will be handled by the approval process.
 Replaced `APPROVAL_WORKFLOW_MODELS` constant with `FeatureQuery` and `populate_model_features_registry`.
-Changed rendering Approval Workflow tab in ScheduledJob. Render only when scheduled job has associated any approval workflows.
+Changed rendering Approval Workflow tab in ScheduledJob; now renders only when the scheduled job has any associated approval workflows.
+Flagged Approval Workflows and their various sub-models as non-versionable.

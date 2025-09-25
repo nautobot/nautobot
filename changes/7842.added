@@ -1,3 +1,2 @@
 Added `Canceled` Approval Workflow State.
-Added `PullRequest` to Approval Workflow Models.
-Approval Workflows and their various sub-models were flagged as non-versionable.
+Added `nautobot.apps.choices.ApprovalWorkflowStateChoices`.

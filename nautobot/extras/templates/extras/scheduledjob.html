@@ -18,7 +18,7 @@
 {% endblock content %}
 
 {% block extra_nav_tabs %}
-    {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.first %}
+    {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.exists %}
         {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
             <li class="nav-item" role="presentation">
                 <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %}">Approval Workflow</a>

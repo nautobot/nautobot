@@ -254,14 +254,18 @@ class ApprovalWorkflow(OrganizationalModel):
         denied_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_stages.exists():
             self.current_state = ApprovalWorkflowStateChoices.DENIED
-        canceled_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED)
-        if canceled_stages.exists():
-            self.current_state = ApprovalWorkflowStateChoices.CANCELED
-        # Check if all stages are approved
-        approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
-        approval_workflow_stage_count = self.approval_workflow_definition.approval_workflow_stage_definitions.count()
-        if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
-            self.current_state = ApprovalWorkflowStateChoices.APPROVED
+        else:
+            canceled_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED)
+            if canceled_stages.exists():
+                self.current_state = ApprovalWorkflowStateChoices.CANCELED
+            else:
+                # Check if all stages are approved
+                approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+                approval_workflow_stage_count = (
+                    self.approval_workflow_definition.approval_workflow_stage_definitions.count()
+                )
+                if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
+                    self.current_state = ApprovalWorkflowStateChoices.APPROVED
 
         # If the state is changed to APPROVED or DENIED or CANCELED from PENDING, set the decision date
         if previous_state != self.current_state:
@@ -421,9 +425,12 @@ class ApprovalWorkflowStage(OrganizationalModel):
         denied_responses = self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_responses.exists():
             self.state = ApprovalWorkflowStateChoices.DENIED
-        canceled_responses = self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.CANCELED)
-        if canceled_responses.exists():
-            self.state = ApprovalWorkflowStateChoices.CANCELED
+        else:
+            canceled_responses = self.approval_workflow_stage_responses.filter(
+                state=ApprovalWorkflowStateChoices.CANCELED
+            )
+            if canceled_responses.exists():
+                self.state = ApprovalWorkflowStateChoices.CANCELED
 
         # Set the decision date if the state is changed to APPROVED or DENIED
         decision_made = (
