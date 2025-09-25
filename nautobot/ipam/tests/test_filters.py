@@ -46,7 +46,7 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
     ClusterType,
@@ -63,21 +63,6 @@ class NamespaceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     tenancy_related_name = "namespaces"
     # Skip description - factory data doesn't have enough variety
     generic_filter_tests = (("name",),)
-
-    @classmethod
-    def setUpTestData(cls):
-        # Create namespaces with tenant assignments for tenancy filter testing
-        tenants = Tenant.objects.all()[:3]
-        tenant_groups = TenantGroup.objects.all()[:2]
-
-        # Create namespaces with different tenants for filter testing
-        for i, tenant in enumerate(tenants):
-            Namespace.objects.create(name=f"Tenant Test Namespace {i + 1}", tenant=tenant)
-
-        # Create namespaces for tenant group filtering
-        for i, group in enumerate(tenant_groups):
-            group_tenant = group.tenants.first()
-            Namespace.objects.create(name=f"Tenant Group Test Namespace {i + 1}", tenant=group_tenant)
 
 
 class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
