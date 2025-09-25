@@ -38,8 +38,7 @@ from nautobot.dcim.models import (
     RearPort,
     RearPortTemplate,
 )
-from nautobot.extras.filters import CustomFieldModelFilterSetMixin
-from nautobot.extras.filters.mixins import RelationshipModelFilterSetMixin
+from nautobot.extras.filters.mixins import CustomFieldModelFilterSetMixin, RelationshipModelFilterSetMixin
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
