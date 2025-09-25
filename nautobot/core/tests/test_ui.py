@@ -4,12 +4,16 @@ from unittest.mock import patch
 
 from django.template import Context
 from django.test import RequestFactory
+from django.urls import reverse
 
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
+from nautobot.cloud.views import CloudResourceTypeUIViewSet
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.object_detail import (
+    _ObjectDetailAdvancedTab,
+    _ObjectDetailMainTab,
     BaseTextPanel,
     DataTablePanel,
     DistinctViewTab,
@@ -319,3 +323,67 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.assertIn("body_content_table", panel_context)
         table = panel_context["body_content_table"]
         self.assertQuerySetEqual(cloud_services, table.data)
+
+    def test_tab_conditional_rendering(self):
+        """
+        Assert default tabs render on the main detail view but not sub-views, while distinct-view-tabs do the reverse.
+        """
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        content = CloudResourceTypeUIViewSet.object_detail_content
+
+        # Main detail view renders all base tabs and no DistinctViewTabs
+        request = self.factory.get(cloud_resource_type.get_absolute_url())
+        request.user = self.user
+        context_data = {
+            "request": request,
+            "object": cloud_resource_type,
+            "settings": {},
+            "csrf_token": "",
+            "perms": [],
+            "created_by": self.request.user,
+            "last_updated_by": self.request.user,
+            "view_action": "retrieve",
+            "detail": True,
+        }
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab):
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()
+            elif isinstance(tab, (_ObjectDetailMainTab, _ObjectDetailAdvancedTab)):  # other base tabs might not render
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+
+        # Distinct tab view renders its tab *only*
+        request = self.factory.get(reverse("cloud:cloudresourcetype_networks", kwargs={"pk": cloud_resource_type.pk}))
+        request.user = self.user
+        context_data["request"] = request
+        context_data["view_action"] = "networks"
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_networks":
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+            else:
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()
+
+        # Same, but for a different distinct view tab
+        request = self.factory.get(reverse("cloud:cloudresourcetype_services", kwargs={"pk": cloud_resource_type.pk}))
+        request.user = self.user
+        context_data["request"] = request
+        context_data["view_action"] = "services"
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_services":
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+            else:
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()

@@ -417,16 +417,14 @@ class Tab(Component):
         """
         Only render a main-view Tab if the active request is for the main object view rather than a separate action.
         """
-        if not self.should_render(context):
-            return False
-
         request = context["request"]
         obj = get_obj_from_context(context)
         return request.path == obj.get_absolute_url()
 
     def render(self, context: Context):
         """Render the tab's contents (layout and panels) to HTML."""
-        if not self.should_render(context) or not self.should_render_content(context):
+        # Check should_render_content first as it's generally a cheaper calculation than should_render checking perms
+        if not self.should_render_content(context) or not self.should_render(context):
             return ""
 
         with context.update(
@@ -490,7 +488,8 @@ class DistinctViewTab(Tab):
         try:
             self.related_object_count = getattr(obj, self.related_object_attribute).count()
         except AttributeError:
-            logger.warning(
+            # Not a warning log, as there are cases where this is expected.
+            logger.debug(
                 f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
             )
 
@@ -502,9 +501,6 @@ class DistinctViewTab(Tab):
         """
         A DistinctViewTab should only render its content if the view in question is active.
         """
-        if not self.should_render(context):
-            return False
-
         with context.update(self.get_extra_context(context)):
             request = context["request"]
             return request.path == context["url"]
