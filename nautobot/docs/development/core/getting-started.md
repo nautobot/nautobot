@@ -183,6 +183,8 @@ Available tasks:
   createsuperuser              Create a new Nautobot superuser account (default: "admin"), will prompt for password.
   debug                        Start Nautobot and its dependencies in debug mode.
   destroy                      Destroy all containers and volumes.
+  djhtml                       Indent Django template files.
+  djlint                       Lint and check Django template files formatting.
   docker-push                  Tags and pushes docker images to the appropriate repos, intended for release use only.
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.

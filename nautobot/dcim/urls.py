@@ -31,6 +31,7 @@ router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
+router.register("devices", views.DeviceUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("locations", views.LocationUIViewSet)
@@ -332,38 +333,12 @@ urlpatterns = [
         name="devicebaytemplate_delete",
     ),
     # Devices
-    path("devices/", views.DeviceListView.as_view(), name="device_list"),
-    path("devices/add/", views.DeviceEditView.as_view(), name="device_add"),
-    path("devices/import/", views.DeviceBulkImportView.as_view(), name="device_import"),  # 3.0 TODO: remove, unused
-    path("devices/edit/", views.DeviceBulkEditView.as_view(), name="device_bulk_edit"),
-    path(
-        "devices/delete/",
-        views.DeviceBulkDeleteView.as_view(),
-        name="device_bulk_delete",
-    ),
-    path("devices/<uuid:pk>/", views.DeviceView.as_view(), name="device"),
-    path("devices/<uuid:pk>/edit/", views.DeviceEditView.as_view(), name="device_edit"),
-    path(
-        "devices/<uuid:pk>/delete/",
-        views.DeviceDeleteView.as_view(),
-        name="device_delete",
-    ),
-    path(
-        "devices/<uuid:pk>/console-ports/",
-        views.DeviceConsolePortsView.as_view(),
-        name="device_consoleports",
-    ),
     path(
         "devices/<uuid:pk>/console-ports/add/",
         RedirectView.as_view(
             url="/dcim/console-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-ports/"
         ),
         name="device_consoleports_add",
-    ),
-    path(
-        "devices/<uuid:pk>/console-server-ports/",
-        views.DeviceConsoleServerPortsView.as_view(),
-        name="device_consoleserverports",
     ),
     path(
         "devices/<uuid:pk>/console-server-ports/add/",
@@ -373,19 +348,9 @@ urlpatterns = [
         name="device_consoleserverports_add",
     ),
     path(
-        "devices/<uuid:pk>/power-ports/",
-        views.DevicePowerPortsView.as_view(),
-        name="device_powerports",
-    ),
-    path(
         "devices/<uuid:pk>/power-ports/add/",
         RedirectView.as_view(url="/dcim/power-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-ports/"),
         name="device_powerports_add",
-    ),
-    path(
-        "devices/<uuid:pk>/power-outlets/",
-        views.DevicePowerOutletsView.as_view(),
-        name="device_poweroutlets",
     ),
     path(
         "devices/<uuid:pk>/power-outlets/add/",
@@ -395,19 +360,9 @@ urlpatterns = [
         name="device_poweroutlets_add",
     ),
     path(
-        "devices/<uuid:pk>/interfaces/",
-        views.DeviceInterfacesView.as_view(),
-        name="device_interfaces",
-    ),
-    path(
         "devices/<uuid:pk>/interfaces/add/",
         RedirectView.as_view(url="/dcim/interfaces/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/interfaces/"),
         name="device_interfaces_add",
-    ),
-    path(
-        "devices/<uuid:pk>/front-ports/",
-        views.DeviceFrontPortsView.as_view(),
-        name="device_frontports",
     ),
     path(
         "devices/<uuid:pk>/front-ports/add/",
@@ -415,19 +370,9 @@ urlpatterns = [
         name="device_frontports_add",
     ),
     path(
-        "devices/<uuid:pk>/rear-ports/",
-        views.DeviceRearPortsView.as_view(),
-        name="device_rearports",
-    ),
-    path(
         "devices/<uuid:pk>/rear-ports/add/",
         RedirectView.as_view(url="/dcim/rear-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/rear-ports/"),
         name="device_rearports_add",
-    ),
-    path(
-        "devices/<uuid:pk>/device-bays/",
-        views.DeviceDeviceBaysView.as_view(),
-        name="device_devicebays",
     ),
     path(
         "devices/<uuid:pk>/device-bays/add/",
@@ -435,59 +380,11 @@ urlpatterns = [
         name="device_devicebays_add",
     ),
     path(
-        "devices/<uuid:pk>/module-bays/",
-        views.DeviceModuleBaysView.as_view(),
-        name="device_modulebays",
-    ),
-    path(
         "devices/<uuid:pk>/module-bays/add/",
         RedirectView.as_view(
             url="/dcim/module-bays/add/?parent_device=%(pk)s&return_url=/dcim/devices/%(pk)s/module-bays/"
         ),
         name="device_modulebays_add",
-    ),
-    path(
-        "devices/<uuid:pk>/inventory/",
-        views.DeviceInventoryView.as_view(),
-        name="device_inventory",
-    ),
-    path(
-        "devices/<uuid:pk>/config-context/",
-        views.DeviceConfigContextView.as_view(),
-        name="device_configcontext",
-    ),
-    path(
-        "devices/<uuid:pk>/changelog/",
-        views.DeviceChangeLogView.as_view(),
-        name="device_changelog",
-        kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="device_notes",
-        kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/dynamic-groups/",
-        views.DeviceDynamicGroupsView.as_view(),
-        name="device_dynamicgroups",
-        kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/status/",
-        views.DeviceStatusView.as_view(),
-        name="device_status",
-    ),
-    path(
-        "devices/<uuid:pk>/lldp-neighbors/",
-        views.DeviceLLDPNeighborsView.as_view(),
-        name="device_lldp_neighbors",
-    ),
-    path(
-        "devices/<uuid:pk>/config/",
-        views.DeviceConfigView.as_view(),
-        name="device_config",
     ),
     path(
         "devices/<uuid:device>/services/assign/",
@@ -499,11 +396,6 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="device_add_image",
         kwargs={"model": Device},
-    ),
-    path(
-        "devices/<uuid:pk>/wireless/",
-        views.DeviceWirelessView.as_view(),
-        name="device_wireless",
     ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),

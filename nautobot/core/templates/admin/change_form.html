@@ -4,9 +4,9 @@
 {% load helpers %}
 
 {% block extrahead %}{{ block.super }}
-{% url 'admin:jsi18n' as jsi18nurl %}
-<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
-{{ media }}
+    {% url 'admin:jsi18n' as jsi18nurl %}
+    <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+    {{ media }}
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
@@ -60,74 +60,74 @@
 
 {% block content %}
 
-{% with module_name=opts.model_name|lower|slugify %}
-    {% render_with_template_if_exist opts.app_label|lower|add:"/admin_model_"|add:module_name|add:"_change_form.html" "" %}
-{% endwith %}
+    {% with module_name=opts.model_name|lower|slugify %}
+        {% render_with_template_if_exist opts.app_label|lower|add:"/admin_model_"|add:module_name|add:"_change_form.html" "" %}
+    {% endwith %}
 
 
-<form class="form-horizontal" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>
-    {% csrf_token %}
-    {% block form_top %}{% endblock %}
+    <form class="form-horizontal" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>
+        {% csrf_token %}
+        {% block form_top %}{% endblock %}
 
-    <div class="alert alert-warning">{% blocktrans %}Fields in <strong>bold</strong> are required.{% endblocktrans %}</div>
-    {% if errors %}
-        <div class="alert alert-danger">
-            {% if errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
-            {{ adminform.form.non_field_errors }}
-        </div>
-    {% endif %}
+        <div class="alert alert-warning">{% blocktrans %}Fields in <strong>bold</strong> are required.{% endblocktrans %}</div>
+        {% if errors %}
+            <div class="alert alert-danger">
+                {% if errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+                {{ adminform.form.non_field_errors }}
+            </div>
+        {% endif %}
 
-    {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}
+        {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}
 
-    <div id="content-main" class="row">
-        <div {% if is_popup %}class="col-md-12"{% else %}class="col-md-6 col-md-offset-3"{% endif %}>
-            {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
-            {% block field_sets %}
-                {% for fieldset in adminform %}
-                    {% include "admin/includes/fieldset.html" with group_column_width=adminform|form_fieldset_column_width %}
-                {% endfor %}
-            {% endblock %}
+        <div id="content-main" class="row">
+            <div {% if is_popup %}class="col-md-12"{% else %}class="col-md-6 col-md-offset-3"{% endif %}>
+                {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
+                {% block field_sets %}
+                    {% for fieldset in adminform %}
+                        {% include "admin/includes/fieldset.html" with group_column_width=adminform|form_fieldset_column_width %}
+                    {% endfor %}
+                {% endblock %}
 
-            {% block after_field_sets %}{% endblock %}
+                {% block after_field_sets %}{% endblock %}
 
-            {% block inline_field_sets %}
-                {% for inline_admin_formset in inline_admin_formsets %}
-                    {% include inline_admin_formset.opts.template %}
-                {% endfor %}
-            {% endblock %}
+                {% block inline_field_sets %}
+                    {% for inline_admin_formset in inline_admin_formsets %}
+                        {% include inline_admin_formset.opts.template %}
+                    {% endfor %}
+                {% endblock %}
 
-            {% block after_related_objects %}{% endblock %}
+                {% block after_related_objects %}{% endblock %}
 
-            {% block admin_change_form_document_ready %}
+                {% block admin_change_form_document_ready %}
 
-            <script type="text/javascript">
-                (function($) {
-                    $(document).ready(function() {
-                        $('.add-another').click(function(e) {
-                            e.preventDefault();
-                            showAddAnotherPopup(this);
+                    <script type="text/javascript">
+                        (function($) {
+                            $(document).ready(function() {
+                                $('.add-another').click(function(e) {
+                                    e.preventDefault();
+                                    showAddAnotherPopup(this);
+                                });
+                                $('.related-lookup').click(function(e) {
+                                    e.preventDefault();
+                                    showRelatedObjectLookupPopup(this);
+                                });
+                                {% if adminform and add %}
+                                    $('form#{{ opts.model_name }}_form :input:visible:enabled:first').focus()
+                                {% endif %}
+                            });
                         });
-                        $('.related-lookup').click(function(e) {
-                            e.preventDefault();
-                            showRelatedObjectLookupPopup(this);
-                        });
-                    {% if adminform and add %}
-                        $('form#{{ opts.model_name }}_form :input:visible:enabled:first').focus()
-                    {% endif %}
-                    });
-                });
-            </script>
-            {% endblock %}
+                    </script>
+                {% endblock %}
 
             {# JavaScript for prepopulated fields #}
-            {% prepopulated_fields_js %}
+                {% prepopulated_fields_js %}
+            </div>
         </div>
-    </div>
 
-    <div class="form-actions">
-        {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
-    </div>
-</form>
-<script id="django-admin-form-add-constants" src="/static/admin/js/change_form.js" data-model-name="admingroup" async=""></script>
-<script id="django-admin-prepopulated-fields-constants" src="/static/admin/js/prepopulate_init.js" data-prepopulated-fields="[]"></script>
+        <div class="form-actions">
+            {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+        </div>
+    </form>
+    <script id="django-admin-form-add-constants" src="/static/admin/js/change_form.js" data-model-name="admingroup" async=""></script>
+    <script id="django-admin-prepopulated-fields-constants" src="/static/admin/js/prepopulate_init.js" data-prepopulated-fields="[]"></script>
 {% endblock %}

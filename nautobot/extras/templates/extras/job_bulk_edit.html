@@ -14,18 +14,18 @@
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.default_job_queue override_field=form.clear_default_job_queue_override %}
 {% endblock %}
 {% block javascript %}
-<script>
-    document.querySelectorAll("[id^=id_clear][id$=override]").forEach(
-        el => el.addEventListener("change", () => {
-            const override_id = el.id;
-            const field_id = "id_" + override_id.slice(9, -9);
-            const field = document.getElementById(field_id);
-            if(el.checked === true){
-                field.disabled = true;
-            } else {
-                field.disabled = false;
+    <script>
+        document.querySelectorAll("[id^=id_clear][id$=override]").forEach(
+            el => el.addEventListener("change", () => {
+                const override_id = el.id;
+                const field_id = "id_" + override_id.slice(9, -9);
+                const field = document.getElementById(field_id);
+                if(el.checked === true){
+                    field.disabled = true;
+                } else {
+                    field.disabled = false;
+                }
             }
-        }
-    ))
-</script>
+            ))
+    </script>
 {% endblock %}

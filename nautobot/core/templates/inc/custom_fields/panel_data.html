@@ -15,24 +15,24 @@
         </div>
         <table id="custom_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in custom_fields.items %}
-            {% with forloop.counter0 as count %}
-                {% if grouping != "" %}
-                    <tr>
-                        <td class="position-relative" colspan="2">
-                            <button
-                                aria-expanded="true"
-                                class="btn float-none fs-4 fw-medium stretched-link nb-collapse-toggle"
-                                data-bs-target=".collapseme-{{ count }}"
-                                data-bs-toggle="collapse"
-                                name="grouping.{{ grouping }}"
-                                type="button"
-                            >
-                                <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
-                                -->{{ grouping }}
-                            </button>
-                        </td>
-                    </tr>
-                {% endif %}
+                {% with forloop.counter0 as count %}
+                    {% if grouping != "" %}
+                        <tr>
+                            <td class="position-relative" colspan="2">
+                                <button
+                                    aria-expanded="true"
+                                    class="btn float-none fs-4 fw-medium stretched-link nb-collapse-toggle"
+                                    data-bs-target=".collapseme-{{ count }}"
+                                    data-bs-toggle="collapse"
+                                    name="grouping.{{ grouping }}"
+                                    type="button"
+                                >
+                                    <span aria-hidden="true" class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->{{ grouping }}
+                                </button>
+                            </td>
+                        </tr>
+                    {% endif %}
                     {% for field, value in fields %}
                         <tr class="collapseme-{{ count }} collapse show nb-transition-none">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
@@ -65,7 +65,7 @@
                         </tr>
                     {% endfor %}
                 {% endwith %}
-                {% endfor %}
+            {% endfor %}
         </table>
     </div>
 {% endif %}
