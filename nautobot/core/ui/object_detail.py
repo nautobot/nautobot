@@ -406,7 +406,12 @@ class Tab(Component):
         return self.label
 
     def render(self, context: Context):
-        """Render the tab's contents (layout and panels) to HTML."""
+        """
+        Render the tab's contents (layout and panels) to HTML.
+        """
+        if not self.is_active_tab(context):
+            return ""
+
         if not self.should_render(context):
             return ""
 
@@ -423,6 +428,12 @@ class Tab(Component):
         ):
             tab_content = render_component_template(self.LAYOUT_TEMPLATE_PATHS[self.layout], context)
             return render_component_template(self.content_wrapper_template_path, context, tab_content=tab_content)
+
+    def is_active_tab(self, context: Context):
+        """
+        Check if this tab is active to render it or skip rendering.
+        """
+        return context.get("view_action") == "retrieve" and context.get("detail")
 
 
 class DistinctViewTab(Tab):
@@ -488,6 +499,12 @@ class DistinctViewTab(Tab):
             self.label,
             render_to_string("utilities/templatetags/badge.html", badge(self.related_object_count, True)),
         )
+
+    def is_active_tab(self, context: Context):
+        """
+        Render this tab only, when it's active
+        """
+        return context.get("view_action") == self.tab_id
 
 
 class Panel(Component):

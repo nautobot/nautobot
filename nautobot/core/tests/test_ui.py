@@ -320,3 +320,51 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.assertIn("body_content_table", panel_context)
         table = panel_context["body_content_table"]
         self.assertQuerySetEqual(cloud_services, table.data)
+
+    def test_extra_tab_panel_renders_only_on_its_own_tab(self):
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        content = ObjectDetailContent(
+            panels=[],
+            extra_tabs=[
+                DistinctViewTab(
+                    weight=1000,
+                    tab_id="services",
+                    label="Cloud Services",
+                    url_name="cloud:cloudresourcetype_services",
+                    related_object_attribute="cloud_services",
+                    panels=(
+                        ObjectsTablePanel(
+                            section=SectionChoices.FULL_WIDTH,
+                            weight=100,
+                            table_class=CloudServiceTable,
+                            table_filter="cloud_resource_type",
+                            tab_id="services",
+                        ),
+                    ),
+                ),
+            ],
+        )
+
+        context_data = {
+            "request": self.request,
+            "object": cloud_resource_type,
+            "settings": {},
+            "csrf_token": "",
+            "perms": [],
+            "created_by": self.request.user,
+            "last_updated_by": self.request.user,
+            "view_action": "retrieve",
+            "detail": True,
+        }
+        context = Context(context_data)
+        rendered_content = {component.__class__.__name__: component.render(context) for component in content.tabs}
+
+        self.assertEqual(rendered_content["DistinctViewTab"], "")
+        self.assertNotEqual(rendered_content["_ObjectDetailMainTab"], "")
+
+        context_data["view_action"] = "services"
+        context = Context(context_data)
+        rendered_content = {component.__class__.__name__: component.render(context) for component in content.tabs}
+
+        self.assertNotEqual(rendered_content["DistinctViewTab"], "")
+        self.assertEqual(rendered_content["_ObjectDetailMainTab"], "")
