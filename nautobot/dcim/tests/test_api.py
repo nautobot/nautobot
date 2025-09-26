@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
@@ -3587,6 +3587,15 @@ class DeviceTypeToSoftwareImageFileTestCase(
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
 
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
     @classmethod
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(Controller)
@@ -3636,6 +3645,15 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
 
     @classmethod
     def setUpTestData(cls):
