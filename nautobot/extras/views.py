@@ -2475,20 +2475,16 @@ class NoteUIViewSet(
             Note: The saved or unsaved Note instance with `user` and `user_name` set.
 
         Behavior:
-            - Sets `user` to the currently authenticated user if available.
-            - Sets `user_name` to the username of the authenticated user or "Undefined"
-            if no user is logged in.
+            - Sets `user` to the currently authenticated user.
+            - Sets `user_name` to the username of the authenticated user.
             - Saves the instance if `commit=True`.
         """
         # Get instance without committing to DB
         obj = super().form_save(form, commit=False, *args, **kwargs)
 
-        # Assign user info
-        if self.request.user.is_authenticated:
-            obj.user = self.request.user
-            obj.user_name = self.request.user.get_username()
-        else:
-            obj.user_name = "Undefined"
+        # Assign user info (only authenticated users can create notes)
+        obj.user = self.request.user
+        obj.user_name = self.request.user.get_username()
 
         # Save to DB if commit is True
         if commit:
