@@ -1,1 +1,1 @@
-Updated the `ControllerManagedDeviceGroupFactory` to potentially create records with a null `capabilities` field.
+Updated the `ControllerFactory` and `ControllerManagedDeviceGroupFactory` to potentially create records with a null `capabilities` field.

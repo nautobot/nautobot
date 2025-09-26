@@ -3618,6 +3618,14 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "location": locations[2].pk,
                 "capabilities": ["wireless"],
             },
+            {
+                "name": "Controller 4",
+                "platform": platforms[3].pk,
+                "status": statuses[3].pk,
+                "role": roles[3].pk,
+                "location": locations[3].pk,
+                "capabilities": None,
+            },
         ]
         cls.bulk_update_data = {
             "platform": platforms[0].pk,
@@ -3650,6 +3658,12 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "controller": controllers[2].pk,
                 "weight": 200,
                 "capabilities": ["wireless"],
+            },
+            {
+                "name": "ControllerManagedDeviceGroup 4",
+                "controller": controllers[3].pk,
+                "weight": 200,
+                "capabilities": None,
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
