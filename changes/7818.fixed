@@ -1,0 +1,2 @@
+Fixed incorrect closing HTML tag in `body_content_data_table.html`.
+Added call to `mark_safe()` on rendered HTML captured by `captureas` template-tag.

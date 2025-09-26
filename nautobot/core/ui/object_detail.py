@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
 from django.db.models import CharField, JSONField, Q, URLField
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -42,9 +43,11 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_mo
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
+from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -122,16 +125,24 @@ class ObjectDetailContent:
 class Component:
     """Common base class for renderable components (tabs, panels, etc.)."""
 
-    def __init__(self, *, weight):
+    def __init__(
+        self,
+        *,
+        weight,
+        required_permissions=None,
+    ):
         """Initialize common Component properties.
 
         Args:
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         self.weight = weight
+        self.required_permissions = required_permissions or []
 
-    def should_render(self, context: dict):
+    def should_render(self, context: Context):
         """
         Check whether this component should be rendered at all.
 
@@ -139,9 +150,13 @@ class Component:
         In general most Components may also return an empty string when actually rendered, which is typically also a
         means to specify that they do not need to be rendered, but may be more expensive to derive.
 
+        The default implementation here checks for `self.required_permissions` if any.
+
         Returns:
             (bool): `True` (default) if this component should be rendered.
         """
+        if self.required_permissions:
+            return context["request"].user.has_perms(self.required_permissions)
         return True
 
     def render(self, context: Context):
@@ -177,12 +192,12 @@ class Button(Component):
         link_name=None,
         icon=None,
         template_path="components/button/default.html",
-        required_permissions=None,
         javascript_template_path=None,
         attributes=None,
         size=None,
         link_includes_pk=True,
         context_object_key=None,
+        render_on_tab_id="main",
         **kwargs,
     ):
         """
@@ -198,29 +213,24 @@ class Button(Component):
             context_object_key (str, optional): The key in the render context that will contain the linked object.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
-            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
-                The button will only be rendered if the user has these permissions.
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on.
         """
         self.label = label
         self.color = color
         self.link_name = link_name
         self.icon = icon
         self.template_path = template_path
-        self.required_permissions = required_permissions or []
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         self.size = size
         self.link_includes_pk = link_includes_pk
         self.context_object_key = context_object_key
+        self.render_on_tab_id = render_on_tab_id
         super().__init__(**kwargs)
-
-    def should_render(self, context: Context):
-        """Render if and only if the requesting user has appropriate permissions (if any)."""
-        return context["request"].user.has_perms(self.required_permissions)
 
     def get_link(self, context: Context):
         """
@@ -246,6 +256,11 @@ class Button(Component):
             "attributes": self.attributes,
             "size": self.size,
         }
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -398,9 +413,18 @@ class Tab(Component):
         """
         return self.label
 
+    def should_render_content(self, context: Context):
+        """
+        Only render a main-view Tab if the active request is for the main object view rather than a separate action.
+        """
+        request = context["request"]
+        obj = get_obj_from_context(context)
+        return request.path == obj.get_absolute_url()
+
     def render(self, context: Context):
         """Render the tab's contents (layout and panels) to HTML."""
-        if not self.should_render(context):
+        # Check should_render_content first as it's generally a cheaper calculation than should_render checking perms
+        if not self.should_render_content(context) or not self.should_render(context):
             return ""
 
         with context.update(
@@ -426,6 +450,7 @@ class DistinctViewTab(Tab):
         url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
         label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
         related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
+        hide_if_empty (bool, optional): Do not render this tab if the related_object_attribute is an empty queryset.
     """
 
     def __init__(
@@ -434,38 +459,61 @@ class DistinctViewTab(Tab):
         url_name,
         label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
         related_object_attribute="",
+        hide_if_empty=False,
         **kwargs,
     ):
         self.url_name = url_name
         self.related_object_attribute = related_object_attribute
+        self.hide_if_empty = hide_if_empty
         super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
 
-    def render_label(self, context: Context):
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+
+        self.related_object_count = None
         if not self.related_object_attribute:
-            return super().render_label(context)
+            return True
 
         obj = get_obj_from_context(context)
         if not hasattr(obj, self.related_object_attribute):
             logger.warning(
                 f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
             )
-            return super().render_label(context)
+            return True
 
         try:
-            related_obj_count = getattr(obj, self.related_object_attribute).count()
-            return format_html(
-                "{} {}",
-                self.label,
-                render_to_string("utilities/templatetags/badge.html", badge(related_obj_count, True)),
-            )
+            self.related_object_count = getattr(obj, self.related_object_attribute).count()
         except AttributeError:
-            logger.warning(
+            # Not a warning log, as there are cases where this is expected.
+            logger.debug(
                 f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
             )
+
+        if self.hide_if_empty and not self.related_object_count:
+            return False
+        return True
+
+    def should_render_content(self, context: Context):
+        """
+        A DistinctViewTab should only render its content if the view in question is active.
+        """
+        with context.update(self.get_extra_context(context)):
+            request = context["request"]
+            return request.path == context["url"]
+
+    def render_label(self, context: Context):
+        if not self.related_object_attribute or not self.related_object_count:
             return super().render_label(context)
+
+        return format_html(
+            "{} {}",
+            self.label,
+            render_to_string("utilities/templatetags/badge.html", badge(self.related_object_count, True)),
+        )
 
 
 class Panel(Component):
@@ -606,7 +654,7 @@ class DataTablePanel(Panel):
         **kwargs,
     ):
         """
-        Instantiate a DataDictTablePanel.
+        Instantiate a DataTablePanel.
 
         Args:
             context_data_key (str): The key in the render context that stores the data used to populate the table.
@@ -791,7 +839,7 @@ class ObjectsTablePanel(Panel):
         self.include_columns = include_columns
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
-        self.add_permissions = add_permissions
+        self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
@@ -822,21 +870,26 @@ class ObjectsTablePanel(Panel):
         if self.tab_id:
             return_url += f"?tab={self.tab_id}"
 
-        if self.add_button_route == "default":
-            body_content_table_class = self.table_class or context[self.context_table_key].__class__
-            body_content_table_model = body_content_table_class.Meta.model
-            permission_name = get_permission_for_model(body_content_table_model, "add")
-            if request.user.has_perms([permission_name]):
-                try:
-                    add_route = reverse(get_route_for_model(body_content_table_model, "add"))
-                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
-                except NoReverseMatch:
-                    logger.warning("add route for `body_content_table_model` not found")
+        if self.add_button_route is not None:
+            add_permissions = self.add_permissions
+            if not add_permissions:
+                body_content_table_class = self.table_class or context[self.context_table_key].__class__
+                body_content_table_model = body_content_table_class.Meta.model
+                add_permissions = [get_permission_for_model(body_content_table_model, "add")]
 
-        elif self.add_button_route is not None:
-            if request.user.has_perms(self.add_permissions or []):
-                add_route = reverse(self.add_button_route)
-                body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+            if self.add_button_route == "default":
+                if request.user.has_perms(add_permissions):
+                    try:
+                        add_route = reverse(get_route_for_model(body_content_table_model, "add"))
+                        body_content_table_add_url = (
+                            f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+                        )
+                    except NoReverseMatch:
+                        logger.warning("add route for `body_content_table_model` not found")
+            else:
+                if request.user.has_perms(add_permissions):
+                    add_route = reverse(self.add_button_route)
+                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
 
         return body_content_table_add_url
 
@@ -971,6 +1024,7 @@ class KeyValueTablePanel(Panel):
         context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
+        key_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
         **kwargs,
     ):
@@ -989,6 +1043,8 @@ class KeyValueTablePanel(Panel):
 
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+                For example: {'content_types': 'Content Type'}.
         """
         if data and context_data_key:
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
@@ -996,9 +1052,12 @@ class KeyValueTablePanel(Panel):
         self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
+        self.key_transforms = key_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return bool(self.get_data(context))
 
     def get_data(self, context: Context):
@@ -1088,6 +1147,10 @@ class KeyValueTablePanel(Panel):
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
                 display = hyperlinked_object_with_color(value)
+            elif isinstance(value, Cluster) and value.cluster_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.cluster_group), hyperlinked_object(value))
+            elif isinstance(value, Rack) and value.rack_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.rack_group), hyperlinked_object(value))
             elif isinstance(value, Tenant) and value.tenant_group is not None:
                 display = format_html("{} / {}", hyperlinked_object(value.tenant_group), hyperlinked_object(value))
             # TODO: render location hierarchy for Location objects
@@ -1176,6 +1239,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self,
         *,
         fields="__all__",
+        additional_fields=(),
         exclude_fields=(),
         context_object_key=None,
         ignore_nonexistent_fields=False,
@@ -1189,6 +1253,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
                 Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
+                When a list is specified, it may include model `@property` attributes and nested lookups (if desired) in
+                addition to concrete model fields; when using `fields="__all__"`, such additional attributes and lookups
+                may be specified with the `additional_fields` parameter.
+            additional_fields (list): Only relevant if `fields == "__all__"`, in which case it can specify additional
+                non-default fields to include such as reverse relations, `@property` attributes, nested lookups, etc.
             exclude_fields (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
             context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
@@ -1197,6 +1266,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 (see `render_label()`).
         """
         self.fields = fields
+        if additional_fields and fields != "__all__":
+            raise ValueError("additional_fields may only be used in combination with fields='__all__'")
+        self.additional_fields = additional_fields
+        if exclude_fields and fields != "__all__":
+            raise ValueError("exclude_fields may only be used in combination with fields='__all__'")
         self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
@@ -1210,6 +1284,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_value(self, key, value, context: Context):
         obj = get_obj_from_context(context, self.context_object_key)
+        # TODO: handle nested keys, e.g. device_type__device_family
         try:
             field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
@@ -1230,8 +1305,18 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         if isinstance(field_instance, JSONField):
             return format_html("<pre>{}</pre>", render_json(value))
 
-        if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
-            return render_content_types(value)
+        if isinstance(field_instance, ManyToManyField):
+            if field_instance.related_model == ContentType:
+                return render_content_types(value)
+            # TODO: this would be nice but it's probably too error-prone in general:
+            # return render_m2m(
+            #     value.all(),
+            #     (
+            #         reverse(get_route_for_model(field_instance.related_model, "list")) + "?" +
+            #         obj._meta.verbose_name_plural.lower().replace(" ", "_") + "=" + str(obj.pk)
+            #     ),
+            #     key,
+            # )
 
         if isinstance(field_instance, CharField) and hasattr(obj, f"get_{key}_display"):
             # For example, Secret.provider -> Secret.get_provider_display()
@@ -1273,6 +1358,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
 
+        fields += self.additional_fields
+
         data = {}
 
         if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
@@ -1283,9 +1370,16 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             if field_name in self.exclude_fields:
                 continue
             try:
-                field_value = getattr(instance, field_name)
-            except ObjectDoesNotExist:
-                field_value = None
+                field_value = instance
+                # Handle nested lookups, e.g. device_type__device_family
+                for token in field_name.split(LOOKUP_SEP):
+                    try:
+                        field_value = getattr(field_value, token)
+                        if field_value is None:
+                            break
+                    except ObjectDoesNotExist:
+                        field_value = None
+                        break
             except AttributeError:
                 if self.ignore_nonexistent_fields:
                     continue
@@ -1301,6 +1395,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
+
+        if key in self.key_transforms:
+            return self.key_transforms[key]
+
         instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
@@ -1572,7 +1670,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         if not hasattr(obj, "get_custom_field_groupings"):
             return False
         self.custom_field_data = obj.get_custom_field_groupings(advanced_ui=self.advanced_ui)
-        return bool(self.custom_field_data)
+        return bool(self.custom_field_data) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap the response from `get_custom_field_groupings()` to a nested dict as expected by the parent class."""
@@ -1648,7 +1746,7 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         if not hasattr(obj, "get_computed_fields_grouping"):
             return False
         self.computed_fields_data = obj.get_computed_fields_grouping(advanced_ui=self.advanced_ui)
-        return bool(self.computed_fields_data)
+        return bool(self.computed_fields_data) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap `get_computed_fields_grouping()` to the nested dict format expected by the base class."""
@@ -1694,7 +1792,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             self.relationships_data["source"]
             or self.relationships_data["destination"]
             or self.relationships_data["peer"]
-        )
+        ) and super().should_render(context)
 
     def get_data(self, context: Context):
         """Remap `get_relationships_with_related_objects()` to the flat dict format expected by the base class."""
@@ -1745,6 +1843,8 @@ class _ObjectTagsPanel(Panel):
         )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return hasattr(get_obj_from_context(context), "tags")
 
     def get_extra_context(self, context: Context):
@@ -1776,6 +1876,8 @@ class _ObjectCommentPanel(ObjectTextPanel):
         )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return hasattr(get_obj_from_context(context), "comments")
 
 
@@ -1909,6 +2011,8 @@ class _ObjectDetailContactsTab(Tab):
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         return getattr(get_obj_from_context(context), "is_contact_associable_model", False)
 
     def render_label(self, context: Context):
@@ -1933,6 +2037,7 @@ class _ObjectDetailGroupsTab(Tab):
         label="Dynamic Groups",
         weight=Tab.WEIGHT_GROUPS_TAB,
         panels=None,
+        required_permissions=("extras.view_dynamic_group",),
         **kwargs,
     ):
         if panels is None:
@@ -1946,15 +2051,20 @@ class _ObjectDetailGroupsTab(Tab):
                     related_field_name="member_id",
                 ),
             )
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+        super().__init__(
+            tab_id=tab_id,
+            label=label,
+            weight=weight,
+            panels=panels,
+            required_permissions=required_permissions,
+            **kwargs,
+        )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         obj = get_obj_from_context(context)
-        return (
-            getattr(obj, "is_dynamic_group_associable_model", False)
-            and context["request"].user.has_perm("extras.view_dynamicgroup")
-            and obj.dynamic_groups.exists()
-        )
+        return getattr(obj, "is_dynamic_group_associable_model", False) and obj.dynamic_groups.exists()
 
     def render_label(self, context: Context):
         return format_html(
@@ -1977,6 +2087,7 @@ class _ObjectDetailMetadataTab(Tab):
         label="Object Metadata",
         weight=Tab.WEIGHT_METADATA_TAB,
         panels=None,
+        required_permissions=("extras.view_objectmetadata",),
         **kwargs,
     ):
         if panels is None:
@@ -1992,15 +2103,20 @@ class _ObjectDetailMetadataTab(Tab):
                     header_extra_content_template_path=None,
                 ),
             )
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+        super().__init__(
+            tab_id=tab_id,
+            label=label,
+            weight=weight,
+            panels=panels,
+            required_permissions=required_permissions,
+            **kwargs,
+        )
 
     def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
         obj = get_obj_from_context(context)
-        return (
-            getattr(obj, "is_metadata_associable_model", False)
-            and context["request"].user.has_perm("extras.view_objectmetadata")
-            and obj.associated_object_metadata.exists()
-        )
+        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
 
     def render_label(self, context: Context):
         return format_html(

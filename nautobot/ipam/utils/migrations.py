@@ -604,7 +604,7 @@ def get_closest_parent(obj, qs):
     """
     # Validate that it's a real CIDR
     cidr = validate_cidr(obj)
-    broadcast = str(cidr.broadcast or cidr.ip)
+    broadcast = str(cidr.broadcast or cidr[-1])
 
     # Prepare the queryset filter
     lookup_kwargs = {

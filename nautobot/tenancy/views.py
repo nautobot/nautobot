@@ -1,6 +1,11 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -111,4 +116,12 @@ class TenantUIViewSet(NautobotUIViewSet):
                 weight=100,
             ),
         )
+    )
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="tenant_group", parent_lookup_key="name"),
+            ]
+        }
     )
