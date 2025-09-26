@@ -39,7 +39,6 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils import lookup, permissions
@@ -1133,6 +1132,8 @@ class BulkEditAndBulkDeleteModelMixin:
 
     def send_bulk_delete_objects_to_job(self, request):
         """Prepare and enqueue bulk delete job."""
+        from nautobot.core.jobs import BulkDeleteObjects
+
         job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
 
         job_form = BulkDeleteObjects.as_form(data={**self.key_params})
@@ -1149,6 +1150,8 @@ class BulkEditAndBulkDeleteModelMixin:
 
     def send_bulk_edit_objects_to_job(self, request, form_data):
         """Prepare and enqueue a bulk edit job."""
+        from nautobot.core.jobs import BulkEditObjects
+
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
 
         if nullified_fields := request.POST.getlist("_nullify"):
