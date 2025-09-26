@@ -328,7 +328,7 @@ $dropdown-link-hover-color: var(--#{$prefix}body-color);
 $dropdown-link-hover-bg:    var(--#{$prefix}primary-bg-subtle);
 
 $dropdown-link-active-color: var(--#{$prefix}primary-text-emphasis);
-$dropdown-link-active-bg:    var(--#{$prefix}primary-bg-subtle);
+$dropdown-link-active-bg:    $dropdown-bg;
 
 $dropdown-link-disabled-color: var(--#{$prefix}tertiary-color);
 
@@ -562,7 +562,7 @@ $s2bs5-padding-y:       $form-select-padding-y;
 $s2bs5-padding-x:       $form-select-padding-x;
 
 /* Variables below cannot reference CSS custom properties because of Select2 processing error. We overwrite it later. */
-$s2bs5-item-active-bg:  $primary-bg-subtle;
+$s2bs5-item-active-bg:  $body-bg;
 $s2bs5-item-hover-bg:   $primary-bg-subtle;
 $s2bs5-item-focus-bg:   $primary-bg-subtle;
 
@@ -636,6 +636,16 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
         &[aria-selected="true"]:not(.select2-results__option--highlighted) {
           color: $dropdown-link-active-color;
           background-color: $dropdown-link-active-bg;
+        }
+
+        /*
+         * The rule below merges styles of highlighted and selected states. It is an addition to the original Select2
+         * Bootstrap 5 theme, in which highlighted and selected states are mutually exclusive.
+         */
+        &.select2-results__option--highlighted.select2-results__option--selected,
+        &.select2-results__option--highlighted[aria-selected="true"] {
+          color: $dropdown-link-active-color;
+          background-color: $dropdown-link-hover-bg;
         }
       }
     }
