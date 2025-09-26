@@ -540,6 +540,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         request.user = self.user
         context_data = {
             "request": request,
+            "user": self.user,
             "object": cloud_resource_type,
             "settings": {},
             "csrf_token": "",
