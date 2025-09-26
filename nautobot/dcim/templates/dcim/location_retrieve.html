@@ -4,12 +4,6 @@
 {% load helpers %}
 {% load tz %}
 
-{% block extra_breadcrumbs %}
-    {% for ancestor in object.ancestors %}
-        <li>{{ ancestor|hyperlinked_object:"name"}}</li>
-    {% endfor %}
-{% endblock %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -43,7 +37,7 @@
             </tr>
             <tr>
                 <td>Time Zone</td>
-                 <td>
+                <td>
                     {% if object.time_zone %}
                         {{ object.time_zone }} (UTC {{ object.time_zone|tzoffset }})<br />
                         <small class="text-muted">Local time: {% timezone object.time_zone %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}</small>

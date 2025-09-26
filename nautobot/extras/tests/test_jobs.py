@@ -352,6 +352,7 @@ class JobTransactionTest(TransactionTestCase):
             "BulkEditObjects",
             content_type=job_ct.id,
             edit_all=False,
+            pk_list=pk_list,
             filter_query_params={},
             form_data={
                 "pk": pk_list,
@@ -395,6 +396,7 @@ class JobTransactionTest(TransactionTestCase):
             "BulkEditObjects",
             content_type=job_ct.id,
             edit_all=False,
+            pk_list=pk_list,
             filter_query_params={},
             form_data={
                 "pk": pk_list,

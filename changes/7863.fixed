@@ -1,0 +1,1 @@
+Fixed a circular-import issue seen in some Apps following #7825.

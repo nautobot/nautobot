@@ -5194,6 +5194,8 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
 class SoftwareImageFileForm(NautobotModelForm):
     """SoftwareImageFile credit/edit form."""
 
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all())
+
     device_types = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
@@ -5340,6 +5342,7 @@ class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class SoftwareVersionForm(NautobotModelForm):
     """SoftwareVersion credit/edit form."""
 
+    platform = DynamicModelChoiceField(queryset=Platform.objects.all())
     release_date = NullableDateField(required=False, widget=DatePicker())
     end_of_support_date = NullableDateField(required=False, widget=DatePicker())
     field_order = [
