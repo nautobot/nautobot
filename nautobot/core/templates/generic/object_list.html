@@ -177,7 +177,7 @@
                         {% endif %}
                         {% include table_template|default:'panel_table.html' %}
 
-                        <div class="d-print-none mt-16 float-lg-start mt-lg-20">
+                        <div class="d-print-none mt-16 float-lg-start mt-lg-20" id="bulk-action-buttons">
                             {% consolidate_bulk_action_buttons %}
                             {% block bulk_buttons %}{% endblock %}
                         </div>
