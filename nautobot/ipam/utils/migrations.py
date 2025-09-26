@@ -367,9 +367,6 @@ def reparent_prefixes(apps):
     if "test" not in sys.argv:
         print("\n>>> Processing Prefix parents, please standby...")
     for pfx in Prefix.objects.all().order_by("-prefix_length", "tenant").select_related("namespace").iterator():
-        # Skip prefixes that don't have namespace assigned yet - they will be handled later
-        if pfx.namespace is None:
-            continue
         parent = get_closest_parent(pfx, pfx.namespace.prefixes.all())
         if parent is not None:
             # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
