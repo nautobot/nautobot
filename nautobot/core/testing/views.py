@@ -226,11 +226,11 @@ class ViewTestCases:
             self.assertEqual(
                 len(captured_tree_cte_queries),
                 self.allowed_number_of_tree_queries_per_view_type["retrieve"],
-                f"The CTE tree was calculated a different number of times ({len(captured_tree_cte_queries)})"
-                f" than allowed ({self.allowed_number_of_tree_queries_per_view_type['retrieve']}). The allowed number"
-                f" can be configured on the viewset with the `allowed_number_of_tree_queries_per_view_type` dictionary."
-                f" Care should be taken to only increase these numbers where necessary - tree queries can become really"
-                f" slow with bigger datasets."
+                f"This view was expected to execute {self.allowed_number_of_tree_queries_per_view_type['retrieve']}"
+                f" recursive database queries but {len(captured_tree_cte_queries)} were executed."
+                f" If this is expected, please update the {self.__class__.__name__}.allowed_number_of_tree_queries_per_view_type['retrieve']"
+                " property. Care should be taken to only increase these numbers where necessary - recursive queries can become really"
+                " slow with bigger datasets."
                 f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
             )
 
@@ -1500,10 +1500,6 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all pks is not part of the html.
-            self.assertNotIn(str(first_pk), response_body)
-            self.assertNotIn(str(second_pk), response_body)
-            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 

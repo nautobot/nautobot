@@ -1,8 +1,2 @@
 {% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-
-{% block extra_breadcrumbs %}
-    {% for ancestor in object.ancestors %}
-        <li class="breadcrumb-item">{{ ancestor|hyperlinked_object:"name" }}</li>
-    {% endfor %}
-{% endblock %}
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}

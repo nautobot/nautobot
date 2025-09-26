@@ -179,6 +179,41 @@ class NormalizeQueryDictTest(TestCase):
             {"name": ["Sample Status"], "content_types": ["dcim.device"]},
         )
 
+        self.assertDictEqual(
+            requests.normalize_querydict({"name": ["Sample Status"], "content_types": ["1"]}, form_class=StatusForm),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(
+                requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+                form_class=StatusForm,
+            ),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+
+class ConvertQueryDictToDictTest(TestCase):
+    """
+    Validate convert_querydict_to_dict() utility function.
+    """
+
+    def test_convert_querydict_to_dict(self):
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("foo=1&bar=2&bar=3&baz=")),
+            {"foo": ["1"], "bar": ["2", "3"], "baz": [""]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+            {"name": ["Sample Status"], "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=dcim.device")),
+            {"name": ["Sample Status"], "content_types": ["dcim.device"]},
+        )
+
 
 class DeepMergeTest(TestCase):
     """
