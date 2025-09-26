@@ -1,0 +1,1 @@
+Fixed an error in rendering the Device detail view when the device has a controller-managed device group with null `capabilities`.
