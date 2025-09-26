@@ -8,7 +8,7 @@ import nautobot.ipam.models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0053_namespace_tenant"),
+        ("ipam", "0054_namespace_tenant"),
     ]
 
     operations = [
