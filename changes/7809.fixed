@@ -1,2 +1,3 @@
 Fixed bulk object edit and bulk delete not considering filtering of saved views.
 Fixed buttons on bulk views not adhering to the all toggle.
+Fixed circular import error by lazy importing job based classes into core views.
