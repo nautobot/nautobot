@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
@@ -33,7 +34,14 @@ from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    context_object_attr,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+    ViewNameBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -2577,6 +2585,37 @@ class JobResultUIViewSet(
     table_class = tables.JobResultTable
     queryset = JobResult.objects.all()
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                # if result.job_model is not None
+                BaseBreadcrumbItem(
+                    label=context_object_attr("job_model.grouping", context_key="result"),
+                    should_render=lambda c: c["result"].job_model is not None,
+                ),
+                InstanceParentBreadcrumbItem(
+                    instance_key="result",
+                    parent_key="job_model",
+                    parent_lookup_key="name",
+                    should_render=lambda c: c["result"].job_model is not None,
+                ),
+                # elif job in context
+                ViewNameBreadcrumbItem(
+                    view_name="extras:jobresult_list",
+                    label=context_object_attr("class_path", context_key="job"),
+                    reverse_query_params=lambda c: {"name": urlencode(c["job"].class_path)},
+                    should_render=lambda c: c["result"].job_model is None and c["job"] is not None,
+                ),
+                # else
+                BaseBreadcrumbItem(
+                    label=context_object_attr("name", context_key="result"),
+                    should_render=lambda c: c["result"].job_model is None and c["job"] is None,
+                ),
+            ]
+        },
+        detail_item_label=context_object_attr("date_created"),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
