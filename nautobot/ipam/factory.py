@@ -288,6 +288,7 @@ class NamespaceFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
+
 class PrefixFactory(PrimaryModelFactory):
     """Create random Prefix objects with randomized data.
 
