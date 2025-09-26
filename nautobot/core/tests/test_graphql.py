@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.test import override_settings, TestCase
+from django.test import override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
 import graphene.types
@@ -38,7 +38,7 @@ from nautobot.core.graphql.schema import (
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import create_test_user, NautobotTestClient
+from nautobot.core.testing import create_test_user, NautobotTestClient, TestCase
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -2448,7 +2448,12 @@ query {
         See https://github.com/nautobot/nautobot/issues/7651.
         """
         query = """query { tenant_groups { name tenants { name } } }"""
-        with self.assertNumQueries(2):  # TODO: should be able to reduce it to 1, but this is still a big improvement
+        # Prewarm caches of Relationships and such to reduce variation in the number of queries below
+        result = self.execute_query(query)
+        self.assertNotIn("error", str(result))
+        # Run it again and assert that the optimized query is run.
+        # Before the fix for #7651 this would result in N+1 queries where N is the number of tenant-groups!
+        with self.assertNumQueries(2):
             result = self.execute_query(query)
         self.assertNotIn("error", str(result))
 
