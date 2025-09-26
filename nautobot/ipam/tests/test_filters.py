@@ -61,7 +61,6 @@ class NamespaceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     queryset = Namespace.objects.all()
     filterset = NamespaceFilterSet
     tenancy_related_name = "namespaces"
-    # Skip description - factory data doesn't have enough variety
     generic_filter_tests = (("name",),)
 
 
