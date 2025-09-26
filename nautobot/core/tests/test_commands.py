@@ -1,9 +1,13 @@
 from io import StringIO
 
 from django.core.management import call_command
+from django.utils.timezone import now
 import yaml
 
 from nautobot.core.testing import TestCase
+from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
+from nautobot.extras.models import Job, ScheduledJob
 
 
 class ManagementCommandTestCase(TestCase):
