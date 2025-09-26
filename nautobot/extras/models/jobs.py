@@ -1311,11 +1311,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             except JobQueue.DoesNotExist:
                 raise ValidationError(f"Job Queue {value} does not exist in the database.")
 
-    def has_approval_workflow_definition(self) -> bool:
-        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
-
-        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
-
     @staticmethod
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)

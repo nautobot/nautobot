@@ -1,0 +1,2 @@
+Added `Canceled` Approval Workflow State.
+Added `nautobot.apps.choices.ApprovalWorkflowStateChoices`.
