@@ -311,6 +311,26 @@ class FlattenIterableTest(TestCase):
 class GetFooForModelTest(TestCase):
     """Tests for the various `get_foo_for_model()` functions."""
 
+    def test_get_user_from_instance_field_named_user(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=self.user,
+        )
+        self.assertEqual(lookup.get_user_from_instance(instance), self.user)
+
+    def test_get_user_from_instance_null_user_field(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=None,
+        )
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
+    def test_get_user_from_instance_no_user_field(self):
+        instance = extras_models.GraphQLQuery.objects.create(name="FizzBuzz", query="{devices { name }}")
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
     def test_get_filterset_for_model(self):
         """
         Test that `get_filterset_for_model` returns the right FilterSet for various inputs.

@@ -627,16 +627,6 @@ class ObjectApprovalWorkflowView(generic.GenericView):
         else:
             obj = get_object_or_404(model, **kwargs)
 
-        job_class = get_job(obj.task)
-        labels = {}
-        if job_class is not None:
-            for name, var in job_class._get_vars().items():
-                field = var.as_field()
-                if field.label:
-                    labels[name] = field.label
-                else:
-                    labels[name] = pretty_name(name)
-
         # Gather all changes for this object (and its related objects)
         approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
         stage_table = tables.RelatedApprovalWorkflowStageTable(
@@ -659,8 +649,6 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "approval_workflow": approval_workflow,
                 "base_template": base_template,
                 "active_tab": "approval_workflow",
-                "labels": labels,
-                "job_class_found": (job_class is not None),
                 "default_time_zone": get_current_timezone(),
                 "stage_table": stage_table,
                 "response_table": response_table,
