@@ -2260,6 +2260,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             return (
                 obj.controller_managed_device_group is not None
+                and isinstance(obj.controller_managed_device_group.capabilities, list)  # it's potentially None
                 and "wireless" in obj.controller_managed_device_group.capabilities
             )
 
