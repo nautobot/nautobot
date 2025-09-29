@@ -170,6 +170,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.19
 
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Added support for `distinct` optional parameter when defining an `ObjectsTablePanel` UI component.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Added `description` filter for the VRF and IPAddress models.
 - [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added support for disabling a `DistinctViewTab` without hiding it by providing a `disabled_message` in the render context.
 - [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added support for `hide_if_empty` optional parameter on `DistinctViewTab`.
@@ -180,6 +181,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Changed in v2.4.19
 
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Changed UI `ObjectsTablePanel` to only apply `.distinct()` to queries when explicitly requested, instead of unconditionally. Improves performance of rendering these tables in most cases.
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Changed `DeviceType` detail view to apply proper ordering to the table of related `SoftwareImageFile` records.
 - [#7606](https://github.com/nautobot/nautobot/issues/7606) - Changed "Side A" and "Side Z" column in circuit table to show shorter `location.name` instead of `location.display`.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Changed the jobs `BulkDeleteObjects` and `BulkEditObjects` to be hidden by default.
 - [#7821](https://github.com/nautobot/nautobot/issues/7821) - Changed the maximum allowed value for rack height from 100 to 500.
@@ -190,6 +193,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.19
 
+- [#7651](https://github.com/nautobot/nautobot/issues/7651) - Improved GraphQL query performance when querying many-to-many and many-to-one related objects such as `{ tenant_groups { tenants { name }}}`.
 - [#7763](https://github.com/nautobot/nautobot/issues/7763) - Fixed an intermittent test failure for `test_anonymous_user_get_shared_views_only`.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed bulk object edit and bulk delete not considering filtering of saved views.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed buttons on bulk views not adhering to the "all" toggle.
@@ -203,9 +207,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7825](https://github.com/nautobot/nautobot/issues/7825) - Enhanced `NautobotUIViewSetMixin` to correctly set the `active_tab` when rendering a detail action other than the default `"retrieve"`.
 - [#7833](https://github.com/nautobot/nautobot/issues/7833) - Fixed an exception when rendering an object detail view with no corresponding list view.
 - [#7835](https://github.com/nautobot/nautobot/issues/7835) - Fixed an MRO error in generic views by consistently placing `UIComponentsMixin` at the beginning of base classes.
+- [#7855](https://github.com/nautobot/nautobot/issues/7855) - Fixed NoteUIViewSet to correctly populate `user` and `user_name` fields on Note creation.
 - [#7858](https://github.com/nautobot/nautobot/issues/7858) - Fixed the `InstanceBreadcrumbsItem` and `InstanceParentBreadcrumbsItem` to not format label with title-casing.
 - [#7858](https://github.com/nautobot/nautobot/issues/7858) - Fixed the Breadcrumbs Items classes to not format label with title-casing for custom labels.
 - [#7863](https://github.com/nautobot/nautobot/issues/7863) - Fixed a circular-import issue seen in some Apps following #7825.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Fixed an error in rendering the Device detail view when the device has a controller-managed device group with null `capabilities`.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Fixed inability to specify null `capabilities` when editing a Controller or Controller Managed Device Group via the REST API.
 
 ### Documentation in v2.4.19
 
@@ -223,6 +230,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7825](https://github.com/nautobot/nautobot/issues/7825) - Refactored VirtualMachine model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
 - [#7854](https://github.com/nautobot/nautobot/issues/7854) - Add DjHTML and djLint to the project and run it against all Django template files. Include this additional check in pre-commit script and pull request CI workflow.
 - [#7864](https://github.com/nautobot/nautobot/issues/7864) - Updated the recursive query failure message for the `GetObjectViewTestCase.test_get_object_with_permission` generic test.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Updated the `ControllerFactory` and `ControllerManagedDeviceGroupFactory` to potentially create records with a null `capabilities` field.
 
 ## v2.4.18 (2025-09-15)
 
