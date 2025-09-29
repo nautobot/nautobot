@@ -1,1 +1,2 @@
 Added support for assigning a Device to more than one Cluster.
+Added support for editing reverse many-to-many relations in bulk edit forms where applicable.

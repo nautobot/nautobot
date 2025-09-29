@@ -1771,6 +1771,10 @@ class DeviceTestCase(
     tenancy_related_name = "devices"
     generic_filter_tests = [
         ("asset_tag",),
+        ("cluster", "clusters__id"),
+        ("cluster", "clusters__name"),
+        ("clusters", "clusters__id"),
+        ("clusters", "clusters__name"),
         ("console_ports", "console_ports__id"),
         ("console_server_ports", "console_server_ports__id"),
         ("device_bays", "device_bays__id"),

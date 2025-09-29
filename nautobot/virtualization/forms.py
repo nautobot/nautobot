@@ -143,11 +143,9 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         if self.instance.present_in_database:
             self.initial["devices"] = self.instance.devices.values_list("id", flat=True)
 
-    def save(self, *args, commit=True, **kwargs):
-        instance = super().save(*args, commit=commit, **kwargs)
-        if commit:
-            instance.devices.set(self.cleaned_data["devices"])
-
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.devices.set(self.cleaned_data["devices"])
         return instance
 
 
@@ -160,6 +158,8 @@ class ClusterBulkEditForm(
     cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    add_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    remove_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:

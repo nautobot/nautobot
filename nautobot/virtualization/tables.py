@@ -86,7 +86,7 @@ class ClusterTable(BaseTable):
     cluster_group = tables.Column(linkify=True, verbose_name="Cluster Group")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"cluster": "pk"},
+        url_params={"clusters": "pk"},
         reverse_lookup="clusters",
         verbose_name="Devices",
     )

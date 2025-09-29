@@ -98,6 +98,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "devices": list(Device.objects.values_list("pk", flat=True)[:3]),
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
@@ -107,6 +108,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "add_devices": list(Device.objects.values_list("pk", flat=True)[:3]),
             "comments": "New comments",
         }
 

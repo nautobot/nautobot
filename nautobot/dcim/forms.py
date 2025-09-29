@@ -2335,7 +2335,6 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
-            "clusters",
             "comments",
             "secrets_group",
             "device_redundancy_group",

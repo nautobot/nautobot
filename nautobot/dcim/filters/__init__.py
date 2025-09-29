@@ -849,14 +849,13 @@ class DeviceFilterSet(
         field_name="clusters",
         queryset=Cluster.objects.all(),
         to_field_name="name",
-        label="Cluster (name or ID)",
+        label="VM cluster (name or ID)",
     )
-    # Even though devices can be assigned to multiple clusters, we only want to filter by one.
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="clusters",
         queryset=Cluster.objects.all(),
         to_field_name="name",
-        label="Cluster (name or ID)",
+        label="VM clusters (name or ID)",
     )
     is_full_depth = django_filters.BooleanFilter(
         field_name="device_type__is_full_depth",
