@@ -118,10 +118,12 @@ Each chart comes with two default toolbox icons:
 - Detail View (allows viewing the underlying chart data)
 - Save as Image (allows exporting the chart as an image (png, jpeg or svg). See more information in model definition)
 
-<!-- pyml disable-num-lines 3 no-inline-html -->
-<p align="center">
-    <img src="../../media/development/echarts/toolbox.png"/>
-</p>
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Echarts Toolbox](../../media/development/echarts/toolbox.png){ .on-glb }
+
+</div>
 
 ### Combined Charts (`combined_with`)
 
@@ -146,7 +148,12 @@ chart = EChartsBase(
 )
 ```
 
-![Bar echart with line](../../media/development/echarts/combined_with-line-bar.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Bar echart with line](../../media/development/echarts/combined_with-line-bar.png){ .on-glb }
+
+</div>
 
 ## Example Usage in a Django View
 
@@ -214,7 +221,12 @@ object_detail_content = object_detail.ObjectDetailContent(
 )
 ```
 
-![Bar echarts data](../../media/development/echarts/bar-echarts-data.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Bar echarts data](../../media/development/echarts/bar-echarts-data.png){ .on-glb }
+
+</div>
 
 ### Pie Type
 
@@ -239,10 +251,12 @@ object_detail_content = object_detail.ObjectDetailContent(
 )
 ```
 
-<!-- pyml disable-num-lines 3 no-inline-html -->
-<p align="center">
-    <img src="../../media/development/echarts/pie-echarts-data.png"/>
-</p>
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Echarts Pie](../../media/development/echarts/pie-echarts-data.png){ .on-glb }
+
+</div>
 
 ### Line Type
 
@@ -267,10 +281,12 @@ object_detail_content = object_detail.ObjectDetailContent(
 )
 ```
 
-<!-- pyml disable-num-lines 3 no-inline-html -->
-<p align="center">
-    <img src="../../media/development/echarts/line-echarts-data.png"/>
-</p>
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Echarts Line](../../media/development/echarts/line-echarts-data.png){ .on-glb }
+
+</div>
 
 ## Example Usage with Querysets
 
@@ -306,7 +322,12 @@ This produces data in the format:
 }
 ```
 
-![Bar echarts queryset records](../../media/development/echarts/bar-echarts-queryset-records.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Bar echarts queryset records](../../media/development/echarts/bar-echarts-queryset-records.png){ .on-glb }
+
+</div>
 
 ### Keys as Series (value_keys as outer keys)
 
@@ -338,4 +359,9 @@ This produces data in the format:
 }
 ```
 
-![Bar echarts queryset keys](../../media/development/echarts/bar-echars-queryset-keys.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Bar echarts queryset keys](../../media/development/echarts/bar-echars-queryset-keys.png){ .on-glb }
+
+</div>
