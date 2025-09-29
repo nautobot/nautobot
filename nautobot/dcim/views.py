@@ -89,7 +89,7 @@ from nautobot.ipam.tables import (
     VRFTable,
 )
 from nautobot.ipam.utils import render_ip_with_nat
-from nautobot.virtualization.models import Cluster, VirtualMachine
+from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
@@ -115,7 +115,6 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
-    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -2444,29 +2443,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=ClusterTable,
                 table_filter="devices",
                 show_table_config_button=False,
-                add_button_route=None,
-                form_id="clusters_form",
                 exclude_columns=["device_count"],
-                footer_buttons=[
-                    object_detail.FormButton(
-                        form_id="clusters_form",
-                        link_name="dcim:device_remove_from_clusters",
-                        label="Remove from clusters",
-                        weight=100,
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
-                    ),
-                    object_detail.FormButton(
-                        form_id="clusters_form",
-                        link_name="dcim:device_add_to_clusters",
-                        label="Add to clusters",
-                        weight=200,
-                        color=ButtonActionColorChoices.ADD,
-                        icon="mdi-plus-thick",
-                        size="xs",
-                    ),
-                ],
             ),
             object_detail.ObjectsTablePanel(
                 weight=300,
@@ -5793,91 +5770,3 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
             ),
         ),
     )
-
-
-class DeviceRemoveFromClustersView(generic.ObjectEditView):
-    queryset = Device.objects.all()
-    form = forms.DeviceRemoveFromClustersForm
-    template_name = "generic/object_bulk_remove.html"
-
-    def post(self, request, *args, **kwargs):
-        device = get_object_or_404(self.queryset, pk=kwargs["pk"])
-
-        if "_confirm" in request.POST:
-            form = self.form(request.POST)
-            if form.is_valid():
-                cluster_pks = form.cleaned_data["pk"]
-                with transaction.atomic():
-                    DeviceClusterAssignment.objects.filter(device=device, cluster__in=cluster_pks).delete()
-                messages.success(
-                    request,
-                    f"Removed device from {len(cluster_pks)} clusters",
-                )
-                return redirect(device.get_absolute_url())
-
-        else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-
-        selected_objects = Cluster.objects.filter(pk__in=form.initial["pk"])
-        cluster_table = ClusterTable(list(selected_objects), orderable=False)
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "form": form,
-                "parent_obj": device,
-                "table": cluster_table,
-                "obj_type_plural": "cluster memberships",
-                "return_url": device.get_absolute_url(),
-            },
-        )
-
-
-class DeviceAddToClusterView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
-    """
-    View to add a device to one or more clusters.
-    """
-
-    queryset = Device.objects.all()
-    template_name = "dcim/device_add_to_clusters.html"
-
-    def get_required_permission(self):
-        return "virtualization.change_cluster"
-
-    def get(self, request, pk):
-        device = get_object_or_404(self.queryset, pk=pk)
-        form = forms.DeviceAddToClustersForm(device=device, initial=request.GET)
-        return render(
-            request,
-            self.template_name,
-            {
-                "device": device,
-                "form": form,
-                "return_url": self.get_return_url(request, device),
-            },
-        )
-
-    def post(self, request, pk):
-        device = get_object_or_404(self.queryset, pk=pk)
-        form = forms.DeviceAddToClustersForm(device=device, data=request.POST)
-        if form.is_valid():
-            cluster_ids = form.cleaned_data.get("clusters")
-            if cluster_ids:
-                device.clusters.add(*cluster_ids)
-                messages.success(
-                    request,
-                    f"Added {device} to {len(cluster_ids)} cluster(s).",
-                )
-            else:
-                messages.info(request, "No clusters selected for addition.")
-            return redirect(self.get_return_url(request, device))
-        return render(
-            request,
-            self.template_name,
-            {
-                "device": device,
-                "form": form,
-                "return_url": self.get_return_url(request, device),
-            },
-        )

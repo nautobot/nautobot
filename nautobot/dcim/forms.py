@@ -5,7 +5,6 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.urls import reverse
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
@@ -38,7 +37,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
-from nautobot.core.forms.forms import ConfirmationForm
 from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
@@ -76,7 +74,7 @@ from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from nautobot.wireless.models import RadioProfile
 
 from .choices import (
@@ -2484,74 +2482,6 @@ class DeviceFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
-
-
-class DeviceAddToClustersForm(BootstrapMixin, forms.Form):
-    """Form for adding a device to one or more clusters."""
-
-    cluster_type = DynamicModelMultipleChoiceField(
-        queryset=ClusterType.objects.all(),
-        required=False,
-    )
-    cluster_group = DynamicModelMultipleChoiceField(
-        queryset=ClusterGroup.objects.all(),
-        required=False,
-        query_params={"location": "$location"},
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-    )
-    location = DynamicModelMultipleChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-    )
-    clusters = DynamicModelMultipleChoiceField(
-        queryset=Cluster.objects.all(),
-        required=True,
-        query_params={
-            "cluster_type": "$cluster_type",
-            "cluster_group": "$cluster_group",
-            "tenant": "$tenant",
-            "location": "$location",
-        },
-    )
-
-    def __init__(self, device, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        def disable_fields(help_text: str):
-            self.fields["cluster_type"].disabled = True
-            self.fields["cluster_group"].disabled = True
-            self.fields["tenant"].disabled = True
-            self.fields["location"].disabled = True
-            self.fields["clusters"].disabled = True
-            self.fields["clusters"].help_text = help_text
-
-        cluster_add_url = (
-            f"{reverse('virtualization:cluster_add')}?return_url="
-            f"{reverse('dcim:device_add_to_clusters', kwargs={'pk': device.pk})}"
-        )
-        cluster_add_link = f'<a href="{cluster_add_url}">Create a new cluster</a>'
-
-        if self.fields["clusters"].queryset.exists():
-            available_clusters = Cluster.objects.exclude(pk__in=device.clusters.values_list("pk", flat=True)).order_by(
-                "name"
-            )
-            if not available_clusters.exists():
-                disable_fields(f"This device already belongs to all available clusters. {cluster_add_link}.")
-            else:
-                if available_clusters.count() == 1:
-                    self.fields["clusters"].initial = [available_clusters.first().pk]
-        else:
-            disable_fields(f"No clusters exist. {cluster_add_link}.")
-
-        # Only show clusters that the device isn't already a member of
-        self.fields["clusters"].widget.add_query_param("devices__n", device.id)
-
-
-class DeviceRemoveFromClustersForm(ConfirmationForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 #
