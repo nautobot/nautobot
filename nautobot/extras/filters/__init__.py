@@ -22,7 +22,7 @@ from nautobot.core.filters import (
     SearchFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.dcim.models import DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -248,6 +248,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device Type (model or ID)",
+    )
+    device_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_families",
+        queryset=DeviceFamily.objects.all(),
+        to_field_name="name",
+        label="Device Family (ID or name)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         field_name="platforms",
