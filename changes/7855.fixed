@@ -1,0 +1,1 @@
+Fixed NoteUIViewSet to correctly populate `user` and `user_name` fields on Note creation. Override form_save() to assign the currently authenticated user and username, removing the previous alter_obj() approach and ensuring notes display the correct creator.
