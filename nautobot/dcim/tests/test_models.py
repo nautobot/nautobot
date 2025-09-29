@@ -4080,7 +4080,8 @@ class DeviceClusterAssignmentTestCase(ModelTestCases.BaseModelTestCase):
         DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[0])
         DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[1])
 
-        self.assertEqual(device_multi_clusters.cluster, self.clusters[0])
+        with self.assertRaises(Cluster.MultipleObjectsReturned):
+            device_multi_clusters.cluster
         self.assertEqual(device_multi_clusters.clusters.count(), 2)
         self.assertIn(self.clusters[0], device_multi_clusters.clusters.all())
         self.assertIn(self.clusters[1], device_multi_clusters.clusters.all())

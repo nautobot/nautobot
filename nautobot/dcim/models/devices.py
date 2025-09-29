@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
@@ -576,23 +576,26 @@ class Device(PrimaryModel, ConfigContextModel):
     @property
     def cluster(self):
         """
-        Returns the first cluster assigned to this device.
+        Returns the only cluster assigned to this device.
+
         Deprecated. Use `clusters` instead.
 
-        TODO: Remove this property in v3.0.0
+        TODO: Remove this property in v4.0.0
         """
-        # Ensures that the first cluster assigned to the device is returned for maximum
-        # backward compatibility.
-        return self.clusters.order_by("created").first()
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        return self.clusters.first()
 
     @cluster.setter
     def cluster(self, value):
         """
         Sets the clusters field to a single value.
-        Only assigns the cluster if there are 0 or 1 clusters currently assigned to the device.
+
         Deprecated. Use `clusters` instead.
 
-        TODO: Remove this property in v3.0.0
+        TODO: Remove this property in v4.0.0
         """
         # If the device hasn't been saved yet, defer the cluster assignment
         if not self.present_in_database:
@@ -702,12 +705,15 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Assign a single cluster to the device.
         """
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+
         if cluster is None:
             self.clusters.clear()
         else:
-            if self.clusters.count() <= 1:
-                with transaction.atomic():
-                    self.clusters.set([cluster])
+            self.clusters.set([cluster])
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary

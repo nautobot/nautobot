@@ -24,6 +24,12 @@ This document describes all new features and changes in Nautobot 3.0.
 
 The Nautobot Data Validation Engine functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature. (...TODO provide more details here...)
 
+### Changed
+
+#### Device Many Clusters ([#7203](https://github.com/nautobot/nautobot/issues/7203))
+
+The Device model has replaced its single `cluster` foreign-key field with a many-to-many `clusters` field, allowing multiple Clusters to be associatd with a single Device. To provide a modicum of backwards-compatibility, the Device model and queryset still support a singular `cluster` property which can be retrieved and (in some cases) set for the case of a single associated Cluster, but App authors, Job Authors, and REST API and GraphQL users are encouraged to migrate to using `clusters` as soon as possible. The `cluster` property will raise a `MultipleObjectsReturned` exception if the Device in question has more than one associated Cluster.
+
 ### Dependencies
 
 #### GraphQL and GraphiQL Updates
