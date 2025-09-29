@@ -744,7 +744,7 @@ class ControllerFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
@@ -771,7 +771,7 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 

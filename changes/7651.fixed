@@ -1,0 +1,1 @@
+Improved GraphQL query performance when querying many-to-many and many-to-one related objects such as `{ tenant_groups { tenants { name }}}`.
