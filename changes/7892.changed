@@ -1,0 +1,1 @@
+Removed caching from the `connected_endpoint` method due to lack of cache invalidation.
