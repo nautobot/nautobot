@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
@@ -35,7 +36,14 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    context_object_attr,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+    ViewNameBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -2138,6 +2146,37 @@ class JobResultUIViewSet(
     table_class = tables.JobResultTable
     queryset = JobResult.objects.all()
     action_buttons = ()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                # if result.job_model is not None
+                BaseBreadcrumbItem(
+                    label=context_object_attr("job_model.grouping", context_key="result"),
+                    should_render=lambda c: c["result"].job_model is not None,
+                ),
+                InstanceParentBreadcrumbItem(
+                    instance_key="result",
+                    parent_key="job_model",
+                    parent_lookup_key="name",
+                    should_render=lambda c: c["result"].job_model is not None,
+                ),
+                # elif job in context
+                ViewNameBreadcrumbItem(
+                    view_name="extras:jobresult_list",
+                    label=context_object_attr("class_path", context_key="job"),
+                    reverse_query_params=lambda c: {"name": urlencode(c["job"].class_path)},
+                    should_render=lambda c: c["result"].job_model is None and c["job"] is not None,
+                ),
+                # else
+                BaseBreadcrumbItem(
+                    label=context_object_attr("name", context_key="result"),
+                    should_render=lambda c: c["result"].job_model is None and c["job"] is None,
+                ),
+            ]
+        },
+        detail_item_label=context_object_attr("date_created"),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2227,18 +2266,16 @@ class JobButtonUIViewSet(NautobotUIViewSet):
 #
 # Change logging
 #
-
-
-class ObjectChangeListView(generic.ObjectListView):
+class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ObjectChangeFilterSet
+    filterset_form_class = forms.ObjectChangeFilterForm
     queryset = ObjectChange.objects.all()
-    filterset = filters.ObjectChangeFilterSet
-    filterset_form = forms.ObjectChangeFilterForm
-    table = tables.ObjectChangeTable
-    template_name = "extras/objectchange_list.html"
+    serializer_class = serializers.ObjectChangeSerializer
+    table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
-    def get(self, request, **kwargs):
+    def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
         # newer methods specifying the lookup method.
 
@@ -2254,26 +2291,34 @@ class ObjectChangeListView(generic.ObjectListView):
             request.GET.update({"time__lte": request.GET.get("time_before")})
             request.GET._mutable = False
 
-        return super().get(request=request, **kwargs)
-
-
-class ObjectChangeView(generic.ObjectView):
-    queryset = ObjectChange.objects.all()
+        return super().get(request=request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
-        related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
-        related_changes_table = tables.ObjectChangeTable(data=related_changes[:50], orderable=False)
+        """
+        Adds snapshot diff and related changes table for the object change detail view.
+        """
+        context = super().get_extra_context(request, instance)
 
-        snapshots = instance.get_snapshots()
-        return {
-            "diff_added": snapshots["differences"]["added"],
-            "diff_removed": snapshots["differences"]["removed"],
-            "next_change": instance.get_next_change(request.user),
-            "prev_change": instance.get_prev_change(request.user),
-            "related_changes_table": related_changes_table,
-            "related_changes_count": related_changes.count(),
-            **super().get_extra_context(request, instance),
-        }
+        if self.action == "retrieve":
+            related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
+            related_changes_table = tables.ObjectChangeTable(
+                data=related_changes[:50],  # Limit for performance
+                orderable=False,
+            )
+            snapshots = instance.get_snapshots()
+
+            context.update(
+                {
+                    "diff_added": snapshots["differences"]["added"],
+                    "diff_removed": snapshots["differences"]["removed"],
+                    "next_change": instance.get_next_change(request.user),
+                    "prev_change": instance.get_prev_change(request.user),
+                    "related_changes_table": related_changes_table,
+                    "related_changes_count": related_changes.count(),
+                }
+            )
+
+        return context
 
 
 class ObjectChangeLogView(generic.GenericView):
@@ -2454,8 +2499,36 @@ class NoteUIViewSet(
         ),
     )
 
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        obj.user = request.user
+    def form_save(self, form, commit=True, *args, **kwargs):
+        """
+        Save the form instance while ensuring the Note's `user` and `user_name` fields
+        are correctly populated.
+
+        Args:
+            form (Form): The validated form instance to be saved.
+            commit (bool): If True, save the instance to the database immediately.
+            *args, **kwargs: Additional arguments to maintain compatibility with
+                            the parent method signature.
+
+        Returns:
+            Note: The saved or unsaved Note instance with `user` and `user_name` set.
+
+        Behavior:
+            - Sets `user` to the currently authenticated user.
+            - Sets `user_name` to the username of the authenticated user.
+            - Saves the instance if `commit=True`.
+        """
+        # Get instance without committing to DB
+        obj = super().form_save(form, commit=False, *args, **kwargs)
+
+        # Assign user info (only authenticated users can create notes)
+        obj.user = self.request.user
+        obj.user_name = self.request.user.get_username()
+
+        # Save to DB if commit is True
+        if commit:
+            obj.save()
+
         return obj
 
 
@@ -2710,6 +2783,7 @@ class SecretUIViewSet(
                 table_title="Groups containing this secret",
                 table_class=tables.SecretsGroupTable,
                 table_attribute="secrets_groups",
+                distinct=True,
                 related_field_name="secrets",
                 footer_content_template_path=None,
             ),
