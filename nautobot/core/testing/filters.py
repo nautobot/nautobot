@@ -99,6 +99,17 @@ class FilterTestCases:
             self.assertIsNotNone(self.filterset)
             return self.filterset.declared_filters["q"].filter_predicates
 
+        def test_no_distinct_on_empty_filter_params(self):
+            """Verify that an empty filterset doesn't cause a `SELECT DISTINCT`."""
+            self.assertIsNotNone(self.filterset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
+            self.assertTrue(filterset.is_valid())
+            self.assertNotIn(
+                "SELECT DISTINCT",
+                str(filterset.qs.query),
+                "Filter set with empty parameter added `DISTINCT` to select query. This needs to be avoided because it incurs heavy performance penalties.",
+            )
+
         def test_id(self):
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
             self.assertIsNotNone(self.filterset)
@@ -326,29 +337,34 @@ class FilterTestCases:
             if not isinstance(obj_field, (CharField, TextField)):
                 self.skipTest("Not a CharField or TextField")
 
+            original_value = getattr(obj, obj_field_name)
             # Create random lowercase string to use for icontains lookup
             max_length = obj_field.max_length or CHARFIELD_MAX_LENGTH
             randomized_attr_value = "".join(random.choices(string.ascii_lowercase, k=max_length))  # noqa: S311 # pseudo-random generator
-            setattr(obj, obj_field_name, randomized_attr_value)
-            obj.save()
+            try:
+                setattr(obj, obj_field_name, randomized_attr_value)
+                obj.save()
 
-            # if lookup_method is iexact use the full updated attr
-            if lookup_method == "iexact":
-                lookup = randomized_attr_value.upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
-            else:
-                lookup = randomized_attr_value[1:].upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
-            params = {"q": lookup}
-            filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
+                # if lookup_method is iexact use the full updated attr
+                if lookup_method == "iexact":
+                    lookup = randomized_attr_value.upper()
+                    model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
+                else:
+                    lookup = randomized_attr_value[1:].upper()
+                    model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
+                params = {"q": lookup}
+                filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
 
-            self.assertTrue(filterset_result.is_valid())
-            self.assertQuerysetEqualAndNotEmpty(
-                filterset_result.qs,
-                model_queryset,
-                ordered=False,
-                msg=lookup,
-            )
+                self.assertTrue(filterset_result.is_valid())
+                self.assertQuerysetEqualAndNotEmpty(
+                    filterset_result.qs,
+                    model_queryset,
+                    ordered=False,
+                    msg=lookup,
+                )
+            finally:
+                setattr(obj, obj_field_name, original_value)
+                obj.save()
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):
             """Gets the relevant queryset based on filter parameters."""
@@ -454,7 +470,7 @@ class FilterTestCases:
             tenant_groups = list(
                 models.TenantGroup.objects.filter(
                     tenants__isnull=False, **{f"tenants__{self.tenancy_related_name}__isnull": False}
-                )
+                ).distinct()
             )[:2]
             tenant_groups_including_children = []
             for tenant_group in tenant_groups:

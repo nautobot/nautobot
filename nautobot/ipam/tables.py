@@ -854,6 +854,7 @@ class ServiceTable(BaseTable):
     parent = tables.LinkColumn(order_by=("device", "virtual_machine"))
     ports = tables.TemplateColumn(template_code="{{ record.port_list }}", verbose_name="Ports")
     tags = TagColumn(url_name="ipam:service_list")
+    actions = ButtonsColumn(Service, buttons=["changelog", "edit", "delete"])
 
     class Meta(BaseTable.Meta):
         model = Service
@@ -866,5 +867,6 @@ class ServiceTable(BaseTable):
             "ip_addresses",
             "description",
             "tags",
+            "actions",
         )
-        default_columns = ("pk", "name", "parent", "protocol", "ports", "description")
+        default_columns = ("pk", "name", "parent", "protocol", "ports", "description", "actions")
