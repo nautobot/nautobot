@@ -179,6 +179,41 @@ class NormalizeQueryDictTest(TestCase):
             {"name": ["Sample Status"], "content_types": ["dcim.device"]},
         )
 
+        self.assertDictEqual(
+            requests.normalize_querydict({"name": ["Sample Status"], "content_types": ["1"]}, form_class=StatusForm),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(
+                requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+                form_class=StatusForm,
+            ),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+
+class ConvertQueryDictToDictTest(TestCase):
+    """
+    Validate convert_querydict_to_dict() utility function.
+    """
+
+    def test_convert_querydict_to_dict(self):
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("foo=1&bar=2&bar=3&baz=")),
+            {"foo": ["1"], "bar": ["2", "3"], "baz": [""]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+            {"name": ["Sample Status"], "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=dcim.device")),
+            {"name": ["Sample Status"], "content_types": ["dcim.device"]},
+        )
+
 
 class DeepMergeTest(TestCase):
     """
@@ -275,6 +310,26 @@ class FlattenIterableTest(TestCase):
 
 class GetFooForModelTest(TestCase):
     """Tests for the various `get_foo_for_model()` functions."""
+
+    def test_get_user_from_instance_field_named_user(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=self.user,
+        )
+        self.assertEqual(lookup.get_user_from_instance(instance), self.user)
+
+    def test_get_user_from_instance_null_user_field(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=None,
+        )
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
+    def test_get_user_from_instance_no_user_field(self):
+        instance = extras_models.GraphQLQuery.objects.create(name="FizzBuzz", query="{devices { name }}")
+        self.assertIsNone(lookup.get_user_from_instance(instance))
 
     def test_get_filterset_for_model(self):
         """

@@ -45,7 +45,6 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
-from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -121,7 +120,9 @@ class ApprovalWorkflowDefinitionSerializer(NautobotModelSerializer):
     """ApprovalWorkflowDefinition Serializer."""
 
     model_content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
     )
 
     class Meta:
@@ -150,7 +151,9 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
     """ApprovalWorkflow Serializer."""
 
     object_under_review_content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
     )
     decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 

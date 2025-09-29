@@ -8,8 +8,10 @@ from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
 from nautobot.core.models.querysets import count_related
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device, Location
+from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
@@ -41,6 +43,12 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
+
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context["active_tab"] = "example_app_device_detail_tab_1"
+        return extra_context
 
 
 class DeviceDetailAppTabTwoView(views.ObjectView):
@@ -50,6 +58,7 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
 
 
 class ExampleAppHomeView(views.GenericView):
@@ -83,6 +92,17 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
+
     object_detail_content = ui.ObjectDetailContent(
         panels=(
             ui.ObjectFieldsPanel(
@@ -302,6 +322,16 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
 
 
 class ViewToBeOverridden(views.GenericView):

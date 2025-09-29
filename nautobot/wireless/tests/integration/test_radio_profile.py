@@ -31,7 +31,7 @@ class RadioProfileTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.url, self.live_server_url + reverse("wireless:radioprofile_list"))
         self.browser.find_by_xpath("//input[@name='pk']").click()
         bulk_edit_url = reverse("wireless:radioprofile_bulk_edit")
-        self.browser.find_by_xpath(f"//button[@formaction='{bulk_edit_url}']").click()
+        self.browser.find_by_xpath(f"//button[starts-with(@formaction, '{bulk_edit_url}')]").click()
 
         # Submit bulk edit form without any changes
         self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()

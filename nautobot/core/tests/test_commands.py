@@ -24,7 +24,10 @@ class ManagementCommandTestCase(TestCase):
         endpoints_dict = yaml.safe_load(out.getvalue())["endpoints"]
         for view_name, value in endpoints_dict.items():
             for endpoint in value:
-                response = self.client.get(endpoint, follow=True)
-                self.assertHttpStatus(
-                    response, 200, f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200"
-                )
+                with self.subTest(endpoint=endpoint):
+                    response = self.client.get(endpoint, follow=True)
+                    self.assertHttpStatus(
+                        response,
+                        200,
+                        f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200",
+                    )

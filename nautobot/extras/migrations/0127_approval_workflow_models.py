@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
                 (
                     "model_content_type",
                     models.ForeignKey(
-                        limit_choices_to=models.Q(("app_label", "extras"), ("model__in", ("scheduledjob",))),
+                        limit_choices_to=nautobot.extras.utils.FeatureQuery("approval_workflows"),
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="+",
                         to="contenttypes.contenttype",
@@ -236,7 +236,7 @@ class Migration(migrations.Migration):
             model_name="approvalworkflow",
             name="object_under_review_content_type",
             field=models.ForeignKey(
-                limit_choices_to=models.Q(("app_label", "extras"), ("model__in", ("scheduledjob",))),
+                limit_choices_to=nautobot.extras.utils.FeatureQuery("approval_workflows"),
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="+",
                 to="contenttypes.contenttype",

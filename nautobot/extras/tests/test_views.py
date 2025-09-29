@@ -118,7 +118,6 @@ class ApprovalWorkflowDefinitionViewTestCase(
     # This is almost like ViewTestCases.PrimaryObjectViewTestCase, but without BulkEditObjectsViewTestCase,
     # because ApprovalWorkflowDefinition doesn't have any fields that support bulk editing.
     # Currently, `model_content_type` only accepts one content type: ScheduledJob.
-    # See nautobot/extras/constants.py:APPROVAL_WORKFLOW_MODELS for details.
 ):
     """Test the ApprovalWorkflowDefinition views."""
 
@@ -4611,8 +4610,8 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
-                        self.assertIn(
-                            f'<strong>{result}</strong>\n                                    <div class="pull-right d-print-none">\n',
+                        self.assertInHTML(
+                            f'<strong>{result}</strong><div class="pull-right d-print-none">',
                             response_body,
                         )
                         # ContactAssociationTable related to this role instances should not be there.
@@ -4623,4 +4622,4 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                     else:
                         self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
-                    self.assertIn(f"<strong>{result}</strong>", response_body)
+                    self.assertInHTML(f"<strong>{result}</strong>", response_body)

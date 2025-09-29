@@ -12,11 +12,14 @@ from nautobot.core.testing import TestCase
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
     Breadcrumbs,
+    context_object_attr,
     InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
-from nautobot.dcim.models import Device, LocationType
+from nautobot.dcim.models import Device, Location, LocationType
+from nautobot.extras.models import Status
 
 
 class BreadcrumbItemsTestCase(TestCase):
@@ -150,6 +153,13 @@ class BreadcrumbItemsTestCase(TestCase):
                 self.assertEqual(url, test_case["expected_url"])
                 self.assertEqual(label, test_case["expected_label"])
 
+    def test_model_item_not_format_custom_label(self):
+        item = ModelBreadcrumbItem(model_key="object", label="custom LaBeL")
+        context = Context({"object": self.location_type})
+
+        _, label = item.as_pair(context)
+        self.assertEqual(label, "custom LaBeL")
+
     def test_model_item_from_context(self):
         """Test breadcrumb item with model from context."""
         item = ModelBreadcrumbItem(model_key="object")
@@ -209,6 +219,69 @@ class BreadcrumbItemsTestCase(TestCase):
         self.assertEqual(url, "")
         self.assertEqual(label, "")
 
+    def test_instance_item_not_add_title_casing(self):
+        context = Context({"object": LocationType.objects.create(name="custom name")})
+        item = InstanceBreadcrumbItem()
+
+        _, label = item.as_pair(context)
+        self.assertEqual(label, "custom name")
+
+    def test_instance_item_is_working_with_directly_passed_instance(self):
+        context = Context({})
+        instance = LocationType.objects.create(name="cUsToM CoUnTrY")
+        item = InstanceBreadcrumbItem(instance=instance)
+
+        url, label = item.as_pair(context)
+        self.assertEqual(url, f"/dcim/location-types/{instance.pk}/")
+        self.assertEqual(label, "cUsToM CoUnTrY")
+
+    def test_context_object_attr_works_with_various_breadcrumb_items(self):
+        parent_location_type = LocationType.objects.create(name="Country", nestable=True)
+        location_type = LocationType.objects.create(name="State", parent=parent_location_type)
+        status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="Pomorskie", location_type=location_type, status=status)
+
+        context = Context({"object": location, "status": status})
+
+        item = InstanceBreadcrumbItem(instance=context_object_attr("location_type"))
+        url, label = item.as_pair(context)
+        self.assertEqual(url, f"/dcim/location-types/{location_type.pk}/")
+        self.assertEqual(label, "Country → State")
+
+        item = BaseBreadcrumbItem(label=context_object_attr("name", context_key="status"))
+        url, label = item.as_pair(context)
+        self.assertEqual(url, "")
+        self.assertEqual(label, status.name)
+
+        item = InstanceBreadcrumbItem(instance=context_object_attr("location_type.parent"))
+        url, label = item.as_pair(context)
+        self.assertEqual(url, f"/dcim/location-types/{parent_location_type.pk}/")
+        self.assertEqual(label, "Country")
+
+    def test_instance_parent_not_add_title_casing(self):
+        parent_location_type = LocationType.objects.create(name="cUsToM CoUnTrY", nestable=True)
+        context = Context({"object": LocationType.objects.create(name="custom name", parent=parent_location_type)})
+        item = InstanceParentBreadcrumbItem()
+
+        _, label = item.as_pair(context)
+        self.assertEqual(label, "cUsToM CoUnTrY")
+
+    def test_instance_parent_is_create_proper_url(self):
+        parent_location_type = LocationType.objects.create(name="Country", nestable=True)
+        location_type = LocationType.objects.create(name="State", parent=parent_location_type)
+
+        context = Context({"object": location_type})
+
+        item = InstanceParentBreadcrumbItem()
+        url, label = item.as_pair(context)
+        self.assertEqual(url, f"/dcim/location-types/?parent={parent_location_type.pk}")
+        self.assertEqual(label, "Country")
+
+        item = InstanceParentBreadcrumbItem(parent_query_param="location", parent_lookup_key="name")
+        url, label = item.as_pair(context)
+        self.assertEqual(url, "/dcim/location-types/?location=Country")
+        self.assertEqual(label, "Country")
+
 
 class BreadcrumbsTestCase(TestCase):
     """Test cases for Breadcrumbs class."""
@@ -260,19 +333,20 @@ class BreadcrumbsTestCase(TestCase):
             "list": [ViewNameBreadcrumbItem(view_name="", label="List Item")],
             "detail": [ViewNameBreadcrumbItem(view_name="", label="Detail Item")],
         }
+        context = Context({})
 
         # Test specific action found
-        result = Breadcrumbs.get_items_for_action(test_items, "list", False)
+        result = Breadcrumbs().get_items_for_action(test_items, "list", False, context)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].label, "List Item")
 
         # Test fallback to detail when action not found and detail=True
-        result = Breadcrumbs.get_items_for_action(test_items, "nonexistent", True)
+        result = Breadcrumbs().get_items_for_action(test_items, "nonexistent", True, context)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].label, "Detail Item")
 
         # Test no fallback when detail=False
-        result = Breadcrumbs.get_items_for_action(test_items, "nonexistent", False)
+        result = Breadcrumbs().get_items_for_action(test_items, "nonexistent", False, context)
         self.assertEqual(len(result), 0)
         self.assertEqual(result, [])
 

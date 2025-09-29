@@ -20,6 +20,13 @@
                 {% block panel_buttons %}{% endblock panel_buttons %}
             </div>
         </div>
+    {% else %}
+        <div class="align-items-center d-flex flex-wrap mb-16">
+            <div class="flex-grow-1 m-0"></div>
+            <div class="flex-grow-0 flex-shrink-0 d-print-none">
+                {% render_detail_view_extra_buttons %}
+            </div>
+        </div>
     {% endif %}
     {{ tab_content }}
 </div>
