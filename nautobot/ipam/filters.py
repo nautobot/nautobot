@@ -139,7 +139,7 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "tags"]
+        fields = ["id", "name", "rd", "tags", "description"]
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
@@ -489,7 +489,7 @@ class IPAddressFilterSet(
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside", "description"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
