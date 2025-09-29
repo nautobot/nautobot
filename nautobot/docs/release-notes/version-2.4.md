@@ -193,6 +193,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#7763](https://github.com/nautobot/nautobot/issues/7763) - Fixed an intermittent test failure for `test_anonymous_user_get_shared_views_only`.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed bulk object edit and bulk delete not considering filtering of saved views.
 - [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed buttons on bulk views not adhering to the "all" toggle.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed circular import error by lazy importing job based classes into core views.
 - [#7810](https://github.com/nautobot/nautobot/issues/7810) - Improved performance for device detail view by avoiding to calculate the location tree more often than needed.
 - [#7812](https://github.com/nautobot/nautobot/issues/7812) - Fixed prefix/circuit count for location detail view stats panel.
 - [#7818](https://github.com/nautobot/nautobot/issues/7818) - Fixed incorrect closing HTML tag in `body_content_data_table.html`.
