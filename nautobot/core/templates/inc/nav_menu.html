@@ -43,7 +43,7 @@
                                                 {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
                                                     <li {% if item_details.permissions and not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <a href="{{ item_link }}"
-                                                            data-item-weight="{{ item_details.weight }}">
+                                                           data-item-weight="{{ item_details.weight }}">
                                                             {{ item_details.name }}
                                                         </a>
                                                         {% if item_details.buttons.items|length > 0 %}

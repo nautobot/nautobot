@@ -2,95 +2,95 @@
 {% load helpers %}
 
 {% block content_left_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Webhook</strong>
-            </div>
-
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Object Type(s)</td>
-                    <td>
-                        <ul>
-                            {% for content_type in content_types %}
-                                <li>{{ content_type }}</li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Call On:</td>
-                    <td>
-                        {{ object.type_create | render_boolean }}
-                        <span>Create</span>
-
-                        <span style="margin-left: 2rem;">{{ object.type_update | render_boolean }}</span>
-                        <span>Update</span>
-
-                        <span style="margin-left: 2rem;">{{ object.type_delete | render_boolean }}</span>
-                        <span>Delete </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Enabled</td>
-                    <td>{{ object.enabled | render_boolean }}</td>
-                </tr>
-            </table>
-
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Webhook</strong>
         </div>
 
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>HTTP</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>HTTP Method</td>
-                    <td><span>{{ object.http_method }}</span></td>
-                </tr>
-                <tr>
-                    <td>HTTP Content Type</td>
-                    <td><span>{{ object.http_content_type }}</span></td>
-                </tr>
-                <tr>
-                    <td>Payload URL</td>
-                    <td><span>{{ object.payload_url }}</span></td>
-                </tr>
-                <tr>
-                    <td>Additional Headers</td>
-                    <td><span>{% if object.additional_headers %} <pre>{{ object.additional_headers }}</pre> {% else %} {{ None }} {% endif %}</span></td>
-                </tr>
-            </table>
-        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Object Type(s)</td>
+                <td>
+                    <ul>
+                        {% for content_type in content_types %}
+                            <li>{{ content_type }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+            <tr>
+                <td>Call On:</td>
+                <td>
+                    {{ object.type_create | render_boolean }}
+                    <span>Create</span>
 
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Security</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                <tr>
-                    <td>Secret</td>
-                    <td>{{ object.secret | placeholder }}</td>
-                </tr>
-                <tr>
-                    <td>SSL Verification</td>
-                    <td>{{ object.ssl_verification | render_boolean }}</td>
-                </tr>
-                <tr>
-                    <td>CA File Path</td>
-                    <td><span>{{ object.ca_file_path | placeholder }}</span></td>
-                </tr>
-            </table>
+                    <span style="margin-left: 2rem;">{{ object.type_update | render_boolean }}</span>
+                    <span>Update</span>
+
+                    <span style="margin-left: 2rem;">{{ object.type_delete | render_boolean }}</span>
+                    <span>Delete </span>
+                </td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled | render_boolean }}</td>
+            </tr>
+        </table>
+
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>HTTP</strong>
         </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>HTTP Method</td>
+                <td><span>{{ object.http_method }}</span></td>
+            </tr>
+            <tr>
+                <td>HTTP Content Type</td>
+                <td><span>{{ object.http_content_type }}</span></td>
+            </tr>
+            <tr>
+                <td>Payload URL</td>
+                <td><span>{{ object.payload_url }}</span></td>
+            </tr>
+            <tr>
+                <td>Additional Headers</td>
+                <td><span>{% if object.additional_headers %} <pre>{{ object.additional_headers }}</pre> {% else %} {{ None }} {% endif %}</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Security</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Secret</td>
+                <td>{{ object.secret | placeholder }}</td>
+            </tr>
+            <tr>
+                <td>SSL Verification</td>
+                <td>{{ object.ssl_verification | render_boolean }}</td>
+            </tr>
+            <tr>
+                <td>CA File Path</td>
+                <td><span>{{ object.ca_file_path | placeholder }}</span></td>
+            </tr>
+        </table>
+    </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Body Template</strong>
-            </div>
-            <div class="panel-body">
-                {% if object.body_template %} <pre>{{ object.body_template }}</pre> {% else %} {{ None }} {% endif %}
-            </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Body Template</strong>
         </div>
+        <div class="panel-body">
+            {% if object.body_template %} <pre>{{ object.body_template }}</pre> {% else %} {{ None }} {% endif %}
+        </div>
+    </div>
 {% endblock content_right_page %}

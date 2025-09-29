@@ -1,0 +1,1 @@
+Fixed an MRO error in generic views by consistently placing `UIComponentsMixin` at the beginning of base classes.

@@ -101,24 +101,24 @@
                         <div class="pull-right">
                             {% if "dryrun" in job_form.fields and object.job_model.supports_dryrun %}
                                 <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
-                                    {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
-                                        disabled="disabled"
-                                    {% endif %}
+                                        {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
+                                            disabled="disabled"
+                                        {% endif %}
                                 >
                                     <i class="mdi mdi-play"></i> Dry Run
                                 </button>
                             {% endif %}
                             <button type="submit" name="_approve" id="id__approve" class="btn btn-success"
-                                {% if not perms.extras.approve_job or not perms.extras.change_scheduledjob or object.job_model is None or not object.job_model.runnable %}
-                                    disabled="disabled"
-                                {% endif %}
+                                    {% if not perms.extras.approve_job or not perms.extras.change_scheduledjob or object.job_model is None or not object.job_model.runnable %}
+                                        disabled="disabled"
+                                    {% endif %}
                             >
                                 <i class="mdi mdi-check"></i> Approve
                             </button>
                             <button type="submit" name="_deny" id="id__deny" class="btn btn-danger"
-                                {% if not perms.extras.approve_job or not perms.extras.delete_scheduledjob %}
-                                    disabled="disabled"
-                                {% endif %}
+                                    {% if not perms.extras.approve_job or not perms.extras.delete_scheduledjob %}
+                                        disabled="disabled"
+                                    {% endif %}
                             >
                                 <i class="mdi mdi-close"></i> Deny
                             </button>
