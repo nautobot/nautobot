@@ -127,6 +127,7 @@ class ConfigContext(
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+    device_families = models.ManyToManyField("dcim.DeviceFamily", related_name="+", blank=True)
 
     # Due to feature flag CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED this field will remain empty unless set to True.
     dynamic_groups = models.ManyToManyField(

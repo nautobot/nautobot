@@ -758,6 +758,7 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                     "locations",
                     "roles",
                     "device_types",
+                    "device_families",
                     "platforms",
                     "cluster_groups",
                     "clusters",
