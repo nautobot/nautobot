@@ -122,7 +122,8 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         # Bypass restriction for superusers and exempt views
         if user.is_superuser or permissions.permission_is_exempt(permission_required):
-            qs = self
+            # This is a cache buster to ensure that we always return a new QuerySet
+            qs = self.all()
 
         # User is anonymous or has not been granted the requisite permission
         elif not user.is_authenticated or permission_required not in user.get_all_permissions():

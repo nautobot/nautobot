@@ -1,24 +1,43 @@
 import datetime
 from io import BytesIO
+import logging
 import urllib.parse
 
+from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
+from prometheus_client import REGISTRY
+from prometheus_client.utils import floatToGoString
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
+from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
-from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
+from nautobot.core.utils.lookup import (
+    get_created_and_last_updated_usernames_for_model,
+    get_filterset_for_model,
+    get_form_for_model,
+    get_view_for_model,
+)
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+
+logger = logging.getLogger(__name__)
+
+METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
+always_generated_metrics = [
+    "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
+]
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -399,3 +418,253 @@ def get_saved_views_for_user(user, list_url):
         return shared_saved_views | user_owned_saved_views
 
     return shared_saved_views
+
+
+def is_metrics_experimental_caching_enabled():
+    """Return True if METRICS_EXPERIMENTAL_CACHING_DURATION is set to a positive integer."""
+    return settings.METRICS_EXPERIMENTAL_CACHING_DURATION > 0
+
+
+def generate_latest_with_cache(registry=REGISTRY):
+    """A vendored version of prometheus_client.generate_latest that caches Nautobot App metrics."""
+
+    def sample_line(line):
+        if line.labels:
+            labelstr = "{{{0}}}".format(
+                ",".join(
+                    [
+                        '{}="{}"'.format(k, v.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\""))
+                        for k, v in sorted(line.labels.items())
+                    ]
+                )
+            )
+        else:
+            labelstr = ""
+        timestamp = ""
+        if line.timestamp is not None:
+            # Convert to milliseconds.
+            timestamp = f" {int(float(line.timestamp) * 1000):d}"
+        return f"{line.name}{labelstr} {floatToGoString(line.value)}{timestamp}\n"
+
+    cached_lines = []
+    output = []
+    # NOTE: In the original prometheus_client code the lines are written to output directly,
+    # here we are going to cache some lines so we need to build each metric's output separately.
+    # So instead of `output.append(line)` we do
+    # `this_metric_output.append(line)` and then `output.extend(this_metric_output)`
+    for metric in registry.collect():
+        this_metric_output = []
+        try:
+            mname = metric.name
+            mtype = metric.type
+            # Munging from OpenMetrics into Prometheus format.
+            if mtype == "counter":
+                mname = mname + "_total"
+            elif mtype == "info":
+                mname = mname + "_info"
+                mtype = "gauge"
+            elif mtype == "stateset":
+                mtype = "gauge"
+            elif mtype == "gaugehistogram":
+                # A gauge histogram is really a gauge,
+                # but this captures the structure better.
+                mtype = "histogram"
+            elif mtype == "unknown":
+                mtype = "untyped"
+
+            this_metric_output.append(
+                "# HELP {} {}\n".format(mname, metric.documentation.replace("\\", r"\\").replace("\n", r"\n"))
+            )
+            this_metric_output.append(f"# TYPE {mname} {mtype}\n")
+
+            om_samples = {}
+            for s in metric.samples:
+                for suffix in ["_created", "_gsum", "_gcount"]:
+                    if s.name == metric.name + suffix:
+                        # OpenMetrics specific sample, put in a gauge at the end.
+                        om_samples.setdefault(suffix, []).append(sample_line(s))
+                        break
+                else:
+                    this_metric_output.append(sample_line(s))
+        except Exception as exception:
+            exception.args = (exception.args or ("",)) + (metric,)
+            raise
+
+        for suffix, lines in sorted(om_samples.items()):
+            this_metric_output.append(
+                "# HELP {}{} {}\n".format(
+                    metric.name, suffix, metric.documentation.replace("\\", r"\\").replace("\n", r"\n")
+                )
+            )
+            this_metric_output.append(f"# TYPE {metric.name}{suffix} gauge\n")
+            this_metric_output.extend(lines)
+
+        # BEGIN Nautobot-specific logic
+        # If the metric name starts with nautobot_, we cache the lines
+        if metric.name.startswith("nautobot_") and metric.name not in always_generated_metrics:
+            cached_lines.extend(this_metric_output)
+        # END Nautobot-specific logic
+
+        # Always add the metric output to the final output
+        output.extend(this_metric_output)
+
+    # BEGIN Nautobot-specific logic
+    # Add in any previously cached metrics.
+    # Note that this is mutually-exclusive with the above block, that is to say,
+    # either cached_lines will be populated OR collector.local_cache will be populated,
+    # never both at the same time.
+    for collector in registry._collector_to_names:
+        # This is to avoid a race condition where between the time to collect the metrics and
+        # the time to generate the output, the cache is expired and we miss some metrics.
+        if hasattr(collector, "local_cache") and collector.local_cache:
+            output.extend(collector.local_cache)
+            del collector.local_cache  # avoid re-using stale data on next call
+
+    # If we have any cached lines, and the cache is empty or expired, update the cache.
+    if cached_lines and not cache.get(METRICS_CACHE_KEY):
+        cache.set(METRICS_CACHE_KEY, cached_lines, timeout=settings.METRICS_EXPERIMENTAL_CACHING_DURATION)
+    # END Nautobot-specific logic
+
+    return "".join(output).encode("utf-8")
+
+
+def get_bulk_queryset_from_view(
+    user, content_type, filter_query_params, pk_list, saved_view_id, action, delete_all=None, edit_all=None, log=None
+):
+    """
+    Return a queryset for bulk operations based on the provided parameters.
+
+    Args:
+        user: The user performing the bulk operation.
+        model: The model class on which the bulk operation is being performed.
+        delete_all: Boolean indicating whether the operation applies to pk_list or not.
+        edit_all: Boolean indicating whether the operation applies to pk_list or not.
+        filter_query_params: A dictionary of filter parameters to apply to the queryset as produced by convert_querydict_to_dict(request.GET).
+        pk_list: A list of primary keys to include, when not using a filter.
+        saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
+
+    Returns:
+        A Django queryset representing the objects to be affected by the bulk operation.
+
+    Notes:
+        Start
+        ├── !is_all and pk_list: Return queryset filtered by pk_list
+        ├── !is_all and !pk_list: Return empty queryset
+        ├── is_all and !saved_view_id and !filter_query_params: Return all objects
+        ├── is_all and filter_query_params: Return queryset filtered by filter_query_params
+        ├── is_all and saved_view_id: Return queryset filtered by saved_view_filter_params
+        ├── is_all and not saved_view_id: Return queryset filtered by saved_view_filter_params
+        └── else: raise RuntimeError
+    """
+    model = content_type.model_class()
+    if not log:
+        log = logger
+
+    action_valid = (action == "delete" and delete_all is not None) or (action == "change" and edit_all is not None)
+    if not action_valid:
+        raise RuntimeError(
+            f"Invalid parameters *_all param for action {action}, got: delete_all={delete_all}, edit_all={edit_all}"
+        )
+
+    view_name = None
+    is_all = None
+    # Based on action_valid one of these must be True
+    if action == "delete":
+        view_name = "BulkDelete"
+        is_all = delete_all
+    elif action == "change":
+        view_name = "BulkEdit"
+        is_all = edit_all
+
+    # The view_class is determined from model on purpose, as view_class the view as a param, will not work
+    # with a job. It is better to be consistent with each with sending the same params that will
+    # always be available from to the confirmation page and to the job.
+    view_class = get_view_for_model(model, view_type=view_name)
+
+    if not view_class:
+        raise RuntimeError(f"No view found for model {model} to determine base queryset.")
+
+    queryset = view_class.queryset.restrict(user, action)
+
+    # The filterset_class is determined from model on purpose, as filterset_class the view as a param, will not work
+    # with a job. It is better to be consistent with each with sending the same params that will
+    # always be available from to the confirmation page and to the job.
+    filterset_class = get_filterset_for_model(model)
+
+    if not filterset_class:
+        log.debug(f"No filterset_class found for model {model}, returning all objects")
+        return queryset
+
+    filterset_class = lookup.get_filterset_for_model(model)
+    if filterset_class:
+        filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+        log.debug(f"Normalized filter_query_params: {filter_query_params}")
+    else:
+        filter_query_params = {}
+
+    # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
+    # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
+    if not is_all and pk_list:
+        log.debug("Filtering by PK list")
+        return queryset.filter(pk__in=pk_list)
+
+    # Should this ever happen?
+    if not is_all and not pk_list:
+        log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
+        return queryset.none()
+
+    # The query params when you manually delete filters from the UI include on the saved view filter
+    # set the flag all_filters_removed to true. If that is the case, we ignore the saved view below, by setting it
+    # to None here
+    if filter_query_params.get("all_filters_removed"):
+        log.debug("The `all_filters_removed` flag is set, ignoring saved view")
+        saved_view_id = None
+        filter_query_params.pop("all_filters_removed")
+
+    new_filter_query_params = {}
+
+    filterset = filterset_class()
+    for key, value in filter_query_params.items():
+        if filterset.filters.get(key) is not None:
+            new_filter_query_params[key] = value
+        else:
+            log.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+    filter_query_params = new_filter_query_params
+
+    # short circuit if no filtering is needed
+    if is_all and not saved_view_id and not filter_query_params:
+        log.debug("No filters or saved view specified, returning all objects")
+        return queryset
+
+    # This covers if there is a filter and a saved view, as when you have both,
+    # the saved view filters show up in the query params or the url.
+    if is_all and filter_query_params:
+        log.debug(f"Filtering by parameters: {filter_query_params}")
+        inner_queryset = filterset_class(filter_query_params, queryset).qs.values("pk")
+        # We take this approach because filterset.qs has already applied .distinct(),
+        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
+        return queryset.filter(pk__in=inner_queryset)
+
+    saved_view_filter_params = {}
+    if saved_view_id:
+        try:
+            saved_view_obj = SavedView.objects.get(id=saved_view_id)
+        except SavedView.DoesNotExist:
+            return queryset.none()
+        saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
+
+    # This covers the case where there is a saved view but no additional filter parameters.
+    if is_all and saved_view_filter_params:
+        log.debug(f"Filtering by saved view parameters: {saved_view_filter_params}")
+        inner_queryset = filterset_class(saved_view_filter_params, queryset).qs.values("pk")
+        # We take this approach because filterset.qs has already applied .distinct(),
+        # and performing a .delete directly on a queryset with .distinct applied is not allowed.
+        return queryset.filter(pk__in=inner_queryset)
+
+    # short circuit if no filtering is applied with a saved view
+    if is_all and not saved_view_filter_params:
+        log.debug("Saved view with no filters specified, returning all objects")
+        return queryset
+
+    log.debug("No valid operation found to generate bulk queryset.")
+    raise RuntimeError("No valid operation found to generate bulk queryset.")
