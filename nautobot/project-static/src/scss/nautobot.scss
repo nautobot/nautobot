@@ -1244,6 +1244,16 @@ textarea {
 .card-header {
   position: relative;
   text-transform: uppercase;
+
+  /*
+   * When a `card-header` element contains a `stretched-link` descendant, which is the default case for collapsible card
+   * headers, move all its interactive children, which are not `stretched-link` elements, to the front (using relative
+   * position with positive z-index), so they can be interacted with and not be covered by the `stretched-link` element.
+   */
+  &:has(.stretched-link) :is(a, button, input, label, select):not(.stretched-link) {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 /* Badges */
