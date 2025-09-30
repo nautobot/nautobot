@@ -165,8 +165,13 @@ Bootstrap v5.x:
 
 ## Forms
 
-- `help-block` is replaced by `form-text`.
-- `checkbox` and `checkbox-inline` are removed; use `form-check` and `form-check-input` instead: [https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks](https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks).
+- Class `form-group` is removed; in most Nautobot model forms it should be replaced by `mb-10 d-flex justify-content-center`.
+    - In the specific case of "drawer" forms (filter forms, table config, etc.), where limited horizontal space is available, you can use class `nb-form-group` instead.
+- Class `control-label` is removed; in most Nautobot model forms it should be replaced by `col-form-label` ([https://getbootstrap.com/docs/5.3/forms/layout/#horizontal-form](https://getbootstrap.com/docs/5.3/forms/layout/#horizontal-form)).
+    - In the specific case of "drawer" forms using `nb-form-group`, you should use class `form-label` instead ([https://getbootstrap.com/docs/5.3/migration/#forms-1](https://getbootstrap.com/docs/5.3/migration/#forms-1)).
+- Class `help-block` is replaced by `form-text`.
+- Classes `checkbox` and `checkbox-inline` are removed; use `form-check` and `form-check-input` instead: [https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks](https://getbootstrap.com/docs/5.3/forms/checks-radios/#checks).
+- Required form fields should use class `nb-required` on their `label` element.
 
 ## Dropdowns
 
