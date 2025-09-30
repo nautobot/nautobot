@@ -31,6 +31,13 @@ from nautobot.cloud.forms import (
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -44,6 +51,16 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     serializer_class = CloudAccountSerializer
     table_class = CloudAccountTable
     form_class = CloudAccountForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="provider",
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -64,6 +81,17 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     table_class = CloudNetworkTable
     form_class = CloudNetworkForm
     bulk_update_form_class = CloudNetworkBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent"), should_render=context_object_attr("parent")
+                ),
+            ]
+        }
+    )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -197,6 +225,15 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     table_class = CloudResourceTypeTable
     form_class = CloudResourceTypeForm
     bulk_update_form_class = CloudResourceTypeBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -277,6 +314,14 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
     table_class = CloudServiceTable
     form_class = CloudServiceForm
     bulk_update_form_class = CloudServiceBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("cloud_resource_type")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

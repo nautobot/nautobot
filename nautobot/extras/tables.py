@@ -114,6 +114,13 @@ GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
 
+IMAGEATTACHMENT_NAME = """
+<span class="mdi mdi-file-image"></span>
+<a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+"""
+
+IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
+
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
@@ -698,6 +705,18 @@ class GraphQLQueryTable(BaseTable):
         )
 
 
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=IMAGEATTACHMENT_NAME, verbose_name="Name")
+    size = tables.TemplateColumn(template_code=IMAGEATTACHMENT_SIZE)
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(ImageAttachment, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
+
+
 def log_object_link(value, record):
     return record.absolute_url or None
 
@@ -706,39 +725,6 @@ def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
         return "danger"
     return record.log_level.lower()
-
-
-class ImageAttachmentTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.TemplateColumn(
-        template_code="""
-        <i class="mdi mdi-file-image"></i>
-        <a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
-        """,
-        verbose_name="Name",
-        orderable=False,
-    )
-    size = tables.Column(verbose_name="Size", accessor="image.size", empty_values=(), orderable=False)
-    created = tables.DateTimeColumn(verbose_name="Created")
-    actions = ButtonsColumn(
-        model=ImageAttachment,
-        buttons=("edit", "delete"),
-        verbose_name="",
-    )
-    row_attrs = {
-        "class": lambda record: "table-danger" if not getattr(record.image, "size", None) else "",
-    }
-
-    class Meta(BaseTable.Meta):
-        model = ImageAttachment
-        fields = ("pk", "name", "size", "created", "actions")
-        default_columns = ("pk", "name", "size", "created", "actions")
-
-    def render_size(self, value, record):
-        try:
-            return f"{record.image.size / 1024:.1f} KB"
-        except Exception:
-            return format_html('<span class="text-danger">Unavailable</span>')
 
 
 class JobTable(BaseTable):

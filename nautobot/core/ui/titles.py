@@ -15,6 +15,7 @@ DEFAULT_TITLES: dict[str, str] = {
     "bulk_rename": "Renaming {{ selected_objects|length }} {{ verbose_name_plural|bettertitle }} on {{ parent_name }}",
     "bulk_update": "Editing {{ objs_count }} {{ verbose_name_plural|bettertitle }}",
     "changelog": "{{ object.display|default:object }} - Change Log",
+    "config_context": "{{ object.display|default:object }} - Config Context",
     "notes": "{{ object.display|default:object }} - Notes",
     "approve": "Approve {{ verbose_name|bettertitle }}?",
     "deny": "Deny {{ verbose_name|bettertitle }}?",

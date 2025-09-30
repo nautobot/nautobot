@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.18b1"
+version = "2.4.19b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -73,7 +73,7 @@ django-prometheus = "~2.4.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~6.0.0"
 # Django silk for request profiling
-django-silk = "~5.4.2"
+django-silk = "~5.4.3"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
@@ -200,17 +200,21 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.18"
+mkdocs-material = "~9.6.20"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.0"
+mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
+# Django template files indenter
+djhtml = ">=3.0.9,<4.0.0"
+# Django template files linter and formatter
+djlint = "~1.36.4"
 # Code static analysis
 pylint = "~3.3.8"
 # Pylint extensions for Django
@@ -260,6 +264,11 @@ omit = [
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+[tool.djlint]
+ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
+profile="django"
+extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"

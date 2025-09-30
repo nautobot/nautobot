@@ -14,7 +14,7 @@ from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
-from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
+from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
@@ -153,7 +153,7 @@ class Rack(PrimaryModel):
     u_height = models.PositiveSmallIntegerField(
         default=RACK_U_HEIGHT_DEFAULT,
         verbose_name="Height (U)",
-        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        validators=[MinValueValidator(1), MaxValueValidator(RACK_U_HEIGHT_MAXIMUM)],
         help_text="Height in rack units",
     )
     desc_units = models.BooleanField(
