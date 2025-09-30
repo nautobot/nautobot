@@ -1844,7 +1844,7 @@ body {
     top: 1.375rem; /* 22px */
 
     &::before { /* Chevron icon */
-      @include chevron(1rem, $nav-black-0); /* 16px */
+      @include chevron(1rem, $navy-0); /* 16px */
     }
   }
 
