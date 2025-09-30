@@ -6,7 +6,7 @@
             <label class="position-relative w-100">
                 <input
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
-                    class="form-control nb-color-transparent"
+                    class="form-control nb-text-transparent"
                     name="q"
                     type="search"
                     value="{{ request.GET.q }}"
@@ -48,7 +48,7 @@
     <div class="col text-end">
         <div class="dropdown">
             <button class="btn dropdown-toggle align-items-center d-inline-flex gap-6" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="align-items-center bg-primary d-inline-flex justify-content-center rounded text-white" style="height: 1.5rem; width: 1.5rem;">
+                <span class="align-items-center bg-primary d-inline-flex justify-content-center rounded nb-text-body-bg" style="height: 1.5rem; width: 1.5rem;">
                     {% if request.user.get_full_name %}
                         {% for name in request.user.get_full_name|split:" " %}<!--
                             -->{{ name|first|upper }}<!--
