@@ -1471,7 +1471,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
-    validation_excluded_fields = ["cluster"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1567,7 +1566,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 4",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
@@ -1580,7 +1578,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 5",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk],
@@ -1593,7 +1590,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[0].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]

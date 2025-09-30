@@ -9,7 +9,6 @@ from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from nautobot.core.api import (
     ChoiceField,
     ContentTypeField,
-    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
     TimeZoneSerializerField,
     TreeModelSerializerMixin,
@@ -108,7 +107,6 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.utils import FeatureQuery
-from nautobot.virtualization.models import Cluster
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
@@ -531,13 +529,6 @@ class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
-    # for backward compatibility where a Device had only a single Cluster
-    cluster = NautobotHyperlinkedRelatedField(
-        allow_null=True,
-        queryset=Cluster.objects.all(),
-        required=False,
-        view_name="virtualization-api:cluster-detail",
-    )
 
     class Meta:
         model = Device
