@@ -2520,8 +2520,36 @@ class NoteUIViewSet(
         ),
     )
 
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        obj.user = request.user
+    def form_save(self, form, commit=True, *args, **kwargs):
+        """
+        Save the form instance while ensuring the Note's `user` and `user_name` fields
+        are correctly populated.
+
+        Args:
+            form (Form): The validated form instance to be saved.
+            commit (bool): If True, save the instance to the database immediately.
+            *args, **kwargs: Additional arguments to maintain compatibility with
+                            the parent method signature.
+
+        Returns:
+            Note: The saved or unsaved Note instance with `user` and `user_name` set.
+
+        Behavior:
+            - Sets `user` to the currently authenticated user.
+            - Sets `user_name` to the username of the authenticated user.
+            - Saves the instance if `commit=True`.
+        """
+        # Get instance without committing to DB
+        obj = super().form_save(form, commit=False, *args, **kwargs)
+
+        # Assign user info (only authenticated users can create notes)
+        obj.user = self.request.user
+        obj.user_name = self.request.user.get_username()
+
+        # Save to DB if commit is True
+        if commit:
+            obj.save()
+
         return obj
 
 
@@ -2776,6 +2804,7 @@ class SecretUIViewSet(
                 table_title="Groups containing this secret",
                 table_class=tables.SecretsGroupTable,
                 table_attribute="secrets_groups",
+                distinct=True,
                 related_field_name="secrets",
                 footer_content_template_path=None,
             ),
