@@ -1,1 +1,1 @@
-Removed caching from the `connected_endpoint` method due to lack of cache invalidation.
+Removed unnecessary and error-prone cache logic from the `PathEndpoint.connected_endpoint` property.
