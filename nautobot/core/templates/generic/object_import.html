@@ -7,7 +7,7 @@
     <form action="" method="post" class="object-import-form h-100 vstack">
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
-            <div class="col-md-8 offset-md-2">
+            <div class="col-lg-8 offset-lg-2">
                 <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
                 {% if form.non_field_errors %}
                     <div class="card border-danger mb-16">

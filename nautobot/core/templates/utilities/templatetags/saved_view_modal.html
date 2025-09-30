@@ -2,7 +2,7 @@
 {% load form_helpers %}
 
 <div class="modal fade" tabindex="-1" id="saved_view_modal" role="dialog">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title">New Saved View</h4>
@@ -13,8 +13,8 @@
                     {% csrf_token %}
                     <div class="row">
                         {% render_field form.name %}
-                        <span class="col-md-3 text-end text-secondary">New Changes</span>
-                        <div class="col-md-9">
+                        <span class="col-lg-3 text-end text-secondary">New Changes</span>
+                        <div class="col-lg-9">
                             <pre><code class="language-json">{{ param_dict }}</code></pre>
                         </div>
                         {% render_field form.is_shared %}

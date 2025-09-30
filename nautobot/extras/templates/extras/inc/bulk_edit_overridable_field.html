@@ -2,7 +2,7 @@
 
 <hr>
 <div class="form-group{% if field.errors %} has-error{% endif %}">
-    <label class="col-lg-3 control-label{% if field.field.nb-required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
+    <label class="col-lg-3 control-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
         {{ field.label }}
     </label>
     <div class="col-lg-9">

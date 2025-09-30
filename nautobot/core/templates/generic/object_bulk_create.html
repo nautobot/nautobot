@@ -28,7 +28,7 @@ Leaving it here for now in case apps are making use of it.
 {% block content %}
     {% block tabs %}{% endblock %}
     <div class="row">
-        <div class="col-md-8 offset-md-2">
+        <div class="col-lg-8 offset-md-2">
             <h1 class="mb-16">{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
                 <div class="card border-danger mb-16">
@@ -41,8 +41,12 @@ Leaving it here for now in case apps are making use of it.
                 </div>
             {% endif %}
             <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link{% if active_tab == 'csv-data' %} active{% endif %}" href="#csv-text" role="tab" data-bs-toggle="tab">CSV Data</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link{% if active_tab == 'csv-file' %} active{% endif %}" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link{% if active_tab == 'csv-data' %} active{% endif %}" href="#csv-text" role="tab" data-bs-toggle="tab">CSV Data</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link{% if active_tab == 'csv-file' %} active{% endif %}" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a>
+                </li>
             </ul>
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane fade{% if active_tab == 'csv-data' %} show active{% endif %}" id="csv-text">
@@ -104,7 +108,7 @@ Leaving it here for now in case apps are making use of it.
                                     <td>{{ field.required | render_boolean }}</td>
                                     <td>
                                         {% if field.choices %}
-                                            <button type="button" class="btn btn-link btn-xs float-end" data-bs-toggle="modal" data-target="#{{ field.name }}_choices">
+                                            <button type="button" class="btn btn-link btn-sm float-end" data-bs-toggle="modal" data-bs-target="#{{ field.name }}_choices">
                                                 <span aria-hidden="true" class="mdi mdi-help-circle"></span>
                                             </button>
                                             <div class="modal fade" id="{{ field.name }}_choices" tabindex="-1" role="dialog">

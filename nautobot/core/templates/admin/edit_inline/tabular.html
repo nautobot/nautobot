@@ -16,7 +16,7 @@
                 <thead><tr>
                     <th class="original"></th>
                     {% for field in inline_admin_formset.fields %}
-                        <th class="column-{{ field.name }}{% if field.required %} required{% endif %}{% if field.widget.is_hidden %} hidden{% endif %}">{{ field.label|capfirst }}
+                        <th class="column-{{ field.name }}{% if field.required %} nb-required{% endif %}{% if field.widget.is_hidden %} hidden{% endif %}">{{ field.label|capfirst }}
                             {% if field.help_text %}<img src="{% static "admin/img/icon-unknown.svg" %}" class="help help-tooltip" width="10" height="10" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}">{% endif %}
                         </th>
                     {% endfor %}

@@ -30,7 +30,7 @@
                 </div>
             {% endif %}
             {% if table %}
-                <div class="col-md-8">
+                <div class="col-lg-8">
                     <div class="card mb-16">
                         <div class="table-responsive">
                             {% render_table table 'inc/table.html' %}
@@ -38,7 +38,7 @@
                     </div>
                 </div>
             {% endif %}
-            <div class="{% if table %}col-md-4{% else %}col-lg-8 offset-lg-2 col-md-10 offset-md-1{% endif %}">
+            <div class="{% if table %}col-lg-4{% else %}col-xl-8 offset-xl-2 col-lg-10 offset-lg-1{% endif %}">
                 <div class="card mb-16">
                     <div class="card-header"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                     <div class="card-body">

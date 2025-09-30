@@ -2,7 +2,7 @@
     <div class="row row-cols-3">
         {% for url, value, title in stats.values %}
             <div class="col text-center">
-                <h2><a href="{% url url %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value > 0 %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ value }}</a></h2>
+                <h2><a href="{% url url %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value > 0 %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ value }}</a></h2>
                 <p>{{ title }}</p>
             </div>
         {% endfor %}

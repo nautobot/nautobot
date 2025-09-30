@@ -1,11 +1,11 @@
 {% load helpers %}
 {% if custom_fields %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Custom Fields</strong>
             <button
                 aria-expanded="true"
-                class="btn btn-primary btn-sm float-end"
+                class="btn btn-primary btn-md float-end"
                 data-nb-target="#custom_fields_accordion_{{ advanced_ui }} .collapse"
                 data-nb-toggle="collapse-all"
                 type="button"
@@ -13,7 +13,7 @@
                 Collapse All
             </button>
         </div>
-        <table id="custom_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
+        <table id="custom_fields_accordion_{{ advanced_ui }}" class="table table-hover card-body attr-table">
             {% for grouping, fields in custom_fields.items %}
                 {% with forloop.counter0 as count %}
                     {% if grouping != "" %}
@@ -47,8 +47,8 @@
                                     {{ value|render_markdown }}
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
-                                        <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
-                                                data-target="#cf_{{ field.key }}" aria-expanded="false"
+                                        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse"
+                                                data-bs-target="#cf_{{ field.key }}" aria-expanded="false"
                                                 aria-controls="cf_{{ field.key }}">
                                             Show/Hide
                                         </button>
@@ -59,7 +59,7 @@
                                 {% elif field.required %}
                                     <span class="text-warning">Not defined</span>
                                 {% else %}
-                                    <span class="text-muted">&mdash;</span>
+                                    <span class="text-secondary">&mdash;</span>
                                 {% endif %}
                             </td>
                         </tr>

@@ -155,18 +155,18 @@
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#dynamic_group_assignment_modal"
                                                         data-objects="all"
-                                                        class="btn btn-primary btn-sm"
+                                                        class="btn btn-primary btn-md"
                                                         disabled="disabled">
                                                     <span class="mdi mdi-group me-4" aria-hidden="true"></span>Update Group Assignment for All
                                                 </button>
                                             {% endif %}
                                             {% if bulk_edit_url and permissions.change %}
-                                                <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
+                                                <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-md" disabled="disabled">
                                                     <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
                                                 </button>
                                             {% endif %}
                                             {% if bulk_delete_url and permissions.delete %}
-                                                <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-sm" disabled="disabled">
+                                                <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-md" disabled="disabled">
                                                     <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
                                                 </button>
                                             {% endif %}
