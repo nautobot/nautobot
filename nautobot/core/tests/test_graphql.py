@@ -1458,9 +1458,7 @@ query {
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
 
-    @skip(
-        "Works in isolation, fails as part of the overall test suite due to issue #446, also something is broken with content types"
-    )
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_relationship_associations(self):
         """Test queries involving relationship associations."""
@@ -2451,6 +2449,23 @@ query {
         self.assertIsNone(result.errors)
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_optimizer_reverse_lookup(self):
+        """
+        Test query optimization in the case of a query mixing reverse and forward nested lookups.
+
+        See https://github.com/nautobot/nautobot/issues/7651.
+        """
+        query = """query { tenant_groups { name tenants { name } } }"""
+        # Prewarm caches of Relationships and such to reduce variation in the number of queries below
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Run it again and assert that the optimized query is run.
+        # Before the fix for #7651 this would result in N+1 queries where N is the number of tenant-groups!
+        with self.assertNumQueries(2):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
 
 
 class GraphQLTypeTestCase(UnitTestTestCase):

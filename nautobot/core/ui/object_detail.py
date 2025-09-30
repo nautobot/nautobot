@@ -754,6 +754,7 @@ class ObjectsTablePanel(Panel):
         table_class=None,
         table_filter=None,
         table_attribute=None,
+        distinct=False,
         select_related_fields=None,
         prefetch_related_fields=None,
         order_by_fields=None,
@@ -796,6 +797,7 @@ class ObjectsTablePanel(Panel):
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
+            distinct (bool, optional): If True, apply `.distinct()` to the table queryset.
             select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
             prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
                 method.
@@ -831,6 +833,7 @@ class ObjectsTablePanel(Panel):
                 table_class,
                 table_filter,
                 table_attribute,
+                distinct,
                 select_related_fields,
                 prefetch_related_fields,
                 order_by_fields,
@@ -839,8 +842,8 @@ class ObjectsTablePanel(Panel):
         ):
             raise ValueError(
                 "context_table_key cannot be combined with any of the args that are used to dynamically construct the "
-                "table (table_class, table_filter, table_attribute, select_related_fields, prefetch_related_fields, "
-                "order_by_fields, hide_hierarchy_ui)."
+                "table (table_class, table_filter, table_attribute, distinct, select_related_fields, "
+                "prefetch_related_fields, order_by_fields, hide_hierarchy_ui)."
             )
         self.context_table_key = context_table_key
         self.table_class = table_class
@@ -852,6 +855,7 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
+        self.distinct = distinct
         self.select_related_fields = select_related_fields
         self.prefetch_related_fields = prefetch_related_fields
         self.order_by_fields = order_by_fields
@@ -965,7 +969,8 @@ class ObjectsTablePanel(Panel):
                 )
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
-            body_content_table_queryset = body_content_table_queryset.distinct()
+            if self.distinct:
+                body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
                 body_content_table_queryset,
                 hide_hierarchy_ui=self.hide_hierarchy_ui,
