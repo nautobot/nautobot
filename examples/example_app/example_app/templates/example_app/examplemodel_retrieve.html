@@ -2,12 +2,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
-{% block extra_breadcrumbs %}
-        <li>
-            <a href="{% url 'plugins:example_app:examplemodel_list' %}?number={{ object.number }}">{{ object.number }} (Breadcrumbs)</a>
-        </li>
-{% endblock extra_breadcrumbs %}
-
 {% block extra_buttons %}
         <a onClick="alert('I am from the detail view template.')" class="btn btn-success">
             <span class="mdi mdi-exclamation-thick" aria-hidden="true"></span> Extra Buttons go here

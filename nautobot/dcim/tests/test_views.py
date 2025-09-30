@@ -452,7 +452,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         prefix_1.locations.set([child_1, child_2])
         prefix_2.locations.set([child_1, child_2])
         request = RequestFactory().get(parent_location.get_absolute_url())
-        request.user = User.objects.first()
+        request.user = self.user
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("ipam.view_prefix")
         context = view_set.get_extra_context(request=request, instance=parent_location)
         self.assertEqual(context["stats"]["prefix_count"], 2)
 
