@@ -1,2 +1,0 @@
-Changed development docker-compose environment to not start the `selenium` container by default.
-Changed `invoke tests` to auto-start the `selenium` container as needed when running integration tests.

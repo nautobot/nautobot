@@ -3,90 +3,90 @@
 {% load form_helpers %}
 
 {% block extra_styles %}
-<style>
-    .style-line {
-        overflow: hidden;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .style-line span {
-        text-align: center;
-        font-size: 15px;
-        color: #acacac;
-        display: inline-block;
-        position: relative;
-        padding: 0 25px;
-        z-index: 1;
-    }
-    .style-line span:before {
-        display: inline-block;
-        content: "";
-        height: 2px;
-        width: 100%;
-        background-color: #cfcfcf;
-        left: 100%;
-        top: 50%;
-        -webkit-transform: translateY(-50%);
-        -ms-transform: translateY(-50%);
-        transform: translateY(-50%);
-        position: absolute;
-        z-index: 1;
-    }
-    .style-line span:after {
-        display: inline-block;
-        content: "";
-        height: 2px;
-        width: 100%;
-        background-color: #cfcfcf;
-        right: 100%;
-        top: 50%;
-        -webkit-transform: translateY(-50%);
-        -ms-transform: translateY(-50%);
-        transform: translateY(-50%);
-        position: absolute;
-        z-index: 1;
-    }
-</style>
+    <style>
+        .style-line {
+            overflow: hidden;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .style-line span {
+            text-align: center;
+            font-size: 15px;
+            color: #acacac;
+            display: inline-block;
+            position: relative;
+            padding: 0 25px;
+            z-index: 1;
+        }
+        .style-line span:before {
+            display: inline-block;
+            content: "";
+            height: 2px;
+            width: 100%;
+            background-color: #cfcfcf;
+            left: 100%;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            -ms-transform: translateY(-50%);
+            transform: translateY(-50%);
+            position: absolute;
+            z-index: 1;
+        }
+        .style-line span:after {
+            display: inline-block;
+            content: "";
+            height: 2px;
+            width: 100%;
+            background-color: #cfcfcf;
+            right: 100%;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            -ms-transform: translateY(-50%);
+            transform: translateY(-50%);
+            position: absolute;
+            z-index: 1;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
-    <div class="col-sm-4 col-sm-offset-4">
-        {% if "BANNER_LOGIN"|settings_or_config %}
-            <div class="alert alert-info text-center" role="alert">
-                {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
-            </div>
-        {% endif %}
-        {% if form.non_field_errors %}
-            <div class="panel panel-danger">
-                <div class="panel-heading"><strong>Errors</strong></div>
-                <div class="panel-body">
-                    {{ form.non_field_errors }}
+    <div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
+        <div class="col-sm-4 col-sm-offset-4">
+            {% if "BANNER_LOGIN"|settings_or_config %}
+                <div class="alert alert-info text-center" role="alert">
+                    {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
                 </div>
-            </div>
-        {% endif %}
-        <form action="{% url 'login' %}" method="post" class="form form-horizontal">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>Log In</strong>
+            {% endif %}
+            {% if form.non_field_errors %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><strong>Errors</strong></div>
+                    <div class="panel-body">
+                        {{ form.non_field_errors }}
+                    </div>
                 </div>
-                <div class="panel-body">
-                    {% csrf_token %}
-                    {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
-                    {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
-                    {% render_form form %}
+            {% endif %}
+            <form action="{% url 'login' %}" method="post" class="form form-horizontal">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Log In</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% csrf_token %}
+                        {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
+                        {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
+                        {% render_form form %}
+                    </div>
+                    <div class="panel-footer text-right">
+                        <button type="submit" class="btn btn-primary">Log In</button>
+                    </div>
                 </div>
-                <div class="panel-footer text-right">
-                    <button type="submit" class="btn btn-primary">Log In</button>
+            </form>
+            {% if SSO_AUTH_ENABLED %}
+                <div class="style-line">
+                    <span>Or</span>
                 </div>
-            </div>
-        </form>
-        {% if SSO_AUTH_ENABLED %}
-        <div class="style-line">
-            <span>Or</span>
+                <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
+            {% endif %}
         </div>
-        <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
-        {% endif %}
     </div>
-</div>
 {% endblock %}

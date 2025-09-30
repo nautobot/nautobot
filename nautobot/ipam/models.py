@@ -350,6 +350,7 @@ class VRFDeviceAssignment(BaseModel):
     is_metadata_associable_model = False
 
     class Meta:
+        verbose_name = "VRF-device assignment"
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
@@ -404,6 +405,7 @@ class VRFPrefixAssignment(BaseModel):
     is_metadata_associable_model = False
 
     class Meta:
+        verbose_name = "VRF-prefix assignment"
         unique_together = ["vrf", "prefix"]
 
     def __str__(self):
@@ -881,6 +883,38 @@ class Prefix(PrimaryModel):
                 "Multiple Location objects returned. Please refer to locations."
             )
         self.locations.set([value])
+
+    @property
+    def default_ancestors(self):
+        """
+        Return this prefix's ancestors in default order.
+
+        This is equivalent to calling `ancestors()` with default
+        arguments: ordered from larger to smaller prefix lengths,
+        excluding the prefix itself.
+        """
+        return self.ancestors()
+
+    @property
+    def default_descendants(self):
+        """
+        Return this prefix's descendants in default order.
+
+        This is equivalent to calling `descendants()` with
+        default arguments: all subnets, excluding the prefix itself.
+        """
+        return self.descendants()
+
+    @property
+    def all_ips(self):
+        """
+        All IP addresses contained within this prefix, including
+        those in descendant prefixes.
+
+        This is a property alias for `get_all_ips()` and may be
+        preferred in new code for readability.
+        """
+        return self.get_all_ips()
 
     def reparent_subnets(self):
         """

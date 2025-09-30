@@ -10,7 +10,9 @@
     <div class="pull-left">
         {% render_components footer_buttons %}
     </div>
-    <div class="clearfix"></div>
+    {% if not body_content_table_add_url %}
+        <div class="clearfix"></div>
+    {% endif %}
 {% endif %}
 
 {% if body_content_table_add_url %}

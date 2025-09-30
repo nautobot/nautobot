@@ -1,1 +1,0 @@
-Fixed a regression in the handling of `ObjectFieldsPanel(ignore_nonexistent_fields=True)` introduced by #7784.
