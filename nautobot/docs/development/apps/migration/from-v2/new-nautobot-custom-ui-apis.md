@@ -309,8 +309,9 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 
 | Class                     | Style                              |
 |---------------------------|------------------------------------|
-| `nb-color-transparent`    | `color: transparent;`              |
 | `nb-cursor-unset`         | `cursor: unset;`                   |
+| `nb-text-transparent`     | `color: transparent;`              |
+| `nb-text-body-bg`         | `color: var(--bs-body-bg);`        |
 | `nb-text-none`            | `text-transform: none;`            |
 | `nb-transition-base`      | `transition: all .2s ease-in-out;` |
 | `nb-transition-fade`      | `transition: opacity .15s linear;` |

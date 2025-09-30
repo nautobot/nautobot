@@ -8,6 +8,12 @@
 /* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
 @import "bootstrap/scss/functions";
 
+@function replace-svg-color($svg, $original-color, $target-color) {
+  $index: string.index($svg, #{$original-color});
+  $length: string.length(#{$original-color});
+  @return #{string.slice($svg, 1, $index - 1)}#{$target-color}#{string.slice($svg, $index + $length, -1)};
+}
+
 /* 2. Include any default variable overrides here */
 @import "colors";
 
@@ -467,9 +473,12 @@ $utilities: map-merge(
   $utilities,
   (
     "nb-color": (
-      class: nb-color,
+      class: nb-text,
       property: color,
-      values: transparent,
+      values: (
+        body-bg: var(--#{$prefix}body-bg),
+        transparent: transparent,
+      ),
     ),
     "nb-cursor": (
       class: nb-cursor,
@@ -1505,9 +1514,9 @@ body {
   $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
   $sidenav-link-width: $sidenav-width-expanded;
 
-  @mixin chevron($size) {
+  @mixin chevron($size, $color: $nav-white-0) {
     @include transition($accordion-icon-transition, $transition-fade);
-    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{$sidenav-chevron-svg}"))};
+    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{replace-svg-color($sidenav-chevron-svg, $nav-white-0, $color)}"))};
     content: "";
     display: block;
     height: $size;
@@ -1541,7 +1550,7 @@ body {
     filter: invert(39%) sepia(6%) saturate(1228%) hue-rotate(166deg) brightness(54%) contrast(86%);
   }
 
-  @include box-shadow($box-shadow);
+  @include box-shadow(0.0625rem 0 0 0 $navy-2, $box-shadow);
   @include transition($transition-collapse-width);
   align-items: center;
   background-color: $navy-0;
@@ -1656,7 +1665,7 @@ body {
     display: flex;
     flex: 1;
     overflow: hidden;
-    padding-block: map.get($spacers, 5);
+    padding-block: map.get($spacers, 8);
     padding-inline-start: map.get($spacers, 20) + $sidenav-link-segment-icon-width + $sidenav-link-gap;
     position: relative;
     text-decoration: none;
@@ -1733,14 +1742,14 @@ body {
   .nb-sidenav-link-group {
     color: $nav-gray-3;
     font-weight: $font-weight-medium;
-    padding-block: map.get($spacers, 5);
+    padding-block: map.get($spacers, 8);
     padding-inline: map.get($spacers, 20);
     text-transform: uppercase;
     width: $sidenav-link-width;
   }
 
   .nb-sidenav-list-divider {
-    border-top: $border-width solid $navy-4;
+    border-top: $border-width solid transparent;
     margin: #{map.get($spacers, 10)}  #{map.get($spacers, 20)};
   }
 
@@ -1752,7 +1761,7 @@ body {
     color: inherit;
     display: inline-flex;
     font-weight: $font-weight-medium;
-    padding-block: map.get($spacers, 5);
+    padding-block: map.get($spacers, 8);
     padding-inline: #{map.get($spacers, 20)}  #{map.get($spacers, 10)};
     text-decoration: none;
     text-transform: uppercase;
@@ -1835,7 +1844,7 @@ body {
     top: 1.375rem; /* 22px */
 
     &::before { /* Chevron icon */
-      @include chevron(1rem); /* 16px */
+      @include chevron(1rem, $navy-0); /* 16px */
     }
   }
 
@@ -1891,12 +1900,7 @@ body {
        * Change select chevron icon color from `#343a40` (`$gray-800`, default) to `#ffffff` (`$nav-white-0`) and right
        * offset from `11px` (default) to `13px` to keep it consistent and aligned with with other sidenav chevrons.
        */
-      $chevron-svg: $s2bs5-indicator;
-      $stroke-color: #{$form-select-indicator-color};
-      $stroke-index: string.index($chevron-svg, $stroke-color);
-      $stroke-length: string.length($stroke-color);
-      $next-chevron-svg: #{string.slice($chevron-svg, 1, $stroke-index - 1)}#{$nav-white-0}#{string.slice($chevron-svg, $stroke-index + $stroke-length, -1)};
-      background-image: escape-svg($next-chevron-svg);
+      background-image: escape-svg(replace-svg-color($s2bs5-indicator, $form-select-indicator-color, $nav-white-0));
       background-position: right 0.8125rem center;
     }
   }
