@@ -1,1 +1,0 @@
-Added CTE query count tracking to GetObjectViewTestCase test cases to keep track of and minimize the query count.
