@@ -7,8 +7,8 @@
         {% render_field form.label %}
         {% render_field form.color %}
         <div class="form-group">
-            <label class="col-md-3 control-label" for="id_length">{{ form.length.label }}</label>
-            <div class="col-md-5">
+            <label class="col-lg-3 control-label" for="id_length">{{ form.length.label }}</label>
+            <div class="col-lg-5">
                 {{ form.length }}
                 {% if form.length.errors %}
                     <ul>
@@ -18,7 +18,7 @@
                     </ul>
                 {% endif %}
             </div>
-            <div class="col-md-4">
+            <div class="col-lg-4">
                 {{ form.length_unit }}
                 {% if form.length_unit.errors %}
                     <ul>

@@ -3,8 +3,8 @@
 {% block bulk_buttons %}
     {% if perms.dcim.change_device %}
         <div class="btn-group dropup">
-            <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="device-bulk-add-components-button">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
+            <button type="button" class="btn btn-md btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="device-bulk-add-components-button">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="mdi mdi-chevron-down"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.dcim.add_consoleport %}<li><a href="{% url 'dcim:device_bulk_add_consoleport' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="formaction dropdown-item">Console Ports</a></li>{% endif %}

@@ -5,7 +5,7 @@
     <form action="." method="post" class="h-100 vstack">
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
-            <div class="col-md-6 offset-md-3">
+            <div class="col-lg-6 offset-md-3">
                 {% if form.non_field_errors %}
                     <div class="card border-danger mb-16">
                         <div class="card-header bg-danger-subtle border-danger text-body">
@@ -20,14 +20,14 @@
                     <div class="card-header">{% block title %}Populate {{ device_bay }}{% endblock %}</div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label class="col-md-3 control-label nb-required">Parent Device</label>
-                            <div class="col-md-9">
+                            <label class="col-lg-3 control-label nb-required">Parent Device</label>
+                            <div class="col-lg-9">
                                 <p class="form-control-static">{{ device_bay.device }}</p>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-3 control-label nb-required">Bay</label>
-                            <div class="col-md-9">
+                            <label class="col-lg-3 control-label nb-required">Bay</label>
+                            <div class="col-lg-9">
                                 <p class="form-control-static">{{ device_bay }}</p>
                             </div>
                         </div>
