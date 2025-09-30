@@ -339,8 +339,7 @@ class ViewTestCases:
                 button_id_attribute = re.search(r"id=\"([A-Za-z]+[\w\-\:\.]*)\"", button).group(0)
                 real_count = content.count(button_parsed)
                 if (real_count is None or real_count == 0) and button_id_attribute in str(content):
-                    self.assertTrue(  # pylint: disable=redundant-unittest-assert  # deliberately fail
-                        False,
+                    self.fail(
                         f"Couldn't find {button} in response, but an element with `{button_id_attribute}` has been found. Is the page using legacy button template?\n{content}",
                     )
                 else:
