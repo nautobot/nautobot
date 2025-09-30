@@ -116,7 +116,7 @@
                         <li class="nav-item" role="presentation">
                             <a
                                 class="nav-link {% if active_tab == 'data_compliance' %}active{% endif %}"
-                                    {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
+                                {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
                                 href="{{ object.get_data_compliance_url }}"
                             >
                                 Data Compliance
