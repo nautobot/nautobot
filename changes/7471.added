@@ -1,0 +1,1 @@
+Added support for `distinct` optional parameter when defining an `ObjectsTablePanel` UI component.

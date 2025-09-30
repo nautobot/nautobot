@@ -1132,6 +1132,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.SoftwareImageFileTable,
                 table_filter="device_types",
+                order_by_fields=["image_file_name"],
                 select_related_fields=["software_version", "status"],
                 exclude_columns=["actions", "tags"],
                 related_field_name="device_types",
@@ -2427,6 +2428,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             return (
                 obj.controller_managed_device_group is not None
+                and isinstance(obj.controller_managed_device_group.capabilities, list)  # it's potentially None
                 and "wireless" in obj.controller_managed_device_group.capabilities
             )
 

@@ -197,6 +197,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
+        render_on_tab_id="main",
         **kwargs,
     ):
         """
@@ -216,6 +217,7 @@ class Button(Component):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on.
         """
         self.label = label
         self.color = color
@@ -227,6 +229,7 @@ class Button(Component):
         self.size = size
         self.link_includes_pk = link_includes_pk
         self.context_object_key = context_object_key
+        self.render_on_tab_id = render_on_tab_id
         super().__init__(**kwargs)
 
     def get_link(self, context: Context):
@@ -253,6 +256,11 @@ class Button(Component):
             "attributes": self.attributes,
             "size": self.size,
         }
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -405,9 +413,18 @@ class Tab(Component):
         """
         return self.label
 
+    def should_render_content(self, context: Context):
+        """
+        Only render a main-view Tab if the active request is for the main object view rather than a separate action.
+        """
+        request = context["request"]
+        obj = get_obj_from_context(context)
+        return request.path == obj.get_absolute_url()
+
     def render(self, context: Context):
         """Render the tab's contents (layout and panels) to HTML."""
-        if not self.should_render(context):
+        # Check should_render_content first as it's generally a cheaper calculation than should_render checking perms
+        if not self.should_render_content(context) or not self.should_render(context):
             return ""
 
         with context.update(
@@ -471,13 +488,22 @@ class DistinctViewTab(Tab):
         try:
             self.related_object_count = getattr(obj, self.related_object_attribute).count()
         except AttributeError:
-            logger.warning(
+            # Not a warning log, as there are cases where this is expected.
+            logger.debug(
                 f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
             )
 
         if self.hide_if_empty and not self.related_object_count:
             return False
         return True
+
+    def should_render_content(self, context: Context):
+        """
+        A DistinctViewTab should only render its content if the view in question is active.
+        """
+        with context.update(self.get_extra_context(context)):
+            request = context["request"]
+            return request.path == context["url"]
 
     def render_label(self, context: Context):
         if not self.related_object_attribute or not self.related_object_count:
@@ -705,6 +731,7 @@ class ObjectsTablePanel(Panel):
         table_class=None,
         table_filter=None,
         table_attribute=None,
+        distinct=False,
         select_related_fields=None,
         prefetch_related_fields=None,
         order_by_fields=None,
@@ -747,6 +774,7 @@ class ObjectsTablePanel(Panel):
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
+            distinct (bool, optional): If True, apply `.distinct()` to the table queryset.
             select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
             prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
                 method.
@@ -782,6 +810,7 @@ class ObjectsTablePanel(Panel):
                 table_class,
                 table_filter,
                 table_attribute,
+                distinct,
                 select_related_fields,
                 prefetch_related_fields,
                 order_by_fields,
@@ -790,8 +819,8 @@ class ObjectsTablePanel(Panel):
         ):
             raise ValueError(
                 "context_table_key cannot be combined with any of the args that are used to dynamically construct the "
-                "table (table_class, table_filter, table_attribute, select_related_fields, prefetch_related_fields, "
-                "order_by_fields, hide_hierarchy_ui)."
+                "table (table_class, table_filter, table_attribute, distinct, select_related_fields, "
+                "prefetch_related_fields, order_by_fields, hide_hierarchy_ui)."
             )
         self.context_table_key = context_table_key
         self.table_class = table_class
@@ -803,6 +832,7 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
+        self.distinct = distinct
         self.select_related_fields = select_related_fields
         self.prefetch_related_fields = prefetch_related_fields
         self.order_by_fields = order_by_fields
@@ -906,7 +936,8 @@ class ObjectsTablePanel(Panel):
                 )
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
-            body_content_table_queryset = body_content_table_queryset.distinct()
+            if self.distinct:
+                body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui, user=request.user
             )

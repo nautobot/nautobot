@@ -18,7 +18,6 @@ import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nautobot.apps.ui import Titles
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -33,7 +32,7 @@ from nautobot.core.ui.breadcrumbs import (
     ModelBreadcrumbItem,
 )
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.titles import DEFAULT_TITLES
+from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
@@ -469,6 +468,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
+                render_on_tab_id="prefixes",
             ),
             ui.AddIPAddressButton(
                 weight=300,
@@ -477,6 +477,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
+                render_on_tab_id="ip-addresses",
             ),
         ],
     )
