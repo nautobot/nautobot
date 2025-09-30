@@ -314,7 +314,7 @@ class PathEndpoint(models.Model):
         """
         Return the attached CablePath's destination (if any)
         """
-        return self._path.destination if self._path else None
+        return self._path.destination if self._path else None  # pylint: disable=no-member
 
 
 #
