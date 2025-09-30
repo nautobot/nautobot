@@ -2460,12 +2460,12 @@ query {
         query = """query { tenant_groups { name tenants { name } } }"""
         # Prewarm caches of Relationships and such to reduce variation in the number of queries below
         result = self.execute_query(query)
-        self.assertNotIn("error", str(result))
+        self.assertIsNone(result.errors)
         # Run it again and assert that the optimized query is run.
         # Before the fix for #7651 this would result in N+1 queries where N is the number of tenant-groups!
         with self.assertNumQueries(2):
             result = self.execute_query(query)
-        self.assertNotIn("error", str(result))
+        self.assertIsNone(result.errors)
 
 
 class GraphQLTypeTestCase(UnitTestTestCase):
