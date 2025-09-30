@@ -5,6 +5,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Location
 * Role
 * Device type
+* Device family
 * Device redundancy group
 * Platform
 * Cluster group
