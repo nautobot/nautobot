@@ -178,8 +178,9 @@ class APISelect(SelectWithDisabled):
         """
         Add details for an additional query param in the form of a data-* JSON-encoded list attribute.
 
-        :param name: The name of the query param
-        :param value: The value of the query param
+        Args:
+            name (str): The name of the query param
+            value (Any): The value of the query param
         """
         key = f"data-query-param-{name}"
 

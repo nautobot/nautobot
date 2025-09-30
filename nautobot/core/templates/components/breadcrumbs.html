@@ -1,14 +1,21 @@
-<ol class="breadcrumb">
-    {% block breadcrumbs %}
-        {% for url, title in breadcrumbs_items %}
-            <li>
-            {% if url %}
-                <a href="{{ url }}">{{ title }}</a>
+{% load helpers %}
+
+<nav aria-label="Breadcrumbs" class="mt-4">
+    <ol class="breadcrumb">
+        {% block breadcrumbs %}
+            {% if legacy_breadcrumbs %}
+                {{ legacy_breadcrumbs | safe }}
             {% else %}
-                {{ title }}
+                {% for url, title in breadcrumbs_items %}
+                    <li class="breadcrumb-item">
+                        {% if url %}
+                            <a href="{{ url }}">{{ title }}</a>
+                        {% else %}
+                            {{ title }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
             {% endif %}
-            </li>
-        {% endfor %}
-        {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-    {% endblock %}
-</ol>
+        {% endblock %}
+    </ol>
+</nav>

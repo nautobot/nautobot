@@ -1,3 +1,4 @@
+from decimal import Decimal
 import re
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -15,6 +16,7 @@ from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -402,8 +404,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     power_factor = models.DecimalField(
         max_digits=4,
         decimal_places=2,
-        default="0.95",
-        validators=[MinValueValidator(0.01), MaxValueValidator(1.00)],
+        default=Decimal("0.95"),
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
         help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
     )
 
@@ -1337,4 +1339,5 @@ class ModuleBay(PrimaryModel):
 
         if self.parent_device is not None:
             # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
-            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
+            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
+            cache.set(cache_key, True, timeout=5)

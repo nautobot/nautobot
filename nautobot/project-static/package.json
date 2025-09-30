@@ -2,11 +2,14 @@
   "name": "nautobot",
   "scripts": {
     "build": "webpack build --mode=production",
-    "code-check": "run-s lint format-check",
-    "lint": "eslint src",
-    "format": "prettier src --write",
-    "format-check": "prettier src --check",
-    "prebuild": "npm run code-check"
+    "build:watch": "npm run build -- --watch",
+    "code:check": "run-s eslint prettier",
+    "code:format": "run-s eslint:fix prettier:fix",
+    "eslint": "eslint src",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prebuild": "npm run code:check",
+    "prettier": "prettier src --check",
+    "prettier:fix": "prettier src --write"
   },
   "dependencies": {
     "@graphiql/plugin-explorer": "0.1.15",
@@ -15,6 +18,7 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
     "clipboard": "2.0.9",
+    "echarts": "^6.0.0",
     "flatpickr": "4.6.9",
     "graphiql": "2.4.7",
     "graphql": "16.10.0",

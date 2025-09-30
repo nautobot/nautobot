@@ -1,0 +1,3 @@
+Added EChartsBase class. Base definition for an ECharts chart (no rendering logic). This class transforms input data, applies theme colors, and generates a valid ECharts option config.
+Added `render_echart` as templatetags.
+Added EChartsPanel class, thank to that ECharts can be used in UI Component.

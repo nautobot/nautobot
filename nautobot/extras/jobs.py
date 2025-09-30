@@ -39,6 +39,7 @@ from nautobot.core.forms import (
     JSONField,
 )
 from nautobot.core.forms.widgets import ClearableFileInput
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
@@ -261,7 +262,7 @@ class BaseJob:
     @classproperty
     def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
         """Cache key for singleton jobs."""
-        return f"nautobot.extras.jobs.running.{cls.class_path}"
+        return construct_cache_key(cls, method_name="running", branch_aware=False, class_path=cls.class_path)
 
     @final
     @classproperty

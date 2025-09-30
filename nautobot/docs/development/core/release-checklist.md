@@ -43,15 +43,14 @@ Every minor version release should refresh `poetry.lock`, so that it lists the m
 !!! hint
     You may use `poetry update --dry-run` to have Poetry automatically tell you what package updates are available and the versions it would upgrade.
 
-### Update Static Libraries
+### Update UI Libraries
 
-Update the following static libraries to their most recent stable release:
+Update UI libraries to their latest version (specified by the tag config) respecting the semver constraints of both package and its dependencies:
 
-* [Bootstrap 3](https://getbootstrap.com/docs/3.4)
-* [Material Design Icons](https://materialdesignicons.com/)
-* [Select2](https://github.com/select2/select2/releases)
-* [jQuery](https://jquery.com/download/)
-* [jQuery UI](https://jqueryui.com/)
+```no-highlight
+invoke npm --command "update --save"
+invoke ui-build
+```
 
 ### Link to the Release Notes Page
 

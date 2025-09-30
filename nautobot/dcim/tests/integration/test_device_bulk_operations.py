@@ -10,7 +10,7 @@ from nautobot.core.testing.integration import (
     BulkOperationsTestCases,
     SeleniumTestCase,
 )
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Controller, Device
 from nautobot.extras.tests.integration import create_test_device
 
 
@@ -27,6 +27,7 @@ class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCas
     model_class = Device
 
     def setup_items(self):
+        Controller.objects.all().delete()
         Device.objects.all().delete()
         test_uuid = str(uuid.uuid4())
 
@@ -79,7 +80,7 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
 
         # Click the bulk-edit button (it uses formaction)
         bulk_url = reverse("dcim:device_bulk_edit")
-        btn_xpath = f'//button[@type="submit" and @formaction="{bulk_url}"]'
+        btn_xpath = f'//button[@type="submit" and starts-with(@formaction, "{bulk_url}")]'
         bulk_btn = WebDriverWait(self.browser.driver, 2).until(
             expected_conditions.element_to_be_clickable((By.XPATH, btn_xpath))
         )

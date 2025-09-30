@@ -10,7 +10,6 @@ from nautobot.data_validation.models import (
     RegularExpressionValidationRule,
     RequiredValidationRule,
     UniqueValidationRule,
-    ValidationRuleManager,
 )
 
 
@@ -23,9 +22,9 @@ from nautobot.data_validation.models import (
 @receiver(post_save, sender=UniqueValidationRule)
 @receiver(post_delete, sender=UniqueValidationRule)
 def invalidate_validation_rule_caches(sender, **kwargs):
-    for method in [
-        ValidationRuleManager.get_for_model,
-        ValidationRuleManager.get_enabled_for_model,
+    for prefix in [
+        sender.objects.get_for_model_cache_key_prefix,
+        sender.objects.get_enabled_for_model_cache_key_prefix,
     ]:
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{method.cache_key_prefix}.{sender._meta.concrete_model._meta.model_name}.*")
+            cache.delete_pattern(f"{prefix}(*)")

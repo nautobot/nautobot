@@ -1,16 +1,63 @@
 """Utilities for looking up related classes and information."""
 
 import inspect
+from operator import attrgetter
 import re
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import ForeignKey, Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
 from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
+
+
+def resolve_attr(obj, dotted_field):
+    """
+    Resolve nested attributes on a Django model instance using a Django-style
+    double-underscore path (e.g. 'location_type__nestable').
+
+    Args:
+        obj: A Django model instance.
+        dotted_field (str): Dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None:
+            - The string representation of the resolved attribute value.
+            - If the attribute is boolean, returns the field label in title case
+              if True, or 'Not <Field Label>' if False.
+            - Returns None if any attribute in the path does not exist or is None.
+
+    Example:
+        >>> resolve_attr(location, "name")
+        'Aisle'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Nestable'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Not Nestable'
+    """
+    try:
+        val = attrgetter(dotted_field.replace("__", "."))(obj)
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+    # to avoid circular import
+    from nautobot.core.templatetags.helpers import bettertitle
+
+    # handle booleans specially
+    if isinstance(val, bool):
+        attrs = dotted_field.split("__")
+        # take last part of dotted_field ("nestable" in "location_type__nestable")
+        field_label = bettertitle(attrs[-1].replace("_", " "))
+        return field_label if val else f"Not {field_label}"
+
+    return str(val) if val else None
 
 
 def get_changes_for_model(model):
@@ -33,12 +80,14 @@ def get_changes_for_model(model):
 def get_model_from_name(model_name):
     """Given a full model name in dotted format (example: `dcim.model`), a model class is returned if valid.
 
-    :param model_name: Full dotted name for a model as a string (ex: `dcim.model`)
-    :type model_name: str
+    Args:
+        model_name (str): Full dotted name for a model as a string (ex: `dcim.model`)
 
-    :raises TypeError: If given model name is not found.
+    Raises:
+        TypeError: If given model name is not found.
 
-    :return: Found model.
+    Returns:
+        (Model): Found model.
     """
 
     try:
@@ -327,6 +376,34 @@ def get_created_and_last_updated_usernames_for_model(instance):
         last_updated_by = last_updated_by_record.user_name
 
     return created_by, last_updated_by
+
+
+def get_user_from_instance(instance):
+    """
+    Retrieve the user object from a model instance, regardless of the field name.
+
+    This function inspects the given model instance to find a ForeignKey that points
+    to the current AUTH_USER_MODEL (as defined in Django settings). It does not require
+    the user-related field to have a fixed name (e.g., "user", "creator", "owner").
+
+    Args:
+        instance (models.Model): A Django model instance that may contain a ForeignKey
+            to the configured user model.
+
+    Returns:
+        User instance if a user-related ForeignKey exists and is populated,
+        otherwise None.
+
+    Example:
+        >>> schedule = ScheduledJob.objects.first()
+        >>> user = get_user_from_instance(schedule)
+        >>> print(user.username)
+    """
+    UserModel = settings.AUTH_USER_MODEL
+    for field in instance._meta.get_fields():
+        if isinstance(field, ForeignKey) and field.related_model._meta.label == UserModel:
+            return getattr(instance, field.name, None)
+    return None
 
 
 def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):

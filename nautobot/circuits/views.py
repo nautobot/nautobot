@@ -5,6 +5,13 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags import helpers
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -58,6 +65,10 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
     def render_key(self, key, value, context):
         if key == "connected_endpoint":
             return "IP Addressing"
+
+        if key == "port_speed":
+            return "Speed"
+
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
@@ -80,6 +91,10 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
                 "{} ({})",
                 ((helpers.hyperlinked_object(ip), getattr(ip, "vrf", None) or "Global") for ip in ip_addresses.all()),
             )
+
+        if key == "port_speed":
+            return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
+
         return super().render_value(key, value, context)
 
 
@@ -92,6 +107,15 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(instance=context_object_attr("circuit"), parent_key="provider"),
+                InstanceBreadcrumbItem(instance=context_object_attr("circuit")),
+            ]
+        }
+    )
 
     object_detail_content = ObjectDetailContent(
         panels=(
@@ -104,7 +128,6 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "cloud_network",
                     "cable",
                     "port_speed",
-                    "upstream_speed",
                     "connected_endpoint",
                     "xconnect_id",
                     "pp_info",
@@ -115,15 +138,7 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "provider_network",
                     "cloud_network",
                     "port_speed",
-                    "upstream_speed",
                 ],
-                exclude_fields=[
-                    "circuit",
-                ],
-                value_transforms={
-                    "port_speed": [helpers.humanize_speed],
-                    "upstream_speed": [helpers.humanize_speed],
-                },
             ),
         )
     )
@@ -177,6 +192,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
@@ -188,17 +211,12 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "provider_network",
                     "cloud_network",
                     "port_speed",
-                    "upstream_speed",
                     "ip_addresses",
                     "xconnect_id",
                     "pp_info",
                     "description",
                 ),
-                value_transforms={
-                    "port_speed": [helpers.humanize_speed, helpers.placeholder],
-                    "upstream_speed": [helpers.humanize_speed],
-                },
-                hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
+                hide_if_unset=("location", "provider_network", "cloud_network"),
                 ignore_nonexistent_fields=True,  # ip_addresses may be undefined
                 header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
                 **kwargs,
@@ -245,6 +263,10 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 )
             if key == "ip_addresses":
                 return "IP Addressing"
+
+            if key == "port_speed":
+                return "Speed"
+
             return super().render_key(key, value, context)
 
         def render_value(self, key, value, context):
@@ -257,6 +279,10 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 if not context["termination"].location:
                     return ""
                 return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+            if key == "port_speed":
+                return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
+
             return super().render_value(key, value, context)
 
         def queryset_list_url_filter(self, key, value, context):
@@ -347,6 +373,14 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     object_detail_content = ObjectDetailContent(
         panels=(

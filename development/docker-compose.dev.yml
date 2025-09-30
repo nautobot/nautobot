@@ -21,7 +21,7 @@ services:
       - ../:/source
   ui_build:
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
-    entrypoint: "bash -c 'cd /source/nautobot/project-static && npm run build -- --watch'"
+    entrypoint: "bash -c 'npm --prefix /source/nautobot/project-static run build:watch'"
     healthcheck:
       disable: true
     tty: true

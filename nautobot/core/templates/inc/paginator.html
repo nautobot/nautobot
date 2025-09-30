@@ -31,22 +31,22 @@
             <ul class="pagination mb-0">
                 {% if page.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="{% querystring request page=page.previous_page_number %}" aria-label="Previous">
+                        <a class="page-link" href="{% legacy_querystring request page=page.previous_page_number %}" aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
                 {% endif %}
                 {% for p in page.smart_pages %}
                     {% if p %}
-                        <li class="page-item {% if page.number == p %} active{% endif %}"><a class="page-link" href="{% querystring request page=p %}">{{ p }}</a></li>
+                        <li class="page-item {% if page.number == p %} active{% endif %}"><a class="page-link" href="{% legacy_querystring request page=p %}">{{ p }}</a></li>
                     {% else %}
                         <li class="page-item disabled"><a class="page-link" tabindex="-1">&hellip;</a></li>
                     {% endif %}
                 {% endfor %}
                 {% if page.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{% querystring request page=page.next_page_number %}" aria-label="Next">
-                          <span aria-hidden="true">&raquo;</span>
+                        <a class="page-link" href="{% legacy_querystring request page=page.next_page_number %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
                         </a>
                     </li>
                 {% endif %}

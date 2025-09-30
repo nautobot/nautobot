@@ -1,8 +1,3 @@
-from django.db.models import Q
-
-# Approval Workflow models
-APPROVAL_WORKFLOW_MODELS = Q(app_label="extras", model__in=("scheduledjob",))
-
 # Webhook content types
 HTTP_CONTENT_TYPE_JSON = "application/json"
 

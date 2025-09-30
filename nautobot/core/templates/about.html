@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load helpers %}
 {% load registry %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block header %}
     {{ block.super }}
@@ -14,9 +17,7 @@
     {% endif %}
 {% endblock %}
 
-
 {% block content %}
-    <h1>About Nautobot</h1>
     <div class="row">
         <div class="col-md-6">
             <div class="panel panel-default">

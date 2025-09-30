@@ -17,7 +17,6 @@ import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor, OrderBy, OrderByTuple
-from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -30,9 +29,7 @@ logger = logging.getLogger(__name__)
 
 class BaseTable(django_tables2.Table):
     """
-    Default table for object lists
-
-    :param user: Personalize table display for the given user (optional). Has no effect if AnonymousUser is passed.
+    Default table for object lists.
     """
 
     class Meta:
@@ -59,7 +56,7 @@ class BaseTable(django_tables2.Table):
             *args (list, optional): Passed through to django_tables2.Table
             table_changes_pending (bool): TODO
             saved_view (SavedView, optional): TODO
-            user (User, optional): TODO
+            user (User, optional): Personalize table display for the given user (optional)
             hide_hierarchy_ui (bool): Whether to display or hide hierarchy indentation of nested objects.
             order_by (list, optional): Field(s) to sort by
             data_transform_callback (function, optional): A function that takes the given `data` as an input and
@@ -108,6 +105,12 @@ class BaseTable(django_tables2.Table):
         if order_by is None and saved_view is not None:
             order_by = saved_view.config.get("sort_order", None)
 
+        # Don't show hierarchy if we're sorted
+        if order_by is not None and hide_hierarchy_ui is None:
+            hide_hierarchy_ui = True
+
+        self.hide_hierarchy_ui = hide_hierarchy_ui
+
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
 
@@ -120,12 +123,6 @@ class BaseTable(django_tables2.Table):
                 *self.exclude,
                 *[column.name for column in self.columns if isinstance(column.column, LinkedCountColumn)],
             ]
-
-        # Don't show hierarchy if we're sorted
-        if order_by is not None and hide_hierarchy_ui is None:
-            hide_hierarchy_ui = True
-
-        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
@@ -307,6 +304,10 @@ class BaseTable(django_tables2.Table):
         Arguments:
             value: iterable or comma separated string of order by aliases.
         """
+        # The below block of code is copied from Table.order_by()
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+
         # collapse empty values to ()
         order_by = () if not value else value
         # accept string
@@ -319,22 +320,17 @@ class BaseTable(django_tables2.Table):
                 valid.append(alias)
         self._order_by = OrderByTuple(valid)
 
-        # The above block of code is copied from super().order_by
-        # due to limitations in directly calling parent class methods within a property setter.
-        # See Python bug report: https://bugs.python.org/issue14965
-        model = getattr(self.Meta, "model", None)
-        if model and issubclass(model, TreeNode):
-            # Use the TreeNode model's approach to sorting
-            queryset = self.data.data
-            # If the data passed into the Table is a list (as in cases like BulkImport post),
-            # convert this list to a queryset.
-            # This ensures consistent behavior regardless of the input type.
-            if isinstance(self.data.data, list):
-                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
-            self.data.data = queryset.extra(order_by=self._order_by)
-        else:
-            # Otherwise, use the default sorting method
-            self.data.order_by(self._order_by)
+        # Nautobot-specific logic begins here
+        if self._order_by:
+            self.hide_hierarchy_ui = True
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "without_tree_fields"):
+                self.data.data = self.data.data.without_tree_fields()
+        elif not self.hide_hierarchy_ui:
+            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "with_tree_fields"):
+                self.data.data = self.data.data.with_tree_fields()
+
+        # Resume base class implementation
+        self.data.order_by(self._order_by)
 
     def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
         """Conditionally prefetch the specified database column if the related table field is visible.
@@ -396,9 +392,10 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     """
     Render edit, delete, and changelog buttons for an object.
 
-    :param model: Model class to use for calculating URL view names
-    :param prepend_template: Additional template content to render in the column (optional)
-    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        prepend_template (Optional[str]): Additional template content to render in the column
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
     buttons = ("changelog", "edit", "delete")
@@ -487,9 +484,9 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
     Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
 
-    :param model: Model class to use for calculating URL view names
-    :param prepend_template: Additional template content to render in the column (optional)
-    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
@@ -688,9 +685,9 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
     performance hit to querysets for table views. If this becomes an issue,
     set `sort_items=False`.
 
-    :param sort_items: Whether to sort by `(app_label, name)`. (default: True)
-    :param truncate_words:
-        Number of words at which to truncate, or `None` to disable. (default: None)
+    Args:
+        sort_items (bool): Whether to sort by `(app_label, name)`.
+        truncate_words (Optional[int]): Number of words at which to truncate, or `None` to disable.
     """
 
     def __init__(self, sort_items=True, truncate_words=None, *args, **kwargs):

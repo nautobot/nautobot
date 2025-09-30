@@ -611,11 +611,14 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         # Add additional data so drf-spectacular will use the Token keyword in authorization header.
         response.data["schema_auth_names"] = ["tokenAuth"]
+
         return response
 
 
 class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRedocView):
     """Extend SpectacularRedocView to support Nautobot's ?api_version=<version> query parameter."""
+
+    template_name = "redoc_ui.html"
 
 
 @method_decorator(gzip_page, name="dispatch")

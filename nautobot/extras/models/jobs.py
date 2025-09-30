@@ -50,7 +50,13 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ApprovableModelMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import (
+    ApprovableModelMixin,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -628,7 +634,7 @@ class JobQueueAssignment(BaseModel):
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel, CustomFieldModel):
+class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     """
     This model stores the results from running a Job.
     """
@@ -1314,11 +1320,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.job_queue = JobQueue.objects.get(name=value)
             except JobQueue.DoesNotExist:
                 raise ValidationError(f"Job Queue {value} does not exist in the database.")
-
-    def has_approval_workflow_definition(self) -> bool:
-        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
-
-        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @staticmethod
     def earliest_possible_time():

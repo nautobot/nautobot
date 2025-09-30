@@ -18,6 +18,7 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
@@ -31,7 +32,10 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
 
 from .device_components import (
     ConsolePort,
@@ -897,7 +901,7 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
-        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
         cache.delete(cache_key)
         return instantiated_components
 
@@ -939,6 +943,10 @@ class Device(PrimaryModel, ConfigContextModel):
         If this Device is a VirtualChassis member, return the VC master. Otherwise, return None.
         """
         return self.virtual_chassis.master if self.virtual_chassis else None
+
+    @property
+    def is_vc_master(self):
+        return self == self.get_vc_master()
 
     @property
     def vc_interfaces(self):
@@ -996,7 +1004,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
         """
-        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
         module_bays_exists = cache.get(cache_key)
         if module_bays_exists is None:
             module_bays_exists = self.module_bays.exists()
@@ -1078,6 +1086,28 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+    @property
+    def radio_profile_assignments(self):
+        """
+        Returns all Controller Managed Device Group Radio Profile Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupRadioProfileAssignment.objects.none()
+        return ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.none()
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
 
 
 #

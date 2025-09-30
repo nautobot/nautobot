@@ -56,7 +56,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -164,6 +164,7 @@ __all__ = (
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
+    "DynamicGroupBulkEditForm",
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
@@ -248,14 +249,17 @@ class ApprovalWorkflowDefinitionForm(
     """Form for creating and updating ApprovalWorkflowDefinition."""
 
     model_content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=True,
         label="Model Content Type",
     )
     model_constraints = JSONField(
         required=False,
         label="Model Constraints",
-        help_text="Filterset filter matching the selected model content type.<br>"
+        help_text="Constraints for filtering selected model content type.<br>"
+        "Supports simple Django field lookups.<br>"
         'Enter in <a href="https://json.org/">JSON</a> format.',
     )
 
@@ -273,7 +277,9 @@ class ApprovalWorkflowDefinitionBulkEditForm(TagsBulkEditFormMixin, NautobotBulk
         queryset=ApprovalWorkflowDefinition.objects.all(), widget=forms.MultipleHiddenInput
     )
     model_content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=True,
         label="Model Content Type",
     )
@@ -292,7 +298,10 @@ class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
     model_content_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"), required=False
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
     )
     tags = TagFilterField(model)
 
@@ -387,7 +396,9 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
         label="Approval Workflow Definition",
     )
     object_under_review_content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=False,
         label="Object Under Review Content Type",
     )
@@ -919,6 +930,20 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 # Dynamic Groups
 #
+class DynamicGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "description",
+            "tenant",
+        ]
 
 
 class DynamicGroupForm(TenancyForm, NautobotModelForm):

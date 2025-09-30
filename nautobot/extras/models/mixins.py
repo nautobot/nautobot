@@ -8,7 +8,7 @@ from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model, get_user_from_instance
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
 
 
@@ -21,6 +21,7 @@ class ApprovableModelMixin(models.Model):
     is_approval_workflow_model = True
 
     # Reverse relation so that deleting a ApprovableModelMixin automatically deletes any approval workflows related to it.
+
     associated_approval_workflows = GenericRelation(
         "extras.ApprovalWorkflow",
         content_type_field="object_under_review_content_type",
@@ -68,7 +69,7 @@ class ApprovableModelMixin(models.Model):
             object_under_review_content_type=ContentType.objects.get_for_model(self),
             object_under_review_object_id=self.pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
-            user=self.user,
+            user=get_user_from_instance(self),
         )
 
         # Create workflow stages if the definition has any
@@ -102,6 +103,11 @@ class ApprovableModelMixin(models.Model):
     def on_workflow_denied(self, approval_workflow):
         """Called when an approval workflow is denied."""
         raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
+
+    def has_approval_workflow_definition(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
 
 class ContactMixin(models.Model):

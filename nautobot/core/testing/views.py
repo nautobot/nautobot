@@ -1,4 +1,5 @@
 import contextlib
+import inspect
 import re
 from typing import Optional, Sequence
 from unittest import mock, skipIf
@@ -9,9 +10,11 @@ from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
-from django.template.defaultfilters import date, timesince
+from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
@@ -145,6 +148,10 @@ class ViewTestCases:
         """
 
         custom_action_required_permissions = {}
+        # TODO: Expand to other relevant view types, e.g. 'list'.
+        allowed_number_of_tree_queries_per_view_type = {
+            "retrieve": 0,
+        }
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
@@ -181,7 +188,8 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            response = self.client.get(instance.get_absolute_url())
+            with CaptureQueriesContext(connection) as capture_queries_context:
+                response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
@@ -209,6 +217,22 @@ class ViewTestCases:
                             self.assertBodyContains(response, escape(str(value)))
                     else:
                         self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
+
+            # Check that no more than the appropriate number of tree CTE queries have been run.
+            captured_tree_cte_queries = [
+                query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+            self.assertEqual(
+                len(captured_tree_cte_queries),
+                self.allowed_number_of_tree_queries_per_view_type["retrieve"],
+                f"This view was expected to execute {self.allowed_number_of_tree_queries_per_view_type['retrieve']}"
+                f" recursive database queries but {len(captured_tree_cte_queries)} were executed."
+                f" If this is expected, please update the {self.__class__.__name__}.allowed_number_of_tree_queries_per_view_type['retrieve']"
+                " property. Care should be taken to only increase these numbers where necessary - recursive queries can become really"
+                " slow with bigger datasets."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
             return response  # for consumption by child test cases if desired
 
@@ -252,16 +276,9 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                timestamps = f"""
-                    <p class="flex-grow-1 m-0">
-                        <small class="align-items-center d-inline-flex gap-4 text-secondary">
-                            <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
-                            <span class="vr mx-4"></span>
-                            <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
-                        </small>
-                    </p>
-                """
-                self.assertBodyContains(response, timestamps, html=True)
+                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
+                # therefore is subject to off-by-one timing failures.
 
             object_edit_url = buttons.edit_button(instance)["url"]
             object_delete_url = buttons.delete_button(instance)["url"]
@@ -354,7 +371,7 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
+                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
                     html=True,
                 )
             else:
@@ -377,7 +394,7 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts</a>',
+                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
                         html=True,
                     )
                 else:
@@ -854,6 +871,30 @@ class ViewTestCases:
                 response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
+        def test_model_properties_as_table_columns_are_not_orderable(self):
+            """
+            Check for table columns that are property-based and not orderable.
+            """
+            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not table_class:
+                return
+
+            queryset = self._get_queryset()
+            table = table_class(queryset)
+            model_cls = table._meta.model
+
+            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
+
+            for name, column in table.base_columns.items():
+                if hasattr(column, "order_by") and column.order_by:
+                    continue
+                if name in property_fields and name != "pk":
+                    with self.subTest(column_name=name):
+                        self.assertFalse(
+                            column.orderable,
+                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
+                        )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -1459,10 +1500,6 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all pks is not part of the html.
-            self.assertNotIn(str(first_pk), response_body)
-            self.assertNotIn(str(second_pk), response_body)
-            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 

@@ -8,6 +8,9 @@ window.bootstrap = bootstrap;
 import ClipboardJS from 'clipboard';
 window.ClipboardJS = ClipboardJS;
 
+import * as echarts from 'echarts';
+window.echarts = echarts;
+
 import flatpickr from 'flatpickr';
 window.flatpickr = flatpickr;
 
@@ -41,6 +44,7 @@ import { observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
+import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 
@@ -55,45 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
 
   // Sidenav
-  document.querySelector('.nb-sidenav-toggler').addEventListener('click', (event) => {
-    const toggler = event.currentTarget;
-
-    const controls = toggler.getAttribute('aria-controls');
-    const expanded = toggler.getAttribute('aria-expanded') === 'true';
-
-    toggler.setAttribute('aria-expanded', String(!expanded));
-
-    const sidenav = document.getElementById(controls);
-    sidenav.classList.toggle('nb-sidenav-collapsed', expanded);
-  });
-
-  [...document.querySelectorAll('.nb-sidenav-list-item')].forEach((sidenavListItem) => {
-    sidenavListItem.addEventListener('click', () => {
-      const controls = sidenavListItem.getAttribute('aria-controls');
-      const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
-
-      sidenavListItem.setAttribute('aria-expanded', String(!expanded));
-
-      const onClickDocument = (documentClickEvent) => {
-        const { target: documentClickTarget } = documentClickEvent;
-        const sidenavFlyout = document.getElementById(controls);
-
-        const isClickOutside =
-          !sidenavListItem.contains(documentClickTarget) && !sidenavFlyout.contains(documentClickTarget);
-
-        if (isClickOutside) {
-          sidenavListItem.setAttribute('aria-expanded', 'false');
-          document.removeEventListener('click', onClickDocument);
-        }
-      };
-
-      if (expanded) {
-        document.removeEventListener('click', onClickDocument);
-      } else {
-        document.addEventListener('click', onClickDocument);
-      }
-    });
-  });
+  initializeSidenav();
 
   // Collapse
   initializeCollapseToggleAll();

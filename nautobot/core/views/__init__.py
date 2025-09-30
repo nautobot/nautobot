@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
@@ -47,9 +48,17 @@ from rest_framework.views import APIView
 from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.mixins import UIComponentsMixin
+from nautobot.core.views.utils import (
+    generate_latest_with_cache,
+    is_metrics_experimental_caching_enabled,
+    METRICS_CACHE_KEY,
+)
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
@@ -101,6 +110,7 @@ class HomeView(AccessMixin, TemplateView):
         context = self.get_context_data()
         context.update(
             {
+                "title": "Home",
                 "new_release": new_release,
             }
         )
@@ -153,8 +163,9 @@ class MediaView(AccessMixin, View):
         return self.handle_no_permission()
 
 
-class WorkerStatusView(UserPassesTestMixin, TemplateView):
+class WorkerStatusView(UserPassesTestMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/worker_status.html"
+    view_titles = Titles(titles={"*": "Nautobot Worker Status"})
 
     def test_func(self):
         return self.request.user.is_staff
@@ -265,13 +276,24 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
                 "timeout": timeout,
                 "workers": workers,
             },
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_titles": self.get_view_titles(),
         }
 
         return self.render_to_response(context)
 
 
-class ThemePreviewView(LoginRequiredMixin, TemplateView):
+class ThemePreviewView(LoginRequiredMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
+    view_titles = Titles(titles={"*": "Nautobot Theme Preview"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "generic": [
+                ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
+                ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
+            ],
+        },
+    )
 
     def get_context_data(self, **kwargs):
         return {
@@ -280,6 +302,9 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
             "table": StatusTable(Status.objects.all()[:3]),
+            "view_titles": self.get_view_titles(),
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_action": "generic",
         }
 
 
@@ -403,7 +428,9 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, UIComponentsMixin, GraphQLView):
+    view_titles = Titles(titles={"*": "GraphiQL"})
+
     def render_graphiql(self, request, **data):
         query_name = request.GET.get("name")
         if query_name:
@@ -411,6 +438,8 @@ class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
             data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
+        data["breadcrumbs"] = self.get_breadcrumbs()
+        data["view_titles"] = self.get_view_titles()
         return render(request, self.graphiql_template, data)
 
 
@@ -422,8 +451,17 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        for metric_generator in registry["app_metrics"]:
-            yield from metric_generator()
+        cached_lines = cache.get(METRICS_CACHE_KEY)
+        if not is_metrics_experimental_caching_enabled() or not cached_lines:
+            # If caching is disabled or no cache is found, generate metrics
+            for metric_generator in registry["app_metrics"]:
+                yield from metric_generator()
+        else:
+            # We stash the cached lines on the instance of the collector so that we can
+            # avoid a potential race condition where the cache expires between
+            # the time we check for it and the time we go to use it
+            # in generate_latest_with_cache()
+            self.local_cache = cached_lines
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
@@ -472,7 +510,13 @@ class NautobotMetricsView(APIView):
         except ValueError:
             # Collector already registered, we are running without multiprocessing
             pass
-        metrics_page = generate_latest(prometheus_registry)
+
+        if is_metrics_experimental_caching_enabled():
+            # Use the vendored version of generate_latest with Caching support
+            metrics_page = generate_latest_with_cache(prometheus_registry)
+        else:
+            # Use the original version of generate_latest to generate the metrics
+            metrics_page = generate_latest(prometheus_registry)
         return Response(metrics_page, content_type=CONTENT_TYPE_LATEST)
 
 
@@ -490,13 +534,14 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
-class AboutView(AccessMixin, TemplateView):
+class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
     """
     Nautobot About View which displays general information about Nautobot and contact details
     for Network to Code.
     """
 
     template_name = "about.html"
+    view_titles = Titles(titles={"*": "About Nautobot"})
 
     def get(self, request, *args, **kwargs):
         # Redirect user to login page if not authenticated
@@ -524,6 +569,8 @@ class AboutView(AccessMixin, TemplateView):
                 "new_release": new_release,
                 "support_contract_active": support_contract_active,
                 "support_expiration_date": support_expiration_date,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             }
         )
 
@@ -534,3 +581,4 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
+    extra_context = {"view_titles": Titles(titles={"*": "Jinja Template Renderer"})}

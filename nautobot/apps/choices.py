@@ -38,6 +38,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     BannerClassChoices,
     ButtonClassChoices,
     CustomFieldFilterLogicChoices,
@@ -65,6 +66,7 @@ from nautobot.ipam.choices import (
 )
 
 __all__ = (
+    "ApprovalWorkflowStateChoices",
     "BannerClassChoices",
     "ButtonActionColorChoices",
     "ButtonActionIconChoices",

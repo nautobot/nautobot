@@ -18,6 +18,7 @@ from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dash
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
 from nautobot.extras.utils import extras_features
@@ -27,14 +28,17 @@ logger = logging.getLogger(__name__)
 
 class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_provided_contents(self, provided_contents_type):
-        cache_key = f"{self.get_for_provided_contents.cache_key_prefix}.{provided_contents_type}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
+        )
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
             cache.set(cache_key, queryset)
         return queryset
-
-    get_for_provided_contents.cache_key_prefix = "nautobot.extras.gitrepository.get_for_provided_contents"
 
 
 @extras_features(

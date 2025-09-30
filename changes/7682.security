@@ -1,1 +1,0 @@
-Removed obsolete package `future` from the `poetry.lock` and hence from the Docker images, eliminating Nautobot's exposure to vulnerability CVE-2025-50817 in that package.

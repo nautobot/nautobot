@@ -7,8 +7,12 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.models.querysets import count_related
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.object_detail import TextPanel
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, Location
+from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -39,6 +43,12 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
+
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context["active_tab"] = "example_app_device_detail_tab_1"
+        return extra_context
 
 
 class DeviceDetailAppTabTwoView(views.ObjectView):
@@ -48,6 +58,7 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
+    object_detail_content = DeviceUIViewSet.object_detail_content
 
 
 class ExampleAppHomeView(views.GenericView):
@@ -81,6 +92,17 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
+
     object_detail_content = ui.ObjectDetailContent(
         panels=(
             ui.ObjectFieldsPanel(
@@ -133,6 +155,71 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=300,
                 context_field="text_panel_code_content",
                 render_as=TextPanel.RenderOptions.CODE,
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                weight=400,
+                label="EChart - LINE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.LINE,
+                    "header": "Number of device - group by device type (Line)",
+                    "description": "Example line chart from EChartsBase",
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                weight=400,
+                label="EChart - PIE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.PIE,
+                    "header": "Number of device - group by device type (Pie)",
+                    "description": "Example pie chart from EChartsBase",
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=200,
+                label="EChart - BAR",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "header": "Compliance per Feature",
+                    "description": "Example bar chart from EChartsBase",
+                    "data": {
+                        "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                        "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+                    },
+                    "combined_with": ui.EChartsBase(
+                        chart_type=ui.EChartsTypeChoices.LINE,
+                        data={
+                            "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                            "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+                        },
+                    ),
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=300,
+                label="EChart - Bar queryset",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "header": "Devices and Prefixes by Location Type",
+                    "description": "Example chart with queryset_to_nested_dict_records_as_series. Please run `nautobot-server generate_test_data` to see data here.",
+                    "data": lambda context: ui.queryset_to_nested_dict_records_as_series(
+                        Location.objects.annotate(
+                            device_count=count_related(Device, "location"),
+                            prefix_count=count_related(Prefix, "locations"),
+                        ),
+                        record_key="location_type__nestable",
+                        value_keys=["prefix_count", "device_count"],
+                    ),
+                },
             ),
         ),
     )
@@ -235,6 +322,16 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
+                ),
+            ]
+        }
+    )
 
 
 class ViewToBeOverridden(views.GenericView):
