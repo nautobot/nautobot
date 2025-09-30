@@ -18,7 +18,7 @@ import yaml
 
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -274,6 +274,7 @@ def update_git_config_contexts(repository_record, job_result):
         for filter_type in (
             "locations",
             "device_types",
+            "device_families",
             "roles",
             "platforms",
             "cluster_groups",
@@ -408,6 +409,7 @@ def import_config_context(context_data, repository_record, job_result):
     for key, model_class in [
         ("locations", Location),
         ("device_types", DeviceType),
+        ("device_families", DeviceFamily),
         ("roles", Role),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
