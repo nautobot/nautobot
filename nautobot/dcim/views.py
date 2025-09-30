@@ -287,7 +287,7 @@ class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
         if obj and obj.latitude and obj.longitude:
             data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
         else:
-            data["GPS Coordinates"] = "Not available"
+            data["GPS Coordinates"] = None
 
         return data
 
