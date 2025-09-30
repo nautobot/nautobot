@@ -1,7 +1,6 @@
 import logging
 from typing import ClassVar, Optional, Type, Union
 
-from django.apps import apps as global_apps
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.models import AnonymousUser
@@ -78,7 +77,7 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
-    # "data_compliance": "view", # Should this be added?
+    "data_compliance": "view",
     "approve": "change",
     "deny": "change",
 }
@@ -1552,13 +1551,11 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     def data_compliance(self, request, *args, **kwargs):
         model = self.get_queryset().model
         instance = self.get_object()
-        if not self.queryset:
-            self.queryset = global_apps.get_model(model).objects.all()
 
         compliance_objects = DataCompliance.objects.filter(
             content_type=ContentType.objects.get_for_model(model), object_id=instance.id
         )
-        compliance_table = DataComplianceTableTab(compliance_objects)
+        compliance_table = self.get_table_class()(compliance_objects)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         RequestConfig(request, paginate).configure(compliance_table)
         data = {

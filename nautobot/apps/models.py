@@ -48,6 +48,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.mixins import (
     ApprovableModelMixin,
     ContactMixin,
+    DataComplianceMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
@@ -76,6 +77,7 @@ __all__ = (
     "ContentTypeRelatedQuerySet",
     "CustomFieldModel",
     "CustomValidator",
+    "DataComplianceMixin",
     "DataComplianceRule",
     "DynamicGroupMixin",
     "DynamicGroupsModelMixin",

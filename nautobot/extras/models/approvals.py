@@ -198,7 +198,6 @@ class ApprovalWorkflow(OrganizationalModel):
     user_name = models.CharField(max_length=150, editable=False, db_index=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
-
     is_data_compliance_model = False
     is_version_controlled = False
 

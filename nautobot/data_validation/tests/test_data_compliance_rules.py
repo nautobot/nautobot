@@ -36,23 +36,10 @@ class TestPassedDataComplianceRule(DataComplianceRule):
         """No exception means the audit passes."""
 
 
-class TestFailedDataComplianceRuleAlt(DataComplianceRule):
-    """Test implementation of DataComplianceRule."""
+class TestFailedDataComplianceRuleAlt(TestFailedDataComplianceRule):
+    """Test implementation of DataComplianceRule, for dcim.rack."""
 
     model = "dcim.rack"
-
-    def audit(self):
-        """Raises an AuditError."""
-        # this should create 4 different Audits, one for each
-        # attribute
-        raise ComplianceError(
-            {
-                "tenant": "Tenant",
-                "description": "Description",
-                "name": "Name",
-                "status": "Status",
-            }
-        )
 
 
 class TestCompliance(TestCase):

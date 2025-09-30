@@ -83,8 +83,6 @@ class ValidationRuleMixin(models.Model):
     objects = ValidationRuleManager()
     documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
-    is_data_compliance_model = False
-
     class Meta:
         """Model metadata for all validation engine rule models."""
 

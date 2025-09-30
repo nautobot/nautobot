@@ -255,7 +255,7 @@ class SavedViewMixin(models.Model):
 
 class DataComplianceMixin:
     """
-    Adds a `data_compliance` property that returns a queryset of `DataCompliance` membership.
+    Adds a `get_data_compliance_url` that can be applied to instances.
     """
 
     is_data_compliance_model = True

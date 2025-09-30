@@ -155,7 +155,16 @@ class DataComplianceUIViewSet(  # pylint: disable=W0223
             ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields="__all__",
+                fields=[
+                    "content_type",
+                    "compliance_class_name",
+                    "last_validation_date",
+                    "validated_object",
+                    "validated_attribute",
+                    "validated_attribute_value",
+                    "valid",
+                    "message",
+                ],
             ),
         )
     )
