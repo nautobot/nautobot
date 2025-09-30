@@ -1,14 +1,14 @@
 {% load helpers %}
 {% if termination.cable %}
     {% if perms.dcim.delete_cable %}
-        <div class="pull-right">
-            <a href="{% url 'dcim:cable_delete' pk=termination.cable.pk %}?return_url={{ termination.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
+        <div class="float-end">
+            <a href="{% url 'dcim:cable_delete' pk=termination.cable.pk %}?return_url={{ termination.circuit.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-sm">
                 <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i> Disconnect
             </a>
         </div>
     {% endif %}
     {{ termination.cable|hyperlinked_object }}
-    <a href="{% url 'circuits:circuittermination_trace' pk=termination.pk %}" class="btn btn-primary btn-xs" title="Trace">
+    <a href="{% url 'circuits:circuittermination_trace' pk=termination.pk %}" class="btn btn-primary btn-sm" title="Trace">
         <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
     </a>
     {% with peer=termination.get_cable_peer %}
@@ -22,9 +22,9 @@
     {% endwith %}
 {% else %}
     {% if perms.dcim.add_cable %}
-        <div class="pull-right">
+        <div class="float-end">
             <span class="dropdown">
-                <button type="button" class="btn btn-success btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
@@ -36,5 +36,5 @@
             </span>
         </div>
     {% endif %}
-    <span class="text-muted">Not defined</span>
+    <span class="text-secondary">Not defined</span>
 {% endif %}
