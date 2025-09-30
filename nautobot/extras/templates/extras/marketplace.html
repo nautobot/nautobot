@@ -61,7 +61,7 @@
 
 {% block content %}
     <div class="row d-print-none">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% render_breadcrumbs %}
         </div>
     </div>
@@ -73,7 +73,7 @@
     <h1>{% block page_heading %}{% render_title %}{% endblock page_heading %}</h1>
 
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             <section class="nb-tiles">
                 {% for app in apps %}
                     <div class="position-relative">
@@ -117,9 +117,9 @@
                         -->
                         <div class="nb-tile-actions">
                             {% if app.docs|default:None != None %}
-                                <a href="{{ app.docs }}" class="btn btn-info btn-sm" target="_blank" data-bs-title="Docs">
+                                <a href="{{ app.docs }}" class="btn btn-info btn-md" target="_blank" data-bs-title="Docs">
                             {% else %}
-                                <a href="" class="btn btn-info btn-sm disabled" target="_blank" data-bs-title="No docs provided">
+                                <a href="" class="btn btn-info btn-md disabled" target="_blank" data-bs-title="No docs provided">
                             {% endif %}
                             <span class="mdi mdi-book-open-page-variant"></span>
                         </a>
@@ -127,7 +127,7 @@
                     </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
-                        <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-dialog modal-xl" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h4 class="modal-title">

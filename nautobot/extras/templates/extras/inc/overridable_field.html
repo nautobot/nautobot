@@ -1,10 +1,10 @@
 {% load form_helpers %}
 
 <div class="form-group{% if field.errors %} has-error{% endif %}">
-    <label class="col-md-3 control-label{% if field.field.required %} required{% endif %}" for="{{ field.id_for_label }}">
+    <label class="col-lg-3 control-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
         {{ field.label }}
     </label>
-    <div class="col-md-3">
+    <div class="col-lg-3">
         <div class="checkbox{% if override_field.errors %} has-error{% endif %}">
             <label for="{{ override_field.id_for_label }}">
                 {{ override_field }}
@@ -15,7 +15,7 @@
             {% endif %}
         </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-lg-6">
         {% if field|widget_type == 'checkboxinput' %}
             <div class="checkbox{% if field.errors %} has-error{% endif %}">
                 <label for="{{ field.id_for_label }}">

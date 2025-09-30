@@ -19,7 +19,7 @@
             <header class="nb-tile-header">
                 <h3>{{ row.record.grouping|bettertitle }}</h3>
 
-                <a href="{% url 'extras:job_run' pk=row.record.pk %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Run/Schedule" {% if not perms.extras.run_job or not row.record.runnable %}disabled="disabled"{% endif %}>
+                <a href="{% url 'extras:job_run' pk=row.record.pk %}" class="btn btn-primary btn-md" data-bs-toggle="tooltip" data-bs-title="Run/Schedule" {% if not perms.extras.run_job or not row.record.runnable %}disabled="disabled"{% endif %}>
                     <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
                 </a>
 
@@ -31,7 +31,7 @@
                     {% endfor %}
                 {% endcomment %}
                 <div class="dropdown">
-                    <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-title="Actions">
+                    <button type="button" class="btn btn-secondary btn-md dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-title="Actions">
                         <span class="mdi mdi-dots-horizontal" aria-hidden="true"><span class="visually-hidden">Actions</span></span>
                     </button>
                     {% with request.path|add:"?display=tiles"|urlencode as return_url %}
