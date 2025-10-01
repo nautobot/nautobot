@@ -10,7 +10,7 @@
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}
-    <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab =="members" %}active{% else %}fade{% endif %}">
+    <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "members" %}active{% else %}fade{% endif %}">
         {% if members_list_url %}
             <div class="row">
                 <div class="col-lg-12">
