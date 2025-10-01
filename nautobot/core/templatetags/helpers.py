@@ -835,21 +835,21 @@ def label_list(value, suffix=""):
 
 @library.filter()
 @register.filter()
-def format_timezone(value):
+def format_timezone(time_zone):
     """
     Return a human-readable representation of a time zone including:
       - Time zone name and UTC offset on the first line
       - Local date and time on the next line (in smaller font)
     """
-    if not value:
+    if not time_zone:
         return HTML_NONE
 
-    now = datetime.datetime.now(value)
+    now = datetime.datetime.now(time_zone)
 
     # Locale-aware formatting (respects USE_L10N + active locale)
     local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
 
-    result = f"{value} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
+    result = f"{time_zone} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
     return format_html(result)
 
 

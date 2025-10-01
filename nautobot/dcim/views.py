@@ -293,7 +293,7 @@ class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
 
     def render_value(self, key, value, context):
         if key == "GPS Coordinates":
-            if value != "Not available":
+            if value is not None:
                 return helpers.render_address(value)
             return helpers.HTML_NONE
 
@@ -437,7 +437,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                     "contact_phone": [helpers.hyperlinked_phone_number],
                     "contact_email": [helpers.hyperlinked_email],
                 },
-                footer_content_template_path="components/panel/footer_convert_to_contact_or_team_record.html",
+                footer_content_template_path="dcim/footer_convert_to_contact_or_team_record.html",
             ),
             object_detail.StatsPanel(
                 weight=100,
@@ -485,7 +485,8 @@ class LocationUIViewSet(NautobotUIViewSet):
         if instance is None:
             return super().get_extra_context(request, instance)
 
-        # This query can get expensive for big trees, so fetch only needed IDs.
+        # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
+        # ensure it is only performed once rather than as a subquery for each of the different count stats.
         related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
@@ -496,7 +497,9 @@ class LocationUIViewSet(NautobotUIViewSet):
             circuit_terminations__location__in=related_locations
         )
 
-        # Avoid distinct() unless multiple locations are involved
+        # When there is more than one location, the models that can be assigned to more then one location at the same
+        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
+        # a performance penalty.
         if len(related_locations) > 1:
             prefix_qs = prefix_qs.distinct()
             vlan_qs = vlan_qs.distinct()
