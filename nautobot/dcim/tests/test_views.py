@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.test import override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
 import yaml
 
@@ -451,7 +452,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         prefix_1.locations.set([child_1, child_2])
         prefix_2.locations.set([child_1, child_2])
         request = RequestFactory().get(parent_location.get_absolute_url())
-        request.user = User.objects.first()
+        request.user = self.user
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("ipam.view_prefix")
         context = view_set.get_extra_context(request=request, instance=parent_location)
         self.assertEqual(context["stats"]["prefix_count"], 2)
 
@@ -2308,6 +2311,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
         device = Device.objects.first()
+        self.add_permissions("dcim.add_virtualdevicecontext")
         url = reverse("dcim:device", kwargs={"pk": device.pk})
         response = self.client.get(url)
         response_body = extract_page_body(response.content.decode(response.charset))
@@ -2321,6 +2325,63 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """
         self.assertInHTML(expected_add_vdc_button_html, response_body)
         self.assertIn("Add virtual device context", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_with_parent_bay(self):
+        parent_device = Device.objects.first()
+        parent_device.subdevice_role = "parent"
+        parent_device.validated_save()
+        child_device = Device.objects.last()
+        child_device.location = parent_device.location
+        child_device.subdevice_role = "child"
+        child_device.validated_save()
+        device_bay = DeviceBay.objects.create(
+            name="test device bay", device=parent_device, installed_device=child_device
+        )
+
+        url = reverse("dcim:device", kwargs={"pk": child_device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(parent_device.display, response_body)
+        self.assertInHTML(str(device_bay), response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_with_rack(self):
+        device = Device.objects.filter(device_type__u_height__gt=0).first()
+        self.assertIsNotNone(device)
+        device.rack = Rack.objects.filter(u_height__gt=device.device_type.u_height).first()
+        self.assertIsNotNone(device.rack)
+        device.position = 1
+        device.face = "front"
+        device.validated_save()
+        url = reverse("dcim:device", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(f"U{device.position} / {device.get_face_display()}", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_modulebays(self):
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        module = Module.objects.filter(parent_module_bay__isnull=True).first()
+
+        module_bays = (
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 1"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 2"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3"),
+        )
+
+        module.location = None
+        module.parent_module_bay = module_bays[0]
+        module.validated_save()
+
+        url = reverse("dcim:device_modulebays", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        # Custom badge - module count / module-bay count
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML("1/3", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
@@ -2522,6 +2583,32 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_wireless(self):
+        self.add_permissions("dcim.view_controllermanageddevicegroup")
+        device = Device.objects.first()
+        device.controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
+        device.validated_save()
+        device.controller_managed_device_group.capabilities = ["wireless"]
+        device.controller_managed_device_group.validated_save()
+
+        url = reverse("dcim:device_wireless", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_napalm_tabs(self):
+        self.add_permissions("dcim.napalm_read_device")
+        device = Device.objects.first()
+        # TODO set NAPALM args, mock NAPALM APIs?
+
+        url = reverse("dcim:device_status", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+        url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+        url = reverse("dcim:device_config", kwargs={"pk": device.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_primary_ips(self):
         """Test assigning a primary IP to a device."""
         self.add_permissions("dcim.change_device")
@@ -2572,6 +2659,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self._get_queryset().get(name="Device X").local_config_context_schema.pk,
             schema.pk,
         )
+
+        url = reverse("dcim:device_configcontext", kwargs={"pk": self._get_queryset().get(name="Device X").pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("foo", response_body)
+        self.assertIn("bar", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_local_config_context_schema_validation_fails(self):
@@ -4223,7 +4317,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
         Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, "<th>Device</th>", html=True)
+        self.assertBodyContains(
+            response,
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            html=True,
+        )
 
     def test_device_column_not_visible(self):
         """
@@ -4236,9 +4334,14 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
-        self.assertNotIn("<th >Device</th>", extract_page_body(response.content.decode(response.charset)))
+        self.assertNotIn(
+            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
+        )
         # Sanity check:
-        self.assertBodyContains(response, "<th>Name</th>", html=True)
+        self.assertBodyContains(
+            response, '<th class="orderable"><a data-column-name="name" href="?sort=name">Name</a></th>', html=True
+        )
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""
