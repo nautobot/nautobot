@@ -1,3 +1,0 @@
-Fixed rendering of table-panel footers when both `footer_buttons` and a `body_content_table_add_url` are defined.
-Fixed incorrect URL paths for actions under `DeviceType`, for example `/dcim/device-types/<pk>/consoleports/` is now corrected to `/dcim/device-types/<pk>/console-ports/`.
-Enhanced `NautobotUIViewSetMixin` to correctly set the `active_tab` when rendering a detail action other than the default `"retrieve"`.

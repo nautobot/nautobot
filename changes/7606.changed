@@ -1,1 +1,0 @@
-Changed "Side A" and "Side Z" column in circuit table to show shorter `location.name` instead of `location.display`
