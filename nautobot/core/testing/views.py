@@ -291,7 +291,7 @@ class ViewTestCases:
                 action_buttons.append(
                     format_html(
                         """
-                            <a id="edit-button" class="btn btn-warning border-end-0" href="{}">
+                            <a id="edit-button" class="btn btn-warning" href="{}">
                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
                             </a>
                         """,
