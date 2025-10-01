@@ -2236,7 +2236,7 @@ ul.nb-tree-hierarchy {
 
   ul {
     list-style-type: "↳ ";
-    padding-block-start: 1.125rem; /* 18px */
+    padding-block-start: map.get($spacers, 4);
   }
 }
 
