@@ -83,6 +83,8 @@ class ValidationRuleMixin(models.Model):
     objects = ValidationRuleManager()
     documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
+    is_data_compliance_model = False
+
     class Meta:
         """Model metadata for all validation engine rule models."""
 
@@ -111,8 +113,6 @@ class RegularExpressionValidationRule(ValidationRuleMixin, PrimaryModel):
     )
 
     clone_fields = ["enabled", "content_type", "regular_expression", "error_message"]
-
-    is_data_compliance_model = False
 
     class Meta:
         """Model metadata for the RegularExpressionValidationRule model."""
@@ -178,8 +178,6 @@ class MinMaxValidationRule(ValidationRuleMixin, PrimaryModel):
     )
 
     clone_fields = ["enabled", "content_type", "min", "max", "error_message"]
-
-    is_data_compliance_model = False
 
     class Meta:
         """Model metadata for the MinMaxValidationRule model."""
