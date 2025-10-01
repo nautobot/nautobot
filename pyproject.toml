@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.19b1"
+version = "2.4.20b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -194,9 +194,6 @@ markdown-version-annotations = "~1.0.1"
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "^0.4.0"
-# Allow Markdown files to include other files
-# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme

@@ -312,11 +312,9 @@ class PathEndpoint(models.Model):
     @property
     def connected_endpoint(self):
         """
-        Caching accessor for the attached CablePath's destination (if any)
+        Return the attached CablePath's destination (if any)
         """
-        if not hasattr(self, "_connected_endpoint"):
-            self._connected_endpoint = self._path.destination if self._path else None
-        return self._connected_endpoint
+        return self._path.destination if self._path else None  # pylint: disable=no-member
 
 
 #
