@@ -2112,6 +2112,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
+        initial_params={"clusters__in": "$clusters"},
     )
     clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),

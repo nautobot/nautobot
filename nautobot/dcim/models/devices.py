@@ -856,14 +856,16 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if self.location is not None:
-            for cluster in self.clusters.all():
-                if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
-                    raise ValidationError(
-                        {
-                            "clusters": f"The assigned cluster '{cluster}' belongs to a location that does not include {self.location}."
-                        }
-                    )
+        # Validate any pending cluster assignment that was deferred during creation
+        # Don't validate `self.clusters` here as that's a M2M and is updated out-of-step with `self.save()`
+        if self.location is not None and hasattr(self, "_deferred_cluster"):
+            cluster = self._deferred_cluster
+            if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
+                raise ValidationError(
+                    {
+                        "clusters": f"Cluster {cluster} belongs to a location, {cluster.location}, that does not include {self.location}."
+                    }
+                )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
@@ -1173,6 +1175,20 @@ class DeviceClusterAssignment(BaseModel):
 
     def __str__(self):
         return f"{self.device}: {self.cluster}"
+
+    def clean(self):
+        super().clean()
+        if self.device.location is not None and self.cluster.location is not None:
+            if self.cluster.location not in self.device.location.ancestors(include_self=True):
+                raise ValidationError(
+                    {
+                        "__all__": f"Cluster {self.cluster} belongs to a location, {self.cluster.location}, that does not include the location of device {self.device}, {self.device.location}"
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 #

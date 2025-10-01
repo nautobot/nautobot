@@ -1651,6 +1651,28 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
 
+    def test_device_cluster_location_mismatch(self):
+        with self.subTest("Invalid cluster assignment at creation time"):
+            device = Device(
+                name="Device in different location from cluster",
+                device_type=self.device_type,
+                role=self.device_role,
+                status=self.device_status,
+                location=self.location_2,
+                cluster=self.cluster,  # belongs to self.location_3
+            )
+            with self.assertRaises(ValidationError) as cm:
+                device.validated_save()
+            self.assertIn("does not include", str(cm.exception))
+
+        new_cluster = Cluster.objects.create(
+            name="New Cluster", cluster_type=self.cluster_type, location=self.location_2
+        )
+        with self.subTest("Invalid cluster assignment via Device.clusters m2m manager"):
+            with self.assertRaises(ValidationError) as cm:
+                self.device.clusters.add(new_cluster)  # self.device belongs to self.location_3
+            self.assertIn("does not include", str(cm.exception))
+
     def test_device_redundancy_group_validation(self):
         d2 = Device(
             name="Test Device 2",

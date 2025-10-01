@@ -2411,7 +2411,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "device_redundancy_group",
                     "controller_managed_device_group",
                     "controller_managed_device_group__controller",
-                    "cluster",
                     "software_version",
                 ],
                 key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
@@ -2419,7 +2418,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "primary_ip4": [render_ip_with_nat],
                     "primary_ip6": [render_ip_with_nat],
                 },
-                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
+                hide_if_unset=["controller_managed_device_group__controller"],
             ),
             DevicePowerUtilizationPanel(
                 weight=100,
