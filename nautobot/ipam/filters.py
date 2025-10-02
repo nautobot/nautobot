@@ -89,7 +89,7 @@ class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
             return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
 
 
-class NamespaceFilterSet(NautobotFilterSet):
+class NamespaceFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",

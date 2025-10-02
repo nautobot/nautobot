@@ -17,6 +17,7 @@ from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
     IPAddressToInterfaceFilterSet,
+    NamespaceFilterSet,
     PrefixFilterSet,
     PrefixLocationAssignmentFilterSet,
     RIRFilterSet,
@@ -52,6 +53,15 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
+
+
+class NamespaceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    """Namespace FilterSet tests"""
+
+    queryset = Namespace.objects.all()
+    filterset = NamespaceFilterSet
+    tenancy_related_name = "namespaces"
+    generic_filter_tests = (("name",),)
 
 
 class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
