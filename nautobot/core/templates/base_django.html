@@ -25,18 +25,18 @@
                 {% include 'inc/header_messages.html' %}
             </div>
             <div class="container-fluid mb-12 mt-16">
-                <div class="row row-cols-3">
-                    <div class="col">
-                        <div>
-                            {% with copy_title=False %}
-                                {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
-                            {% endwith %}
-                            {% block breadcrumbs_wrapper %}
-                                {% block breadcrumbs %}{% endblock breadcrumbs %}
-                            {% endblock breadcrumbs_wrapper %}
-                        </div>
+                <div class="row">
+                    <div class="col-4">
+                        {% with copy_title=False %}
+                            {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
+                        {% endwith %}
                     </div>
                     {% include 'inc/header.html' %}
+                    <div class="col-12">
+                        {% block breadcrumbs_wrapper %}
+                            {% block breadcrumbs %}{% endblock breadcrumbs %}
+                        {% endblock breadcrumbs_wrapper %}
+                    </div>
                 </div>
             </div>
             {% block header %}{% endblock header %}
