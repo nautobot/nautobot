@@ -1,2 +1,0 @@
-Added support for `Button.render_on_tab_id` parameter to scope UI Component buttons to a specific view tab.
-Added `should_render_content()` API to `Tab` and `DistinctViewTab` to avoid rendering tab contents unnecessarily when a different tab or set of tabs is displayed.
