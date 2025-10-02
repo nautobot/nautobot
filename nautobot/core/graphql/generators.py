@@ -67,15 +67,18 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     filterset_class = schema_type._meta.filterset_class
 
+    @gql_optimizer.resolver_hints(model_field=field_name)
     def resolve_filter(self, info, **kwargs):
+        field = getattr(self, field_name)
+
         if not filterset_class or not kwargs:
-            return getattr(self, field_name).all()
+            return field.all()
 
         # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
         if "_type" in kwargs:
             kwargs["type"] = kwargs.pop("_type")
 
-        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+        resolved_obj = filterset_class(kwargs, field.all())
 
         # Check result filter for errors.
         if not resolved_obj.errors:

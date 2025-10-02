@@ -1,2 +1,0 @@
-Fixed bulk object edit and bulk delete not considering filtering of saved views.
-Fixed buttons on bulk views not adhering to the all toggle.
