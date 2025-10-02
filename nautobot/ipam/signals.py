@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
+from nautobot.dcim.models import Interface
 from nautobot.ipam.models import (
     IPAddressToInterface,
     Prefix,
@@ -13,6 +14,7 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.virtualization.models import VMInterface
 
 
 @receiver(pre_save, sender=VRFDeviceAssignment)
@@ -136,3 +138,41 @@ def assert_locations_content_types(sender, instance, action, reverse, model, pk_
             raise ValidationError(
                 {key: f"{instance} is a {instance.location_type} and may not have {label} associated to it."}
             )
+
+
+def _validate_ip_interface_assignments(sender, instance, action, pk_set, interface_field):
+    """
+    Helper function to validate IPAddressToInterface instances after M2M operations.
+
+    Args:
+        sender: The through model class (IPAddressToInterface)
+        instance: The interface instance (Interface or VMInterface)
+        action: The M2M action (post_add, post_remove, etc.)
+        pk_set: Set of IP address PKs being modified
+        interface_field: Field name to filter on ('interface' or 'vm_interface')
+    """
+    if action == "post_add" and pk_set:
+        # Get the through model instances that were just created
+        filter_kwargs = {interface_field: instance, "ip_address_id__in": pk_set}
+        through_instances = sender.objects.filter(**filter_kwargs)
+
+        # Validate each through model instance
+        for through_instance in through_instances:
+            through_instance.full_clean()
+
+
+@receiver(m2m_changed, sender=Interface.ip_addresses.through)
+def validate_interface_ip_assignments(sender, instance, action, pk_set, **kwargs):
+    """
+    Validate IPAddressToInterface instances after M2M operations.
+
+    Handles both physical Interface and VMInterface IP assignments.
+    Since Django's M2M add() with through_defaults bypasses save() methods,
+    we validate the through model instances via signal handler.
+    """
+    if action == "post_add" and pk_set:
+        # Route to appropriate validation based on instance type
+        if isinstance(instance, Interface):
+            _validate_ip_interface_assignments(sender, instance, action, pk_set, "interface")
+        elif isinstance(instance, VMInterface):
+            _validate_ip_interface_assignments(sender, instance, action, pk_set, "vm_interface")
