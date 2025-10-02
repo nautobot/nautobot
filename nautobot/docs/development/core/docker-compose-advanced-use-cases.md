@@ -154,6 +154,7 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 - `.devcontainer/devcontainer.json` - Configuration for the [`Dev Containers`](https://code.visualstudio.com/docs/devcontainers/containers) extension
 - `nautobot.code-workspace` - VS Code workspace configuration for Nautobot
 - `development/docker-compose.debug.yml` - Docker Compose file with debug configuration for VS Code
+- `development/docker-compose.nohealthcheck.yml` - Docker compose override file used to remove healh checks set in `docker-compose.yml`. Useful for VS Code Dev Containers where no process is spawned and the container would never be healthy.
 
 ### Dev Containers Setup
 
@@ -170,7 +171,7 @@ You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debuggi
 - **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
 !!! note
-    You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
+    You can run tests with the VS Code Test Explorer panel, or with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
 
 ### Special Workflow for Containers on Remote Servers
 
