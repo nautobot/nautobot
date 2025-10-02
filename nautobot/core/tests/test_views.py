@@ -197,7 +197,8 @@ class AppDocsViewTestCase(TestCase):
         super().setUp()
         # Create temporary test package structure
         self.test_app_name = "test_app"
-        self.temp_dir = tempfile.TemporaryDirectory()
+        # I use tearDown to clean up, so this is save
+        self.temp_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
         self.docs_path = Path(self.temp_dir.name) / "docs"
         self.docs_path.mkdir(parents=True)
         (self.docs_path / "index.html").write_text("<html>Test Index</html>")

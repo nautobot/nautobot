@@ -40,13 +40,13 @@ Two URL patterns are defined for serving documentation:
 
 ```python
 from django.urls import path
-from nautobot.core.views import AppsDocsView
+from nautobot.core.views import AppDocsView
 
 urlpatterns = [
     # Apps docs - Serve the main page
-    path("docs/<str:app>/", AppsDocsView.as_view(), name="docs_index"),
+    path("docs/<str:app>/", AppDocsView.as_view(), name="docs_index"),
     # Apps docs - Serve assets
-    path("docs/<str:app>/<path:path>", AppsDocsView.as_view(), name="docs_file"),
+    path("docs/<str:app>/<path:path>", AppDocsView.as_view(), name="docs_file"),
 ]
 ```
 
@@ -54,7 +54,7 @@ urlpatterns = [
 
 `/docs/example_app/assets/extra.css` - serves static assets referenced in the HTML.
 
-Both routes go through AppsDocsView, which enforces login.
+Both routes go through AppDocsView, which enforces login.
 
 ### Redirect for Each App
 
