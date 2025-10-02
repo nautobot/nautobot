@@ -105,7 +105,8 @@
                 <td>
                     {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% if default_time_zone != object.time_zone %}
-                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                        {{ object.time_zone }}
+                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                     {% endif %}
                 </td>
             </tr>
@@ -115,7 +116,8 @@
                     {% if object.last_run_at %}
                         {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                         {% if default_time_zone != object.time_zone %}
-                            <br>{{ object.last_run_at|timezone:default_time_zone|date:SHORT_DATETIME_FORMAT }}
+                            {{ object.time_zone }}
+                            <br>{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                         {% endif %}
                     {% else %}
                         {{ object.last_run_at|placeholder }}
