@@ -233,7 +233,7 @@
     message: Replace banner-bottom with nb-banner-bottom
     flags: re.DOTALL
     patterns:
-      - class="[^"]*banner-bottom\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)banner-bottom\b(?!-)[^"]*"
 - rule:
     name: B103
     message: Replace btn-inline with nb-btn-inline-hover and refer to New Nautobot Custom UI APIs documentation for details.
@@ -257,13 +257,13 @@
     message: Replace cable-trace with nb-cable-trace
     flags: re.DOTALL
     patterns:
-      - class="[^"]*cable-trace\b(?!-)[^"]*
+      - class="[^"]*(?<!-)cable-trace\b(?!-)[^"]*
 - rule:
     name: B107
     message: Replace color-block with nb-color-block
     flags: re.DOTALL
     patterns:
-      - class="[^"]*color-block\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)color-block\b(?!-)[^"]*"
 - rule:
     name: B108
     message: Remove inline-color-block
@@ -275,7 +275,7 @@
     message: Replace editor-container with nb-editor-container
     flags: re.DOTALL
     patterns:
-      - class="[^"]*editor-container\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)editor-container\b(?!-)[^"]*"
 - rule:
     name: B110
     message: Remove filter-container, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
@@ -335,70 +335,70 @@
     message: Replace report-stats with nb-report-stats
     flags: re.DOTALL
     patterns:
-      - class="[^"]*report-stats\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)report-stats\b(?!-)[^"]*"
 - rule:
     name: B120
     message: Replace right-side-panel with nb-right-side-panel
     flags: re.DOTALL
     patterns:
-      - class="[^"]*right-side-panel\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)right-side-panel\b(?!-)[^"]*"
 - rule:
     name: B121
     message: Replace software-image-hierarchy with nb-software-image-hierarchy
     flags: re.DOTALL
     patterns:
-      - class="[^"]*software-image-hierarchy\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)software-image-hierarchy\b(?!-)[^"]*"
 - rule:
     name: B122
     message: Replace tree-hierarchy with nb-tree-hierarchy
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tree-hierarchy\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tree-hierarchy\b(?!-)[^"]*"
 - rule:
     name: B123
     message: Replace tiles with nb-tiles
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tiles\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tiles\b(?!-)[^"]*"
 - rule:
     name: B124
     message: Replace tile with nb-tile
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tile\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tile\b(?!-)[^"]*"
 - rule:
     name: B125
     message: Replace tile-description with nb-tile-description
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tile-description\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tile-description\b(?!-)[^"]*"
 - rule:
     name: B126
     message: Replace tile-footer with nb-tile-footer
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tile-footer\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tile-footer\b(?!-)[^"]*"
 - rule:
     name: B127
     message: Replace tile-header with nb-tile-header
     flags: re.DOTALL
     patterns:
-      - class="[^"]*tile-header\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)tile-header\b(?!-)[^"]*"
 - rule:
     name: B128
     message: Replace table-headings with nb-table-headings
     flags: re.DOTALL
     patterns:
-      - class="[^"]*table-headings\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)table-headings\b(?!-)[^"]*"
 - rule:
     name: B129
     message: Replace description with nb-description
     flags: re.DOTALL
     patterns:
-      - class="[^"]*description\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)description\b(?!-)[^"]*"
 - rule:
     name: B130
     message: Replace style-line with nb-style-line
     flags: re.DOTALL
     patterns:
-      - class="[^"]*style-line\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)style-line\b(?!-)[^"]*"
