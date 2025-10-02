@@ -34,7 +34,7 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
         cluster.validated_save()
         with self.assertRaises(ValidationError) as cm:
             # Assign any device with a Location, since we're using a custom Location for this test we know it won't match
-            cluster.devices.add(Device.objects.filter(location__isnull=False).first())
+            cluster.devices.add(Device.objects.filter(location__isnull=False).first())  # pylint: disable=no-member
         self.assertIn("does not include", str(cm.exception))
 
 
