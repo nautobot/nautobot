@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 
 from nautobot.core.views import (
     AboutView,
+    AppDocsView,
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
@@ -59,6 +60,10 @@ urlpatterns = [
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
     # Apps
     path("apps/", include((apps_patterns, "apps"))),
+    # Apps docs - Serve the main page
+    path("docs/<str:app_name>/", AppDocsView.as_view(), name="docs_index"),
+    # Apps docs - Serve assets
+    path("docs/<str:app_name>/<path:path>", AppDocsView.as_view(), name="docs_file"),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO

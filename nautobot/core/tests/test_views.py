@@ -1,5 +1,7 @@
+from importlib import resources
 import json
 import os
+from pathlib import Path
 import re
 import tempfile
 from unittest import mock, skipIf
@@ -188,6 +190,68 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class AppDocsViewTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        # Create temporary test package structure
+        self.test_app_name = "test_app"
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.docs_path = Path(self.temp_dir.name) / "docs"
+        self.docs_path.mkdir(parents=True)
+        (self.docs_path / "index.html").write_text("<html>Test Index</html>")
+        (self.docs_path / "css/style.css").parent.mkdir(parents=True, exist_ok=True)
+        (self.docs_path / "css/style.css").write_text("body { background: #fff; }")
+
+        # Patch importlib.resources.files to point to temp_dir only when `test_app`
+        self._original_resources_files = resources.files
+
+        def mock_resources_files(name):
+            if name == "test_app":
+                return Path(self.temp_dir.name)
+            raise ModuleNotFoundError(f"No module named {name}")
+
+        resources.files = mock_resources_files
+
+    def tearDown(self):
+        resources.files = self._original_resources_files
+        self.temp_dir.cleanup()
+
+    def test_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_index", kwargs={"app_name": self.test_app_name})
+        response = self.client.get(url)
+        # LoginRequiredMixin redirects to /accounts/login/
+        self.assertRedirects(
+            response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
+        )
+
+    def test_serve_index_html_logged_in(self):
+        url = reverse("docs_index", kwargs={"app_name": self.test_app_name})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Index")
+        self.assertEqual(response["Content-Type"], "text/html")
+
+    def test_serve_css_logged_in(self):
+        url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "background: #fff;")
+        self.assertEqual(response["Content-Type"], "text/css")
+
+    def test_nonexistent_app(self):
+        url = reverse("docs_index", kwargs={"app_name": "nonexistent_app"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "App nonexistent_app not found."})
+
+    def test_nonexistent_file(self):
+        url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": "missing.html"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("File", response.json()["detail"])
 
 
 class MediaViewTestCase(TestCase):

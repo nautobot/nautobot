@@ -1,0 +1,1 @@
+Application documentation is now served dynamically from the package and access is restricted to authenticated users, replacing the previous static public serving.

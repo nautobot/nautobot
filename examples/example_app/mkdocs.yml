@@ -1,6 +1,6 @@
 ---
 dev_addr: "127.0.0.1:8001"
-site_dir: "/opt/nautobot/media/docs/example_app"
+site_dir: "example_app/docs"
 site_name: "Example App Documentation"
 copyright: "Copyright &copy; The Authors"
 theme:

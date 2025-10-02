@@ -1,4 +1,3 @@
-from django.urls import reverse_lazy
 from django.urls import path
 from django.views.generic import RedirectView
 
@@ -17,7 +16,8 @@ urlpatterns = [
     path("config/", views.ExampleAppConfigView.as_view(), name="config"),
     path(
         "docs/",
-        RedirectView.as_view(url=reverse_lazy("media", kwargs={"path": "docs/example_app/index.html"})),
+        RedirectView.as_view(pattern_name="docs_index"),
+        {"app_name": app_name},
         name="docs",
     ),
     # Still have the ability to add routes to a model that is using the NautobotUIViewSet.
