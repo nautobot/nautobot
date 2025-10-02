@@ -15,7 +15,7 @@ In case you were not using any plugins and had not maintained your own custom CS
 
 Otherwise, you will need to individually review whether the packages and/or modules you are using, are still compatible with Bootstrap 5.x and in case they are not, update them accordingly.
 
-## Bootstrap data-* attributes
+## Bootstrap `data-*` attributes
 
 In Bootstrap v5.x, some reused native HTML attributes became `data-*` attributes for less ambiguity. In addition to that, all custom Bootstrap `data-*` attributes are prefixed with an additional `bs-` for even more clarity. For example, `data-toggle="collapse"` is now `data-bs-toggle="collapse"`, and Tooltip's `title` attribute has been changed to `data-bs-title`.
 
@@ -100,12 +100,12 @@ Everything presented in this section was simplified for the default font size eq
     - Uses 12-column grid system.
     - Requires explicit breakpoint prefixes (`xs`, `sm`, `md`, `lg`).
     - Column widths are fixed per breakpoint.
-    - `offset` classes control positioning.
+    - `col-*-offset-*` classes control horizontal positioning.
 - Bootstrap v5.x grid system:
     - No more `xs` breakpoint.
     - Uses `col-*` auto-sizing if not specified (no need for exact column width).
     - Specifies `gutter` width via `g-*` classes.
-    - `offset` classes are placed with `ms-auto`, `me-auto`, and `mx-auto`.
+    - Specifies column horizontal offset with `offset-*`, though other new utilities are available to control positioning as well and may be preferable.
 
 Above is a short summary for the positioning and layout changes in Bootstrap v5.x, see more details in the Bootstrap v5.x documentation about [columns](https://getbootstrap.com/docs/5.3/layout/columns/), [float](https://getbootstrap.com/docs/5.3/utilities/float/), and [position](https://getbootstrap.com/docs/5.3/utilities/position/).
 
@@ -115,7 +115,7 @@ Bootstrap v3.4.1 shipped with [Responsive utilities](https://getbootstrap.com/do
 
 - Breakpoint values and names have changed, refer to [Bootstrap v3.4.1 breakpoints](https://getbootstrap.com/docs/3.4/css/#responsive-utilities-classes) and [Bootstrap v5.x breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/#available-breakpoints) for more detail.
 - `xs` breakpoint no longer exists (at least not in CSS class names). It is a result of Bootstrap v5.x (and web, in general) mobile-first approach which defaults layouts to the smallest breakpoint available and goes up from there. Do not worry, it does not mean you have to support mobile layouts. But in case you do, see how is `xs` migrated in examples below.
-- `hidden-xs` is replaced by `d-block d-sm-none` (hide on extra small).
+- `hidden-xs` is replaced by `d-block d-sm-none` (hide on extra small). Note the change from `xs` to `sm` due to the change in layout breakpoint sizes in Bootstrap v5.
 - `visible-xs` is replaced by `d-none d-sm-block` (show on extra small).
 
 ## Breadcrumb
@@ -161,6 +161,48 @@ Bootstrap v5.x:
 ```html
 <button class="btn-secondary"></button>
 <button class="btn-close" data-bs-dismiss="alert"></button>
+```
+
+## Columns
+
+See more details in the Bootstrap v5.x documentation about [columns](https://getbootstrap.com/docs/5.3/layout/columns/), but generally speaking you'll need to make two types of changes to your column definitions:
+
+1. Increase to the next larger breakpoint (see note below).
+2. Replace `col-<breakpoint>-offset-<amount>` with `offset-<breakpoint>-<amount>`.
+
+!!! note "Generally increase column breakpoints by one stage when migrating"
+    A subtle change between Bootstrap v3 and v5 columns, in addition to the removal of `xs`, is that the other grid breakpoints have generally changed. For example, in v3, a `col-sm-4` would apply to windows up to 768px in size, but in v5, `col-sm-4` applies only up to 576px in size while `col-md-4` applies to windows between 577px and 768px. The net result of this change is that *in general* you will want to adjust all size-specific column definitions "up" one size increment, so `col-sm-*` becomes `col-md-*`, `col-md-*` becomes `col-lg-*`, etc.
+
+    That said, you may also want to refer to the Bootstrap v5 docs linked above to see if you can simplify your HTML/CSS classes to achieve the desired results more simply with the new grid features in Bootstrap v5.
+
+Bootstrap v3:
+
+```html
+<div class="row">
+    <div class="col-md-4 col-md-offset-4">
+        This column is 4 wide (1/3 the page width) and offset by 4 (making it centered) at breakpoint "md" and smaller.
+    </div>
+</div>
+```
+
+Bootstrap v5:
+
+```html
+<div class="row">
+    <div class="col-lg-4 offset-lg-4">
+        This column is 4 wide (1/3 the page width) and offset by 4 (making it centered) at breakpoint "lg" and smaller.
+    </div>
+</div>
+```
+
+Bootstrap v5 (alternate):
+
+```html
+<div class="row">
+    <div class="col-lg-4 mx-auto">
+        This column is 4 wide (1/3 the page width) and centered (automatic left/right margins) on breakpoint "lg" and smaller.
+    </div>
+</div>
 ```
 
 ## Forms
