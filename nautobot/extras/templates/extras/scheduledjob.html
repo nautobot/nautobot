@@ -103,10 +103,9 @@
             <tr>
                 <td>Start Time</td>
                 <td>
+                    {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% if default_time_zone != object.time_zone %}
-                        {{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
-                    {% else %}
-                        {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% endif %}
                 </td>
             </tr>
@@ -114,10 +113,9 @@
                 <td>Last Run At</td>
                 <td>
                     {% if object.last_run_at %}
+                        {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                         {% if default_time_zone != object.time_zone %}
-                            {{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
-                        {% else %}
-                            {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                            <br>{{ object.last_run_at|timezone:default_time_zone|date:SHORT_DATETIME_FORMAT }}
                         {% endif %}
                     {% else %}
                         {{ object.last_run_at|placeholder }}
