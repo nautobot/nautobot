@@ -19,10 +19,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
 
-        # Virtualization cluster for VirtualMachine
-        cluster = getattr(obj, "cluster", None)
-        cluster_group = getattr(cluster, "cluster_group", None)
-
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
@@ -45,8 +41,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(roles=role) | Q(roles=None),
             Q(device_types=device_type) | Q(device_types=None),
             Q(platforms=obj.platform) | Q(platforms=None),
-            Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
-            Q(clusters=cluster) | Q(clusters=None),
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
             Q(tenant_groups__in=tenant_groups) | Q(tenant_groups=None),
             Q(tenants=tenant) | Q(tenants=None),
@@ -54,6 +48,16 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         ]
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
+
+        # `clusters` for Device, `cluster` for VirtualMachine
+        if obj._meta.model_name == "device":
+            query.append(Q(clusters__in=obj.clusters.all()) | Q(clusters=None))
+            query.append(
+                Q(cluster_groups__in=obj.clusters.values_list("cluster_group", flat=True)) | Q(cluster_groups=None)
+            )
+        else:
+            query.append(Q(clusters=obj.cluster) | Q(clusters=None))
+            query.append(Q(cluster_groups=obj.cluster.cluster_group) | Q(cluster_groups=None))
 
         queryset = (
             self.filter(
@@ -119,8 +123,6 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
-            Q(clusters=OuterRef("cluster")) | Q(clusters=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
@@ -138,8 +140,14 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
+            # For devices, handle clusters as ManyToMany relationship
+            base_query.add((Q(clusters=OuterRef("clusters")) | Q(clusters=None)), Q.AND)
+            base_query.add((Q(cluster_groups=OuterRef("clusters__cluster_group")) | Q(cluster_groups=None)), Q.AND)
         else:
             location_query_string = "cluster__location"
+            # For virtual machines, handle cluster as ForeignKey relationship
+            base_query.add((Q(clusters=OuterRef("cluster")) | Q(clusters=None)), Q.AND)
+            base_query.add((Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None)), Q.AND)
 
         location_query = Q(locations=None) | Q(locations=OuterRef(location_query_string))
         for _ in range(Location.objects.max_depth + 1):

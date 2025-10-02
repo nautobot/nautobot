@@ -1,0 +1,1 @@
+Removed `cluster` field from Device REST API serializer. `clusters` is available as a read-only field, and assignment of Devices to Clusters via the REST API is now possible via `/api/dcim/device-cluster-assignments/`.
