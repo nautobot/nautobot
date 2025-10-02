@@ -1024,8 +1024,8 @@ class ViewTestCases:
             # Check if title is rendered correctly
             title = self.get_title()
             expected_title = (
-                '<h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">'
-                '<img alt="Nautobot chevron" class="flex-grow-0 flex-shrink-0 my-n6" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;">'
+                '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
                 f"{title}</h1>"
             )
             self.assertBodyContains(response, expected_title, html=True)

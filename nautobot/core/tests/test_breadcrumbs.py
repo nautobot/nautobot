@@ -376,7 +376,7 @@ class BreadcrumbsTestCase(TestCase):
 
         html = breadcrumbs.render(context)
 
-        expected_html = """<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/dcim/devices/">Devices</a></li></ol></nav>"""
+        expected_html = """<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/dcim/devices/">Devices</a></li></ol></nav>"""
         self.assertHTMLEqual(html, expected_html)
 
     def test_get_extra_context(self):
