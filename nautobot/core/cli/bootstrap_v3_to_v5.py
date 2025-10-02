@@ -499,7 +499,12 @@ def convert_bootstrap_classes(html_input: str, file_path: str = None) -> tuple[s
         'btn-xs': 'btn-sm',
         'btn-lg': 'btn',  # btn-lg is supported in Bootstrap 5 but not meaningful different from btn in Nautobot's theme
         'btn-default': 'btn-secondary',
+        'checkbox': 'form-check',
+        'checkbox-inline': 'form-check-input',
         'close': 'btn-close',
+        'control-label': 'col-form-label',
+        'form-group': 'mb-10 d-flex justify-content-center',
+        'help-block': 'form-text',
         'label label-default': 'badge bg-default',  # Bootstrap 5 uses general background classes instead of label-default
         'label label-primary': 'badge bg-primary',
         'label label-success': 'badge bg-success',
