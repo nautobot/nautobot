@@ -1,26 +1,10 @@
 import argparse
+import logging
 import os
 import re
 
+logger = logging.getLogger(__name__)
 
-def replace_class_in_attribute(match, old_class: str, new_class: str, stats: dict) -> str:
-    """
-    Helper for regex sub: replaces old_class with new_class in a class attribute string.
-    """
-    class_attr = match.group(1)
-    classes = class_attr.split()
-    replaced = False
-    new_classes = []
-    for c in classes:
-        if c == old_class:
-            new_classes.append(new_class)
-            replaced = True
-        else:
-            new_classes.append(c)
-    if replaced:
-        stats['replacements'] += 1
-        print(f"DEBUG: Replaced '{old_class}' with '{new_class}' in class=\"{class_attr}\" → class=\"{' '.join(new_classes)}\"")
-    return f'class="{" ".join(new_classes)}"'
 
 def _fix_breadcrumb_items(html: str, stats: dict) -> str:
     """
@@ -40,6 +24,7 @@ def _fix_breadcrumb_items(html: str, stats: dict) -> str:
     )
     return pattern.sub(ol_replacer, html)
 
+
 def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
     """
     Adds 'nav-item' class to all <li> tags in the given HTML string,
@@ -48,8 +33,8 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
     """
     def li_replacer(match):
         li_tag = match.group(0)
-        # If Django template logic for class="active" is found, notify user and skip auto-fix
-        if re.search(r'{%.*?class=["\']active["\'].*?%}', li_tag):
+        # If Django template logic is found, notify user and skip auto-fix
+        if re.search(r'{%.*%}', li_tag):
             if 'manual_nav_template_lines' not in stats:
                 stats['manual_nav_template_lines'] = []
             # Get line number and character position of li_tag
@@ -59,24 +44,15 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
                     # Append line number, character position and file path for easier identification
                     stats['manual_nav_template_lines'].append(f"{file_path}:{i + 1}:{line.index(li_tag)} - Please review manually '{li_tag}'")
                     break
-            # Still add nav-item to <li> if not present
-            class_attr_match = re.search(r'class=(["\'])(.*?)\1', li_tag)
-            if class_attr_match:
-                classes = class_attr_match.group(2).split()
-                if 'nav-item' not in classes:
-                    classes.append('nav-item')
-                    stats['nav_items'] += 1
-                new_class_attr = f'class="{" ".join(classes)}"'
-                li_tag = re.sub(r'class=(["\'])(.*?)\1', new_class_attr, li_tag, count=1)
             else:
-                li_tag = re.sub(r'<li(\s|>)', r'<li class="nav-item"\1', li_tag, count=1)
-                stats['nav_items'] += 1
+                stats['manual_nav_template_lines'].append(f"{file_path} - Please review manually '{li_tag}'")
+            return li_tag
 
         # Add nav-item to <li>
         class_attr_match = re.search(r'class=(["\'])(.*?)\1', li_tag)
         if class_attr_match:
             classes = class_attr_match.group(2).split()
-            if 'nav-item' not in classes:
+            if not any(['nav-item' in _class for _class in classes]):
                 classes.append('nav-item')
                 stats['nav_items'] += 1
             new_class_attr = f'class="{" ".join(classes)}"'
@@ -87,8 +63,8 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
 
         # Move plain active from <li> to child <a> or <button>
         li_tag, n_active = re.subn(
-            r'class=(["\'])([^"\']*\bactive\b[^"\']*)\1',
-            lambda m: f'class="{ " ".join([c for c in m.group(2).split() if c != "active"]) }"' if "active" in m.group(2).split() else m.group(0),
+            r'(<li[^>]+)class=(["\'])([^"\']*\bactive\b[^"\']*)\2',
+            lambda m: f'{m.group(1)}class="{ " ".join([c for c in m.group(3).split() if c != "active"]) }"' if "active" in m.group(3).split() else m.group(0),
             li_tag
         )
         if n_active:
@@ -97,17 +73,22 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
                 child_class_match = re.search(r'class=(["\'])(.*?)\1', child_tag)
                 if child_class_match:
                     child_classes = child_class_match.group(2).split()
-                    if 'nav-link' not in child_classes:
+                    # We use substring rather than exact match for cases with inline Django template fragements like:
+                    # <a class="nav-link{% if some_condition %} active{% endif %}">
+                    # where our naive split() call above would create "navlink{%" and "active{%" class entries
+                    if not any(["nav-link" in child_class for child_class in child_classes]):
                         child_classes.append('nav-link')
-                    if 'active' not in child_classes:
+                        stats['nav_items'] += 1
+                    if not any(["active" in child_class for child_class in child_classes]):
                         child_classes.append('active')
+                        stats['nav_items'] += 1
                     new_child_class = f'class="{" ".join(child_classes)}"'
                     child_tag = re.sub(r'class=(["\'])(.*?)\1', new_child_class, child_tag, count=1)
                 else:
                     child_tag = re.sub(r'<(a|button)', r'<\1 class="nav-link active"', child_tag, count=1)
+                    stats['nav_items'] += 1
                 return child_tag
             li_tag = re.sub(r'<(a|button)[^>]*>.*?</\1>', add_active_to_child, li_tag, flags=re.DOTALL)
-            stats['nav_items'] += 1
 
         # Always add nav-link to <a> or <button> if not present
         def add_nav_link(child_match):
@@ -115,7 +96,7 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
             child_class_match = re.search(r'class=(["\'])(.*?)\1', child_tag)
             if child_class_match:
                 child_classes = child_class_match.group(2).split()
-                if 'nav-link' not in child_classes:
+                if not any(["nav-link" in child_class for child_class in child_classes]):
                     child_classes.append('nav-link')
                     new_child_class = f'class="{" ".join(child_classes)}"'
                     child_tag = re.sub(r'class=(["\'])(.*?)\1', new_child_class, child_tag, count=1)
@@ -253,7 +234,7 @@ def _fix_panel_classes(html: str, stats: dict) -> str:
     return ''.join(result)
 
 
-def _replace_classes(html_string: str, replacements: dict, stats: dict) -> str:
+def _replace_classes(html_string: str, replacements: dict, stats: dict, file_path: str) -> str:
     """
     Replaces class names in html_string according to the replacements dict.
     Each key is replaced with its value using regex word boundaries, case-insensitive.
@@ -262,17 +243,26 @@ def _replace_classes(html_string: str, replacements: dict, stats: dict) -> str:
     def class_attr_replacer(match):
         class_value = match.group(1)
         original = class_value
-        for search, replace in replacements.items():
-            # Only replace whole words in class attribute
-            pattern = r'\b(?<!-)' + re.escape(search) + r'\b(?!-)'
-            class_value, num_replacements = re.subn(pattern, replace, class_value, flags=re.IGNORECASE)
-            if num_replacements > 0:
-                print(f"DEBUG: Replaced '{search}' with '{replace}' ({num_replacements} times) in class=\"{original}\"")
-                stats['replacements'] += num_replacements
+        if "{%" in class_value or "%}" in class_value:
+            if any([re.search(r"\b(?<!-)" + re.escape(search) + r"\b(?!-)", class_value) for search in replacements.keys()]):
+                if 'manual_nav_template_lines' not in stats:
+                    stats['manual_nav_template_lines'] = []
+                stats['manual_nav_template_lines'].append(f"{file_path} - Please review manually '{class_value}'")
+        else:
+            for search, replace in replacements.items():
+                # Only replace whole words in class attribute
+                pattern = r'\b(?<!-)' + re.escape(search) + r'\b(?!-)'
+                class_value, num_replacements = re.subn(pattern, replace, class_value, flags=re.IGNORECASE)
+                if num_replacements > 0:
+                    logger.debug(
+                        'Replaced "%s" with "%s" (%d times) in class="%s"', search, replace, num_replacements, original
+                    )
+                    stats['replacements'] += num_replacements
         return f'class="{class_value}"'
 
     # Only replace within class attributes
     return re.sub(r'class="([^"]*)"', class_attr_replacer, html_string)
+
 
 def _replace_attributes(html_string: str, replacements: dict, stats: dict) -> str:
     """
@@ -285,16 +275,9 @@ def _replace_attributes(html_string: str, replacements: dict, stats: dict) -> st
         pattern = r'\b' + re.escape(search) + r'\b'
         html_string, num_replacements = re.subn(pattern, replace, html_string, flags=re.IGNORECASE)
         if num_replacements > 0:
-            print(f"DEBUG: Replaced '{search}' with '{replace}' ({num_replacements} times).")
+            logger.debug('Replaced "%s" with "%s" (%d times).', search, replace, num_replacements)
             stats['replacements'] += num_replacements
     return html_string
-
-def _replace_close_in_classes(html_string: str, stats: dict) -> str:
-    """
-    Replaces 'close' class with 'btn-close' in <button> elements using regex only.
-    """
-    pattern = re.compile(r'class="([^"]*\bclose\b[^"]*)"')
-    return pattern.sub(lambda m: replace_class_in_attribute(m, 'close', 'btn-close', stats), html_string)
 
 # TODO: Fix this to use regex only, but leaving for now due to the parent span logic. Not necessary for the bootstrap upgrade.
 # def _convert_i_to_span_mdi(soup: BeautifulSoup, stats: dict) -> str:
@@ -407,12 +390,20 @@ def _remove_classes(html: str, classes_to_remove: list[str], stats: dict) -> str
         removed = len(classes) - len(new_classes)
         if removed > 0:
             stats['replacements'] += removed
-            print(f"DEBUG: Removed {removed} class(es) {classes_to_remove} from class=\"{class_attr}\" → class=\"{' '.join(new_classes)}\"")
-        # If no classes left, remove the class attribute entirely
-        if new_classes:
-            return f'class="{" ".join(new_classes)}"'
-        else:
-            return 'class=""'  # Return empty class attribute to be cleaned up later
+            logger.debug(
+                'Removed %d class(es) %s from class="%s" → class="%s"',
+                removed,
+                classes_to_remove,
+                class_attr,
+                " ".join(new_classes),
+            )
+            # If no classes left, remove the class attribute entirely
+            if new_classes:
+                return f'class="{" ".join(new_classes)}"'
+            else:
+                return 'class=""'  # Return empty class attribute to be cleaned up later
+        return f'class="{class_attr}"'
+
     # Replace all class attributes in the HTML
     html = pattern.sub(class_replacer, html)
     # Remove empty class attributes and leading whitespace if leading whitespace exists
@@ -501,11 +492,14 @@ def convert_bootstrap_classes(html_input: str, file_path: str = None) -> tuple[s
     }
 
     # --- Stage 1: Apply rules that work directly on the HTML string (simple string/regex replacements) ---
-    replacements = {
+    class_replacements = {
         'pull-left': 'float-start',
         'pull-right': 'float-end',
         'center-block': 'd-block mx-auto',  # Bootstrap 5 uses mx-auto for centering
+        'btn-xs': 'btn-sm',
+        'btn-lg': 'btn',  # btn-lg is supported in Bootstrap 5 but not meaningful different from btn in Nautobot's theme
         'btn-default': 'btn-secondary',
+        'close': 'btn-close',
         'label label-default': 'badge bg-default',  # Bootstrap 5 uses general background classes instead of label-default
         'label label-primary': 'badge bg-primary',
         'label label-success': 'badge bg-success',
@@ -536,6 +530,10 @@ def convert_bootstrap_classes(html_input: str, file_path: str = None) -> tuple[s
         'description': 'nb-description',  # Custom class
         'style-line': 'nb-style-line',  # Custom class
     }
+    # Add column offset fixup, e.g. col-sm-offset-4 --> offset-sm-4
+    for bkpt in ["xs", "sm", "md", "lg", "xl", "xxl"]:
+        for size in range(0, 13):
+            class_replacements[f"col-{bkpt}-offset-{size}"] = f"offset-{bkpt}-{size}"
 
     attribute_replacements = {
         'data-toggle': 'data-bs-toggle',  # Bootstrap 5 uses data-bs-* attributes
@@ -546,11 +544,10 @@ def convert_bootstrap_classes(html_input: str, file_path: str = None) -> tuple[s
     }
 
     current_html = _replace_attributes(current_html, attribute_replacements, stats)
-    current_html = _replace_classes(current_html, replacements, stats)
+    current_html = _replace_classes(current_html, class_replacements, stats, file_path=file_path)
     current_html = _fix_extra_breadcrumbs_block(current_html, stats)
     current_html = _fix_breadcrumbs_block(current_html, stats)
     current_html = _fix_extra_nav_tabs_block(current_html, stats, file_path=file_path)
-    current_html = _replace_close_in_classes(current_html, stats)
     current_html = _fix_breadcrumb_items(current_html, stats)
     current_html = _fix_panel_classes(current_html, stats)
     current_html = _remove_classes(current_html, ['powered-by-nautobot', 'inline-color-block', 'panel-default', "hover_copy"], stats)  # Remove small form/input classes
@@ -573,16 +570,28 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
     totals = {k: 0 for k in ['replacements', 'extra_breadcrumbs', 'breadcrumb_items', 'nav_items', 'panel_classes', 'resizing_xs']}
     # Breakpoints that are not xs do not count as failures in djlint, so we keep a separate counter
     resizing_other = 0
+
+    if os.path.isfile(directory):
+        only_filename = os.path.basename(directory)
+        directory = os.path.dirname(directory)
+    else:
+        only_filename = None
     for root, _, files in os.walk(directory):
         for filename in files:
+            if only_filename and only_filename != filename:
+                continue
             if filename.lower().endswith('.html'):
                 file_path = os.path.join(root, filename)
+                logger.info("Processing: %s", file_path)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    original_content = f.read()
+
+                content = original_content
+
                 if resize:
                     # If resize is True, we only change the breakpoints
                     # This is a one-time operation to adjust the breakpoints.
-                    print(f"Resizing Breakpoints: {file_path}")
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        original_content = f.read()
+                    logger.info("Resizing Breakpoints: %s", file_path)
 
                     # Define the breakpoint mapping
                     breakpoint_map = {
@@ -593,74 +602,49 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
                         'xl': 'xxl'
                     }
 
-                    # Patterns to match class prefixes and their types
-                    class_patterns = {
-                        'col': 'regex',
-                        'btn': 'simple',
-                        'btn-group': 'simple',
-                        'lh': 'simple',
-                        'modal': 'simple',
-                        'flex': 'regex',
-                        'text': 'regex'
-                    }
-
-                    content = original_content
                     resizing_other = 0
 
                     # Iterate from the highest breakpoint to the lowest
                     for breakpoint in ['xl', 'lg', 'md', 'sm', 'xs']:
                         new_breakpoint = breakpoint_map[breakpoint]
-                        for pattern, typ in class_patterns.items():
-                            if typ == 'simple':
-                                # Replace exact matches (e.g., btn-xs)
-                                regex = re.compile(rf'(\b{pattern}-{breakpoint}\b)')
-                                def simple_repl(m):
-                                    nonlocal resizing_other
-                                    if breakpoint == 'xs':
-                                        totals['resizing_xs'] += 1
-                                    else:
-                                        resizing_other += 1
-                                    return f'{pattern}-{new_breakpoint}'
-                                content = regex.sub(simple_repl, content)
+                        # Replace with regex, e.g., col-xs-12 → col-sm-12
+                        regex = re.compile(rf'(\bcol-{breakpoint})([a-zA-Z0-9-]*)')
+                        def regex_repl(m):
+                            nonlocal resizing_other
+                            if breakpoint == 'xs':
+                                totals['resizing_xs'] += 1
                             else:
-                                # Replace with regex, e.g., col-xs-12 → col-sm-12, text-xs-center → text-sm-center
-                                regex = re.compile(rf'(\b{pattern}-{breakpoint})([a-zA-Z0-9-]*)')
-                                def regex_repl(m):
-                                    nonlocal resizing_other
-                                    if breakpoint == 'xs':
-                                        totals['resizing_xs'] += 1
-                                    else:
-                                        resizing_other += 1
-                                    return f'{pattern}-{new_breakpoint}{m.group(2)}'
-                                content = regex.sub(regex_repl, content)
+                                resizing_other += 1
+                            return f'col-{new_breakpoint}{m.group(2)}'
+                        content = regex.sub(regex_repl, content)
 
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-                else:
-                    print(f"Processing: {file_path}")
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        original_content = f.read()
+                fixed_content, stats = convert_bootstrap_classes(content, file_path=file_path)
 
-                    fixed_content, stats = convert_bootstrap_classes(original_content, file_path=file_path)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(fixed_content)
+                logger.info("Fixed: %s", file_path)
 
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(fixed_content)
-                    print(f"Fixed: {file_path}\n")
+                if any([stat for stat in stats.values()]):
+                    print(f"→ {os.path.relpath(file_path, directory)}: ", end='')
+                    if stats["replacements"]:
+                        print(f"{stats['replacements']} class replacements, ", end='')
+                    if stats["extra_breadcrumbs"]:
+                        print(f"{stats['extra_breadcrumbs']} extra-breadcrumbs, ", end='')
+                    if stats["breadcrumb_items"]:
+                        print(f"{stats['breadcrumb_items']} breadcrumb-items, ", end='')
+                    if stats["nav_items"]:
+                        print(f"{stats['nav_items']} nav-items, ", end='')
+                    if stats["panel_classes"]:
+                        print(f"{stats['panel_classes']} panel replacements, ", end='')
+                    print()
 
-                    print(f"→ {os.path.relpath(file_path, directory)}: "
-                        f"{stats['replacements']} class replacements, "
-                        f"{stats['extra_breadcrumbs']} extra-breadcrumbs, "
-                        f"{stats['breadcrumb_items']} breadcrumb-items, "
-                        f"{stats['nav_items']} nav-items\n"
-                        f"{stats['panel_classes']} panel replacements, ")
-
-                    if stats.get('manual_nav_template_lines'):
-                        print("  !!! Manual review needed for nav-item fixes at:")
-                        for line in stats['manual_nav_template_lines']:
-                            print(f"    - {line}")
-                    for k, v in stats.items():
-                        if k in totals:
-                            totals[k] += v
+                if stats.get('manual_nav_template_lines'):
+                    print("  !!! Manual review needed for nav-item fixes at:")
+                    for line in stats['manual_nav_template_lines']:
+                        print(f"    - {line}")
+                for k, v in stats.items():
+                    if k in totals:
+                        totals[k] += v
 
     # Global summary
     total_issues = sum(totals.values())
@@ -674,22 +658,6 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
     print(f"- Resizing breakpoint xs:      {totals['resizing_xs']}")
     print("-------------------------------------")
     print(f"- Resizing other breakpoints:  {resizing_other}")
-
-
-def find_template_dir_from_nautobot_app(app_dir: str) -> str:
-    """
-    Given a Nautobot app directory, tries to find the template directory.
-    E.g., if given "nautobot-golden-config", it looks for:
-        nautobot-golden-config/templates/
-
-    Returns the path if found, otherwise raises an error.
-    """
-    templates_path = os.path.join(app_dir, 'templates')
-
-    if not os.path.exists(templates_path) or not os.path.isdir(templates_path):
-        raise FileNotFoundError(f"No 'templates/' directory found in {app_dir}")
-
-    return templates_path
 
 
 def main():
