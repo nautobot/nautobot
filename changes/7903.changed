@@ -1,1 +1,4 @@
 Application documentation is now served dynamically from the package and access is restricted to authenticated users, replacing the previous static public serving.
+Updated `get_docs_url` implementation:
+    - For plugin models, documentation URLs are now resolved dynamically.
+    - Core and `extras` models continue to resolve documentation via static paths as before.

@@ -1,6 +1,6 @@
 import contextlib
 import datetime
-import importlib.resources as resources
+from importlib import resources
 import logging
 import mimetypes
 import os
