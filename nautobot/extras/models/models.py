@@ -270,6 +270,7 @@ class ConfigContextSchema(OrganizationalModel):
     )
 
     documentation_static_path = "docs/user-guide/core-data-model/extras/configcontextschema.html"
+    is_data_compliance_model = False
 
     def __str__(self):
         if self.owner:
@@ -352,6 +353,8 @@ class CustomLink(
         help_text="The class of the first link in a group will be used for the dropdown button",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
+
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
@@ -577,6 +580,7 @@ class FileAttachment(BaseModel):
     mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     natural_key_field_names = ["pk"]
 
@@ -637,6 +641,8 @@ class FileProxy(BaseModel):
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
+
+    is_data_compliance_model = False
 
     def __str__(self):
         return self.name
@@ -837,6 +843,7 @@ class Note(ChangeLoggedModel, BaseModel):
     objects = BaseManager.from_queryset(NotesQuerySet)()
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["created"]
@@ -877,6 +884,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
     is_shared = models.BooleanField(default=True)
 
     documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["owner", "view", "name"]
@@ -905,6 +913,7 @@ class UserSavedViewAssociation(BaseModel):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
     view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["user", "view_name"]]
@@ -1000,6 +1009,7 @@ class Webhook(
         "Leave blank to use the system defaults.",
         default="",
     )
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ("name",)

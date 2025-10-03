@@ -36,6 +36,12 @@ class TestPassedDataComplianceRule(DataComplianceRule):
         """No exception means the audit passes."""
 
 
+class TestFailedDataComplianceRuleAlt(TestFailedDataComplianceRule):
+    """Test implementation of DataComplianceRule, for dcim.rack."""
+
+    model = "dcim.rack"
+
+
 class TestCompliance(TestCase):
     """Test DataComplianceRule methods."""
 
