@@ -28,11 +28,11 @@
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduled Job</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>
@@ -73,11 +73,11 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduling</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Enabled?</td>
                 <td>{{ object.enabled | render_boolean }}</td>
@@ -130,11 +130,11 @@
 {% endblock %}
 {% block content_right_page %}
     {% if job_class_found %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>User Inputs</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 {% for key, value in object.kwargs.items %}
                     <tr>
                         <td>{{ labels|get_item:key }}</td>
@@ -146,11 +146,11 @@
             </table>
         </div>
     {% endif %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Celery Keyword Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>

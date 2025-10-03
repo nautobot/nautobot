@@ -5,7 +5,7 @@
 {% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock breadcrumbs_wrapper %}
 
 {% block header %}
-    <div class="pull-right d-print-none">
+    <div class="float-end d-print-none">
         {% block buttons %}
             {% if app_data.home_url %}
                 <a href="{% url app_data.home_url %}" class="btn btn-primary">
@@ -28,13 +28,13 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% block content_left_page %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card">
+                    <div class="card-header">
                         <strong>App</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         <tr>
                             <td>Package Name</td>
                             <td><code>{{ app_data.package }}</code></td>
@@ -65,16 +65,16 @@
                         {% if app_data.availability %}
                             <tr>
                                 <td>License</td>
-                                <td><label class="label label-transparent">{{ app_data.availability }}</label></td>
+                                <td><label class="badge bg-transparent">{{ app_data.availability }}</label></td>
                             </tr>
                         {% endif %}
                     </table>
                 </div>
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card">
+                    <div class="card-header">
                         <strong>Compatibility</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         <tr>
                             <td>Min Nautobot Version</td>
                             <td>v{{ object.min_version | placeholder }}</td>
@@ -87,13 +87,13 @@
                 </div>
             {% endblock content_left_page %}
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% block content_right_page %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card">
+                    <div class="card-header">
                         <strong>Features Employed</strong>
                     </div>
-                    <table class="table table-hover panel-body attr-table">
+                    <table class="table table-hover card-body attr-table">
                         {% with object.features as features %}
                             <tr>
                                 <td>Constance Config</td>
@@ -366,7 +366,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% block content_full_width_page %}
             {% endblock content_full_width_page %}
         </div>

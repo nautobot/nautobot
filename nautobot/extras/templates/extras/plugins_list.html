@@ -9,17 +9,17 @@
 
 {% block content %}
     <div class="row d-print-none">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% render_breadcrumbs %}
         </div>
     </div>
 
-    <div class="pull-right d-print-none">
+    <div class="float-end d-print-none">
         <div class="btn-group">
-            <a class="btn btn-default set-apps-display" data-display="tiles" href="" title="Tiles">
+            <a class="btn btn-secondary set-apps-display" data-display="tiles" href="" title="Tiles">
                 <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
             </a>
-            <a class="btn btn-default set-apps-display" data-display="list" href="" title="List">
+            <a class="btn btn-secondary set-apps-display" data-display="list" href="" title="List">
                 <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
             </a>
         </div>
@@ -30,9 +30,9 @@
     <h1>{% block page_heading %}{% render_title %}{% endblock %}</h1>
 
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% if filter_form %}
-                <div class="col-md-3 float-end nb-right-side-panel d-print-none">
+                <div class="col-lg-3 float-end nb-right-side-panel d-print-none">
                     {% include 'inc/search_panel.html' %}
                     {% block sidebar %}{% endblock %}
                 </div>
