@@ -3,23 +3,23 @@
 {% load static %}
 
 {% block form %}
-    <div class="card">
-        <div class="card-header"><strong>Metadata Type</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Metadata Type</strong></div>
+        <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.description %}
             {% render_field form.data_type %}
         </div>
     </div>
-    <div class="card">
-        <div class="card-header"><strong>Assignment</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
             {% render_field form.content_types %}
         </div>
     </div>
-    <div class="card">
-        <div class="card-header"><strong>Choices (select and multi-select data types)</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Choices (select and multi-select data types)</strong></div>
+        <div class="panel-body">
             {{ choices.non_field_errors }}
             <table class="table" id="metadata-choices">
                 {{ choices.management_form }}

@@ -10,7 +10,7 @@
             {% if circuit_termination_a %}
                 {{ circuit_termination_a.location }} {% if circuit_termination_a.interface %}- {{ circuit_termination_a.interface.device }} {{ circuit_termination_a.interface }}{% endif %}
             {% else %}
-                <span class="text-secondary">None</span>
+                <span class="text-muted">None</span>
             {% endif %}
         </li>
         <li>
@@ -18,7 +18,7 @@
             {% if circuit_termination_z %}
                 {{ circuit_termination_z.location }} {% if circuit_termination_z.interface %}- {{ circuit_termination_z.interface.device }} {{ circuit_termination_z.interface }}{% endif %}
             {% else %}
-                <span class="text-secondary">None</span>
+                <span class="text-muted">None</span>
             {% endif %}
         </li>
     </ul>

@@ -21,18 +21,18 @@
     {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.exists %}
         {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
             <li class="nav-item" role="presentation">
-                <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %} nav-link">Approval Workflow</a>
+                <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %}">Approval Workflow</a>
             </li>
         {% endif %}
     {% endif %}
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Scheduled Job</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>
@@ -73,11 +73,11 @@
             </tr>
         </table>
     </div>
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Scheduling</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Enabled?</td>
                 <td>{{ object.enabled | render_boolean }}</td>
@@ -130,11 +130,11 @@
 {% endblock %}
 {% block content_right_page %}
     {% if job_class_found %}
-        <div class="card">
-            <div class="card-header">
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>User Inputs</strong>
             </div>
-            <table class="table table-hover card-body attr-table">
+            <table class="table table-hover panel-body attr-table">
                 {% for key, value in object.kwargs.items %}
                     <tr>
                         <td>{{ labels|get_item:key }}</td>
@@ -146,11 +146,11 @@
             </table>
         </div>
     {% endif %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Celery Keyword Arguments</strong>
         </div>
-        <div class="card-body">
+        <div class="panel-body">
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>

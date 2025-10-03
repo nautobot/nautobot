@@ -19,22 +19,22 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
                     <strong>About</strong>
                 </div>
-                <div class="card-body">
+                <div class="panel-body">
                     <a href="https://networktocode.com/nautobot/">Nautobot</a> is a product of <a href="https://networktocode.com/">Network to Code</a>. Nautobot is a Network Source of Truth and Network Automation Platform. Nautobot has an extensive ecosystem of solutions that can be installed to provide and power Network Automation feature sets. Please check the <a href="{% url 'apps:apps_marketplace' %}">App Marketplace</a> to learn more.
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
                     <strong>Support</strong>
                 </div>
-                <table class="table table-hover card-body attr-table">
+                <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Support Contract Status</td>
                         <td>{{ support_contract_active | render_boolean }}</td>

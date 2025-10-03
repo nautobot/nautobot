@@ -5,11 +5,11 @@
 {% load tz %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Location</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Location Type</td>
                 <td>{{ object.location_type|hyperlinked_object:"name" }}</td>
@@ -40,9 +40,9 @@
                 <td>
                     {% if object.time_zone %}
                         {{ object.time_zone }} (UTC {{ object.time_zone|tzoffset }})<br />
-                        <small class="text-secondary">Local time: {% timezone object.time_zone %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}</small>
+                        <small class="text-muted">Local time: {% timezone object.time_zone %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}</small>
                     {% else %}
-                        <span class="text-secondary">&mdash;</span>
+                        <span class="text-muted">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -62,23 +62,23 @@
             </tr>
         </table>
     </div>
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Geographical Info</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Physical Address</td>
                 <td>
                     {% if object.physical_address %}
-                        <div class="float-end d-print-none">
-                            <a href="https://maps.google.com/?q={{ object.physical_address|urlencode }}" target="_blank" class="btn btn-primary btn-sm">
+                        <div class="pull-right d-print-none">
+                            <a href="https://maps.google.com/?q={{ object.physical_address|urlencode }}" target="_blank" class="btn btn-primary btn-xs">
                                 <i class="mdi mdi-map-marker"></i> Map it
                             </a>
                         </div>
                         <span>{{ object.physical_address|linebreaksbr }}</span>
                     {% else %}
-                        <span class="text-secondary">&mdash;</span>
+                        <span class="text-muted">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -90,25 +90,25 @@
                 <td>GPS Coordinates</td>
                 <td>
                     {% if object.latitude and object.longitude %}
-                        <div class="float-end d-print-none">
-                            <a href="https://maps.google.com/?q={{ object.latitude }},{{ object.longitude }}" target="_blank" class="btn btn-primary btn-sm">
+                        <div class="pull-right d-print-none">
+                            <a href="https://maps.google.com/?q={{ object.latitude }},{{ object.longitude }}" target="_blank" class="btn btn-primary btn-xs">
                                 <i class="mdi mdi-map-marker"></i> Map it
                             </a>
                         </div>
                         <span>{{ object.latitude }}, {{ object.longitude }}</span>
                     {% else %}
-                        <span class="text-secondary">&mdash;</span>
+                        <span class="text-muted">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
         </table>
     </div>
     {% if show_convert_to_contact_button %}
-        <div class="card">
-            <div class="card-header">
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>Contact Info</strong>
             </div>
-            <table class="table table-hover card-body attr-table">
+            <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Contact Name</td>
                     <td>{{ object.contact_name|placeholder }}</td>
@@ -124,8 +124,8 @@
             </table>
             {% if request.user|has_perms:contact_association_permission %}
                 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                    <div class="card-footer text-right d-print-none">
-                        <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-sm">
+                    <div class="panel-footer text-right d-print-none">
+                        <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-account-edit" aria-hidden="true"></span>
                             Convert to contact/team record
                         </a>
@@ -134,63 +134,63 @@
             {% endif %}
         </div>
     {% endif %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Comments</strong>
         </div>
-        <div class="card-body nb-rendered-markdown">
+        <div class="panel-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
-                <span class="text-secondary">None</span>
+                <span class="text-muted">None</span>
             {% endif %}
         </div>
     </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Stats</strong>
         </div>
-        <div class="card-body">
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'dcim:rack_list' %}?location={{ object.pk }}" class="btn {% if stats.rack_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.rack_count }}</a></h2>
+        <div class="panel-body">
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'dcim:rack_list' %}?location={{ object.pk }}" class="btn {% if stats.rack_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.rack_count }}</a></h2>
                 <p>Racks</p>
             </div>
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'dcim:device_list' %}?location={{ object.pk }}" class="btn {% if stats.device_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.device_count }}</a></h2>
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'dcim:device_list' %}?location={{ object.pk }}" class="btn {% if stats.device_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.device_count }}</a></h2>
                 <p>Devices</p>
             </div>
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'ipam:prefix_list' %}?locations={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.prefix_count }}</a></h2>
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'ipam:prefix_list' %}?locations={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
                 <p>Prefixes</p>
             </div>
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'ipam:vlan_list' %}?locations={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.vlan_count }}</a></h2>
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'ipam:vlan_list' %}?locations={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
                 <p>VLANs</p>
             </div>
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'circuits:circuit_list' %}?location={{ object.pk }}" class="btn {% if stats.circuit_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.circuit_count }}</a></h2>
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'circuits:circuit_list' %}?location={{ object.pk }}" class="btn {% if stats.circuit_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.circuit_count }}</a></h2>
                 <p>Circuits</p>
             </div>
-            <div class="col-lg-4 text-center">
-                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?location={{ object.pk }}" class="btn {% if stats.vm_count %}btn-primary{% else %}btn-secondary{% endif %} btn-xl">{{ stats.vm_count }}</a></h2>
+            <div class="col-md-4 text-center">
+                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?location={{ object.pk }}" class="btn {% if stats.vm_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vm_count }}</a></h2>
                 <p>Virtual Machines</p>
             </div>
         </div>
     </div>
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Rack Groups</strong>
         </div>
-        <table class="table table-hover card-body">
+        <table class="table table-hover panel-body">
             {% for rg in rack_groups %}
                 <tr>
                     <td style="padding-left: {{ rg.tree_depth }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
                     <td class="text-right d-print-none">
-                        <a href="{% url 'dcim:rack_elevation_list' %}?rack_group={{ rg.pk }}" class="btn btn-sm btn-primary" title="View elevations">
+                        <a href="{% url 'dcim:rack_elevation_list' %}?rack_group={{ rg.pk }}" class="btn btn-xs btn-primary" title="View elevations">
                             <i class="mdi mdi-server"></i>
                         </a>
                     </td>
@@ -200,21 +200,21 @@
                 <td><i class="mdi mdi-folder-open"></i> All racks</td>
                 <td>{{ stats.rack_count }}</td>
                 <td class="text-right d-print-none">
-                    <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.pk }}" class="btn btn-sm btn-primary" title="View elevations">
+                    <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.pk }}" class="btn btn-xs btn-primary" title="View elevations">
                         <i class="mdi mdi-server"></i>
                     </a>
                 </td>
             </tr>
         </table>
     </div>
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Images</strong>
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="card-footer text-right d-print-none">
-                <a href="{% url 'dcim:location_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
+            <div class="panel-footer text-right d-print-none">
+                <a href="{% url 'dcim:location_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
                 </a>
@@ -225,14 +225,14 @@
 
 {% block content_full_width_page %}
     {% if object.children.all %}
-        <div class="card">
-            <div class="card-header">
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>Children</strong>
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="card-footer text-right d-print-none">
-                    <a href="{% url 'dcim:location_add' %}?parent={{ object.pk }}" class="btn btn-sm btn-primary">
+                <div class="panel-footer text-right d-print-none">
+                    <a href="{% url 'dcim:location_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>
                 </div>

@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Power Outlet</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 {% if object.device %}
                     <td>Device</td>
@@ -45,17 +45,17 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Connection</strong>
         </div>
         {% if object.cable %}
-            <table class="table table-hover card-body attr-table">
+            <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Cable</td>
                     <td>
                         {{ object.cable|hyperlinked_object }}
-                        <a href="{% url 'dcim:poweroutlet_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
+                        <a href="{% url 'dcim:poweroutlet_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                             <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                         </a>
                     </td>
@@ -86,19 +86,19 @@
                         <td>Path Status</td>
                         <td>
                             {% if object.path.is_active %}
-                                <span class="badge bg-success">Reachable</span>
+                                <span class="label label-success">Reachable</span>
                             {% else %}
-                                <span class="badge bg-danger">Not Reachable</span>
+                                <span class="label label-danger">Not Reachable</span>
                             {% endif %}
                         </td>
                     </tr>
                 {% endif %}
             </table>
         {% else %}
-            <div class="card-body text-secondary">
+            <div class="panel-body text-muted">
                 Not connected
                 {% if perms.dcim.add_cable %}
-                    <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" title="Connect" class="btn btn-primary btn-md float-end">
+                    <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" title="Connect" class="btn btn-primary btn-sm pull-right">
                         <i class="mdi mdi-ethernet-cable" aria-hidden="true"></i> Connect
                     </a>
                 {% endif %}

@@ -13,11 +13,11 @@
 {% endblock masthead %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>IP Address to Interface</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>IP Address</td>
                 <td>{{ object.ip_address|hyperlinked_object }}</td>

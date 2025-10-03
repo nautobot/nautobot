@@ -7,7 +7,7 @@
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
             {% if preferences %}
-                <div class="col-lg-8 offset-lg-2">
+                <div class="col-md-8 offset-md-2">
                     <div class="card mb-16">
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -36,9 +36,9 @@
                     </button>
                 </div>
             {% else %}
-                <h3 class="col-lg-8 offset-lg-2 mb-16 text-center text-secondary">No preferences found</h3>
+                <h3 class="col-md-8 offset-md-2 mb-16 text-center text-secondary">No preferences found</h3>
             {% endif %}
-            <div class="col-lg-8 offset-lg-2">
+            <div class="col-md-8 offset-md-2">
                 {% if form.non_field_errors %}
                     <div class="card border-danger mb-16">
                         <div class="card-header bg-danger-subtle border-danger text-body">

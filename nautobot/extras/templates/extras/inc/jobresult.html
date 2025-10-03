@@ -7,11 +7,11 @@
 {% load plugins %}
 {% load static %}
 
-<div class="card">
-    <div class="card-header">
+<div class="panel panel-default">
+    <div class="panel-heading">
         <strong>Summary of Results</strong>
     </div>
-    <table class="table table-hover card-body">
+    <table class="table table-hover panel-body">
         <tr>
             <td>Job Description</td>
             <td>{{ result.job_model.description | render_markdown | placeholder }}</td>
@@ -84,10 +84,10 @@
 </div>
 
 
-<div class="card">
-    <div class="card-header">
+<div class="panel panel-default">
+    <div class="panel-heading">
         <strong>Logs</strong>
-        <div class="float-end d-print-none">
+        <div class="pull-right d-print-none">
             <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
         </div>
     </div>

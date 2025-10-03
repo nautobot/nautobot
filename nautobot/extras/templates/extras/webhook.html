@@ -2,12 +2,12 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Webhook</strong>
         </div>
 
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Object Type(s)</td>
                 <td>
@@ -39,11 +39,11 @@
 
     </div>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>HTTP</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>HTTP Method</td>
                 <td><span>{{ object.http_method }}</span></td>
@@ -63,11 +63,11 @@
         </table>
     </div>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Security</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Secret</td>
                 <td>{{ object.secret | placeholder }}</td>
@@ -85,11 +85,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Body Template</strong>
         </div>
-        <div class="card-body">
+        <div class="panel-body">
             {% if object.body_template %} <pre>{{ object.body_template }}</pre> {% else %} {{ None }} {% endif %}
         </div>
     </div>

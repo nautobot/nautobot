@@ -2,9 +2,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
-        <div class="card-header"><strong>Location</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Location</strong></div>
+        <div class="panel-body">
             {% render_field form.location_type %}
             {% render_field form.parent %}
             {% render_field form.name %}
@@ -16,9 +16,9 @@
         </div>
     </div>
     {% include 'inc/tenancy_form_panel.html' %}
-    <div class="card">
-        <div class="card-header"><strong>Contact Info</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contact Info</strong></div>
+        <div class="panel-body">
             {% render_field form.physical_address %}
             {% render_field form.shipping_address %}
             {% render_field form.latitude %}
@@ -29,9 +29,9 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card">
-        <div class="card-header"><strong>Comments</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
             {% render_field form.comments %}
         </div>
     </div>

@@ -61,30 +61,30 @@
             </div>
             {% if not is_popup %}
                 <div class="container-fluid mb-12 mt-16">
-                    <div class="row row-cols-3">
-                        <div class="col">
-                            <div>
-                                <h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">
-                                    <img
-                                        alt="Nautobot chevron"
-                                        class="flex-grow-0 flex-shrink-0 my-n6"
-                                        role="presentation"
-                                        src="{% static 'img/nautobot_chevron.svg' %}"
-                                        style="width: 1.5rem;"
-                                    />
-                                    {% block pretitle %}{% endblock %}
-                                    {% block content_title %}
-                                        {% if title %}
-                                            {% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}
-                                        {% endif %}
-                                    {% endblock %}
-                                </h1>
-                                <nav aria-label="Breadcrumbs" class="mt-4">
-                                    {% block breadcrumbs %}{% endblock breadcrumbs %}
-                                </nav>
-                            </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <h1 class="d-flex fs-2 gap-8 lh-sm py-6">
+                                <img
+                                    alt="Nautobot chevron"
+                                    class="align-self-start flex-grow-0 flex-shrink-0 my-n4"
+                                    role="presentation"
+                                    src="{% static 'img/nautobot_chevron.svg' %}"
+                                    style="width: 1.5rem;"
+                                />
+                                {% block pretitle %}{% endblock %}
+                                {% block content_title %}
+                                    {% if title %}
+                                        {% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}
+                                    {% endif %}
+                                {% endblock %}
+                            </h1>
                         </div>
                         {% include 'inc/header.html' %}
+                        <div class="col-12">
+                            <nav aria-label="Breadcrumbs" class="mt-1">
+                                {% block breadcrumbs %}{% endblock breadcrumbs %}
+                            </nav>
+                        </div>
                     </div>
                 </div>
                 {% block header %}{% endblock header %}

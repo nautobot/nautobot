@@ -18,7 +18,7 @@
             {% endif %}
         {% endfor %}
         <div class="row">
-            <div class="col-xl-8 offset-xl-2 col-lg-10 offset-lg-1">
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
                 <h3 class="mb-16">Assign an IP Address</h3>
                 {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='assign' %}
                 {% if form.non_field_errors %}
@@ -39,7 +39,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-8 offset-xl-2 col-lg-10 offset-lg-1 gap-8 hstack justify-content-center">
+        <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 gap-8 hstack justify-content-center">
             <button type="submit" class="btn btn-primary">
                 <span aria-hidden="true" class="mdi mdi-magnify me-4"></span><!--
                 -->Search
@@ -54,12 +54,12 @@
         <form action="{% legacy_querystring request %}" method="post">
             {% csrf_token %}
             <div class="row">
-                <div class="col-lg-12">
+                <div class="col-md-12">
                     <h3 class="my-16">Search Results</h3>
                     {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
                     <div class="d-print-none mt-16 text-center">
                         {% if perms.dcim.change_interface %}
-                            <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-md">
+                            <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
                                 <span class="mdi mdi-check me-4" aria-hidden="true"></span><!--
                                 -->Assign Selected IP Addresses to Interface
                             </button>

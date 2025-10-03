@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Front Port</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 {% if object.device %}
                     <td>Device</td>
@@ -45,17 +45,17 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Connection</strong>
         </div>
         {% if object.cable %}
-            <table class="table table-hover card-body attr-table">
+            <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Cable</td>
                     <td>
                         {{ object.cable|hyperlinked_object }}
-                        <a href="{% url 'dcim:frontport_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
+                        <a href="{% url 'dcim:frontport_trace' pk=object.pk %}" class="btn btn-primary btn-xs" title="Trace">
                             <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
                         </a>
                     </td>
@@ -64,19 +64,19 @@
                     <td>Connection Status</td>
                     <td>
                         {% if object.cable.status %}
-                            <span class="badge bg-success">{{ object.cable.get_status_display }}</span>
+                            <span class="label label-success">{{ object.cable.get_status_display }}</span>
                         {% else %}
-                            <span class="badge bg-info">{{ object.cable.get_status_display }}</span>
+                            <span class="label label-info">{{ object.cable.get_status_display }}</span>
                         {% endif %}
                     </td>
                 </tr>
             </table>
         {% else %}
-            <div class="card-body text-secondary">
+            <div class="panel-body text-muted">
                 Not connected
                 {% if perms.dcim.add_cable %}
-                    <span class="dropdown float-end">
-                        <button type="button" class="btn btn-primary btn-md dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="dropdown pull-right">
+                        <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                         </button>
                         <ul class="dropdown-menu dropdown-menu-right">

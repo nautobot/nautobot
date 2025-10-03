@@ -6,7 +6,7 @@
     {% if perms.dcim.change_moduletype %}
         <div class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="module-type-add-components-button">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="mdi mdi-chevron-down"></span>
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.dcim.add_consoleporttemplate %}
@@ -40,53 +40,53 @@
 
 {% block extra_nav_tabs %}
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'interfaces' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'interfaces' %} active{% endif %}">
             Interfaces {% badge interface_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'frontports' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'frontports' %} active{% endif %}">
             Front Ports {% badge front_port_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'rearports' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'rearports' %} active{% endif %}">
             Rear Ports {% badge rear_port_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleports' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleports' %} active{% endif %}">
             Console Ports {% badge consoleport_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleserverports' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleserverports' %} active{% endif %}">
             Console Server Ports {% badge consoleserverport_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'powerports' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'powerports' %} active{% endif %}">
             Power Ports {% badge powerport_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'poweroutlets' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'poweroutlets' %} active{% endif %}">
             Power Outlets {% badge poweroutlet_table.rows|length %}
         </a>
     </li>
     <li class="nav-item" role="presentation">
-        <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'modulebays' %} active{% endif %}">
+        <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-toggle="tab" class="nav-link{% if request.GET.tab == 'modulebays' %} active{% endif %}">
             Module Bays {% badge modulebay_table.rows|length %}
         </a>
     </li>
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Chassis</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Manufacturer</td>
                 <td><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
@@ -116,15 +116,15 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Comments</strong>
         </div>
-        <div class="card-body nb-rendered-markdown">
+        <div class="panel-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
-                <span class="text-secondary">None</span>
+                <span class="text-muted">None</span>
             {% endif %}
         </div>
     </div>

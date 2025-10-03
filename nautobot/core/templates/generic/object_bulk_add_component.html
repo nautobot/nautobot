@@ -13,14 +13,14 @@
         <div class="row align-content-start flex-fill">
             <h1 class="mb-16">{% block title %}Add {{ model_name|title }}{% endblock %}</h1>
             <p class="mb-16">{{ table.rows|length }} {{ parent_model_name }} selected</p>
-            <div class="col-lg-7">
+            <div class="col-md-7">
                 <div class="card mb-16">
                     <div class="table-responsive">
                         {% include 'inc/table.html' %}
                     </div>
                 </div>
             </div>
-            <div class="col-lg-5">
+            <div class="col-md-5">
                 {% if form.non_field_errors %}
                     <div class="card border-danger mb-16">
                         <div class="card-header bg-danger-subtle border-danger text-body">

@@ -2,9 +2,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
-        <div class="card-header"><strong>VLAN</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>VLAN</strong></div>
+        <div class="panel-body">
             {% render_field form.vid %}
             {% render_field form.name %}
             {% render_field form.status %}
@@ -12,9 +12,9 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="card">
-        <div class="card-header"><strong>Assignment</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
             {% render_field form.locations %}
             {% render_field form.vlan_group %}
         </div>

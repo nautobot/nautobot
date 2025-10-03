@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Interface</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Virtual Machine</td>
                 <td>{{ object.virtual_machine|hyperlinked_object }}</td>
@@ -37,7 +37,7 @@
                     {% if object.parent_interface %}
                         <a href="{{ object.parent_interface.get_absolute_url }}">{{ object.parent_interface }}</a>
                     {% else %}
-                        <span class="text-secondary">None</span>
+                        <span class="text-muted">None</span>
                     {% endif %}
                 </td>
             </tr>
@@ -51,7 +51,7 @@
                     {% if object.bridge %}
                         <a href="{{ object.bridge.get_absolute_url }}">{{ object.bridge }}</a>
                     {% else %}
-                        <span class="text-secondary">None</span>
+                        <span class="text-muted">None</span>
                     {% endif %}
                 </td>
             </tr>

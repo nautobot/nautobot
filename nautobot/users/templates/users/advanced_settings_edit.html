@@ -5,7 +5,7 @@
     <form action="." method="post" class="h-100 vstack">
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
-            <div class="col-lg-8 offset-lg-2">
+            <div class="col-md-8 offset-md-2">
                 {% if form.non_field_errors %}
                     <div class="card border-danger mb-16">
                         <div class="card-header bg-danger-subtle border-danger text-body">
@@ -21,7 +21,7 @@
                     <div class="card-body">
                         {% render_field form.request_profiling %}
                         {% if request.user.is_superuser %}
-                            <div class="col-lg-9 offset-lg-3">
+                            <div class="col-md-9 offset-md-3">
                                 <a href="{% url 'silk:summary' %}">Silk Request Profiling Dashboard</a>
                             </div>
                         {% endif %}

@@ -20,11 +20,11 @@
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>IP Address</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Namespace</td>
                 <td>{{ object.parent.namespace|hyperlinked_object }}</td>
@@ -74,11 +74,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Operational Details</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             {% include 'inc/tenant_table_row.html' %}
             <tr>
                 <td>Assignment</td>
@@ -89,7 +89,7 @@
                         {% elif interface_count == 0 and vm_interface_count == 1 %}
                             {{ object.vm_interfaces.first.parent|hyperlinked_object }} ({{ object.vm_interfaces.first|hyperlinked_object }})
                         {% elif interface_count == 0 and vm_interface_count == 0 %}
-                            <span class="text-secondary">&mdash;</span>
+                            <span class="text-muted">&mdash;</span>
                         {% else %}
                             {% if interface_count > 0 %}
                                 <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}">
@@ -118,7 +118,7 @@
                             ({{ object.nat_inside.assigned_object.parent|hyperlinked_object }})
                         {% endif %}
                     {% else %}
-                        <span class="text-secondary">None</span>
+                        <span class="text-muted">None</span>
                     {% endif %}
                 </td>
             </tr>
@@ -132,7 +132,7 @@
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <span class="text-secondary">None</span>
+                        <span class="text-muted">None</span>
                     {% endif %}
                 </td>
             </tr>

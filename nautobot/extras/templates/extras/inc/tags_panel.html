@@ -1,11 +1,11 @@
 {% load helpers %}
 {% with tags=object.tags %}
     {% if tags %}
-        <div class="card">
-            <div class="card-header">
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>Tags</strong>
             </div>
-            <div class="card-body">
+            <div class="panel-body">
                 {% include "components/panel/body_content_tags.html" with tags=tags.all list_url_name=url %}
             </div>
         </div>

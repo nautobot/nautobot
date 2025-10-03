@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block form %}
-    <div class="card">
-        <div class="card-header"><strong>Contact</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contact</strong></div>
+        <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.phone %}
             {% render_field form.email %}
@@ -20,9 +20,9 @@
             {% render_field form.comments %}
         </div>
     </div>
-    <div class="card">
-        <div class="card-header"><strong>Contact Association</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contact Association</strong></div>
+        <div class="panel-body">
             {% render_field form.role %}
             {% render_field form.status %}
             {% render_field form.associated_object_type.as_hidden %}

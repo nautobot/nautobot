@@ -3,18 +3,18 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="card">
-        <div class="card-header"><strong>Tenant</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Tenant</strong></div>
+        <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.tenant_group %}
             {% render_field form.description %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="card">
-        <div class="card-header"><strong>Comments</strong></div>
-        <div class="card-body">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Comments</strong></div>
+        <div class="panel-body">
             {% render_field form.comments %}
         </div>
     </div>

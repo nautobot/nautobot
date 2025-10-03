@@ -4,7 +4,7 @@
 
 {% block content %}
     <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-        <div class="col-md-4 col-md-offset-4">
+        <div class="col-sm-4 col-sm-offset-4">
             {% if "BANNER_LOGIN"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
                     {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
