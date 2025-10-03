@@ -55,3 +55,73 @@ The top level is the project root. Immediately within the root should exist seve
 * The app source directory, with the same name as your app.
 
 The app source directory contains all of the actual Python code and other resources used by your app. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `NautobotAppConfig` class.
+
+## Serving Apps Documentation
+
+The documentation for each pip-installed application is served dynamically through Django views and is restricted to authenticated users. This approach ensures that:
+
+- Works regardless of where the app is installed (editable install, virtualenv, system site-packages).
+- Access is protected by Django authentication.
+
+### File Structure
+
+Documentation for an app (e.g., example_app) is expected to be located inside the package:
+
+```no-highlight
+example_app/
+├── docs/
+│   ├── index.html
+│   ├── assets/
+      └── extra.css
+      └── nautobot_logo.svg
+```
+
+The `docs` directory is the `site_dir` output of MkDocs during the build process.
+
+### Build Process
+
+Documentation is built using MkDocs:
+
+```no-highlight
+mkdocs build --no-directory-urls --strict
+```
+
+`site_dir` in mkdocs.yml should be always inside the app package like `<app_name>/docs` this defined where output of `mkdocs build` is placed.
+
+### URL Routing
+
+Two URL patterns are defined for serving documentation:
+
+```python
+from django.urls import path
+from nautobot.core.views import AppDocsView
+
+urlpatterns = [
+    # Apps docs - Serve the main page
+    path("docs/<str:app>/", AppDocsView.as_view(), name="docs_index"),
+    # Apps docs - Serve assets
+    path("docs/<str:app>/<path:path>", AppDocsView.as_view(), name="docs_file"),
+]
+```
+
+`/docs/example_app/` - serves index.html.
+
+`/docs/example_app/assets/extra.css` - serves static assets referenced in the HTML.
+
+Both routes go through AppDocsView, which enforces login.
+
+### Redirect for Each App
+
+Each app should define its own top-level `/docs/` URL that redirects to the appropriate app documentation:
+
+```python
+app_name = example_app
+path(
+    "docs/",
+    RedirectView.as_view(pattern_name="docs_index"),
+    {"app_name": app_name},
+    name="docs",
+)
+```
+
+This allows users to access `/docs/` without specifying the app name. The redirect points to the docs_index route for the specific app.
