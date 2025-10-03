@@ -506,6 +506,10 @@ class FilterTestCases:
                              "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
                             {"search": "lorem ipsum",
                              "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
+                            {"search": "",
+                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
+                            {"search": "null",
+                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
                         ],
                     },
                     "n": {
@@ -514,6 +518,12 @@ class FilterTestCases:
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
                             {"search": "Lorem ipsum",
                              "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
+                            {"search": "lorem ipsum",
+                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {"search": "",
+                             "expected": {"no_key": True, "empty": False, "null": True, "value": True}},
+                            {"search": "null",
+                             "expected": {"no_key": True, "empty": True, "null": False, "value": True}},
                         ],
                     },
                     "ic": {
