@@ -59,7 +59,7 @@
                                                 </div>
                                                 {{ item.form_field.as_hidden }}
                                             {% else %}
-                                                <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
+                                                <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
                                                     <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                         {{ name | split:"_" | join:" " }}
                                                         <span class="form-text">
@@ -89,7 +89,7 @@
                                             </div>
                                             {{ item.form_field.as_hidden }}
                                         {% else %}
-                                            <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
+                                            <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
                                                 <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ item.name | split:"_" | join:" " }}
                                                     <span class="form-text">
