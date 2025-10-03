@@ -55,7 +55,7 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
         class_attr_match = re.search(r'class=(["\'])(.*?)\1', li_tag)
         if class_attr_match:
             classes = class_attr_match.group(2).split()
-            if not any(["nav-item" in _class for _class in classes]):
+            if not any("nav-item" in _class for _class in classes):
                 classes.append("nav-item")
                 stats["nav_items"] += 1
             new_class_attr = f'class="{" ".join(classes)}"'
@@ -82,10 +82,10 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
                     # We use substring rather than exact match for cases with inline Django template fragements like:
                     # <a class="nav-link{% if some_condition %} active{% endif %}">
                     # where our naive split() call above would create "navlink{%" and "active{%" class entries
-                    if not any(["nav-link" in child_class for child_class in child_classes]):
+                    if not any("nav-link" in child_class for child_class in child_classes):
                         child_classes.append("nav-link")
                         stats["nav_items"] += 1
-                    if not any(["active" in child_class for child_class in child_classes]):
+                    if not any("active" in child_class for child_class in child_classes):
                         child_classes.append("active")
                         stats["nav_items"] += 1
                     new_child_class = f'class="{" ".join(child_classes)}"'
@@ -103,7 +103,7 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
             child_class_match = re.search(r'class=(["\'])(.*?)\1', child_tag)
             if child_class_match:
                 child_classes = child_class_match.group(2).split()
-                if not any(["nav-link" in child_class for child_class in child_classes]):
+                if not any("nav-link" in child_class for child_class in child_classes):
                     child_classes.append("nav-link")
                     new_child_class = f'class="{" ".join(child_classes)}"'
                     child_tag = re.sub(r'class=(["\'])(.*?)\1', new_child_class, child_tag, count=1)
@@ -257,7 +257,7 @@ def _replace_classes(html_string: str, replacements: dict, stats: dict, file_pat
         original = class_value
         if "{%" in class_value or "%}" in class_value:
             if any(
-                [re.search(r"\b(?<!-)" + re.escape(search) + r"\b(?!-)", class_value) for search in replacements.keys()]
+                re.search(r"\b(?<!-)" + re.escape(search) + r"\b(?!-)", class_value) for search in replacements.keys()
             ):
                 if "manual_nav_template_lines" not in stats:
                     stats["manual_nav_template_lines"] = []
@@ -606,6 +606,10 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
         directory = os.path.dirname(directory)
     else:
         only_filename = None
+
+    # Define the breakpoint mapping
+    breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
+
     for root, _, files in os.walk(directory):
         for filename in files:
             if only_filename and only_filename != filename:
@@ -623,24 +627,21 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
                     # This is a one-time operation to adjust the breakpoints.
                     logger.info("Resizing Breakpoints: %s", file_path)
 
-                    # Define the breakpoint mapping
-                    breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
-
                     resizing_other = 0
 
                     # Iterate from the highest breakpoint to the lowest
-                    for breakpoint in ["xl", "lg", "md", "sm", "xs"]:
-                        new_breakpoint = breakpoint_map[breakpoint]
+                    for bkpt in ["xl", "lg", "md", "sm", "xs"]:
                         # Replace with regex, e.g., col-xs-12 → col-sm-12
-                        regex = re.compile(rf"(\bcol-{breakpoint})([a-zA-Z0-9-]*)")
+                        regex = re.compile(rf"(\bcol-{bkpt})([a-zA-Z0-9-]*)")
 
-                        def regex_repl(m):
+                        def regex_repl(m, captured_bkpt=bkpt):
                             nonlocal resizing_other
-                            if breakpoint == "xs":
+                            if captured_bkpt == "xs":
                                 totals["resizing_xs"] += 1
                             else:
                                 resizing_other += 1
-                            return f"col-{new_breakpoint}{m.group(2)}"
+                            new_bkpt = breakpoint_map[captured_bkpt]
+                            return f"col-{new_bkpt}{m.group(2)}"
 
                         content = regex.sub(regex_repl, content)
 
@@ -650,7 +651,7 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
                     f.write(fixed_content)
                 logger.info("Fixed: %s", file_path)
 
-                if any([stat for stat in stats.values()]):
+                if any(stats.values()):
                     print(f"→ {os.path.relpath(file_path, directory)}: ", end="")
                     if stats["replacements"]:
                         print(f"{stats['replacements']} class replacements, ", end="")
