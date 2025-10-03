@@ -10,14 +10,14 @@
 {% endif %}
 {% if "approve" in buttons and have_permission and record.is_active_stage %}
     <span title='{% if request.user in record.users_that_already_approved %}You already approved this stage{% else %}Approve this stage{% endif %}'>
-        <a href="{% url approval_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}" class="btn btn-success btn-xs{% if request.user in record.users_that_already_approved %} disabled{% endif %}">
+        <a href="{% url approval_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}" class="btn btn-success btn-sm{% if request.user in record.users_that_already_approved %} disabled{% endif %}">
             <i class="mdi mdi-check"></i>
         </a>
     </span>
 {% endif %}
 {% if "deny" in buttons and have_permission and record.is_active_stage and request.user not in record.users_that_already_approved %}
     <span title='{%if request.user in record.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}'>
-        <a href="{% url deny_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}" class="btn btn-xs btn-danger {% if request.user in record.users_that_already_approved %} disabled{% endif %}">
+        <a href="{% url deny_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}" class="btn btn-sm btn-danger {% if request.user in record.users_that_already_approved %} disabled{% endif %}">
             <i class="mdi mdi-close"></i>
         </a>
     </span>
