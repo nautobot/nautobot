@@ -157,7 +157,7 @@
     message: panel is no longer available; use card instead.
     flags: re.DOTALL
     patterns:
-      - class="[^"]*\bpanel\b(?!-)[^"]*"
+      - class="[^"]*(?<!-)\bpanel\b(?!-)[^"]*"
 - rule:
     name: B062
     message: panel-heading is no longer available; use card-header instead.

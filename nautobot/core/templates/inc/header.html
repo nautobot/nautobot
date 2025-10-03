@@ -60,8 +60,8 @@
                 {% firstof request.user.get_full_name request.user.username %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{% url 'about' %}"><span class="mdi mdi-information"></span>About</a></li>
-                    <li><a class="dropdown-item" href="{% url 'user:profile' %}"><span class="mdi mdi-account-box"></span>Profile</a></li>
+                <li><a class="dropdown-item" href="{% url 'about' %}"><span class="mdi mdi-information"></span>About</a></li>
+                <li><a class="dropdown-item" href="{% url 'user:profile' %}"><span class="mdi mdi-account-box"></span>Profile</a></li>
                 <li><a class="dropdown-item" href="{% url 'extras:approver_dashboard' %}"><span class="mdi mdi-check-bold"></span>Approval Dashboard</a></li>
                 {% if request.user.is_staff %}
                     <li><a class="dropdown-item" href="{% url 'worker_status' %}"><span class="mdi mdi-server-network"></span>Worker Status</a></li>
