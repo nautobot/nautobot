@@ -47,7 +47,7 @@ def run(
                     li_start_absolute = ol_start + li_start_relative
 
                     li_tag = ol_content[li_start_relative:li_end_relative]
-                    if not re.search(r"\sclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
+                    if not re.search(r"\bclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
                         errors.append(
                             {
                                 "code": rule["name"],
@@ -81,7 +81,7 @@ def run(
             li_start_absolute = block_start + li_start_relative + len(block_match.group(0).split(block_content)[0])
 
             li_tag = block_content[li_start_relative:li_end_relative]
-            if not re.search(r"\sclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
+            if not re.search(r"\bclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
                 errors.append(
                     {
                         "code": rule["name"],
@@ -115,7 +115,7 @@ def run(
             li_start_absolute = block_start + li_start_relative + len(block_match.group(0).split(block_content)[0])
 
             li_tag = block_content[li_start_relative:li_end_relative]
-            if not re.search(r"\sclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
+            if not re.search(r"\bclass=(['\"])(.*?)\1", li_tag, flags=re.IGNORECASE):
                 errors.append(
                     {
                         "code": rule["name"],

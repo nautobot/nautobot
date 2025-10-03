@@ -29,7 +29,7 @@
                     {{ opts.verbose_name_plural|capfirst }}
                 {% endif %}
             </li>
-            <li class="breadcrumb-item active">{% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}</li>
+            <li class="breadcrumb-item active" aria-current="page">{% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}</li>
         </ol>
     {% endblock %}
 {% endif %}

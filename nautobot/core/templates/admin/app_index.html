@@ -8,7 +8,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
             {% for app in app_list %}
-                <li class="breadcrumb-item{% if forloop.last %} active{% endif %}">{{ app.name }}</li>
+            <li {% if forloop.last %}class="breadcrumb-item active" aria-current="page"{% else %}class="breadcrumb-item"{% endif %}>{{ app.name }}</li>
             {% endfor %}
         </ol>
     {% endblock %}
