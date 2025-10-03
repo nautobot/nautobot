@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import datetime
+from importlib import resources
 import json
 import logging
 import re
@@ -483,11 +484,14 @@ def percentage(x, y):
 @library.filter()
 @register.filter()
 def get_docs_url(model):
-    """Return the likely static documentation path for the specified model, if it can be found/predicted.
+    """Return the documentation URL for the specified model, if it can be found/predicted.
 
     - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
         - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
     - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
+    - Plugin models are expected to be documented within their package at
+      ``docs/models/{model_name}.html`` and are served dynamically through
+      the ``AppDocsView`` endpoint (``/docs/<app_name>/<path>``).
 
     Any model can define a `documentation_static_path` class attribute if it needs to override the above expectations.
 
@@ -502,11 +506,27 @@ def get_docs_url(model):
     Example:
         >>> get_docs_url(location_instance)
         "static/docs/models/dcim/location.html"
+        >>> get_docs_ulr(example_app)
+        "/docs/example_app/models/examplemodel.html"
     """
     if hasattr(model, "documentation_static_path"):
         path = model.documentation_static_path
     elif model._meta.app_label in settings.PLUGINS:
-        path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+        app_label = model._meta.app_label
+        path = f"models/{model._meta.model_name}.html"
+        # Build the dynamic docs URL
+        docs_url = reverse("docs_file", kwargs={"app_name": app_label, "path": path})
+        # Check that the file actually exists inside the app's docs folder
+        try:
+            base_dir = resources.files(app_label) / "docs"
+            file_path = base_dir / path
+            if file_path.is_file():
+                return docs_url
+        except ModuleNotFoundError:
+            pass
+
+        logger.debug("No documentation found for %s (expected at %s)", type(model), path)
+        return None
     elif model._meta.app_label == "extras":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
     else:
