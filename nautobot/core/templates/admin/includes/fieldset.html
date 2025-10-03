@@ -22,9 +22,9 @@
         {% endif %}
         {% for line in fieldset %}
             <div class="row">
-                <div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">
+                <div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} d-none{% endif %}{% endfor %}">
                     {% for field in line %}
-                        <div class="col-lg-12 mb-10 d-flex justify-content-center{% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
+                        <div class="col-lg-12 mb-10 d-flex justify-content-center{% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} d-none{% endif %}{% endif %}">
                             <div class="col-form-label col-lg-3">
                                 {{ field.label_tag }}
                             </div>

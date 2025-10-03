@@ -115,7 +115,7 @@
     message: hidden is now d-none
     flags: re.DOTALL
     patterns:
-      - class="[^"]*(?<!-)hidden\b[^"]*"
+      - class="[^"]*(?<![-_.])hidden\b[^"]*"
 - rule:
     name: B022
     message: visible- is replaced by d-{value}-{breakpoint}. Value can be block, inline, inline-block, table, flex, etc. Breakpoint can be sm, md, lg, or xl.
@@ -139,7 +139,7 @@
     message: hidden- is replaced by d-{breakpoint}. Value can be sm, md, lg, or xl.
     flags: re.DOTALL
     patterns:
-      - hidden-.*
+      - (?<!-)hidden-.*
 - rule:
     name: B032
     message: The contextual classes (e.g., label-primary, label-success) now use the general-purpose classes bg-primary, bg-success, etc.
