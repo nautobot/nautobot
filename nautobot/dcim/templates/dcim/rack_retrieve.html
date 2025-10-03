@@ -14,20 +14,20 @@
 {% block title %}Rack {{ object }}{% endblock title %}
 
 {% block panel_buttons %}
-    <button class="btn btn-sm btn-default toggle-fullname" selected="selected">
+    <button class="btn btn-sm btn-secondary toggle-fullname" selected="selected">
         <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
     </button>
-    <button class="btn btn-sm btn-default toggle-images" selected="selected">
+    <button class="btn btn-sm btn-secondary toggle-images" selected="selected">
         <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
     </button>
 {% endblock panel_buttons %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Rack</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Location</td>
                 <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
@@ -82,18 +82,18 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Dimensions</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Type</td>
                 <td>
                     {% if object.type %}
                         {{ object.get_type_display }}
                     {% else %}
-                        <span class="text-muted">None</span>
+                        <span class="text-secondary">None</span>
                     {% endif %}
                 </td>
             </tr>
@@ -111,7 +111,7 @@
                     {% if object.outer_width %}
                         <span>{{ object.outer_width }} {{ object.get_outer_unit_display }}</span>
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -121,30 +121,30 @@
                     {% if object.outer_depth %}
                         <span>{{ object.outer_depth }} {{ object.get_outer_unit_display }}</span>
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Comments</strong>
         </div>
-        <div class="panel-body rendered-markdown">
+        <div class="card-body rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
-                <span class="text-muted">None</span>
+                <span class="text-secondary">None</span>
             {% endif %}
         </div>
     </div>
     {% if power_feeds %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Power Feeds</strong>
             </div>
-            <table class="table panel-body">
+            <table class="table card-body">
                 <tr>
                     <th>Panel</th>
                     <th>Feed</th>
@@ -172,7 +172,7 @@
                                     {% endif %}
                                 {% endwith %}
                             {% else %}
-                                <td class="text-muted">N/A</td>
+                                <td class="text-secondary">N/A</td>
                             {% endif %}
                         {% endwith %}
                     </tr>
@@ -180,26 +180,26 @@
             </table>
         </div>
     {% endif %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Images</strong>
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="panel-footer text-right noprint">
-                <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
+            <div class="card-footer text-right d-print-none">
+                <a href="{% url 'dcim:rack_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
                 </a>
             </div>
         {% endif %}
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Reservations</strong>
         </div>
         {% if reservations %}
-            <table class="table table-hover panel-body">
+            <table class="table table-hover card-body">
                 <tr>
                     <th>Units</th>
                     <th>Tenant</th>
@@ -218,14 +218,14 @@
                             {{ resv.description }}<br />
                             <small>{{ resv.user }} &middot; {{ resv.created }}</small>
                         </td>
-                        <td class="text-right noprint">
+                        <td class="text-right d-print-none">
                             {% if perms.dcim.change_rackreservation %}
-                                <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-xs" title="Edit reservation">
+                                <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-sm" title="Edit reservation">
                                     <i class="mdi mdi-pencil" aria-hidden="true"></i>
                                 </a>
                             {% endif %}
                             {% if perms.dcim.delete_rackreservation %}
-                                <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-xs" title="Delete reservation">
+                                <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-sm" title="Delete reservation">
                                     <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
                                 </a>
                             {% endif %}
@@ -234,11 +234,11 @@
                 {% endfor %}
             </table>
         {% else %}
-            <div class="panel-body text-muted">None</div>
+            <div class="card-body text-secondary">None</div>
         {% endif %}
         {% if perms.dcim.add_rackreservation %}
-            <div class="panel-footer text-right noprint">
-                <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-xs">
+            <div class="card-footer text-right d-print-none">
+                <a href="{% url 'dcim:rackreservation_add' %}?rack={{ object.pk }}&return_url={{ object.get_absolute_url }}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Add a reservation
                 </a>
@@ -249,25 +249,25 @@
 
 {% block content_right_page %}
     <div class="row" style="margin-bottom: 20px">
-        <div class="col-md-6 col-sm-6 col-xs-12 text-center">
+        <div class="col-lg-6 col-md-6 col-sm-12 text-center">
             <div style="margin-left: 30px">
                 <h4>Front</h4>
                 {% include 'dcim/inc/rack_elevation.html' with face='front' %}
             </div>
         </div>
-        <div class="col-md-6 col-sm-6 col-xs-12 text-center">
+        <div class="col-lg-6 col-md-6 col-sm-12 text-center">
             <div style="margin-left: 30px">
                 <h4>Rear</h4>
                 {% include 'dcim/inc/rack_elevation.html' with face='rear' %}
             </div>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Non-Racked Devices</strong>
         </div>
         {% if nonracked_devices %}
-            <table class="table table-hover panel-body">
+            <table class="table table-hover card-body">
                 <tr>
                     <th>Name</th>
                     <th>Role</th>
@@ -283,17 +283,17 @@
                             <td>{{ device.parent_bay.device|hyperlinked_object }}</td>
                             <td>{{ device.parent_bay }}</td>
                         {% else %}
-                            <td colspan="2" class="text-muted">&mdash;</td>
+                            <td colspan="2" class="text-secondary">&mdash;</td>
                         {% endif %}
                     </tr>
                 {% endfor %}
             </table>
         {% else %}
-            <div class="panel-body text-muted">None</div>
+            <div class="card-body text-secondary">None</div>
         {% endif %}
         {% if perms.dcim.add_device %}
-            <div class="panel-footer text-right noprint">
-                <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
+            <div class="card-footer text-right d-print-none">
+                <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Add a non-racked device
                 </a>
