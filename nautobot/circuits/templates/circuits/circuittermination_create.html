@@ -29,9 +29,15 @@
                 {% with providernetwork_tab_active=form.initial.provider_network %}
                     {% with cloudnetwork_tab_active=form.initial.cloud_network %}
                         <ul class="nav nav-tabs" role="tablist">
-                            <li role="presentation"{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} class="active"{% endif %}><a href="#location" role="tab" data-bs-toggle="tab">Location</a></li>
-                            <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-bs-toggle="tab">Provider Network</a></li>
-                            <li role="presentation"{% if cloudnetwork_tab_active %} class="active"{% endif %}><a href="#cloudnetwork" role="tab" data-bs-toggle="tab">Cloud Network</a></li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} active{% endif %}" href="#location" role="tab" data-bs-toggle="tab">Location</a>
+                            </li>
+                            <li class="nav-item" role="presentation"> 
+                                <a class="nav-link{% if providernetwork_tab_active %} active{% endif %}" href="#providernetwork" role="tab" data-bs-toggle="tab">Provider Network</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link{% if cloudnetwork_tab_active %} active{% endif %}" href="#cloudnetwork" role="tab" data-bs-toggle="tab">Cloud Network</a>
+                            </li>
                         </ul>
                         <div class="tab-content">
                             <div class="tab-pane{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} active{% endif %}" id="location">
