@@ -1,7 +1,7 @@
 {% load helpers %}
 {% if computed_fields %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Computed Fields</strong>
             <button
                 aria-expanded="true"
@@ -13,7 +13,7 @@
                 Collapse All
             </button>
         </div>
-        <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
+        <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover card-body attr-table">
             {% for grouping, fields in computed_fields.items %}
                 {% with forloop.counter0 as count %}
                     {% if grouping != "" %}

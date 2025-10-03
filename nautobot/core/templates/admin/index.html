@@ -37,7 +37,7 @@
 
 {% block content %}
     <div class="row">
-        <div id="content-main" class="col-sm-12">
+        <div id="content-main" class="col-md-12">
 
             <div class="tabbable">
                 {% for app in app_list %}
@@ -54,13 +54,13 @@
                                     {% endif %}
 
                                     {% if model.add_url or model.admin_url%}
-                                        <div class="pull-right">
+                                        <div class="float-end">
                                             {% if model.add_url %}
-                                                <a href="{{ model.add_url }}" class="btn btn-xs btn-primary"><span class="glyphicon glyphicon-plus"></span>
+                                                <a href="{{ model.add_url }}" class="btn btn-sm btn-primary"><span class="glyphicon glyphicon-plus"></span>
                                                     {% trans 'Add' %}</a>
                                             {% endif %}
                                             {% if model.admin_url %}
-                                                <a href="{{ model.admin_url }}" class="btn btn-xs btn-warning"><span class="glyphicon glyphicon-edit"></span>
+                                                <a href="{{ model.admin_url }}" class="btn btn-sm btn-warning"><span class="glyphicon glyphicon-edit"></span>
                                                     {% trans 'Edit' %}</a>
                                             {% endif %}
                                         </div>

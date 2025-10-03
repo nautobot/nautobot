@@ -12,7 +12,7 @@
                     <input type="hidden" name="_schedule_type" value="immediately">
                     <input type="hidden" name="export_format" value="yaml">
                     <button class="dropdown-item" type="submit">
-                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML
+                        <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML
                     </button>
                 </form>
             </li>
@@ -25,7 +25,7 @@
                 <input type="hidden" name="_schedule_type" value="immediately">
                 <input type="hidden" name="export_format" value="csv">
                 <button class="dropdown-item" type="submit">
-                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV
+                    <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV
                 </button>
             </form>
         </li>
@@ -40,7 +40,7 @@
                         <input type="hidden" name="_schedule_type" value="immediately">
                         <button class="dropdown-item" type="submit"
                                 {% if et.description %}title="{{ et.description }}"{% endif %}
-                        ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
+                        ><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>
                 </li>
             {% endfor %}

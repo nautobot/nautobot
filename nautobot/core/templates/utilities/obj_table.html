@@ -28,7 +28,7 @@
             </div>
         {% endif %}
         {% include table_template|default:'responsive_table.html' %}
-        <div class="pull-left d-print-none">
+        <div class="floag-start d-print-none">
             {% block extra_actions %}{% endblock %}
             {% if bulk_edit_url and permissions.change %}
                 <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm">

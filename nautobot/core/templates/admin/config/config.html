@@ -14,11 +14,11 @@
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-lg-6 offset-lg-3">
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
@@ -38,9 +38,9 @@
 
                 <div class="row">
                     {% for fieldset in fieldsets %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading"><strong>{{ fieldset.title }}</strong></div>
-                            <div class="panel-body">
+                        <div class="card">
+                            <div class="card-header"><strong>{{ fieldset.title }}</strong></div>
+                            <div class="card-body">
                                 {% for item in fieldset.config_values %}
                                 {# Handle App Configuration #}
                                     {% if "__" in item.name %}
@@ -60,13 +60,13 @@
                                                 {{ item.form_field.as_hidden }}
                                             {% else %}
                                                 <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                                    <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
+                                                    <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                         {{ name | split:"_" | join:" " }}
                                                         <span class="form-text">
                                                             (default: <code>{{ item.default }}</code>)
                                                         </span>
                                                     </label>
-                                                    <div class="col-md-9">
+                                                    <div class="col-lg-9">
                                                         {{ item.form_field.errors }}
                                                         {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                         {{ item.form_field }}
@@ -90,13 +90,13 @@
                                             {{ item.form_field.as_hidden }}
                                         {% else %}
                                             <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                                <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
+                                                <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ item.name | split:"_" | join:" " }}
                                                     <span class="form-text">
                                                         (default: <code>{{ item.default }}</code>)
                                                     </span>
                                                 </label>
-                                                <div class="col-md-9">
+                                                <div class="col-lg-9">
                                                     {{ item.form_field.errors }}
                                                     {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                     {{ item.form_field }}
@@ -113,7 +113,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
+            <div class="col-lg-6 offset-lg-3 text-right">
                 <input type="submit" name="_save" class="btn btn-primary" value="{% trans 'Save' %}"/>
             </div>
         </div>

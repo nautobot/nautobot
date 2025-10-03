@@ -104,7 +104,7 @@ Leaving it here for now in case apps are making use of it.
                                     <td>{{ field.required | render_boolean }}</td>
                                     <td>
                                         {% if field.choices %}
-                                            <button type="button" class="btn btn-link btn-xs float-end" data-bs-toggle="modal" data-target="#{{ field.name }}_choices">
+                                            <button type="button" class="btn btn-link btn-sm float-end" data-bs-toggle="modal" data-bs-target="#{{ field.name }}_choices">
                                                 <span aria-hidden="true" class="mdi mdi-help-circle"></span>
                                             </button>
                                             <div class="modal fade" id="{{ field.name }}_choices" tabindex="-1" role="dialog">
