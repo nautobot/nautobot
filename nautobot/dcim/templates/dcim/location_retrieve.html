@@ -73,7 +73,7 @@
                     {% if object.physical_address %}
                         <div class="float-end d-print-none">
                             <a href="https://maps.google.com/?q={{ object.physical_address|urlencode }}" target="_blank" class="btn btn-primary btn-sm">
-                                <i class="mdi mdi-map-marker"></i> Map it
+                                <span class="mdi mdi-map-marker"></span> Map it
                             </a>
                         </div>
                         <span>{{ object.physical_address|linebreaksbr }}</span>
@@ -92,7 +92,7 @@
                     {% if object.latitude and object.longitude %}
                         <div class="float-end d-print-none">
                             <a href="https://maps.google.com/?q={{ object.latitude }},{{ object.longitude }}" target="_blank" class="btn btn-primary btn-sm">
-                                <i class="mdi mdi-map-marker"></i> Map it
+                                <span class="mdi mdi-map-marker"></span> Map it
                             </a>
                         </div>
                         <span>{{ object.latitude }}, {{ object.longitude }}</span>
@@ -187,21 +187,21 @@
         <table class="table table-hover card-body">
             {% for rg in rack_groups %}
                 <tr>
-                    <td style="padding-left: {{ rg.tree_depth }}8px"><i class="mdi mdi-folder-open"></i> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
+                    <td style="padding-left: {{ rg.tree_depth }}8px"><span class="mdi mdi-folder-open"></span> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
                     <td class="text-right d-print-none">
                         <a href="{% url 'dcim:rack_elevation_list' %}?rack_group={{ rg.pk }}" class="btn btn-sm btn-primary" title="View elevations">
-                            <i class="mdi mdi-server"></i>
+                            <span class="mdi mdi-server"></span>
                         </a>
                     </td>
                 </tr>
             {% endfor %}
             <tr>
-                <td><i class="mdi mdi-folder-open"></i> All racks</td>
+                <td><span class="mdi mdi-folder-open"></span> All racks</td>
                 <td>{{ stats.rack_count }}</td>
                 <td class="text-right d-print-none">
                     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.pk }}" class="btn btn-sm btn-primary" title="View elevations">
-                        <i class="mdi mdi-server"></i>
+                        <span class="mdi mdi-server"></span>
                     </a>
                 </td>
             </tr>

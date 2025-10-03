@@ -221,12 +221,12 @@
                         <td class="text-right d-print-none">
                             {% if perms.dcim.change_rackreservation %}
                                 <a href="{% url 'dcim:rackreservation_edit' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-warning btn-sm" title="Edit reservation">
-                                    <i class="mdi mdi-pencil" aria-hidden="true"></i>
+                                    <span class="mdi mdi-pencil" aria-hidden="true"></span>
                                 </a>
                             {% endif %}
                             {% if perms.dcim.delete_rackreservation %}
                                 <a href="{% url 'dcim:rackreservation_delete' pk=resv.pk %}?return_url={{ object.get_absolute_url }}" class="btn btn-danger btn-sm" title="Delete reservation">
-                                    <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
+                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                                 </a>
                             {% endif %}
                         </td>

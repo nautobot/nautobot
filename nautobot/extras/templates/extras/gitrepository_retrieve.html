@@ -7,14 +7,14 @@
               method="post" action="{% url 'extras:gitrepository_dryrun' pk=object.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-info">
-                <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
+                <span class="mdi mdi-book-refresh" aria-hidden="true"></span> Dry-Run
             </button>
         </form>
         <form class="form-inline" style="display: inline-block"
               method="post" action="{% url 'extras:gitrepository_sync' pk=object.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
-                <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
+                <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span> Sync
             </button>
         </form>
     {% endif %}
@@ -65,7 +65,7 @@
                 <tr>
                     <td>
                         <span style="display: inline-block" class="badge bg-info">
-                            <i class="mdi {{ entry.icon }}"></i>
+                            <span class="mdi {{ entry.icon }}"></span>
                         </span>
                         {{ entry.name|title }}</td>
                     <td>

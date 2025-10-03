@@ -9,17 +9,17 @@
         {% block buttons %}
             {% if app_data.home_url %}
                 <a href="{% url app_data.home_url %}" class="btn btn-primary">
-                    <i class="mdi mdi-home"></i> App Home
+                    <span class="mdi mdi-home"></span> App Home
                 </a>
             {% endif %}
             {% if app_data.config_url %}
                 <a href="{% url app_data.config_url %}" class="btn btn-warning">
-                    <i class="mdi mdi-cog"></i> App Configuration
+                    <span class="mdi mdi-cog"></span> App Configuration
                 </a>
             {% endif %}
             {% if app_data.docs_url %}
                 <a href="{% url app_data.docs_url %}" class="btn btn-info">
-                    <i class="mdi mdi-cog"></i> App Documentation
+                    <span class="mdi mdi-cog"></span> App Documentation
                 </a>
             {% endif %}
         {% endblock buttons %}

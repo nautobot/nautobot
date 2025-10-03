@@ -35,7 +35,7 @@
                             {{ obj.parent_bay.name }}
                             {% if perms.dcim.change_devicebay %}
                                 <a href="{% url 'dcim:devicebay_depopulate' pk=obj.parent_bay.pk %}" class="btn btn-danger btn-sm">
-                                    <i class="mdi mdi-close-thick" aria-hidden="true" title="Remove device"></i> Remove
+                                    <span class="mdi mdi-close-thick" aria-hidden="true" title="Remove device"></span> Remove
                                 </a>
                             {% endif %}
                         </p>
