@@ -64,6 +64,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -537,6 +538,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
             "vc_priority": {"label": "Virtual chassis priority"},
+            "clusters": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):
@@ -1151,4 +1153,12 @@ class ModuleFamilySerializer(NautobotModelSerializer):
 
     class Meta:
         model = ModuleFamily
+        fields = "__all__"
+
+
+class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
+    """Serializer for DeviceClusterAssignment model."""
+
+    class Meta:
+        model = DeviceClusterAssignment
         fields = "__all__"

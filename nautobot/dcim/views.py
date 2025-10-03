@@ -30,7 +30,7 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -90,7 +90,7 @@ from nautobot.ipam.tables import (
 )
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -964,6 +964,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.SoftwareImageFileTable,
                 table_filter="device_types",
+                order_by_fields=["image_file_name"],
                 select_related_fields=["software_version", "status"],
                 exclude_columns=["actions", "tags"],
                 related_field_name="device_types",
@@ -983,7 +984,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-type-add-components-button"},
                 icon="mdi-plus-thick",
@@ -2010,7 +2011,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         queryset = super().get_queryset()
         if self.detail:  # TODO: change to self.action == "retrieve" as a part of addressing NAUTOBOT-1051
             queryset = queryset.select_related(
-                "cluster__cluster_group",
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
                 "device_type__device_family",
@@ -2025,7 +2025,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 "status",
                 "tenant__tenant_group",
                 "virtual_chassis",
-            ).prefetch_related("images", "software_image_files")
+            ).prefetch_related("clusters", "images", "software_image_files")
         if self.action == "config_context":
             queryset = queryset.annotate_config_context_data()
         return queryset
@@ -2281,7 +2281,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
@@ -2412,7 +2412,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "device_redundancy_group",
                     "controller_managed_device_group",
                     "controller_managed_device_group__controller",
-                    "cluster",
                     "software_version",
                 ],
                 key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
@@ -2420,7 +2419,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "primary_ip4": [render_ip_with_nat],
                     "primary_ip6": [render_ip_with_nat],
                 },
-                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
+                hide_if_unset=["controller_managed_device_group__controller"],
             ),
             DevicePowerUtilizationPanel(
                 weight=100,
@@ -2436,6 +2435,15 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
                 show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=250,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Clusters",
+                table_class=ClusterTable,
+                table_filter="devices",
+                show_table_config_button=False,
+                exclude_columns=["device_count"],
             ),
             object_detail.ObjectsTablePanel(
                 weight=300,
