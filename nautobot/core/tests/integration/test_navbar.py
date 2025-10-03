@@ -94,3 +94,37 @@ class NavBarTestCase(SeleniumTestCase):
                 self.assertEqual(len(tabs), 1, msg=f'"{tab_name}" was unexpectedly not found.')
             else:
                 self.assertTrue(tabs.is_empty(), msg=f'"{tab_name}" was unexpectedly found.')
+
+    def test_navbar_render_with_limited_permissions_and_no_empty_tabs_and_groups(self):
+        """
+        Render navbar from home page with limited permissions.
+        This restricts the user to be able to view ONLY locations on the navbar.
+        It then checks the UI for these restrictions and asserts that tabs and groups with no children are not rendered.
+        """
+
+        self.add_permissions("dcim.view_location")
+        user_permissions = self.user.get_all_permissions()
+
+        self.browser.visit(self.live_server_url)
+
+        visible_tabs = set()
+        visible_groups = set()
+        visible_items = set()
+
+        for tab_name, groups in self.navbar.items():
+            for group_name, items in groups.items():
+                for item_name, item_details in items.items():
+                    if item_details["permission"] in user_permissions:
+                        visible_tabs.add(tab_name)
+                        visible_groups.add(group_name)
+                        visible_items.add(item_name)
+                    item = self.browser.find_by_xpath(
+                        f"//*[@id='sidenav']//a[@data-item-weight and normalize-space()='{item_name}']"
+                    )
+                    self.assertEqual(len(item), 1 if item_name in visible_items else 0)
+                group = self.browser.find_by_xpath(
+                    f"//*[@id='sidenav']//li[@data-group-weight and normalize-space()='{group_name}']"
+                )
+                self.assertEqual(len(group), 1 if group_name in visible_groups else 0)
+            tab = self.browser.find_by_xpath(f"//*[@id='sidenav']//li[@data-section-name='{tab_name}']")
+            self.assertEqual(len(tab), 1 if tab_name in visible_tabs else 0)
