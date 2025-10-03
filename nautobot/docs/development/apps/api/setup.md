@@ -60,8 +60,8 @@ The app source directory contains all of the actual Python code and other resour
 
 The documentation for each pip-installed application is served dynamically through Django views and is restricted to authenticated users. This approach ensures that:
 
-- Works regardless of where the app is installed (editable install, virtualenv, system site-packages).
-- Access is protected by Django authentication.
+* Works regardless of where the app is installed (editable install, virtualenv, system site-packages).
+* Access is protected by Django authentication.
 
 ### File Structure
 
