@@ -777,7 +777,7 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
 
         return super().render_value(key, value, context)
 
