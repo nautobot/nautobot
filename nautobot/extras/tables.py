@@ -374,7 +374,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         {% if record.remaining_approvals == 1 %}
         {{ record.remaining_approvals }} more approval needed
         {% elif record.remaining_approvals == 0 %}
-        <span class="text-muted">&mdash;</span>
+        <span class="text-secondary">&mdash;</span>
         {% else %}
         {{ record.remaining_approvals }} more approvals needed
         {% endif %}
@@ -1099,7 +1099,7 @@ class JobTable(BaseTable):
             {% if value %}
                 {{ value.date_created|date:SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
-                <span class="text-muted">Never</span>
+                <span class="text-secondary">Never</span>
             {% endif %}
         """,
         extra_context={"SHORT_DATETIME_FORMAT": settings.SHORT_DATETIME_FORMAT},

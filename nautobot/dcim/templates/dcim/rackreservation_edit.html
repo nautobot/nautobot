@@ -2,9 +2,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Rack Reservation</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Rack Reservation</strong></div>
+        <div class="card-body">
             {% render_field form.location %}
             {% render_field form.rack_group %}
             {% render_field form.rack %}
@@ -13,9 +13,9 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenant Assignment</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Tenant Assignment</strong></div>
+        <div class="card-body">
             {% render_field form.tenant_group %}
             {% render_field form.tenant %}
         </div>

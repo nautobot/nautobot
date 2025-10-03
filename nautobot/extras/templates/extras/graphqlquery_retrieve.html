@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Query</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td><span>{{ object.name }}</span></td>
@@ -24,20 +24,20 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Response</strong>
-            <button class="btn btn-primary btn-xs pull-right" onclick="test_query()">Execute</button>
+            <button class="btn btn-primary btn-sm float-end" onclick="test_query()">Execute</button>
         </div>
         {% if object.variables %}
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 <tr>
                     <td>Variables:</td>
                     <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea></td>
                 </tr>
             </table>
         {% endif %}
-        <div class="panel-footer">
+        <div class="card-footer">
                 <pre id="query_output">
 
                 </pre>

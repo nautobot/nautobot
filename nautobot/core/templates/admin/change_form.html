@@ -29,7 +29,7 @@
                     {{ opts.verbose_name_plural|capfirst }}
                 {% endif %}
             </li>
-            <li class="breadcrumb-item active">{% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}</li>
+            <li class="breadcrumb-item active" aria-current="page">{% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}</li>
         </ol>
     {% endblock %}
 {% endif %}
@@ -80,7 +80,7 @@
         {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}
 
         <div id="content-main" class="row">
-            <div {% if is_popup %}class="col-md-12"{% else %}class="col-md-6 col-md-offset-3"{% endif %}>
+            <div {% if is_popup %}class="col-lg-12"{% else %}class="col-lg-6 offset-lg-3"{% endif %}>
                 {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
                 {% block field_sets %}
                     {% for fieldset in adminform %}

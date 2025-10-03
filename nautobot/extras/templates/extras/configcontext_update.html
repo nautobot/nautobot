@@ -2,9 +2,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Config Context</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Config Context</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.weight %}
             {% render_field form.description %}
@@ -12,9 +12,9 @@
             {% render_field form.is_active %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Assignment</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Assignment</strong></div>
+        <div class="card-body">
             {% render_field form.locations %}
             {% render_field form.roles %}
             {% render_field form.device_types %}
@@ -30,9 +30,9 @@
             {% endif %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Data</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Data</strong></div>
+        <div class="card-body">
             {% render_field form.data %}
         </div>
     </div>
@@ -41,9 +41,9 @@
     and incorrect, "Tags" field to the form. Currently config-contexts don't support custom-fields or relationships,
     but they do support notes.
     {% endcomment %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Notes</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Notes</strong></div>
+        <div class="card-body">
             {% render_field form.object_note %}
         </div>
     </div>

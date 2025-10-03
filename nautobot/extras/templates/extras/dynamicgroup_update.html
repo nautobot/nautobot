@@ -4,9 +4,9 @@
 
 {% block form_errors %}
     {% if form.non_field_errors %}
-        <div class="panel panel-danger">
-            <div class="panel-heading"><strong>Errors</strong></div>
-            <div class="panel-body">
+        <div class="card border-danger">
+            <div class="card-header bg-danger-subtle border-danger text-body"><strong>Errors</strong></div>
+            <div class="card-body">
                 {{ form.non_field_errors }}
                 {% for child in children.forms %}
                     {% if child.errors %}
@@ -19,9 +19,9 @@
 {% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Dynamic Group</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Dynamic Group</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.description %}
             {% render_field form.content_type %}
@@ -29,15 +29,15 @@
             {% render_field form.tenant %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Filter Options</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Filter Options</strong></div>
+        <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active">
-                    <a href="#filter-form" role="tab" data-toggle="tab">Filter Fields</a>
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link active" href="#filter-form" role="tab" data-bs-toggle="tab">Filter Fields</a>
                 </li>
-                <li role="presentation">
-                    <a href="#children-form" role="tab" data-toggle="tab">Child Groups</a>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" href="#children-form" role="tab" data-bs-toggle="tab">Child Groups</a>
                 </li>
             </ul>
             <div class="tab-content">
@@ -49,26 +49,26 @@
                             expected to have string inputs and do not support multiple values.
                         </span>
 
-                        <div class="panel panel-default">
-                            <div class="panel-heading"><strong>Object Fields</strong></div>
-                            <div class="panel-body">
+                        <div class="card">
+                            <div class="card-header"><strong>Object Fields</strong></div>
+                            <div class="card-body">
                                 {% render_form filter_form excluded_fields="[]" %}
                             </div>
                         </div>
 
                         {% if filter_form.custom_fields %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading"><strong>Custom Fields</strong></div>
-                                <div class="panel-body">
+                            <div class="card">
+                                <div class="card-header"><strong>Custom Fields</strong></div>
+                                <div class="card-body">
                                     {% render_custom_fields filter_form %}
                                 </div>
                             </div>
                         {% endif %}
 
                         {% if filter_form.relationships %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading"><strong>Relationships</strong></div>
-                                <div class="panel-body">
+                            <div class="card">
+                                <div class="card-header"><strong>Relationships</strong></div>
+                                <div class="card-body">
                                     {% render_relationships filter_form %}
                                 </div>
                             </div>

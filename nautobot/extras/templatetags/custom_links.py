@@ -81,7 +81,7 @@ def custom_links(context, obj):
                     links_rendered += format_html(GROUP_LINK, link_rendered, link_target, text_rendered)
             except Exception as e:
                 links_rendered += format_html(
-                    '<li><a disabled="disabled" title="{}"><span class="text-muted">'
+                    '<li><a disabled="disabled" title="{}"><span class="text-secondary">'
                     '<i class="mdi mdi-alert"></i> {}</span></a></li>',
                     e,
                     cl.name,

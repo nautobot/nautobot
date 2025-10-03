@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Cluster</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>{{ object.name }}</td>
@@ -33,23 +33,23 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Comments</strong>
         </div>
-        <div class="panel-body nb-rendered-markdown">
+        <div class="card-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
-                <span class="text-muted">None</span>
+                <span class="text-secondary">None</span>
             {% endif %}
         </div>
     </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Host Devices</strong>
         </div>
         {% if perms.virtualization.change_cluster %}
@@ -58,14 +58,14 @@
         {% endif %}
         {% include 'responsive_table.html' with table=device_table %}
         {% if perms.virtualization.change_cluster %}
-            <div class="panel-footer d-print-none">
-                <div class="pull-right">
-                    <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-xs">
+            <div class="card-footer d-print-none">
+                <div class="float-end">
+                    <a href="{% url 'virtualization:cluster_add_devices' pk=object.pk %}?location={{ object.location.pk }}" class="btn btn-primary btn-sm">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add devices
                     </a>
                 </div>
-                <button type="submit" name="_remove" class="btn btn-danger primary btn-xs">
+                <button type="submit" name="_remove" class="btn btn-danger primary btn-sm">
                     <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                     Remove devices
                 </button>

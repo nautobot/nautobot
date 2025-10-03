@@ -10,22 +10,22 @@
             <div class="card-body">
                 {% render_field form.action %}
                 {% render_field form.location %}
-                <div class="form-group">
-                    <label class="col-md-3 control-label nb-required">Source Location "Contact Name"</label>
-                    <div class="col-md-9">
-                        <p class="form-control-static">{{ obj.contact_name | placeholder}}</p>
+                <div class="mb-10 d-flex justify-content-center">
+                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Name"</label>
+                    <div class="col-lg-9">
+                        <p class="form-control-plaintext">{{ obj.contact_name | placeholder}}</p>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="col-md-3 control-label nb-required">Source Location "Contact Phone"</label>
-                    <div class="col-md-9">
-                        <p class="form-control-static">{{ obj.contact_phone | placeholder}}</p>
+                <div class="mb-10 d-flex justify-content-center">
+                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Phone"</label>
+                    <div class="col-lg-9">
+                        <p class="form-control-plaintext">{{ obj.contact_phone | placeholder}}</p>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="col-md-3 control-label nb-required">Source Location "Contact Email"</label>
-                    <div class="col-md-9">
-                        <p class="form-control-static">{{ obj.contact_email | placeholder}}</p>
+                <div class="mb-10 d-flex justify-content-center">
+                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Email"</label>
+                    <div class="col-lg-9">
+                        <p class="form-control-plaintext">{{ obj.contact_email | placeholder}}</p>
                     </div>
                 </div>
                 {% render_field form.name %}

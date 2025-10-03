@@ -669,7 +669,7 @@ class TagColumn(django_tables2.TemplateColumn):
     {% for tag in value.all %}
         {% include 'utilities/templatetags/tag.html' %}
     {% empty %}
-        <span class="text-muted">&mdash;</span>
+        <span class="text-secondary">&mdash;</span>
     {% endfor %}
     """
 

@@ -7,12 +7,12 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
                     <strong>Approval Workflow</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Approval Workflow Definition</td>
                         <td>{{ approval_workflow.approval_workflow_definition | hyperlinked_object }}</td>
@@ -28,7 +28,7 @@
                 </table>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             {% include 'panel_table.html' with table=stage_table heading="Stages"%}
             {% include 'panel_table.html' with table=response_table heading="Responses"%}
         </div>

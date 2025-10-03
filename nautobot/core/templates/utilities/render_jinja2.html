@@ -22,19 +22,19 @@
 {% block content %}
     <form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
         <div class="row">
-            <div class="col-lg-6 col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading"><strong>Template</strong></div>
-                    <div class="panel-body">
-                        <div class="form-group">
-                            <label class="col-md-3 control-label nb-required" for="id_template_code">Jinja Template</label>
-                            <div class="col-md-9">
+            <div class="col-xl-6 col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong>Template</strong></div>
+                    <div class="card-body">
+                        <div class="mb-10 d-flex justify-content-center">
+                            <label class="col-lg-3 col-form-label nb-required" for="id_template_code">Jinja Template</label>
+                            <div class="col-lg-9">
                                 <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label" for="id_context">Data</label>
-                            <div class="col-md-9">
+                        <div class="mb-10 d-flex justify-content-center">
+                            <label class="col-lg-3 col-form-label" for="id_context">Data</label>
+                            <div class="col-lg-9">
                                 <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
                                 <span class="form-text">Enter data in <a href="https://json.org/">JSON</a> format.</span>
                             </div>
@@ -45,16 +45,16 @@
                     <button type="submit" class="btn btn-primary">Render</button>
                 </div>
             </div>
-            <div class="col-lg-6 col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+            <div class="col-xl-6 col-lg-6">
+                <div class="card">
+                    <div class="card-header">
                         <strong>Rendered Template</strong>
                         <button type="button" class="btn btn-secondary opacity-100 nb-btn-inline-hover copy-rendered-template" data-clipboard-target="#rendered_template">
                             <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                             <span class="visually-hidden">Copy</span>
                         </button>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         <textarea readonly="readonly" cols="40" rows="23" class="form-control" placeholder="Rendered Template" id="rendered_template"></textarea>
                     </div>
                 </div>

@@ -1583,7 +1583,7 @@ class Controller(PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
     @property
@@ -1680,7 +1680,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
 

@@ -1,11 +1,11 @@
 {% load helpers %}
 {% if show_available is not None %}
     <div class="btn-group" role="group">
-        <a href="{{ request.path }}{% legacy_querystring request show_available='true' %}" class="btn btn-default btn-xs{% if show_available %} active disabled{% endif %}">
-            <i class="mdi mdi-eye-outline"></i> Show available
+        <a href="{{ request.path }}{% legacy_querystring request show_available='true' %}" class="btn btn-secondary btn-sm{% if show_available %} active disabled{% endif %}">
+            <span class="mdi mdi-eye-outline"></span> Show available
         </a>
-        <a href="{{ request.path }}{% legacy_querystring request show_available='false' %}" class="btn btn-default btn-xs{% if not show_available %} active disabled{% endif %}">
-            <i class="mdi mdi-eye-off-outline"></i> Hide available
+        <a href="{{ request.path }}{% legacy_querystring request show_available='false' %}" class="btn btn-secondary btn-sm{% if not show_available %} active disabled{% endif %}">
+            <span class="mdi mdi-eye-off-outline"></span> Hide available
         </a>
     </div>
 {% endif %}
