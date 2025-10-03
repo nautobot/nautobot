@@ -182,7 +182,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell --install-dir /tmp/fnm && \
     cp /tmp/fnm/fnm /usr/bin
 
-WORKDIR /source/nautobot/project-static
+WORKDIR /source/nautobot/ui
 
 # Instead of using fnm shell integration, we manually set the PATH to include the fnm directory
 ENV PATH="${FNM_DIR}/aliases/default/bin:${PATH}"

@@ -723,8 +723,8 @@ def loaddata(context, filepath="db_output.json"):
 
 @task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
 def npm(context, command):
-    """Execute any given npm command inside `project-static` directory."""
-    run_command(context, f"npm --prefix nautobot/project-static {command}")
+    """Execute any given npm command inside `ui` directory."""
+    run_command(context, f"npm --prefix nautobot/ui {command}")
 
 
 @task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
