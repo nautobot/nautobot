@@ -3,9 +3,11 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.utils.html import format_html, format_html_join
 from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
 
@@ -132,3 +134,40 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
                 )
             }
         )
+
+
+def convert_watts_to_va(watts, power_factor):
+    """
+    Convert watts to VA using power factor.
+    """
+    if not watts:
+        return 0
+    return int(watts / power_factor)
+
+
+def render_software_version_and_image_files(instance, software_version, context):
+    display = hyperlinked_object(software_version)
+    overridden_software_image_files = instance.software_image_files.all()
+    if software_version is not None:
+        display += format_html(
+            '<ul class="software-image-hierarchy">{}</ul>',
+            format_html_join(
+                "\n",
+                "<li>{}{}</li>",
+                [
+                    [
+                        hyperlinked_object(img, "image_file_name"),
+                        " (overridden)" if overridden_software_image_files.exists() else "",
+                    ]
+                    for img in software_version.software_image_files.restrict(context["request"].user, "view")
+                ],
+            ),
+        )
+    if overridden_software_image_files.exists():
+        display += format_html(
+            "<br><strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
+            format_html_join(
+                "\n", "<li>{}</li>", [[hyperlinked_object(img)] for img in overridden_software_image_files.all()]
+            ),
+        )
+    return display

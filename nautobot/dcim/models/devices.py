@@ -31,7 +31,10 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
 
 from .device_components import (
     ConsolePort,
@@ -829,7 +832,7 @@ class Device(PrimaryModel, ConfigContextModel):
             if existing_virtual_chassis and existing_virtual_chassis.master == self:
                 raise ValidationError(
                     {
-                        "virtual_chassis": f"The master device for the virtual chassis ({ existing_virtual_chassis}) may not be removed"
+                        "virtual_chassis": f"The master device for the virtual chassis ({existing_virtual_chassis}) may not be removed"
                     }
                 )
 
@@ -939,6 +942,10 @@ class Device(PrimaryModel, ConfigContextModel):
         If this Device is a VirtualChassis member, return the VC master. Otherwise, return None.
         """
         return self.virtual_chassis.master if self.virtual_chassis else None
+
+    @property
+    def is_vc_master(self):
+        return self == self.get_vc_master()
 
     @property
     def vc_interfaces(self):
@@ -1078,6 +1085,28 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+    @property
+    def radio_profile_assignments(self):
+        """
+        Returns all Controller Managed Device Group Radio Profile Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupRadioProfileAssignment.objects.none()
+        return ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.none()
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
 
 
 #

@@ -175,7 +175,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
         if self.distinct:
             qs = qs.distinct()
@@ -209,14 +209,12 @@ class ContentTypeFilterMixin:
             return qs
 
         if value.isdigit():
-            return qs.filter(**{f"{self.field_name}__pk": value})
-
+            return self.get_method(qs)(**{f"{self.field_name}__pk": value})
         try:
             app_label, model = value.lower().split(".")
         except ValueError:
             return qs.none()
-
-        return qs.filter(
+        return self.get_method(qs)(
             **{
                 f"{self.field_name}__app_label": app_label,
                 f"{self.field_name}__model": model,
@@ -244,12 +242,17 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
         content_type = ContentTypeChoiceFilter(
             choices=FeatureQuery("dynamic_groups").get_choices,
         )
+
+    In most cases you should use `ContentTypeMultipleChoiceFilter` instead.
     """
 
 
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
+
+    Does NOT allow filtering by PK at this time; it would need to be reimplemented similar to
+    NaturalKeyOrPKMultipleChoiceFilter as a breaking change.
 
     Defaults to joining multiple options with "AND". Pass `conjoined=False` to
     override this behavior to join with "OR" instead.
@@ -265,43 +268,14 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         kwargs.setdefault("conjoined", True)
         super().__init__(*args, **kwargs)
 
-    def filter(self, qs, value):
-        """Filter on value, which should be list of content-type names.
-
-        e.g. `['dcim.device', 'dcim.rack']`
-        """
-        if not self.conjoined:
-            q = models.Q()
-
-        for v in value:
-            if self.conjoined:
-                qs = ContentTypeFilter.filter(self, qs, v)
-            else:
-                if v.isdigit():
-                    q |= models.Q(**{f"{self.field_name}__pk": value})
-                    continue
-                # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
-                # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
-                # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
-                # Q((field__app_label="dcim" AND field__model="device") OR (field__app_label="ipam" AND field__model="VLAN"))
-                try:
-                    app_label, model = v.lower().split(".")
-                except ValueError:
-                    continue
-                q |= models.Q(
-                    **{
-                        f"{self.field_name}__app_label": app_label,
-                        f"{self.field_name}__model": model,
-                    }
-                )
-
-        if not self.conjoined:
-            qs = qs.filter(q)
-
-        if self.distinct:
-            qs = qs.distinct()
-
-        return qs
+    def get_filter_predicate(self, v):
+        if v.isdigit():
+            return {f"{self.field_name}__pk": v}
+        try:
+            app_label, model = v.lower().split(".")
+        except ValueError:
+            return {f"{self.field_name}__pk": v}
+        return {f"{self.field_name}__app_label": app_label, f"{self.field_name}__model": model}
 
 
 class MappedPredicatesFilterMixin:
@@ -568,7 +542,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
@@ -642,6 +616,9 @@ class BaseFilterSet(django_filters.FilterSet):
             (
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
+                ContentTypeFilter,
+                ContentTypeChoiceFilter,
+                ContentTypeMultipleChoiceFilter,
                 MultiValueUUIDFilter,
                 TagFilter,
                 TreeNodeMultipleChoiceFilter,
@@ -820,6 +797,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Contacts (name or ID)",
                 )
+                cls.declared_filters["contacts"] = filters["contacts"]  # pylint: disable=no-member
 
             if "teams" not in filters:
                 filters["teams"] = NaturalKeyOrPKMultipleChoiceFilter(
@@ -828,6 +806,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Teams (name or ID)",
                 )
+                cls.declared_filters["teams"] = filters["teams"]  # pylint: disable=no-member
 
         if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):  # pylint: disable=no-member
             if not hasattr(cls._meta.model, "static_group_association_set"):  # pylint: disable=no-member
@@ -848,6 +827,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     query_params={"content_type": cls._meta.model._meta.label_lower},  # pylint: disable=no-member
                     label="Dynamic groups (name or ID)",
                 )
+                cls.declared_filters["dynamic_groups"] = filters["dynamic_groups"]  # pylint: disable=no-member
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:  # pylint: disable=no-member

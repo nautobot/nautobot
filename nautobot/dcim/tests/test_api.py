@@ -10,14 +10,16 @@ from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedTypeChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
@@ -3064,7 +3066,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                     # Interface name starts with parent device's position in VC; e.g. 1/1, 1/2, 1/3...
                     Interface.objects.create(
                         device=device,
-                        name=f"{i%3+1}/{j}",
+                        name=f"{i % 3 + 1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
                         role=interface_role,
@@ -3166,6 +3168,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
+    choices_fields = ["panel_type", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3204,7 +3207,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    choices_fields = ["phase", "supply", "type"]
+    choices_fields = ["phase", "supply", "type", "breaker_pole_count", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3229,8 +3232,20 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         )
 
         power_panels = (
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 1"),
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 2"),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 1",
+                panel_type=PowerPanelTypeChoices.TYPE_UTILITY,
+                breaker_position_count=42,
+            ),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 2",
+                panel_type=PowerPanelTypeChoices.TYPE_RPP,
+                breaker_position_count=24,
+            ),
         )
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
@@ -3285,6 +3300,9 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
+                "destination_panel": power_panels[1].pk,
+                "breaker_position": 5,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_1,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": PRIMARY,
@@ -3292,6 +3310,8 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
+                "breaker_position": 10,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_2,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": REDUNDANT,
@@ -3567,6 +3587,15 @@ class DeviceTypeToSoftwareImageFileTestCase(
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
 
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
     @classmethod
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(Controller)
@@ -3598,6 +3627,14 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "location": locations[2].pk,
                 "capabilities": ["wireless"],
             },
+            {
+                "name": "Controller 4",
+                "platform": platforms[3].pk,
+                "status": statuses[3].pk,
+                "role": roles[3].pk,
+                "location": locations[3].pk,
+                "capabilities": None,
+            },
         ]
         cls.bulk_update_data = {
             "platform": platforms[0].pk,
@@ -3608,6 +3645,15 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
 
     @classmethod
     def setUpTestData(cls):
@@ -3630,6 +3676,12 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "controller": controllers[2].pk,
                 "weight": 200,
                 "capabilities": ["wireless"],
+            },
+            {
+                "name": "ControllerManagedDeviceGroup 4",
+                "controller": controllers[3].pk,
+                "weight": 200,
+                "capabilities": None,
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent

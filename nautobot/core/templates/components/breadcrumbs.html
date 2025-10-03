@@ -1,0 +1,19 @@
+{% load helpers %}
+
+<ol class="breadcrumb">
+    {% block breadcrumbs %}
+        {% if legacy_breadcrumbs %}
+            {{ legacy_breadcrumbs | safe }}
+        {% else %}
+            {% for url, title in breadcrumbs_items %}
+                <li>
+                    {% if url %}
+                        <a href="{{ url }}">{{ title }}</a>
+                    {% else %}
+                        {{ title }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        {% endif %}
+    {% endblock %}
+</ol>

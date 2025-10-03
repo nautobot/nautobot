@@ -1372,6 +1372,37 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
+# Power Panels
+#
+
+
+class PowerPanelTypeChoices(ChoiceSet):
+    TYPE_UTILITY = "utility"
+    TYPE_GENERATOR = "generator"
+    TYPE_SWITCHGEAR = "switchgear"
+    TYPE_MDP = "mdp"
+    TYPE_UPS = "ups"
+    TYPE_TRANSFER_SWITCH = "transfer-switch"
+    TYPE_PDU = "pdu"
+    TYPE_PANELBOARD = "panelboard"
+    TYPE_MLC = "mlc"
+    TYPE_RPP = "rpp"
+
+    CHOICES = (
+        (TYPE_UTILITY, "Utility"),
+        (TYPE_GENERATOR, "Generator"),
+        (TYPE_SWITCHGEAR, "Switchgear"),
+        (TYPE_MDP, "Main Distribution Panel (MDP)"),
+        (TYPE_UPS, "Uninterruptible Power Supply (UPS)"),
+        (TYPE_TRANSFER_SWITCH, "Transfer Switch (TS)"),
+        (TYPE_PDU, "Power Distribution Unit (PDU)"),
+        (TYPE_PANELBOARD, "Panelboard"),
+        (TYPE_MLC, "Mini Load Center (MLC)"),
+        (TYPE_RPP, "Remote Power Panel (RPP)"),
+    )
+
+
+#
 # PowerFeeds
 #
 
@@ -1405,6 +1436,16 @@ class PowerFeedTypeChoices(ChoiceSet):
     }
 
 
+class PowerPathChoices(ChoiceSet):
+    PATH_A = "a"
+    PATH_B = "b"
+
+    CHOICES = (
+        (PATH_A, "Path A"),
+        (PATH_B, "Path B"),
+    )
+
+
 class PowerFeedSupplyChoices(ChoiceSet):
     SUPPLY_AC = "ac"
     SUPPLY_DC = "dc"
@@ -1423,6 +1464,18 @@ class PowerFeedPhaseChoices(ChoiceSet):
         (PHASE_SINGLE, "Single phase"),
         (PHASE_3PHASE, "Three-phase"),
     )
+
+
+class PowerFeedBreakerPoleChoices(ChoiceSet):
+    POLE_1 = 1
+    POLE_2 = 2
+    POLE_3 = 3
+
+    CHOICES = [
+        (POLE_1, "1-Pole"),
+        (POLE_2, "2-Pole"),
+        (POLE_3, "3-Pole"),
+    ]
 
 
 #
