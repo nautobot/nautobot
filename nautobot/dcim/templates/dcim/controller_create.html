@@ -20,8 +20,12 @@
             {% render_field form.external_integration %}
             {% with controllerdevice_tab_active=form.initial.controller_device %}
                 <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation"{% if controllerdevice_tab_active %} class="active"{% endif %}><a href="#controllerdevice" role="tab" data-bs-toggle="tab">Controller Device</a></li>
-                    <li role="presentation"{% if not controllerdevice_tab_active %} class="active"{% endif %}><a href="#controller_device_redundancy_group" role="tab" data-bs-toggle="tab">Controller Device Redundancy Group</a></li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{% if controllerdevice_tab_active %} active{% endif %}" href="#controllerdevice" role="tab" data-bs-toggle="tab">Controller Device</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{% if not controllerdevice_tab_active %} active{% endif %}" href="#controller_device_redundancy_group" role="tab" data-bs-toggle="tab">Controller Device Redundancy Group</a>
+                    </li>
                 </ul>
                 <div class="tab-content">
                     <div class="tab-pane{% if not controllerdevice_tab_active %} active{% endif %}" id="controller_device_redundancy_group">

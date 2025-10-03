@@ -9,7 +9,7 @@
     {% render_field form.slug %}
     {% render_field form.manufacturer %}
 
-    <div class="form-group{% if form.network_driver.errors %} has-error{% endif %}">
+    <div class="mb-10 d-flex justify-content-center{% if form.network_driver.errors %} has-error{% endif %}">
         <label class="col-lg-3 col-form-label" for="id_network_driver">Network driver</label>
         <div class="col-lg-9">
             {{ form.network_driver }}
@@ -32,8 +32,8 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title"><code>Network driver</code> Choices</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p>Drivers selected from the below list can be used to automatically map to a driver name in supported tools using the platform's <a href="{% static 'docs/models/dcim/platform.html' %}"><code>network_driver_mappings</code></a> property. For advanced automation purposes, the network driver field may be set to a value not present in this list but will not provide automatic mapping unless the <a href="{% static 'docs/configuration/optional-settings.html' %}#network_drivers"><code>NETWORK_DRIVERS</code></a> setting is updated to add the new value.</p>
