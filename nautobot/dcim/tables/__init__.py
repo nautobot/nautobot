@@ -33,6 +33,7 @@ from .devices import (
     ModuleFamilyTable,
     ModuleModuleBayTable,
     ModuleTable,
+    NonRackedDevicesTable,
     PlatformTable,
     PowerOutletTable,
     PowerPortTable,
@@ -59,10 +60,11 @@ from .devicetypes import (
     RearPortTemplateTable,
 )
 from .locations import LocationTable, LocationTypeTable
-from .power import PowerFeedTable, PowerPanelTable
+from .power import PowerFeedDetailTable, PowerFeedTable, PowerPanelTable
 from .racks import (
     RackDetailTable,
     RackGroupTable,
+    RackReservationDetailTable,
     RackReservationTable,
     RackTable,
 )
@@ -110,8 +112,10 @@ __all__ = (
     "ModuleModuleBayTable",
     "ModuleTable",
     "ModuleTypeTable",
+    "NonRackedDevicesTable",
     "PlatformTable",
     "PowerConnectionTable",
+    "PowerFeedDetailTable",
     "PowerFeedTable",
     "PowerOutletTable",
     "PowerOutletTemplateTable",
@@ -120,6 +124,7 @@ __all__ = (
     "PowerPortTemplateTable",
     "RackDetailTable",
     "RackGroupTable",
+    "RackReservationDetailTable",
     "RackReservationTable",
     "RackTable",
     "RearPortTable",
