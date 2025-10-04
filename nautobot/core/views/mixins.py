@@ -24,7 +24,6 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
 from django_filters import FilterSet
-from django_tables2 import RequestConfig
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
@@ -48,7 +47,6 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_bulk_queryset_from_view,
@@ -57,7 +55,6 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.data_validation.models import DataCompliance
 from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
@@ -1538,29 +1535,9 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
 class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     """
-    UI Mixin for an DataCompliance for this object.
-
-    base_template: Specify to explicitly identify the base object detail template to render.
-        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
-        will be used, as per `get_base_template()`.
+    UI Mixin for a DataCompliance to show up for a given object.
     """
-
-    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def data_compliance(self, request, *args, **kwargs):
-        model = self.get_queryset().model
-        instance = self.get_object()
-
-        compliance_objects = DataCompliance.objects.filter(
-            content_type=ContentType.objects.get_for_model(model), object_id=instance.id
-        )
-        compliance_table = self.get_table_class()(compliance_objects)
-        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        RequestConfig(request, paginate).configure(compliance_table)
-        data = {
-            "base_template": get_base_template(self.base_template, model),
-            "active_tab": "data_compliance",
-            "table": compliance_table,
-        }
-        return Response(data)
+        return Response({})

@@ -83,6 +83,20 @@
                             {% endif %}
                         {% endwith %}
                     {% endif %}
+                    {% if perms.data_validation.view_datacompliance %}
+                        {% if active_tab != 'data_compliance' and object.get_data_compliance_url or active_tab == 'data_compliance' %}
+
+                            <li class="nav-item" role="presentation">
+                                <a
+                                    class="nav-link {% if active_tab == 'data_compliance' %}active{% endif %}"
+                                    {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
+                                    href="{{ object.get_data_compliance_url }}"
+                                >
+                                    Data Compliance
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
                 {% if perms.extras.view_note %}
                     {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
@@ -106,20 +120,6 @@
                                 href="{{ object.get_changelog_url }}"
                             >
                                 Change Log
-                            </a>
-                        </li>
-                    {% endif %}
-                {% endif %}
-                {% if perms.data_validation.view_datacompliance %}
-                    {% if active_tab != 'data_compliance' and object.get_data_compliance_url or active_tab == 'data_compliance' %}
-
-                        <li class="nav-item" role="presentation">
-                            <a
-                                class="nav-link {% if active_tab == 'data_compliance' %}active{% endif %}"
-                                {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
-                                href="{{ object.get_data_compliance_url }}"
-                            >
-                                Data Compliance
                             </a>
                         </li>
                     {% endif %}

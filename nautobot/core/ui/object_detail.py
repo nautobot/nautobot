@@ -47,6 +47,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_mo
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
+from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
@@ -101,6 +102,7 @@ class ObjectDetailContent:
             _ObjectDetailContactsTab(),
             _ObjectDetailGroupsTab(),
             _ObjectDetailMetadataTab(),
+            _ObjectDetailDataComplianceTab(),
         ]
         if extra_tabs is not None:
             tabs.extend(extra_tabs)
@@ -377,8 +379,9 @@ class Tab(Component):
     WEIGHT_CONTACTS_TAB = 300
     WEIGHT_GROUPS_TAB = 400
     WEIGHT_METADATA_TAB = 500
-    WEIGHT_NOTES_TAB = 600  # reserved, not yet using this framework
-    WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
+    WEIGHT_DATACOMPLIANCE_TAB = 600
+    WEIGHT_NOTES_TAB = 700  # reserved, not yet using this framework
+    WEIGHT_CHANGELOG_TAB = 800  # reserved, not yet using this framework
 
     def panels_for_section(self, section):
         """
@@ -2146,6 +2149,44 @@ class _ObjectDetailContactsTab(Tab):
                 badge(get_obj_from_context(context).associated_contacts.count(), True),
             ),
         )
+
+
+class _ObjectDetailDataComplianceTab(DistinctViewTab):
+    """Built-in class for a Tab displaying information about data compliance."""
+
+    def __init__(
+        self,
+        *,
+        tab_id="data_compliance",
+        label="Data Compliance",
+        weight=Tab.WEIGHT_DATACOMPLIANCE_TAB,
+        panels=None,
+        **kwargs,
+    ):
+        if panels is None:
+            panels = (
+                ObjectsTablePanel(
+                    weight=100,
+                    table_class=DataComplianceTable,
+                    table_attribute="associated_data_compliance",
+                    related_field_name="object_id",
+                    label="Data Compliance",
+                    add_button_route=None,
+                    header_extra_content_template_path=None,
+                    include_paginator=True,
+                ),
+            )
+        super().__init__(url_name="", tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        instance = get_obj_from_context(context)
+        url_name = get_route_for_model(instance, "data-compliance")
+        return {"url": reverse(url_name, kwargs={"pk": get_obj_from_context(context).pk})}
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return getattr(get_obj_from_context(context), "is_data_compliance_model", False)
 
 
 @dataclass

@@ -337,6 +337,8 @@ class DataCompliance(PrimaryModel):
     valid = models.BooleanField(blank=False, null=False)
     message = models.TextField(blank=True, default="")
 
+    is_data_compliance_model = False
+
     class Meta:
         """Meta class for Audit model."""
 
