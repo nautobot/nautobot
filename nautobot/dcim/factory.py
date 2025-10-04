@@ -31,6 +31,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -49,6 +50,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerOutletTemplate,
@@ -615,7 +617,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
+    location = random_instance(lambda: Location.objects.get_for_model(Rack), allow_null=False)
 
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
@@ -633,7 +635,7 @@ class RackFactory(PrimaryModelFactory):
     type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
 
     width = factory.Faker("random_element", elements=RackWidthChoices.values())
-    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    u_height = factory.Faker("pyint", min_value=10, max_value=RACK_U_HEIGHT_MAXIMUM)
     desc_units = NautobotBoolIterator()
 
     has_outer_width = NautobotBoolIterator()
@@ -742,7 +744,7 @@ class ControllerFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
@@ -769,7 +771,7 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
@@ -787,6 +789,7 @@ class ModuleTypeFactory(PrimaryModelFactory):
         exclude = ("has_part_number", "has_comments")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
+    module_family = random_instance(ModuleFamily, allow_null=True)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -968,6 +971,15 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         "has_device_type",
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
+    )
+
+    class Params:
+        has_module_family = NautobotBoolIterator()
+
+    module_family = factory.Maybe(
+        "has_module_family",
+        random_instance(ModuleFamily),
+        None,
     )
 
 

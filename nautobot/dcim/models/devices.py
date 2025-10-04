@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -30,6 +31,10 @@ from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_dri
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
 
 from .device_components import (
     ConsolePort,
@@ -827,7 +832,7 @@ class Device(PrimaryModel, ConfigContextModel):
             if existing_virtual_chassis and existing_virtual_chassis.master == self:
                 raise ValidationError(
                     {
-                        "virtual_chassis": f"The master device for the virtual chassis ({ existing_virtual_chassis}) may not be removed"
+                        "virtual_chassis": f"The master device for the virtual chassis ({existing_virtual_chassis}) may not be removed"
                     }
                 )
 
@@ -895,6 +900,8 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
+        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        cache.delete(cache_key)
         return instantiated_components
 
     create_components.alters_data = True
@@ -935,6 +942,10 @@ class Device(PrimaryModel, ConfigContextModel):
         If this Device is a VirtualChassis member, return the VC master. Otherwise, return None.
         """
         return self.virtual_chassis.master if self.virtual_chassis else None
+
+    @property
+    def is_vc_master(self):
+        return self == self.get_vc_master()
 
     @property
     def vc_interfaces(self):
@@ -988,6 +999,18 @@ class Device(PrimaryModel, ConfigContextModel):
         return Device.objects.filter(parent_bay__device=self.pk)
 
     @property
+    def has_module_bays(self) -> bool:
+        """
+        Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
+        """
+        cache_key = f"nautobot.dcim.device.{self.pk}.has_module_bays"
+        module_bays_exists = cache.get(cache_key)
+        if module_bays_exists is None:
+            module_bays_exists = self.module_bays.exists()
+            cache.set(cache_key, module_bays_exists, timeout=5)
+        return module_bays_exists
+
+    @property
     def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
@@ -997,6 +1020,9 @@ class Device(PrimaryModel, ConfigContextModel):
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
         recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
         qs = Module.objects.all()
+        if not self.has_module_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
         query = Q()
         for level in range(recursion_depth):
             recursive_query = "parent_module_bay__parent_module__" * level
@@ -1059,6 +1085,28 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+    @property
+    def radio_profile_assignments(self):
+        """
+        Returns all Controller Managed Device Group Radio Profile Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupRadioProfileAssignment.objects.none()
+        return ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.none()
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
 
 
 #
@@ -1456,6 +1504,15 @@ class Controller(PrimaryModel):
             return format_html('<span class="text-muted">&mdash;</span>')
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignment linked to this controller.
+        """
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__controller=self
+        )
+
 
 @extras_features(
     "custom_links",
@@ -1550,6 +1607,30 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 #
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleFamily(PrimaryModel):
+    """
+    A ModuleFamily represents a classification of ModuleTypes.
+    It is used to enforce compatibility between ModuleBays and Modules.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "module families"
+
+    def __str__(self):
+        return self.name
+
+
 # TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 @extras_features(
     "custom_links",
@@ -1577,6 +1658,13 @@ class ModuleType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
@@ -1585,6 +1673,7 @@ class ModuleType(PrimaryModel):
 
     clone_fields = [
         "manufacturer",
+        "module_family",
     ]
 
     class Meta:
@@ -1808,6 +1897,36 @@ class Module(PrimaryModel):
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+        # Validate module family compatibility
+        if self.parent_module_bay and self.parent_module_bay.module_family:
+            if self.module_type.module_family != self.parent_module_bay.module_family:
+                module_family_name = self.parent_module_bay.module_family.name
+                if self.module_type.module_family is None:
+                    module_type_family = "not assigned to a family"
+                else:
+                    module_type_family = f"in the family {self.module_type.module_family.name}"
+                raise ValidationError(
+                    {
+                        "module_type": f"The selected module bay requires a module type in the family {module_family_name}, "
+                        f"but the selected module type is {module_type_family}."
+                    }
+                )
+
+        # Validate module manufacturer constraint
+        if self.parent_module_bay and self.parent_module_bay.requires_first_party_modules:
+            if self.parent_module_bay.parent_device:
+                parent_mfr = self.parent_module_bay.parent_device.device_type.manufacturer
+            elif self.parent_module_bay.parent_module:
+                parent_mfr = self.parent_module_bay.parent_module.module_type.manufacturer
+            else:
+                parent_mfr = None
+            if parent_mfr and self.module_type.manufacturer != parent_mfr:
+                raise ValidationError(
+                    {
+                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device or module"
+                    }
                 )
 
     def save(self, *args, **kwargs):

@@ -176,8 +176,6 @@ def consolidate_bulk_action_buttons(context):
             "bulk_action_buttons": bulk_action_buttons,
         }
 
-    params = ("?" + context["request"].GET.urlencode()) if context["request"].GET else ""
-
     primary_button_fragment = child_button_fragment = """
         <button {attrs}>
             <span class="{icon}" aria-hidden="true"></span> {label}
@@ -196,6 +194,9 @@ def consolidate_bulk_action_buttons(context):
         static_group_icon += " text-muted"
 
     if render_edit_button:
+        query_string = ""
+        if hasattr(context["request"], "GET") and context["request"].GET:
+            query_string = "?" + context["request"].GET.urlencode()
         bulk_action_buttons.append(
             format_html(
                 primary_button_fragment,
@@ -203,7 +204,7 @@ def consolidate_bulk_action_buttons(context):
                 attrs=render_tag_attrs(
                     {
                         "class": edit_button_classes,
-                        "formaction": reverse(context["bulk_edit_url"]) + params,
+                        "formaction": reverse(context["bulk_edit_url"]) + query_string,
                         "type": "submit",
                     }
                 ),
@@ -233,6 +234,9 @@ def consolidate_bulk_action_buttons(context):
         )
 
     if render_delete_button:
+        query_string = ""
+        if hasattr(context["request"], "GET") and context["request"].GET:
+            query_string = "?" + context["request"].GET.urlencode()
         bulk_action_buttons.append(
             format_html(
                 child_button_fragment,
@@ -242,7 +246,7 @@ def consolidate_bulk_action_buttons(context):
                         "class": delete_button_classes,
                         "type": "submit",
                         "name": "_delete",
-                        "formaction": reverse(context["bulk_delete_url"]) + params,
+                        "formaction": reverse(context["bulk_delete_url"]) + query_string,
                     }
                 ),
                 icon="mdi mdi-trash-can-outline",

@@ -7,6 +7,7 @@ from .choices import InterfaceTypeChoices
 #
 
 RACK_U_HEIGHT_DEFAULT = 42
+RACK_U_HEIGHT_MAXIMUM = 500
 
 RACK_ELEVATION_BORDER_WIDTH = 2
 RACK_ELEVATION_LEGEND_WIDTH_DEFAULT = 30
@@ -94,22 +95,6 @@ COMPATIBLE_TERMINATION_TYPES = {
         "rearport",
         "circuittermination",
     ],
-}
-
-#
-# Platforms
-#
-
-NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
-    "ansible",
-    "hier_config",
-    "napalm",
-    "netmiko",
-    "netutils_parser",
-    "ntc_templates",
-    "pyats",
-    "pyntc",
-    "scrapli",
 }
 
 #

@@ -1,15 +1,11 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
+{% load ui_framework %}
 
 {% block header %}
     <div class="row noprint">
         <div class="col-md-12">
-            <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
-                    <li><a href="{% url 'apps:app_detail' app=app_data.package %}">{{ app_data.name | bettertitle }}</a></li>
-                {% endblock breadcrumbs %}
-            </ol>
+            {% render_breadcrumbs %}
         </div>
     </div>
     <div class="pull-right noprint">
@@ -32,7 +28,7 @@
         {% endblock buttons %}
     </div>
     {% block masthead %}
-        <h1>{% block title %}{{ app_data.name | bettertitle }}{% endblock %}</h1>
+        <h1>{% block title %}{% render_title %}{% endblock %}</h1>
     {% endblock masthead %}
 {% endblock header %}
 
@@ -54,10 +50,10 @@
                             <td>{{ app_data.headline }}</td>
                         </tr>
                         {% if app_data.description and app_data.headline != app_data.description %}
-                        <tr>
-                            <td>Description</td>
-                            <td>{{ app_data.description }}</td>
-                        </tr>
+                            <tr>
+                                <td>Description</td>
+                                <td>{{ app_data.description }}</td>
+                            </tr>
                         {% endif %}
                         <tr>
                             <td>Version</td>
@@ -73,10 +69,10 @@
                             </td>
                         </tr>
                         {% if app_data.availability %}
-                        <tr>
-                            <td>License</td>
-                            <td><label class="label label-transparent">{{ app_data.availability }}</label></td>
-                        </tr>
+                            <tr>
+                                <td>License</td>
+                                <td><label class="label label-transparent">{{ app_data.availability }}</label></td>
+                            </tr>
                         {% endif %}
                     </table>
                 </div>
@@ -184,20 +180,20 @@
                                 <td>
                                     {% if features.filter_extensions %}
                                         {% if features.filter_extensions.filterset_fields %}
-                                        <b>FilterSet Filters</b>
-                                        <ul class="list-unstyled">
-                                            {% for filterset_field in features.filter_extensions.filterset_fields %}
-                                                <li><code>{{ filterset_field }}</code></li>
-                                            {% endfor %}
-                                        </ul>
+                                            <b>FilterSet Filters</b>
+                                            <ul class="list-unstyled">
+                                                {% for filterset_field in features.filter_extensions.filterset_fields %}
+                                                    <li><code>{{ filterset_field }}</code></li>
+                                                {% endfor %}
+                                            </ul>
                                         {% endif %}
                                         {% if features.filter_extensions.filterform_fields %}
-                                        <b>FilterForm Fields</b>
-                                        <ul class="list-unstyled">
-                                            {% for filterform_field in features.filter_extensions.filterform_fields %}
-                                                <li><code>{{ filterform_field }}</code></li>
-                                            {% endfor %}
-                                        </ul>
+                                            <b>FilterForm Fields</b>
+                                            <ul class="list-unstyled">
+                                                {% for filterform_field in features.filter_extensions.filterform_fields %}
+                                                    <li><code>{{ filterform_field }}</code></li>
+                                                {% endfor %}
+                                            </ul>
                                         {% endif %}
                                     {% else %}
                                         {% include 'utilities/render_boolean.html' with value=features.filter_extensions %}
@@ -218,7 +214,7 @@
                                     {% if features.jobs %}
                                         <ul class="list-unstyled">
                                             {% for job in features.jobs %}
-                                            <li><a href="{% url 'extras:job_run_by_class_path' class_path=job.class_path %}">{{ job }}</a></li>
+                                                <li><a href="{% url 'extras:job_run_by_class_path' class_path=job.class_path %}">{{ job }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
@@ -268,7 +264,7 @@
                                     {% if features.api_urlpatterns %}
                                         <ul class="list-unstyled">
                                             {% for urlpattern in features.api_urlpatterns %}
-                                            <li>{{ urlpattern.name | placeholder }} (<code>/api/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                                <li>{{ urlpattern.name | placeholder }} (<code>/api/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
@@ -299,28 +295,28 @@
                                 <td>
                                     {% if features.table_extensions %}
                                         {% if features.table_extensions.columns %}
-                                        <b>Custom Columns</b>
-                                        <ul class="list-unstyled">
-                                            {% for column in features.table_extensions.columns %}
-                                                <li><code>{{ column }}</code></li>
-                                            {% endfor %}
-                                        </ul>
+                                            <b>Custom Columns</b>
+                                            <ul class="list-unstyled">
+                                                {% for column in features.table_extensions.columns %}
+                                                    <li><code>{{ column }}</code></li>
+                                                {% endfor %}
+                                            </ul>
                                         {% endif %}
                                         {% if features.table_extensions.add_to_default_columns %}
-                                        <b>Additional Default Columns</b>
-                                        <ul class="list-unstyled">
-                                            {% for column in features.table_extensions.add_to_default_columns %}
-                                                <li><code>{{ column }}</code></li>
-                                            {% endfor %}
-                                        </ul>
+                                            <b>Additional Default Columns</b>
+                                            <ul class="list-unstyled">
+                                                {% for column in features.table_extensions.add_to_default_columns %}
+                                                    <li><code>{{ column }}</code></li>
+                                                {% endfor %}
+                                            </ul>
                                         {% endif %}
                                         {% if features.table_extensions.remove_from_default_columns %}
-                                        <b>Remove from Default Columns</b>
-                                        <ul class="list-unstyled">
-                                            {% for column in features.table_extensions.remove_from_default_columns %}
-                                                <li><code>{{ column }}</code></li>
-                                            {% endfor %}
-                                        </ul>
+                                            <b>Remove from Default Columns</b>
+                                            <ul class="list-unstyled">
+                                                {% for column in features.table_extensions.remove_from_default_columns %}
+                                                    <li><code>{{ column }}</code></li>
+                                                {% endfor %}
+                                            </ul>
                                         {% endif %}
                                     {% else %}
                                         {% include 'utilities/render_boolean.html' with value=features.table_extensions %}
@@ -333,7 +329,7 @@
                                     {% if features.urlpatterns %}
                                         <ul class="list-unstyled">
                                             {% for urlpattern in features.urlpatterns %}
-                                            <li>{{ urlpattern.name | placeholder }} (<code>/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
+                                                <li>{{ urlpattern.name | placeholder }} (<code>/plugins/{{ object.base_url }}/{{ urlpattern.pattern }}</code>)</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

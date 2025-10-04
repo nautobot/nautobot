@@ -52,6 +52,7 @@ from nautobot.extras.models import (
     Contact,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     DynamicGroup,
     ExportTemplate,
@@ -204,7 +205,7 @@ class ComputedFieldRenderingTestCase(TestCase):
     def test_view_object_with_computed_field_fallback_value(self):
         """Ensure that the fallback_value is rendered if the template fails to render."""
         # Make the template invalid to demonstrate the fallback value
-        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.template = "FOO {{ obj | invalid_filter }}"
         self.computedfield.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
@@ -223,7 +224,7 @@ class ComputedFieldRenderingTestCase(TestCase):
 
     def test_view_object_with_computed_field_unsafe_fallback_value(self):
         """Ensure that computed field fallback values can't be used as an XSS vector."""
-        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.template = "FOO {{ obj | invalid_filter }}"
         self.computedfield.fallback_value = '<script>alert("Hello world!"</script>'
         self.computedfield.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
@@ -638,12 +639,16 @@ class CustomFieldTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomField
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
         obj_type = ContentType.objects.get_for_model(Location)
 
         custom_fields = [
@@ -674,7 +679,7 @@ class CustomFieldTestCase(
 
         for custom_field in custom_fields:
             custom_field.validated_save()
-            custom_field.content_types.set([obj_type])
+            custom_field.content_types.set([obj_type, device_ct])
 
         cls.form_data = {
             "content_types": [obj_type.pk],
@@ -689,6 +694,17 @@ class CustomFieldTestCase(
             "custom_field_choices-INITIAL_FORMS": "1",
             "custom_field_choices-MIN_NUM_FORMS": "0",
             "custom_field_choices-MAX_NUM_FORMS": "1000",
+        }
+
+        cls.bulk_edit_data = {
+            "grouping": "Updated Grouping",
+            "description": "Updated description for testing bulk edit.",
+            "required": True,
+            "filter_logic": "loose",
+            "weight": 200,
+            "advanced_ui": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     def test_create_object_without_permission(self):
@@ -708,6 +724,161 @@ class CustomFieldTestCase(
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
+
+    def test_create_custom_field_with_choices(self):
+        """Ensure a select-type CustomField can be created with multiple valid choices.."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "select_with_choices",
+            "label": "Select Field with Choices",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-value": "Option A",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "Option B",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(CustomField.objects.filter(key="select_with_choices").exists())
+
+        field = CustomField.objects.get(key="select_with_choices")
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertSetEqual(
+            set(field.custom_field_choices.values_list("value", flat=True)),
+            {"Option A", "Option B"},
+        )
+
+    def test_update_select_custom_field_add_choice(self):
+        """Test that submitting the edit form with both existing and new choices
+        results in the new choice being saved correctly."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Editable Select Field",
+            key="editable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        # Added initial choice
+        initial_choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Initial Option",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": initial_choice.pk,
+            "custom_field_choices-0-value": "Initial Option",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "New Option",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertTrue(field.custom_field_choices.filter(value="New Option").exists())
+
+    def test_update_select_custom_field_remove_choice(self):
+        """Test removing a choice from a select field."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Deletable Select Field",
+            key="deletable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Choice To Delete",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": choice.pk,
+            "custom_field_choices-0-value": choice.value,
+            "custom_field_choices-0-weight": choice.weight,
+            "custom_field_choices-0-DELETE": "on",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 0)
+
+    def test_create_custom_field_with_invalid_choice_data(self):
+        """Ensure invalid choice formset blocks saving."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "invalid_choice_field",
+            "label": "Field with Invalid Choice",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            # Invalid: missing weight, empty value
+            "custom_field_choices-0-value": "",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="value", errors=["This field is required."]
+        )
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
+        )
 
 
 class CustomLinkRenderingTestCase(TestCase):
@@ -808,6 +979,7 @@ class DynamicGroupTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     # NOTE: This isn't using `ViewTestCases.PrimaryObjectViewTestCase` because bulk-import/edit
     # views for DynamicGroup do not make sense at this time, primarily because `content_type` is
     # immutable after create.
@@ -837,6 +1009,10 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
         }
 
     def _get_queryset(self):
@@ -1137,7 +1313,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -1850,8 +2026,18 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
+    custom_test_permissions = [
+        "extras.view_secret",
+        "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1895,6 +2081,108 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+        }
+
+    def test_create_group_with_valid_secret_association(self):
+        """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
+        # Create a secret to associate
+        secret = Secret.objects.create(
+            name="AWS_Secret",
+            provider="text-file",
+            parameters={"path": "/tmp"},  # noqa: S108  # hardcoded-temp-file -- false positive
+        )
+
+        form_data = {
+            "name": "test",
+            "description": "test bulk edits",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret.pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        # Submit the form to the "add SecretsGroup" view
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SecretsGroup.objects.filter(name="test").exists())
+
+        # Checks that the association was created correctly
+        group = SecretsGroup.objects.get(name="test")
+        self.assertEqual(group.secrets_group_associations.count(), 1)
+
+        association = group.secrets_group_associations.first()
+        self.assertEqual(association.secret, secret)
+        self.assertEqual(association.access_type, SecretsGroupAccessTypeChoices.TYPE_HTTP)
+        self.assertEqual(association.secret_type, SecretsGroupSecretTypeChoices.TYPE_PASSWORD)
+
+    def test_create_group_with_invalid_secret_association(self):
+        """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
+        url = reverse("extras:secretsgroup_add")
+
+        form_data = {
+            "name": "Invalid Secrets Group",
+            "description": "Missing required fields",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": "",  # invalid
+        }
+
+        response = self.client.post(url, data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Checks that no new SecretsGroup was created
+        self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
+
+        # Checks that formset errors are raised in the context
+        self.assertFormsetError(
+            response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
+        )
+
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
 
 
 class GraphQLQueriesTestCase(
@@ -1956,21 +2244,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
@@ -1984,7 +2272,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -2001,7 +2289,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -2032,7 +2320,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -2092,7 +2380,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2483,7 +2771,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
@@ -3676,6 +3964,43 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.source.name, content, msg=content)
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
+    def test_get_object_with_advanced_relationships(self):
+        device_type = ContentType.objects.get_for_model(Device)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+        Relationship.objects.create(
+            label="Device VLANs 4",
+            key="device_vlans_4",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Advanced",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=True,
+        )
+        Relationship.objects.create(
+            label="Device VLANs 5",
+            key="device_vlans_5",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Main",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=False,
+        )
+
+        device = Device.objects.first()
+        # Add model-level permission
+        self.add_permissions(f"{Device._meta.app_label}.view_{Device._meta.model_name}")
+        # Try GET the main tab
+        response = self.client.get(device.get_absolute_url())
+        response_content = extract_page_body(response.content.decode(response.charset))
+        # The relationship's source label should be in the advanced tab since advance_ui=True
+        # a.k.a its index should be greater than the index of the advanced tab
+        self.assertGreater(response_content.find("Device VLANs Advanced"), response_content.find('id="advanced"'))
+        # The relationship's source label should not be in the advanced tab since advance_ui=False
+        # a.k.a its index should be smaller than the index of the advanced tab
+        self.assertGreater(response_content.find('id="advanced"'), response_content.find("Device VLANs Main"))
+
 
 class StaticGroupAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
@@ -3939,8 +4264,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,
@@ -4000,8 +4324,8 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
-                        self.assertIn(
-                            f'<strong>{result}</strong>\n                                    <div class="pull-right noprint">\n',
+                        self.assertInHTML(
+                            f'<strong>{result}</strong><div class="pull-right noprint">',
                             response_body,
                         )
                         # ContactAssociationTable related to this role instances should not be there.
@@ -4012,4 +4336,4 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                     else:
                         self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
-                    self.assertIn(f"<strong>{result}</strong>", response_body)
+                    self.assertInHTML(f"<strong>{result}</strong>", response_body)

@@ -1,29 +1,29 @@
 {% load helpers %}
 {% if location is not None %}
-{% with ancestors=location.ancestors %}
-    <style>
-        .location-hierarchy {
-            list-style-type: none;
-            padding-left: 0px;
-        }
+    {% with ancestors=location.ancestors %}
+        <style>
+            .location-hierarchy {
+                list-style-type: none;
+                padding-left: 0px;
+            }
 
-        .location-hierarchy ul {
-            list-style-type: "↳ ";
-            padding-left: 18px;
-        }
-    </style>
-    <ul class="location-hierarchy">
-        {% for ancestor in ancestors %}
-            <li>{{ ancestor|hyperlinked_object:"name" }} ({{ ancestor.location_type|hyperlinked_object:"name" }})
-                <ul>
-        {% endfor %}
-        <li><strong>{{ location|hyperlinked_object:"name" }} ({{ location.location_type|hyperlinked_object:"name" }})</strong></li>
-        {% for ancestor in ancestors %}
+            .location-hierarchy ul {
+                list-style-type: "↳ ";
+                padding-left: 18px;
+            }
+        </style>
+        <ul class="location-hierarchy">
+            {% for ancestor in ancestors %}
+                <li>{{ ancestor|hyperlinked_object:"name" }} ({{ ancestor.location_type|hyperlinked_object:"name" }})
+                    <ul>
+            {% endfor %}
+            <li><strong>{{ location|hyperlinked_object:"name" }} ({{ location.location_type|hyperlinked_object:"name" }})</strong></li>
+            {% for ancestor in ancestors %}
                 </ul>
-            </li>
-        {% endfor %}
-    </ul>
-{% endwith %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endwith %}
 {% else %}
     {{ location|placeholder }}
 {% endif %}

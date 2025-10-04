@@ -30,6 +30,7 @@ from .devices import (
     InterfaceTable,
     InventoryItemTable,
     ModuleBayTable,
+    ModuleFamilyTable,
     ModuleModuleBayTable,
     ModuleTable,
     PlatformTable,
@@ -38,6 +39,7 @@ from .devices import (
     RearPortTable,
     SoftwareImageFileTable,
     SoftwareVersionTable,
+    VirtualChassisMembersTable,
     VirtualChassisTable,
     VirtualDeviceContextTable,
 )
@@ -104,6 +106,7 @@ __all__ = (
     "ManufacturerTable",
     "ModuleBayTable",
     "ModuleBayTemplateTable",
+    "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
     "ModuleTypeTable",
@@ -123,6 +126,7 @@ __all__ = (
     "RearPortTemplateTable",
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
+    "VirtualChassisMembersTable",
     "VirtualChassisTable",
     "VirtualDeviceContextTable",
 )

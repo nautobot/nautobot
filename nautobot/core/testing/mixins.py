@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
@@ -156,10 +156,28 @@ class NautobotTestCaseMixin:
         """
         for name in names:
             ct, action = permissions.resolve_permission_ct(name)
-            obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
+            obj_perm, _ = users_models.ObjectPermission.objects.get_or_create(name=name, actions=[action], **kwargs)
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
+
+    def remove_permissions(self, *names, **kwargs):
+        """
+        Remove a set of permissions. Accepts permission names in the form <app>.<action>_<model>.
+        Additional keyword arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+
+        Examples:
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup")
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
+        """
+        for name in names:
+            _, action, _ = permissions.resolve_permission(name)
+            try:
+                obj_perm = users_models.ObjectPermission.objects.get(name=name, actions=[action], **kwargs)
+                obj_perm.delete()
+            except ObjectDoesNotExist:
+                # Permission does not exist, so nothing to remove
+                pass
 
     #
     # Custom assertions

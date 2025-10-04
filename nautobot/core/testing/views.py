@@ -1,7 +1,8 @@
 import contextlib
+import inspect
 import re
 from typing import Optional, Sequence
-from unittest import skipIf
+from unittest import mock, skipIf
 import uuid
 
 from django.apps import apps
@@ -9,13 +10,17 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db import connection
+from django.db.models import ManyToManyField, Model, QuerySet
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
+from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
@@ -141,6 +146,12 @@ class ViewTestCases:
         Retrieve a single instance.
         """
 
+        custom_action_required_permissions = {}
+        # TODO: Expand to other relevant view types, e.g. 'list'.
+        allowed_number_of_tree_queries_per_view_type = {
+            "retrieve": 0,
+        }
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
             # Make the request as an unauthenticated user
@@ -176,7 +187,8 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            response = self.client.get(instance.get_absolute_url())
+            with CaptureQueriesContext(connection) as capture_queries_context:
+                response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
@@ -204,6 +216,22 @@ class ViewTestCases:
                             self.assertBodyContains(response, escape(str(value)))
                     else:
                         self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
+
+            # Check that no more than the appropriate number of tree CTE queries have been run.
+            captured_tree_cte_queries = [
+                query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+            self.assertEqual(
+                len(captured_tree_cte_queries),
+                self.allowed_number_of_tree_queries_per_view_type["retrieve"],
+                f"This view was expected to execute {self.allowed_number_of_tree_queries_per_view_type['retrieve']}"
+                f" recursive database queries but {len(captured_tree_cte_queries)} were executed."
+                f" If this is expected, please update the {self.__class__.__name__}.allowed_number_of_tree_queries_per_view_type['retrieve']"
+                " property. Care should be taken to only increase these numbers where necessary - recursive queries can become really"
+                " slow with bigger datasets."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
             return response  # for consumption by child test cases if desired
 
@@ -246,6 +274,21 @@ class ViewTestCases:
             self.assertBodyContains(response, f"{instance.get_absolute_url()}#advanced")
             self.assertBodyContains(response, "Advanced")
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_custom_actions(self):
+            instance = self._get_queryset().first()
+            for url_name, required_permissions in self.custom_action_required_permissions.items():
+                url = reverse(url_name, kwargs={"pk": instance.pk})
+                self.assertHttpStatus(self.client.get(url), 403)
+                for permission in required_permissions[:-1]:
+                    self.add_permissions(permission)
+                    self.assertHttpStatus(self.client.get(url), 403)
+
+                self.add_permissions(required_permissions[-1])
+                self.assertHttpStatus(self.client.get(url), 200)
+                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
+                self.remove_permissions(*required_permissions)
+
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
         View the changelog for an instance.
@@ -262,8 +305,7 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
-                    html=True,
+                    f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
                 )
             else:
                 self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
@@ -285,8 +327,7 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
-                        html=True,
+                        f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
                     )
                 else:
                     self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
@@ -759,6 +800,30 @@ class ViewTestCases:
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
+        def test_model_properties_as_table_columns_are_not_orderable(self):
+            """
+            Check for table columns that are property-based and not orderable.
+            """
+            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not table_class:
+                return
+
+            queryset = self._get_queryset()
+            table = table_class(queryset)
+            model_cls = table._meta.model
+
+            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
+
+            for name, column in table.base_columns.items():
+                if hasattr(column, "order_by") and column.order_by:
+                    continue
+                if name in property_fields and name != "pk":
+                    with self.subTest(column_name=name):
+                        self.assertFalse(
+                            column.orderable,
+                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
+                        )
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
@@ -1060,6 +1125,7 @@ class ViewTestCases:
         def validate_redirect_to_job_result(self, response):
             # Get the last Bulk Edit Objects JobResult created
             job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+            self.assertIsNotNone(job_result, "No JobResult was created - likely the bulk_edit_data is invalid!")
             # Assert redirect to Job Results
             self.assertRedirects(
                 response,
@@ -1093,8 +1159,71 @@ class ViewTestCases:
             # Assign model-level permission
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
-            response = self.client.post(self._get_url("bulk_edit"), data)
-            self.validate_redirect_to_job_result(response)
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
+
+                # Verify that the provided self.bulk_edit_data was passed through correctly to the job.
+                # The below is a bit gross because of multiple layers of data encoding and decoding involved. Sorry!
+                job_form = BulkEditObjects.as_form(BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs))
+                job_form.is_valid()
+                job_kwargs = job_form.cleaned_data
+
+                bulk_edit_form_class = lookup.get_form_for_model(self.model, form_prefix="BulkEdit")
+                bulk_edit_form = bulk_edit_form_class(self.model, job_kwargs["form_data"])
+                bulk_edit_form.is_valid()
+                passed_bulk_edit_data = bulk_edit_form.cleaned_data
+
+                for key, value in self.bulk_edit_data.items():
+                    with self.subTest(key=key):
+                        if isinstance(passed_bulk_edit_data.get(key), Model):
+                            self.assertEqual(passed_bulk_edit_data.get(key).pk, value)
+                        elif isinstance(passed_bulk_edit_data.get(key), QuerySet):
+                            self.assertEqual(
+                                sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
+                            )
+                        else:
+                            self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_edit_objects_nullable_fields(self):
+            """Assert that "set null" fields on the bulk-edit form are correctly passed through to the job."""
+            bulk_edit_form_class = lookup.get_form_for_model(self.model, form_prefix="BulkEdit")
+            bulk_edit_form = bulk_edit_form_class(self.model)
+            if not getattr(bulk_edit_form, "nullable_fields", ()):
+                self.skipTest(f"no nullable fields on {bulk_edit_form_class}")
+
+            for field_name in bulk_edit_form.nullable_fields:
+                with self.subTest(field_name=field_name):
+                    if field_name.startswith("cf_"):
+                        # TODO check whether customfield is nullable
+                        continue
+                    if field_name.startswith("cr_"):
+                        # TODO check whether relationship is required
+                        continue
+                    model_field = self.model._meta.get_field(field_name)
+                    if isinstance(model_field, ManyToManyField):
+                        # always nullable
+                        continue
+                    self.assertTrue(model_field.null or model_field.blank)
+
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+            data = {
+                "pk": pk_list,
+                "_apply": True,  # Form button
+                "_nullify": list(bulk_edit_form.nullable_fields),
+            }
+
+            # Assign model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
+
+                self.assertEqual(mock_enqueue_job.call_args.kwargs["form_data"].get("_nullify"), data["_nullify"])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
@@ -1193,11 +1322,13 @@ class ViewTestCases:
             }
             data.update(utils.post_data(self.bulk_edit_data))
 
-            # Attempt to bulk edit permitted objects into a non-permitted state
-            response = self.client.post(self._get_url("bulk_edit"), data)
-            # NOTE: There is no way of testing constrained failure as bulk edit is a system Job;
-            # and can only be tested by checking JobLogs.
-            self.validate_redirect_to_job_result(response)
+            with mock.patch.object(JobResult, "enqueue_job", wraps=JobResult.enqueue_job) as mock_enqueue_job:
+                # Attempt to bulk edit permitted objects into a non-permitted state
+                response = self.client.post(self._get_url("bulk_edit"), data)
+                # NOTE: There is no way of testing constrained failure as bulk edit is a system Job;
+                # and can only be tested by checking JobLogs.
+                self.validate_redirect_to_job_result(response)
+                mock_enqueue_job.assert_called()
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
         """
@@ -1296,10 +1427,6 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all pks is not part of the html.
-            self.assertNotIn(str(first_pk), response_body)
-            self.assertNotIn(str(second_pk), response_body)
-            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 

@@ -14,10 +14,12 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
+    PowerPathChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
@@ -52,6 +54,7 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     ModuleBayFilterSet,
     ModuleBayTemplateFilterSet,
+    ModuleFamilyFilterSet,
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
@@ -100,6 +103,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -118,6 +122,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.extras.filters.mixins import RoleFilter, StatusFilter
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -228,6 +233,7 @@ def common_test_data(cls):
         PowerPanel.objects.create(name="Power Panel 1", location=loc0, rack_group=rack_groups[0]),
         PowerPanel.objects.create(name="Power Panel 2", location=loc1, rack_group=rack_groups[1]),
         PowerPanel.objects.create(name="Power Panel 3", location=loc1, rack_group=rack_groups[2]),
+        PowerPanel.objects.create(name="Power Panel 4", location=loc0),
     )
     power_panels[0].tags.set(Tag.objects.get_for_model(PowerPanel))
     power_panels[1].tags.set(Tag.objects.get_for_model(PowerPanel)[:3])
@@ -348,7 +354,19 @@ def common_test_data(cls):
     power_feeds = (
         PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0], status=pf_status),
         PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1], status=pf_status),
-        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2], status=pf_status),
+        PowerFeed.objects.create(
+            name="Power Feed 3",
+            rack=racks[2],
+            power_panel=power_panels[2],
+            status=pf_status,
+            destination_panel=power_panels[0],
+        ),
+        PowerFeed.objects.create(
+            name="Power Feed 4",
+            power_panel=power_panels[1],
+            status=pf_status,
+            destination_panel=power_panels[3],
+        ),
     )
     power_feeds[0].tags.set(Tag.objects.get_for_model(PowerFeed))
     power_feeds[1].tags.set(Tag.objects.get_for_model(PowerFeed)[:3])
@@ -573,12 +591,20 @@ def common_test_data(cls):
         label="devicebay3",
         description="Device Bay Description 3",
     )
+
+    cls.module_families = (
+        ModuleFamily.objects.create(name="Module Family 1"),
+        ModuleFamily.objects.create(name="Module Family 2"),
+        ModuleFamily.objects.create(name="Module Family 3"),
+    )
     ModuleBayTemplate.objects.create(
         device_type=device_types[0],
         name="device test module bay 1",
         position=1,
         label="devicemodulebay1",
         description="device test module bay 1 description",
+        module_family=cls.module_families[0],
+        requires_first_party_modules=True,
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
@@ -586,13 +612,16 @@ def common_test_data(cls):
         position=2,
         label="devicemodulebay2",
         description="device test module bay 2 description",
+        module_family=cls.module_families[1],
+        requires_first_party_modules=False,
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
         name="device test module bay 3",
         position=3,
         label="devicemodulebay3",
-        description="device test module bay 3 description",
+        description="device test module bay 3 without a module family",
+        requires_first_party_modules=True,
     )
     secrets_groups = (
         SecretsGroup.objects.create(name="Secrets group 1"),
@@ -667,54 +696,61 @@ def common_test_data(cls):
             manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1", comments="Module Type 1"
         ),
         ModuleType.objects.create(
-            manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2", comments="Module Type 2"
+            manufacturer=cls.manufacturers[1],
+            model="Filter Test Module Type 2",
+            comments="Module Type 2",
+            module_family=cls.module_families[0],
         ),
         ModuleType.objects.create(
-            manufacturer=cls.manufacturers[2], model="Filter Test Module Type 3", comments="Module Type 3"
+            manufacturer=cls.manufacturers[2],
+            model="Filter Test Module Type 3",
+            comments="Module Type 3",
+            module_family=cls.module_families[1],
         ),
     )
 
     # Create 3 of each component template on the first two module types
     for i in range(6):
         ConsolePortTemplate.objects.create(
-            name=f"Test Filters Module Console Port {i+1}",
+            name=f"Test Filters Module Console Port {i + 1}",
             module_type=module_types[i % 2],
         )
         ConsoleServerPortTemplate.objects.create(
-            name=f"Test Filters Module Console Server Port {i+1}",
+            name=f"Test Filters Module Console Server Port {i + 1}",
             module_type=module_types[i % 2],
         )
         ppt = PowerPortTemplate.objects.create(
-            name=f"Test Filters Module Power Port {i+1}",
+            name=f"Test Filters Module Power Port {i + 1}",
             module_type=module_types[i % 2],
         )
         PowerOutletTemplate.objects.create(
-            name=f"Test Filters Module Power Outlet {i+1}",
+            name=f"Test Filters Module Power Outlet {i + 1}",
             power_port_template=ppt,
             module_type=module_types[i % 2],
         )
         InterfaceTemplate.objects.create(
-            name=f"Test Filters Module Interface {i+1}",
+            name=f"Test Filters Module Interface {i + 1}",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             module_type=module_types[i % 2],
         )
         rpt = RearPortTemplate.objects.create(
-            name=f"Test Filters Module Rear Port {i+1}",
+            name=f"Test Filters Module Rear Port {i + 1}",
             module_type=module_types[i % 2],
             type=PortTypeChoices.TYPE_8P8C,
             positions=10,
         )
         FrontPortTemplate.objects.create(
-            name=f"Test Filters Module Front Port {i+1}",
+            name=f"Test Filters Module Front Port {i + 1}",
             module_type=module_types[i % 2],
             rear_port_template=rpt,
             rear_port_position=i + 1,
             type=PortTypeChoices.TYPE_8P8C,
         )
         ModuleBayTemplate.objects.create(
-            name=f"Test Filters Module Module Bay {i+1}",
+            name=f"Test Filters Module Module Bay {i + 1}",
             position=i + 1,
             module_type=module_types[i % 2],
+            requires_first_party_modules=(i % 2 == 0),  # True for even indices, False for odd
         )
 
     module_roles = Role.objects.get_for_model(Module)
@@ -1233,7 +1269,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
         rack_group = RackGroup.objects.get(name="Rack Group 3")
         tenant = Tenant.objects.filter(tenant_group__isnull=False).first()
-        rack_role = Role.objects.get_for_model(Rack).first()
+        cls.rack_role = Role.objects.get_for_model(Rack).first()
 
         Rack.objects.create(
             name="Rack 4",
@@ -1242,7 +1278,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             rack_group=rack_group,
             tenant=tenant,
             status=cls.rack_statuses[0],
-            role=rack_role,
+            role=cls.rack_role,
             serial="ABCDEF",
             asset_tag="1004",
             type=RackTypeChoices.TYPE_2POST,
@@ -1270,6 +1306,34 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         with self.subTest():
             params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_role_status_negation(self):
+        """https://github.com/nautobot/nautobot/issues/6456"""
+        self.assertIsInstance(self.filterset().filters["role"], RoleFilter)
+        self.assertIsInstance(self.filterset().filters["role__n"], RoleFilter)
+        with self.subTest("Negated role (id)"):
+            params = {"role__n": [self.rack_role.pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(role=self.rack_role)
+            )
+        with self.subTest("Negated role (name)"):
+            params = {"role__n": [self.rack_role.name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(role=self.rack_role)
+            )
+
+        self.assertIsInstance(self.filterset().filters["status"], StatusFilter)
+        self.assertIsInstance(self.filterset().filters["status__n"], StatusFilter)
+        with self.subTest("Negated status (id)"):
+            params = {"status__n": [self.rack_statuses[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(status=self.rack_statuses[0])
+            )
+        with self.subTest("Negated status (name)"):
+            params = {"status__n": [self.rack_statuses[0].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Rack.objects.exclude(status=self.rack_statuses[0])
+            )
 
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -3539,8 +3603,6 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        PowerPanel.objects.create(name="Power Panel 4", location=cls.loc1)
-
 
 class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerFeed.objects.all()
@@ -3548,8 +3610,12 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
     generic_filter_tests = [
         ("amperage",),
         ("available_power",),
+        ("breaker_pole_count",),
+        ("breaker_position",),
         ("cable", "cable__id"),
         ("comments",),
+        ("destination_panel", "destination_panel__id"),
+        ("destination_panel", "destination_panel__name"),
         ("max_utilization",),
         ("name",),
         ("power_panel", "power_panel__id"),
@@ -3569,6 +3635,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             PowerFeed.objects.get(name="Power Feed 1"),
             PowerFeed.objects.get(name="Power Feed 2"),
             PowerFeed.objects.get(name="Power Feed 3"),
+            PowerFeed.objects.get(name="Power Feed 4"),
         )
 
         pf_statuses = Status.objects.get_for_model(PowerFeed)
@@ -3582,6 +3649,9 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=100,
             max_utilization=10,
             comments="PFA",
+            power_path=PowerPathChoices.PATH_A,
+            breaker_position=1,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
         )
         PowerFeed.objects.filter(pk=power_feeds[1].pk).update(
             status=pf_statuses[1],
@@ -3592,6 +3662,9 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=200,
             max_utilization=20,
             comments="PFB",
+            power_path=PowerPathChoices.PATH_B,
+            breaker_position=4,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
         PowerFeed.objects.filter(pk=power_feeds[2].pk).update(
             status=pf_statuses[2],
@@ -3602,14 +3675,32 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
             amperage=300,
             max_utilization=30,
             comments="PFC",
+            power_path=PowerPathChoices.PATH_A,
+            breaker_position=9,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_3,
+        )
+        PowerFeed.objects.filter(pk=power_feeds[3].pk).update(
+            status=pf_statuses[0],
+            type=PowerFeedTypeChoices.TYPE_REDUNDANT,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+            voltage=400,
+            amperage=400,
+            max_utilization=40,
+            comments="PFD",
+            power_path=PowerPathChoices.PATH_B,
+            breaker_position=15,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
         )
 
         power_feeds[0].refresh_from_db()
         power_feeds[1].refresh_from_db()
         power_feeds[2].refresh_from_db()
+        power_feeds[3].refresh_from_db()
         power_feeds[0].validated_save()
         power_feeds[1].validated_save()
         power_feeds[2].validated_save()
+        power_feeds[3].validated_save()
 
         power_ports = (
             PowerPort.objects.get(name="Power Port 1"),
@@ -3652,6 +3743,13 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(phase=PowerFeedPhaseChoices.PHASE_3PHASE),
+        )
+
+    def test_power_path(self):
+        params = {"power_path": [PowerPathChoices.PATH_A]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(power_path=PowerPathChoices.PATH_A),
         )
 
 
@@ -4055,6 +4153,18 @@ class ModuleTestCase(
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
 
+    def test_compatible_with_module_bay(self):
+        """Test filtering modules that are compatible with a specific module bay based on module family."""
+        module_bay = ModuleBay.objects.filter(module_family__isnull=False).first()
+        compatible_modules = Module.objects.filter(module_type__module_family=module_bay.module_family)
+        params = {"compatible_with_module_bay": module_bay.pk}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params).qs, compatible_modules)
+
+        # Test with module bay that has no module family - should return ALL modules
+        module_bay_no_family = ModuleBay.objects.filter(module_family__isnull=True).first()
+        params = {"compatible_with_module_bay": module_bay_no_family.pk}
+        self.assertQuerysetEqual(self.filterset(params).qs, self.queryset, ordered=False)
+
 
 class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = ModuleType.objects.all()
@@ -4080,11 +4190,25 @@ class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
         ("rear_port_templates", "rear_port_templates__id"),
         ("rear_port_templates", "rear_port_templates__name"),
         ("module_bay_templates", "module_bay_templates__id"),
+        ("module_family", "module_family__id"),
+        ("module_family", "module_family__name"),
     ]
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+    def test_compatible_with_module_bay(self):
+        """Test filtering module types that are compatible with a specific module bay based on module family."""
+        module_bay = ModuleBay.objects.filter(module_family__isnull=False).first()
+        compatible_module_types = ModuleType.objects.filter(module_family=module_bay.module_family)
+        params = {"compatible_with_module_bay": module_bay.pk}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params).qs, compatible_module_types)
+
+        # Test with module bay that has no module family - should return ALL module types
+        module_bay_no_family = ModuleBay.objects.filter(module_family__isnull=True).first()
+        params = {"compatible_with_module_bay": module_bay_no_family.pk}
+        self.assertQuerysetEqual(self.filterset(params).qs, self.queryset, ordered=False)
 
 
 class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
@@ -4097,6 +4221,8 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
         ("label",),
         ("module_type", "module_type__id"),
         ("module_type", "module_type__model"),
+        ("module_family", "module_family__id"),
+        ("module_family", "module_family__name"),
         ("name",),
         ("position",),
     ]
@@ -4104,6 +4230,21 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+    def test_requires_first_party_modules(self):
+        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
+        with self.subTest():
+            params = {"requires_first_party_modules": True}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(requires_first_party_modules=True),
+            )
+        with self.subTest():
+            params = {"requires_first_party_modules": False}
+            self.assertQuerysetEqual(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(requires_first_party_modules=False),
+            )
 
 
 class ModuleBayTestCase(FilterTestCases.FilterTestCase):
@@ -4266,5 +4407,41 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 name="Interface 000",
                 status=interface_status,
+            ),
+        )
+
+
+class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
+    """Test cases for the ModuleFamilyFilterSet."""
+
+    queryset = ModuleFamily.objects.all()
+    filterset = ModuleFamilyFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("description",),
+        ("module_types", "module_types__id"),
+        ("module_types", "module_types__model"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for filter tests."""
+        manufacturers = (
+            Manufacturer.objects.create(name="Manufacturer 1"),
+            Manufacturer.objects.create(name="Manufacturer 2"),
+        )
+
+        cls.module_families = (
+            ModuleFamily.objects.create(name="Module Family 1", description="First family"),
+            ModuleFamily.objects.create(name="Module Family 2", description="Second family"),
+            ModuleFamily.objects.create(name="Module Family 3", description="Third family"),
+        )
+
+        cls.module_types = (
+            ModuleType.objects.create(
+                manufacturer=manufacturers[0], model="Model 1", module_family=cls.module_families[0]
+            ),
+            ModuleType.objects.create(
+                manufacturer=manufacturers[1], model="Model 2", module_family=cls.module_families[1]
             ),
         )

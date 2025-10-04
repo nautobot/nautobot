@@ -19,6 +19,10 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -50,8 +54,10 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
+    PowerFeed,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
@@ -1777,6 +1783,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device.validated_save()
 
     def test_all_x_properties(self):
+        self.assertTrue(self.device.has_module_bays)
         self.assertEqual(self.device.all_modules.count(), 0)
         self.assertEqual(self.device.all_module_bays.count(), 1)
         self.assertEqual(self.device.all_console_server_ports.count(), 1)
@@ -2385,6 +2392,263 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # Enable change logging
         with context_managers.web_request_context(self.user):
             self.device1.delete()
+
+
+class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
+    model = PowerFeed
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.status = Status.objects.get_for_model(PowerFeed).first()
+        cls.rack_status = Status.objects.get_for_model(Rack).first()
+
+        cls.source_panel = PowerPanel.objects.create(location=cls.location, name="Source Panel 1")
+        cls.destination_panel = PowerPanel.objects.create(location=cls.location, name="Destination Panel 1")
+
+        # Create location in different hierarchy for rack validation test
+        cls.other_location = Location.objects.create(
+            name="Other Location",
+            location_type=LocationType.objects.get(name="Campus"),
+            status=Status.objects.get_for_model(Location).first(),
+        )
+
+        cls.rack = Rack.objects.create(location=cls.location, name="Test Rack", status=cls.rack_status)
+        cls.other_rack = Rack.objects.create(location=cls.other_location, name="Other Rack", status=cls.rack_status)
+
+        PowerFeed.objects.create(
+            name="Test Power Feed 1",
+            power_panel=cls.source_panel,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 2",
+            power_panel=cls.source_panel,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 3",
+            power_panel=cls.destination_panel,
+            status=cls.status,
+        )
+
+    def test_destination_panel_self_reference_validation(self):
+        """Test that a power feed cannot reference itself."""
+        feed = PowerFeed(
+            name="Self Reference",
+            power_panel=self.source_panel,
+            destination_panel=self.source_panel,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("destination_panel", cm.exception.message_dict)
+
+    def test_circuit_breaker_position_conflict_validation(self):
+        """Test that overlapping circuit breaker positions raise validation errors."""
+        # Create first feed at position 1 with 2 poles (occupies 1,3)
+        PowerFeed.objects.create(
+            name="Feed 1",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=1,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        # Try to create conflicting feed at position 3
+        conflicting_feed = PowerFeed(
+            name="Feed 2",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=3,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            conflicting_feed.full_clean()
+        self.assertIn("breaker_position", cm.exception.message_dict)
+
+    def test_rack_location_hierarchy_validation(self):
+        """Test that rack must belong to same location hierarchy as power panel."""
+        feed = PowerFeed(
+            name="Invalid Rack Location",
+            power_panel=self.source_panel,
+            rack=self.other_rack,  # Different location hierarchy
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("rack", cm.exception.message_dict)
+
+    def test_ac_voltage_negative_validation(self):
+        """Test that AC supply cannot have negative voltage."""
+        feed = PowerFeed(
+            name="Negative Voltage",
+            power_panel=self.source_panel,
+            status=self.status,
+            voltage=-120,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("voltage", cm.exception.message_dict)
+
+    def test_phase_designation_single_pole(self):
+        """Test phase designation calculation for single-pole breakers."""
+        # Pattern: positions 1,2=A, 3,4=B, 5,6=C, 7,8=A, etc.
+        test_cases = [
+            (1, "A"),
+            (2, "A"),
+            (3, "B"),
+            (4, "B"),
+            (5, "C"),
+            (6, "C"),
+            (7, "A"),
+            (8, "A"),
+            (9, "B"),
+            (10, "B"),
+        ]
+
+        for position, expected_phase in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"1P Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+                    # phase defaults to PHASE_SINGLE which is correct for all single-pole feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_phase)
+
+    def test_phase_designation_two_pole_single_phase(self):
+        """Test phase designation for 2-pole breakers delivering single-phase power."""
+        # Common datacenter scenario: 2P breaker for 208V single-phase to rack PDU
+        # Uses two phase conductors but delivers single-phase power
+        test_cases = [
+            (1, "A-B"),  # occupies 1,3 → A,B → 208V single-phase
+            (2, "A-B"),  # occupies 2,4 → A,B → 208V single-phase
+            (3, "B-C"),  # occupies 3,5 → B,C → 208V single-phase
+            (4, "B-C"),  # occupies 4,6 → B,C → 208V single-phase
+            (5, "A-C"),  # occupies 5,7 → C,A → sorted to A-C → 208V single-phase
+            (6, "A-C"),  # occupies 6,8 → C,A → sorted to A-C → 208V single-phase
+            (7, "A-B"),  # occupies 7,9 → A,B → 208V single-phase (cycle continues)
+        ]
+
+        for position, expected_designation in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"2P Single-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+                    # phase defaults to PHASE_SINGLE - correct for 208V single-phase feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_designation)
+                # Verify it's still marked as single-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+
+    def test_phase_designation_three_pole_three_phase(self):
+        """Test phase designation for 3-pole breakers delivering three-phase power."""
+        # True three-phase power using all three phases
+        test_cases = [1, 2, 3, 4, 5]
+
+        for position in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"3P Three-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_3,
+                    phase=PowerFeedPhaseChoices.PHASE_3PHASE,  # Explicitly set to three-phase
+                )
+                self.assertEqual(feed.phase_designation, "A-B-C")
+                # Verify it's marked as three-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_3PHASE)
+
+    def test_phase_designation_edge_cases(self):
+        """Test phase designation calculation for edge cases and None values."""
+        # Test missing breaker_position
+        feed = PowerFeed.objects.create(
+            name="No Position",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+        # Test missing breaker_pole_count (should default to single pole)
+        feed = PowerFeed.objects.create(
+            name="No Pole Count",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=1,
+            breaker_pole_count=None,
+        )
+        # Should default to single pole and have phase designation
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
+        self.assertEqual(feed.phase_designation, "A")
+
+        # Test both missing
+        feed = PowerFeed.objects.create(
+            name="No Position or Pole Count",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=None,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+    def test_phase_field_defaults(self):
+        """Test that phase field defaults correctly and type field defaults to primary."""
+        feed = PowerFeed.objects.create(
+            name="Default Fields Test",
+            power_panel=self.source_panel,
+            status=self.status,
+        )
+
+        # Verify defaults
+        self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+        self.assertEqual(feed.type, PowerFeedTypeChoices.TYPE_PRIMARY)
+
+    def test_occupied_positions(self):
+        """Test occupied positions calculation."""
+        feed = PowerFeed.objects.create(
+            name="Test Feed",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=5,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        self.assertEqual(feed.get_occupied_positions(), {5, 7})
+        self.assertEqual(feed.occupied_positions, "5, 7")
+
+    def test_breaker_pole_count_enforcement_in_save(self):
+        """Test that breaker_pole_count defaults to POLE_1 when breaker_position is set during save."""
+        # Create feed with breaker_position but no breaker_pole_count
+        feed = PowerFeed(
+            name="Test Save Enforcement",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=10,
+        )
+
+        # Verify breaker_pole_count is None before save
+        self.assertIsNone(feed.breaker_pole_count)
+
+        # Save without calling clean() to bypass form validation
+        feed.save()
+
+        # Verify breaker_pole_count was set to POLE_1 during save
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
 
 
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
@@ -3404,6 +3668,130 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.assertEqual(child_module.interfaces.first().name, "Interface " + module_bay_position + "/3/2")
 
+    def test_module_manufacturer_constraint_requires_first_party_false(self):
+        """Test that modules are allowed when requires_first_party_modules is False, regardless of manufacturer."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test1", requires_first_party_modules=False
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        device_manufacturer = self.device.device_type.manufacturer
+        module_type = ModuleType.objects.create(manufacturer=device_manufacturer, model="Same Manufacturer Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test2", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test3", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_module_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child1")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        child_module.full_clean()
+        child_module.save()
+
+    def test_module_manufacturer_constraint_module_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        parent_manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=parent_manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child2")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_manufacturer = Manufacturer.objects.create(name="Child Manufacturer")
+        child_module_type = ModuleType.objects.create(manufacturer=child_manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            child_module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_no_parent_module_bay(self):
+        """Test that manufacturer constraint validation is skipped when parent_module_bay is None."""
+        manufacturer = Manufacturer.objects.create(name="Any Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Any Module")
+        module = Module(
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
@@ -3507,3 +3895,24 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             vdc.validated_save()
 
         self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
+
+
+class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
+    """Test cases for the ModuleFamily model."""
+
+    model = ModuleFamily
+
+    def setUp(self):
+        """Create a ModuleFamily for use in test methods."""
+        self.module_family = ModuleFamily.objects.create(
+            name="Test Module Family", description="A module family for testing"
+        )
+
+    def test_create_modulefamily(self):
+        """Test the creation of a ModuleFamily instance."""
+        self.assertEqual(self.module_family.name, "Test Module Family")
+        self.assertEqual(self.module_family.description, "A module family for testing")
+
+    def test_modulefamily_str(self):
+        """Test string representation of ModuleFamily."""
+        self.assertEqual(str(self.module_family), "Test Module Family")

@@ -7,10 +7,9 @@ from django.core.exceptions import (
 )
 from django.db.models import ManyToManyField, ProtectedError
 
-from nautobot.core import exceptions
 from nautobot.core.forms.utils import restrict_form_fields
-from nautobot.core.utils.filtering import get_filterset_field
-from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
+from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.views.utils import get_bulk_queryset_from_view
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs import (
     BooleanVar,
@@ -19,6 +18,7 @@ from nautobot.extras.jobs import (
     ObjectVar,
     RunJobTaskFailed,
 )
+from nautobot.extras.models import SavedView
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 name = "System Jobs"
@@ -32,8 +32,10 @@ class BulkEditObjects(Job):
         description="Type of objects to update",
     )
     form_data = JSONVar(description="BulkEditForm data")
+    pk_list = JSONVar(description="List of objects pks to edit", required=False)
     edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
+    saved_view = ObjectVar(model=SavedView, required=False)
 
     class Meta:
         name = "Bulk Edit Objects"
@@ -41,42 +43,14 @@ class BulkEditObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
+        hidden = True
 
-    def _update_objects(self, model, form, filter_query_params, edit_all, nullified_fields):
+    def _update_objects(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
+        base_queryset = model.objects.restrict(self.user, "change")
+        queryset = get_bulk_queryset_from_view(user=self.user, action="change", log=self.logger, **self.key_params)
+
         with deferred_change_logging_for_bulk_operation():
-            base_queryset = model.objects.restrict(self.user, "change")
             updated_objects_pk = []
-            filterset_cls = get_filterset_for_model(model)
-
-            if filter_query_params:
-                if not filterset_cls:
-                    self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
-                    raise RunJobTaskFailed(
-                        f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
-                    )
-
-                # Discarding non-filter query params
-                new_filter_query_params = {}
-
-                for key, value in filter_query_params.items():
-                    try:
-                        get_filterset_field(filterset_cls(), key)
-                        new_filter_query_params[key] = value
-                    except exceptions.FilterSetFieldNotFound:
-                        self.logger.debug(
-                            f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
-                        )
-
-                filter_query_params = new_filter_query_params
-
-            if edit_all:
-                if filter_query_params:
-                    queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "change")
-                else:
-                    queryset = model.objects.restrict(self.user, "change")
-            else:
-                queryset = model.objects.restrict(self.user, "change").filter(pk__in=form.cleaned_data["pk"])
-
             form_custom_fields = getattr(form, "custom_fields", [])
             form_relationships = getattr(form, "relationships", [])
             standard_fields = [
@@ -96,12 +70,11 @@ class BulkEditObjects(Job):
                         model_field = None
 
                     # Handle nullification
-                    if nullified_fields:
-                        if field_name in form.nullable_fields and field_name in nullified_fields:
-                            if isinstance(model_field, ManyToManyField):
-                                getattr(obj, field_name).set([])
-                            else:
-                                setattr(obj, field_name, None if model_field is not None and model_field.null else "")
+                    if nullified_fields and field_name in nullified_fields and field_name in form.nullable_fields:
+                        if isinstance(model_field, ManyToManyField):
+                            getattr(obj, field_name).set([])
+                        else:
+                            setattr(obj, field_name, None if model_field is not None and model_field.null else "")
 
                     # ManyToManyFields
                     elif isinstance(model_field, ManyToManyField):
@@ -109,7 +82,8 @@ class BulkEditObjects(Job):
                             getattr(obj, field_name).set(form.cleaned_data[field_name])
                     # Normal fields
                     elif form.cleaned_data[field_name] not in (None, "", []):
-                        setattr(obj, field_name, form.cleaned_data[field_name])
+                        if hasattr(obj, field_name):
+                            setattr(obj, field_name, form.cleaned_data[field_name])
 
                 # Update custom fields
                 for field_name in form_custom_fields:
@@ -121,7 +95,7 @@ class BulkEditObjects(Job):
                 obj.full_clean()
                 obj.save()
                 updated_objects_pk.append(obj.pk)
-                form.post_save(obj)
+                form.post_save(obj)  # handles M2M add_* and remove_* form fields
 
                 if hasattr(form, "save_relationships") and callable(form.save_relationships):
                     # Add/remove relationship associations
@@ -130,14 +104,18 @@ class BulkEditObjects(Job):
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=self.user)
             total_updated_objs = len(updated_objects_pk)
-            # Enforce object-level permissions
+            # Enforce object-level permissions. This works because we used .restrict() above and if the user
+            # doesn't have permission to change one of the objects after the change, it won't be in base_queryset
+            # filtered to the pks of the objects we just changed.
             if base_queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
                 raise ObjectDoesNotExist
             return total_updated_objs
 
-    def _process_valid_form(self, model, form, filter_query_params, edit_all, nullified_fields):
+    def _process_valid_form(self, model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id):
         try:
-            total_updated_objs = self._update_objects(model, form, filter_query_params, edit_all, nullified_fields)
+            total_updated_objs = self._update_objects(
+                model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id
+            )
             msg = f"Updated {total_updated_objs} {model._meta.verbose_name_plural}"
             self.logger.info(msg)
             return msg
@@ -149,11 +127,23 @@ class BulkEditObjects(Job):
         raise RunJobTaskFailed("Bulk Edit not fully successful, see logs")
 
     def run(  # pylint: disable=arguments-differ
-        self, *, content_type, form_data, edit_all=False, filter_query_params=None
+        self, *, content_type, form_data, pk_list=None, edit_all=False, filter_query_params=None, saved_view=None
     ):
+        saved_view_id = saved_view.pk if saved_view is not None else None
+        if not filter_query_params:
+            filter_query_params = {}
+
         if not self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to update %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have change permissions on the requested content-type")
+
+        self.key_params = {
+            "content_type": content_type,
+            "edit_all": edit_all,
+            "filter_query_params": filter_query_params,
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
 
         model = content_type.model_class()
         if model is None:
@@ -178,7 +168,9 @@ class BulkEditObjects(Job):
         if form.is_valid():
             self.logger.debug("Form validation was successful")
             nullified_fields = form_data.get("_nullify")
-            return self._process_valid_form(model, form, filter_query_params, edit_all, nullified_fields)
+            return self._process_valid_form(
+                model, form, filter_query_params, pk_list, edit_all, nullified_fields, saved_view_id
+            )
         else:
             self.logger.error(f"Form validation unsuccessful: {form.errors.as_json()}")
 
@@ -197,6 +189,7 @@ class BulkDeleteObjects(Job):
     pk_list = JSONVar(description="List of objects pks to delete", required=False)
     delete_all = BooleanVar(description="Delete all (filtered) objects instead of a list of PKs", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
+    saved_view = ObjectVar(model=SavedView, required=False)
 
     class Meta:
         name = "Bulk Delete Objects"
@@ -204,13 +197,25 @@ class BulkDeleteObjects(Job):
         has_sensitive_variables = False
         soft_time_limit = 1800
         time_limit = 2000
+        hidden = True
 
     def run(  # pylint: disable=arguments-differ
-        self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None
+        self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view=None
     ):
+        saved_view_id = saved_view.pk if saved_view is not None else None
+        if not filter_query_params:
+            filter_query_params = {}
         if not self.user.has_perm(f"{content_type.app_label}.delete_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to delete %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have delete permissions on the requested content-type")
+
+        key_params = {
+            "content_type": content_type,
+            "delete_all": delete_all,
+            "filter_query_params": filter_query_params,
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
 
         model = content_type.model_class()
         if model is None:
@@ -221,49 +226,7 @@ class BulkDeleteObjects(Job):
             )
             raise RunJobTaskFailed("Model not found")
 
-        filterset_cls = get_filterset_for_model(model)
-
-        if filter_query_params:
-            if not filterset_cls:
-                self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
-                raise RunJobTaskFailed(
-                    f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
-                )
-
-            # Discarding non-filter query params
-            new_filter_query_params = {}
-
-            for key, value in filter_query_params.items():
-                try:
-                    get_filterset_field(filterset_cls(), key)
-                    new_filter_query_params[key] = value
-                except exceptions.FilterSetFieldNotFound:
-                    self.logger.debug(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
-
-            filter_query_params = new_filter_query_params
-
-        if delete_all:
-            # Case for selecting all objects (or all filtered objects) to delete
-            if filter_query_params:
-                # If there is filter query params, we need to apply it to the queryset
-                queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "delete")
-                # We take this approach because filterset.qs has already applied .distinct(),
-                # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-                queryset = model.objects.filter(pk__in=queryset)
-            else:
-                # If there is not, we can just restrict the queryset to the user's permissions
-                queryset = model.objects.restrict(self.user, "delete")
-        elif pk_list:
-            # Case for selecting specific objects to delete, delete_all overrides this option
-            queryset = model.objects.restrict(self.user, "delete").filter(pk__in=pk_list)
-            if queryset.count() < len(pk_list):
-                # We do not check ObjectPermission error for `delete_all` case because user is trying to
-                # delete all objs they have permission to which would not raise any issue.
-                self.logger.error("You do not have permissions to delete some of the objects provided in `pk_list`.")
-                raise RunJobTaskFailed("Caught ObjectPermission error while attempting to delete objects")
-        elif not pk_list and not delete_all:
-            self.logger.error("You must select at least one object instance to delete.")
-            raise RunJobTaskFailed("Either `pk_list` or `delete_all` is required.")
+        queryset = get_bulk_queryset_from_view(user=self.user, action="delete", log=self.logger, **key_params)
 
         verbose_name_plural = model._meta.verbose_name_plural
 

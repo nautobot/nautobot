@@ -34,11 +34,11 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $("a.set_speed").click(function(e) {
-        e.preventDefault();
-        $("#id_" + $(this).attr("target")).val($(this).attr("data"));
-    });
-</script>
+    {{ block.super }}
+    <script type="text/javascript">
+        $("a.set_speed").click(function(e) {
+            e.preventDefault();
+            $("#id_" + $(this).attr("target")).val($(this).attr("data"));
+        });
+    </script>
 {% endblock %}

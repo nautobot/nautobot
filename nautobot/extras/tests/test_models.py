@@ -153,6 +153,10 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
 
+        # Template strings for validation testing (cannot be saved due to syntax errors)
+        self.invalid_template_unclosed_bracket = "{{ obj.name }"
+        self.invalid_template_unknown_tag = "{% unknowntag %}{{ obj.name }}{% endunknowntag %}"
+
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, f"{self.location1.name} is awesome!")
@@ -213,6 +217,218 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
+
+    def test_template_validation_invalid_syntax(self):
+        """
+        Test that ComputedField with invalid Jinja2 template syntax raises ValidationError.
+        """
+        # Invalid template with syntax error - unclosed bracket
+        invalid_computed_field = ComputedField(
+            label="Invalid Template Test",
+            key="invalid_template_test",
+            template=self.invalid_template_unclosed_bracket,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+        self.assertIn("line", str(error_dict["template"][0]))
+
+    def test_template_validation_invalid_tag(self):
+        """
+        Test that ComputedField with invalid Jinja2 tag raises ValidationError.
+        """
+        # Invalid template with unknown tag
+        invalid_computed_field = ComputedField(
+            label="Invalid Tag Test",
+            key="invalid_tag_test",
+            template=self.invalid_template_unknown_tag,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+
+    def test_bulk_create_valid_templates(self):
+        """Test that bulk_create works with valid templates."""
+        valid_fields = [
+            ComputedField(
+                label="Bulk Test 1",
+                key="bulk_test_1",
+                template="{{ obj.name }} - Test 1",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Bulk Test 2",
+                key="bulk_test_2",
+                template="{{ obj.id }} - Test 2",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        # Should not raise ValidationError
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+        self.assertEqual(len(created_fields), 2)
+
+    def test_bulk_create_invalid_templates(self):
+        """Test that bulk_create fails with invalid templates and reports all errors."""
+        invalid_fields = [
+            ComputedField(
+                label="Invalid Test 1",
+                key="invalid_test_1",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Test 2",
+                key="invalid_test_2",
+                template=self.invalid_template_unknown_tag,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(invalid_fields)
+
+        # Check that both errors are reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Test 1", error_message)
+        self.assertIn("Invalid Test 2", error_message)
+
+    def test_bulk_update_template_field(self):
+        """Test that bulk_update validates templates when template field is updated."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Update Test 1",
+                key="update_test_1",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Update Test 2",
+                key="update_test_2",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update with invalid templates
+        for field in created_fields:
+            field.template = self.invalid_template_unclosed_bracket
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that validation error occurred
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Update Test 1", error_message)
+        self.assertIn("Update Test 2", error_message)
+
+    def test_bulk_update_non_template_field(self):
+        """Test that bulk_update skips template validation when template field is not updated."""
+        # Create a field with invalid template (bypassing validation for this test)
+        field = ComputedField(
+            label="Non-template Update Test",
+            key="non_template_update_test",
+            template="{{ obj.name }}",  # Start with valid template
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+        field.save()
+
+        # Manually set invalid template (simulating existing invalid data)
+        ComputedField.objects.filter(pk=field.pk).update(template=self.invalid_template_unclosed_bracket)
+        field.refresh_from_db()
+
+        # Update only the label field - should not trigger template validation
+        field.label = "Updated Label"
+        try:
+            ComputedField.objects.bulk_update([field], ["label"])
+        except ValidationError:
+            self.fail("bulk_update should not validate templates when template field is not being updated")
+
+    def test_bulk_create_mixed_valid_invalid(self):
+        """Test that bulk_create fails when mixing valid and invalid templates."""
+        mixed_fields = [
+            ComputedField(
+                label="Valid Mixed Test",
+                key="valid_mixed_test",
+                template="{{ obj.name }} - Valid",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Mixed Test",
+                key="invalid_mixed_test",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(mixed_fields)
+
+        # Check that the invalid object is reported but valid one is not
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Mixed Test", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Mixed Test", error_message)
+
+        # Verify no objects were created (all-or-nothing behavior)
+        self.assertFalse(ComputedField.objects.filter(key="valid_mixed_test").exists())
+        self.assertFalse(ComputedField.objects.filter(key="invalid_mixed_test").exists())
+
+    def test_bulk_update_mixed_valid_invalid(self):
+        """Test that bulk_update fails when mixing valid and invalid template updates."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Valid Update Mixed",
+                key="valid_update_mixed",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Update Mixed",
+                key="invalid_update_mixed",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update: one with valid template, one with invalid
+        created_fields[0].template = "{{ obj.name }} - Updated Valid"  # Valid
+        created_fields[1].template = self.invalid_template_unclosed_bracket  # Invalid
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that only the invalid object is reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Update Mixed", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Update Mixed", error_message)
+
+        # Verify templates were not updated (all-or-nothing behavior)
+        created_fields[0].refresh_from_db()
+        created_fields[1].refresh_from_db()
+        self.assertEqual(created_fields[0].template, "{{ obj.name }}")  # Original template
+        self.assertEqual(created_fields[1].template, "{{ obj.id }}")  # Original template
 
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):
@@ -1404,7 +1620,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass.TestPassJob")
+        self.assertEqual(self.local_job.class_path, "pass_job.TestPassJob")
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
@@ -2145,7 +2361,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
         self.daily_utc_job = ScheduledJob.objects.create(
             name="Daily UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
@@ -2153,7 +2369,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.daily_est_job = ScheduledJob.objects.create(
             name="Daily EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2168,7 +2384,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2177,7 +2393,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.one_off_utc_job = ScheduledJob.objects.create(
             name="One-off UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
@@ -2335,7 +2551,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test that TYPE_CUSTOM behavior around DST is as expected."""
         cronjob = ScheduledJob.objects.create(
             name="DST Aware Cronjob",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_CUSTOM,
@@ -2390,7 +2606,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test the interaction of TYPE_DAILY around DST."""
         daily = ScheduledJob.objects.create(
             name="Daily Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_DAILY,
@@ -2963,7 +3179,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_class = get_job(f"{module}.{name}")
 

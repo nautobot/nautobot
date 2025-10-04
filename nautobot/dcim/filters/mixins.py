@@ -38,7 +38,7 @@ from nautobot.dcim.models import (
     RearPort,
     RearPortTemplate,
 )
-from nautobot.extras.filters import CustomFieldModelFilterSetMixin
+from nautobot.extras.filters.mixins import CustomFieldModelFilterSetMixin, RelationshipModelFilterSetMixin
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
@@ -101,7 +101,7 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     )
 
 
-class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin):
+class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin, RelationshipModelFilterSetMixin):
     module = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Module.objects.all(),
         to_field_name="module_type__model",

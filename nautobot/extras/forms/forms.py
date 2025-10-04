@@ -43,6 +43,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    CustomFieldFilterLogicChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -134,6 +135,7 @@ __all__ = (
     "ConfigContextSchemaForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldBulkDeleteForm",
+    "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
     "CustomFieldFilterForm",
     "CustomFieldForm",
@@ -142,6 +144,7 @@ __all__ = (
     "CustomLinkFilterForm",
     "CustomLinkForm",
     "DynamicGroupBulkAssignForm",
+    "DynamicGroupBulkEditForm",
     "DynamicGroupFilterForm",
     "DynamicGroupForm",
     "DynamicGroupMembershipFormSet",
@@ -197,6 +200,7 @@ __all__ = (
     "SecretFilterForm",
     "SecretForm",
     "SecretsGroupAssociationFormSet",
+    "SecretsGroupBulkEditForm",
     "SecretsGroupFilterForm",
     "SecretsGroupForm",
     "StaticGroupAssociationFilterForm",
@@ -464,6 +468,66 @@ class CustomFieldDescriptionField(CommentField):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
 
 
+class CustomFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=CustomField.objects.all(), widget=forms.MultipleHiddenInput)
+    grouping = forms.CharField(
+        required=False,
+        max_length=CHARFIELD_MAX_LENGTH,
+        label="Grouping",
+        help_text="Human-readable grouping that this custom field belongs to.",
+    )
+    description = forms.CharField(
+        required=False,
+        max_length=CHARFIELD_MAX_LENGTH,
+        label="Description",
+        help_text="A helpful description for this field.",
+    )
+    required = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        label="Required",
+        help_text="If true, this field is required when creating new objects or editing an existing object.",
+    )
+    filter_logic = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(CustomFieldFilterLogicChoices.CHOICES),
+        label="Filter logic",
+        help_text="Loose matches any instance of a given string; Exact matches the entire field.",
+    )
+    weight = forms.IntegerField(
+        required=False, label="Weight", help_text="Fields with higher weights appear lower in a form."
+    )
+    advanced_ui = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        label="Move to Advanced tab",
+        help_text="Hide this field from the object's primary information tab. It will appear in the 'Advanced' tab instead.",
+    )
+    add_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("custom_fields"), required=False, label="Add Content Types"
+    )
+    remove_content_types = MultipleContentTypeField(
+        limit_choices_to=FeatureQuery("custom_fields"), required=False, label="Remove Content Types"
+    )
+
+    class Meta:
+        model = CustomField
+        fields = (
+            "grouping",
+            "description",
+            "required",
+            "filter_logic",
+            "weight",
+            "advanced_ui",
+            "add_content_types",
+            "remove_content_types",
+        )
+        nullable_fields = [
+            "grouping",
+            "description",
+        ]
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(
         required=True, max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users."
@@ -641,6 +705,20 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 # Dynamic Groups
 #
+class DynamicGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = DynamicGroup
+        fields = [
+            "description",
+            "tenant",
+        ]
 
 
 class DynamicGroupForm(TenancyForm, NautobotModelForm):
@@ -914,13 +992,13 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
     verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)
-    extra_config = forms.JSONField(required=False)
+    extra_config = JSONField(required=False, widget=forms.Textarea, help_text="JSON data")
     http_method = forms.ChoiceField(
         required=False,
         label="HTTP Method",
         choices=add_blank_choice(WebhookHttpMethodChoices),
     )
-    headers = forms.JSONField(required=False, label="HTTP Request headers")
+    headers = JSONField(required=False, widget=forms.Textarea, help_text="Headers for the HTTP request")
 
     class Meta:
         model = ExternalIntegration
@@ -1487,7 +1565,6 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     class Meta:
         model = JobQueue
         nullable_fields = [
-            "secrets_group",
             "description",
             "tenant",
         ]
@@ -1910,8 +1987,8 @@ class RelationshipBulkEditForm(BootstrapMixin, CustomFieldModelBulkEditFormMixin
     )
     source_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     destination_hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    source_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
-    destination_filter = forms.JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
+    source_filter = JSONField(required=False, widget=forms.Textarea, help_text="Filter for the source")
+    destination_filter = JSONField(required=False, widget=forms.Textarea, help_text="Filter for the destination")
     source_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()), required=False
     )
@@ -2081,6 +2158,14 @@ class RoleFilterForm(NautobotFilterForm):
 #
 # Secrets
 #
+
+
+class SecretsGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=SecretsGroup.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        model = SecretsGroup
 
 
 def provider_choices():
@@ -2256,6 +2341,8 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     secret = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     ca_file_path = forms.CharField(required=False, max_length=4096)
     http_content_type = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    additional_headers = forms.CharField(required=False, widget=forms.Textarea)
+    body_template = forms.CharField(required=False, widget=forms.Textarea)
 
     # Choice field
     http_method = forms.ChoiceField(
@@ -2279,6 +2366,8 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
             "type_delete",
             "http_method",
             "http_content_type",
+            "additional_headers",
+            "body_template",
             "ssl_verification",
             "ca_file_path",
             "payload_url",
@@ -2286,6 +2375,7 @@ class WebhookBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
             "add_content_types",
             "remove_content_types",
         )
+        nullable_fields = ("additional_headers",)
 
 
 class WebhookForm(BootstrapMixin, forms.ModelForm):

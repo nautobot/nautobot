@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -35,7 +36,7 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -47,7 +48,9 @@ UTILIZATION_GRAPH = """
 # object: the base ancestor Prefix, in the case of PrefixDetailTable, else None
 PREFIX_COPY_LINK = """
 {% load helpers %}
+{% if not table.hide_hierarchy_ui %}
 {% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
+{% endif %}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -417,6 +420,15 @@ class PrefixDetailTable(PrefixTable):
     utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_conditional_prefetch(
+            "utilization",
+            prefetch=Prefetch(
+                "children", queryset=Prefix.objects.only("network", "prefix_length", "parent_id").order_by()
+            ),
+        )
 
     class Meta(PrefixTable.Meta):
         fields = (
@@ -842,6 +854,7 @@ class ServiceTable(BaseTable):
     parent = tables.LinkColumn(order_by=("device", "virtual_machine"))
     ports = tables.TemplateColumn(template_code="{{ record.port_list }}", verbose_name="Ports")
     tags = TagColumn(url_name="ipam:service_list")
+    actions = ButtonsColumn(Service, buttons=["changelog", "edit", "delete"])
 
     class Meta(BaseTable.Meta):
         model = Service
@@ -854,5 +867,6 @@ class ServiceTable(BaseTable):
             "ip_addresses",
             "description",
             "tags",
+            "actions",
         )
-        default_columns = ("pk", "name", "parent", "protocol", "ports", "description")
+        default_columns = ("pk", "name", "parent", "protocol", "ports", "description", "actions")

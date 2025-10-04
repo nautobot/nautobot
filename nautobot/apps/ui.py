@@ -2,6 +2,16 @@
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
+from nautobot.core.ui.breadcrumbs import (
+    AncestorsBreadcrumbs,
+    BaseBreadcrumbItem,
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+    ViewNameBreadcrumbItem,
+)
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.homepage import (
     HomePageBase,
@@ -36,14 +46,18 @@ from nautobot.core.ui.object_detail import (
     Tab,
     TextPanel,
 )
+from nautobot.core.ui.titles import Titles
 from nautobot.core.ui.utils import render_component_template
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
+    "AncestorsBreadcrumbs",
     "Banner",
     "BannerClassChoices",
+    "BaseBreadcrumbItem",
     "BaseTextPanel",
+    "Breadcrumbs",
     "Button",
     "ButtonColorChoices",
     "Component",
@@ -55,8 +69,11 @@ __all__ = (
     "HomePageGroup",
     "HomePageItem",
     "HomePagePanel",
+    "InstanceBreadcrumbItem",
+    "InstanceParentBreadcrumbItem",
     "KeyValueTablePanel",
     "LayoutChoices",
+    "ModelBreadcrumbItem",
     "NavMenuAddButton",
     "NavMenuBase",
     "NavMenuButton",
@@ -75,5 +92,8 @@ __all__ = (
     "Tab",
     "TemplateExtension",
     "TextPanel",
+    "Titles",
+    "ViewNameBreadcrumbItem",
+    "context_object_attr",
     "render_component_template",
 )

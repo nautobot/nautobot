@@ -30,6 +30,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
+    UIComponentsMixin,
 )
 from nautobot.core.views.paginator import EnhancedPage, EnhancedPaginator, get_paginate_count
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -78,6 +79,7 @@ __all__ = (
     "ObjectNotesViewMixin",
     "ObjectPermissionRequiredMixin",
     "ObjectView",
+    "UIComponentsMixin",
     "check_and_call_git_repository_function",
     "check_filter_for_display",
     "csv_format",
