@@ -1,8 +1,10 @@
 {% load helpers %}
+{% load static %}
 
 {% include "components/panel/header_extra_content_table.html" %}
 
 <div class="pull-right col-md-2 noprint">
     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
 </div>
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
 <script src="{% versioned_static 'js/interface_filtering.js' %}"></script>
