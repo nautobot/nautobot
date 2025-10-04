@@ -73,14 +73,14 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
         )
 
     def test_render_breadcrumbs_empty_context(self):
         context = Context({})
         output = ui_framework.render_breadcrumbs(context)
 
-        self.assertHTMLEqual(output, '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"></ol></nav>')
+        self.assertHTMLEqual(output, '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"></ol></nav>')
 
     def test_render_breadcrumbs_with_legacy_breadcrumbs(self):
         legacy_breadcrumbs = '<li class="breadcrumb-item"><a href="/">Home</a></li>'
@@ -89,7 +89,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Home</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Home</a></li></ol></nav>',
         )
 
     def test_render_breadcrumbs_with_legacy_and_block_breadcrumbs_the_same_with_breadcrumbs_class(self):
@@ -106,7 +106,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
         )
 
     def test_render_breadcrumbs_with_legacy_and_block_breadcrumbs_the_same_and_no_breadcrumbs_class(self):
@@ -116,7 +116,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Home</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Home</a></li></ol></nav>',
         )
 
     def test_render_breadcrumbs_with_legacy_breadcrumbs_override(self):
@@ -134,7 +134,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Override</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Override</a></li></ol></nav>',
         )
 
     def test_render_breadcrumbs_strips_tags(self):
@@ -160,5 +160,5 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
 
         self.assertHTMLEqual(
             output,
-            '<nav aria-label="Breadcrumbs" class="mt-4"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
+            '<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">New Home</a></li></ol></nav>',
         )

@@ -14,6 +14,7 @@ from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
 from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape, format_html
@@ -291,7 +292,7 @@ class ViewTestCases:
                 action_buttons.append(
                     format_html(
                         """
-                            <a id="edit-button" class="btn btn-warning border-end-0" href="{}">
+                            <a id="edit-button" class="btn btn-warning" href="{}">
                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
                             </a>
                         """,
@@ -323,8 +324,27 @@ class ViewTestCases:
                         helpers.bettertitle(self.model._meta.verbose_name),
                     )
                 )
+
+            # Because we are looking for a hypothetical use of legacy button templates on the page here, we need some
+            # additional logic to know if this assertion should be made in the first place, and be handled in the `if`
+            # below, or fall back to standard button presence check in the `else` case otherwise.
+            content = assert_and_parse_html(
+                self,
+                utils.extract_page_body(response.content.decode(response.charset)),
+                None,
+                "Response's content is not valid HTML:",
+            )
             for button in action_buttons:
-                self.assertBodyContains(response, button, html=True)
+                button_parsed = assert_and_parse_html(self, button, None, "Button is not valid HTML:")
+                button_id_attribute = re.search(r"id=\"([A-Za-z]+[\w\-\:\.]*)\"", button).group(0)
+                real_count = content.count(button_parsed)
+                if (real_count is None or real_count == 0) and button_id_attribute in str(content):
+                    self.fail(
+                        f"Couldn't find {button} in response, but an element with `{button_id_attribute}` has been found. Is the page using legacy button template?\n{content}",
+                    )
+                else:
+                    # If it wasn't for the legacy button template check above, this would be the only thing needed here.
+                    self.assertBodyContains(response, button, html=True)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
@@ -1004,8 +1024,8 @@ class ViewTestCases:
             # Check if title is rendered correctly
             title = self.get_title()
             expected_title = (
-                '<h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">'
-                '<img alt="Nautobot chevron" class="flex-grow-0 flex-shrink-0 my-n6" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;">'
+                '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
                 f"{title}</h1>"
             )
             self.assertBodyContains(response, expected_title, html=True)
@@ -1257,6 +1277,7 @@ class ViewTestCases:
                                 sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
                             )
                         else:
+                            self.assertIn(key, bulk_edit_form.fields)
                             self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

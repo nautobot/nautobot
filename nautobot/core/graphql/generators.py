@@ -68,9 +68,12 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     filterset_class = schema_type._meta.filterset_class
 
+    @gql_optimizer.resolver_hints(model_field=field_name)
     def resolve_filter(self, info, **kwargs):
+        field = getattr(self, field_name)
+
         if not filterset_class or not kwargs:
-            return getattr(self, field_name).all()
+            return field.all()
 
         # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
         if "_type" in kwargs:
@@ -78,7 +81,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             if "type" not in kwargs:
                 kwargs["type"] = _type
 
-        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+        resolved_obj = filterset_class(kwargs, field.all())
 
         # Check result filter for errors.
         if not resolved_obj.errors:
