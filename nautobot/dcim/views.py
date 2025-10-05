@@ -4450,6 +4450,14 @@ class CableUIViewSet(NautobotUIViewSet):
     queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
     action_buttons = ("import", "export")
 
+    def get_queryset(self):
+        # 6933 fix: with prefetch related in queryset
+        # DeviceInterface is not properly cleared of _path_id
+        queryset = super().get_queryset()
+        if self.action == "destroy":
+            queryset = queryset.prefetch_related(None)
+        return queryset
+
 
 class PathTraceView(generic.ObjectView):
     """
