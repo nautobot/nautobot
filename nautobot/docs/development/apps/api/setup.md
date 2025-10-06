@@ -76,7 +76,6 @@ example_app/
       └── nautobot_logo.svg
 ```
 
-
 ### Build Process using MkDocs
 
 If using MkDocs to compile Markdown documentation to HTML, you should ensure that `mkdocs.yml` defines `site_dir` to be the path `<app_name>/docs` so that the compiled HTML is correctly placed in that directory.
