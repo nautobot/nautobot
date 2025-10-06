@@ -1,2 +1,0 @@
-Added `nautobot-migrate-bootstrap-v3-to-v5` helper script that can be run by Apps to streamline their migration to Bootstrap v5.x for Nautobot v3.x compatibility.
-Added additional DjLint rules to flag various cases where HTML templates had not yet been migrated to Bootstrap v5.x compatibility.

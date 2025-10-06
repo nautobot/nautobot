@@ -1,3 +1,0 @@
-Added the `runnable` property to the ScheduledJob model.
-Added the `has_approval_workflow_definition` method to the ScheduledJob model.
-Added support for custom approval templates via a new `get_approval_template()` method on models ScheduledJob. This allows objects to override the default approval UI when specific conditions are met (e.g. one-off jobs scheduled in the past).

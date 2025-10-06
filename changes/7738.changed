@@ -1,1 +1,0 @@
-Use Nautobot standard layout (header, sidenav, footer) in special views (Admin, GraphiQL, DRF API docs, Swagger and Redoc).

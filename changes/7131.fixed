@@ -1,2 +1,0 @@
-Fixed Graphene v3 handling of `description` filters.
-Restored GraphQL `_type` filters (as aliases of `type` filters) to preserve backwards compatibility with Nautobot v2.x.

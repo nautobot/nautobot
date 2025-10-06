@@ -1,2 +1,0 @@
-Ran `nautobot-migrate-bootstrap-v3-to-v5` against all core HTML templates to auto-migrate many remaining Bootstrap 3 CSS classes and HTML structure to Bootstrap 5 equivalents, as well as identifying various CSS/HTML that needed manual updates.
-Ran updated DjLint rules against all core HTML templates and manually addressed any identified issues not already covered by the `nautobot-migrate-bootstrap-v3-to-v5` script.
