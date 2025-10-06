@@ -1,4 +1,6 @@
+from nautobot.core.apps import NavMenuGroup, NavMenuTab, register_menu_items
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.extras.registry import registry
 
 
 class NavBarTestCase(SeleniumTestCase):
@@ -94,3 +96,28 @@ class NavBarTestCase(SeleniumTestCase):
                 self.assertEqual(len(tabs), 1, msg=f'"{tab_name}" was unexpectedly not found.')
             else:
                 self.assertTrue(tabs.is_empty(), msg=f'"{tab_name}" was unexpectedly found.')
+
+    def test_navbar_render_with_missing_items_and_no_empty_tabs_and_groups(self):
+        """
+        Render navbar from home page with missing items.
+        This could potentially lead to displaying empty tabs and groups on the navbar.
+        Check the UI and assert that tabs and groups with no items are not rendered.
+        """
+
+        register_menu_items((NavMenuTab(name="Test Tab", groups=(NavMenuGroup(name="Test Group", items=()),)),))
+
+        try:
+            self.user.is_superuser = True
+            self.user.save()
+
+            self.browser.visit(self.live_server_url)
+
+            group = self.browser.find_by_xpath(
+                "//*[@id='sidenav']//li[@data-group-weight and normalize-space()='Test Group']"
+            )
+            self.assertEqual(len(group), 0)
+
+            tab = self.browser.find_by_xpath("//*[@id='sidenav']//li[@data-section-name='Test Tab']")
+            self.assertEqual(len(tab), 0)
+        finally:
+            del registry["nav_menu"]["tabs"]["Test Tab"]
