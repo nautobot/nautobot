@@ -50,7 +50,7 @@
                                 <div class="nb-trace-end">
                                     <h3 class="text-danger">Path split!</h3>
                                     <p>Select a node below to continue:</p>
-                                    <ul class="text-left">
+                                    <ul class="text-start">
                                         {% for next_node in path.get_split_nodes %}
                                             {% if next_node.cable %}
                                                 <li>
@@ -112,7 +112,7 @@
                                         <span class="text-secondary">Incomplete</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-right">
+                                <td class="text-end">
                                     {{ cablepath.segment_count }}
                                 </td>
                             </tr>

@@ -124,7 +124,7 @@
             </table>
             {% if request.user|has_perms:contact_association_permission %}
                 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                    <div class="card-footer text-right d-print-none">
+                    <div class="card-footer text-end d-print-none">
                         <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-sm">
                             <span class="mdi mdi-account-edit" aria-hidden="true"></span>
                             Convert to contact/team record
@@ -189,7 +189,7 @@
                 <tr>
                     <td style="padding-left: {{ rg.tree_depth }}8px"><span class="mdi mdi-folder-open"></span> <a href="{{ rg.get_absolute_url }}">{{ rg }}</a></td>
                     <td>{{ rg.rack_count }}</td>
-                    <td class="text-right d-print-none">
+                    <td class="text-end d-print-none">
                         <a href="{% url 'dcim:rack_elevation_list' %}?rack_group={{ rg.pk }}" class="btn btn-sm btn-primary" title="View elevations">
                             <span class="mdi mdi-server"></span>
                         </a>
@@ -199,7 +199,7 @@
             <tr>
                 <td><span class="mdi mdi-folder-open"></span> All racks</td>
                 <td>{{ stats.rack_count }}</td>
-                <td class="text-right d-print-none">
+                <td class="text-end d-print-none">
                     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ object.pk }}" class="btn btn-sm btn-primary" title="View elevations">
                         <span class="mdi mdi-server"></span>
                     </a>
@@ -213,7 +213,7 @@
         </div>
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
-            <div class="card-footer text-right d-print-none">
+            <div class="card-footer text-end d-print-none">
                 <a href="{% url 'dcim:location_add_image' object_id=object.pk %}" class="btn btn-primary btn-sm">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
@@ -231,7 +231,7 @@
             </div>
             {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
                     </a>

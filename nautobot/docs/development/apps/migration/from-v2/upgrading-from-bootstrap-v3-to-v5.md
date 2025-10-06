@@ -44,6 +44,8 @@ One major difference between Bootstrap v3.4.1 and v5.x is that [Helper classes](
 | Helper class        | Utility                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------|
 | `text-muted`        | `text-secondary`                                                                                                           |
+| `text-left`         | `text-start`                                                                                                               |
+| `text-right`        | `text-end`                                                                                                                 |
 | `close`             | `btn-close` *(technically speaking, close button is a component now, not a helper or utility)*                             |
 | `caret`             | *removed, use an icon from icon library instead*                                                                           |
 | `pull-left`         | `float-start`                                                                                                              |

@@ -531,7 +531,9 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "label label-danger": "badge bg-danger",
         "label label-info": "badge bg-info",
         "label label-transparent": "badge bg-transparent",
+        "text-left": "text-start",
         "text-muted": "text-secondary",
+        "text-right": "text-end",
         "sr-only": "visually-hidden",  # Bootstrap 5 uses visually-hidden instead of sr-only
         "sr-only-focusable": "visually-hidden-focusable",  # Bootstrap 5 uses visually-hidden-focusable instead of sr-only-focusable
         "accordion-toggle": "nb-collapse-toggle",  # Custom class to handle accordion toggles

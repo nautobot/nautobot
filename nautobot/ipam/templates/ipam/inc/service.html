@@ -11,7 +11,7 @@
         {% endfor %}
     </td>
     <td>{{ service.description }}</td>
-    <td class="text-right d-print-none">
+    <td class="text-end d-print-none">
         <a href="{% url 'ipam:service_changelog' pk=service.pk %}" class="btn btn-secondary btn-sm" title="Change log">
             <span class="mdi mdi-history"></span>
         </a>

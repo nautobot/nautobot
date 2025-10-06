@@ -10,19 +10,19 @@
             <div class="mb-10 d-flex justify-content-center">
                 <label class="col-lg-3 col-form-label">Provider</label>
                 <div class="col-lg-9">
-                    <p class="form-control-static">{{ obj.circuit.provider }}</p>
+                    <p class="form-control-plaintext">{{ obj.circuit.provider }}</p>
                 </div>
             </div>
             <div class="mb-10 d-flex justify-content-center">
                 <label class="col-lg-3 col-form-label">Circuit</label>
                 <div class="col-lg-9">
-                    <p class="form-control-static">{{ obj.circuit.cid }}</p>
+                    <p class="form-control-plaintext">{{ obj.circuit.cid }}</p>
                 </div>
             </div>
             <div class="mb-10 d-flex justify-content-center">
                 <label class="col-lg-3 col-form-label">Termination</label>
                 <div class="col-lg-9">
-                    <p class="form-control-static">{{ form.term_side.value }}</p>
+                    <p class="form-control-plaintext">{{ form.term_side.value }}</p>
                 </div>
             </div>
             {% with location_tab_active=form.initial.location %}

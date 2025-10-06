@@ -53,7 +53,7 @@
             </div>
             {% include 'inc/table.html' with table=device_table %}
             {% if perms.dcim.add_device %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
                     </a>
@@ -69,7 +69,7 @@
             </div>
             {% include 'inc/table.html' with table=interface_table %}
             {% if perms.dcim.add_interface %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:interface_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Interface
                     </a>
@@ -85,7 +85,7 @@
             </div>
             {% include 'inc/table.html' with table=rack_table %}
             {% if perms.dcim.add_rack %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:rack_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Rack
                     </a>
@@ -101,7 +101,7 @@
             </div>
             {% include 'inc/table.html' with table=ipaddress_table %}
             {% if perms.ipam.add_ipaddress %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'ipam:ipaddress_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add IP Address
                     </a>
@@ -117,7 +117,7 @@
             </div>
             {% include 'inc/table.html' with table=prefix_table %}
             {% if perms.ipam.add_prefix %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Prefix
                     </a>
@@ -133,7 +133,7 @@
             </div>
             {% include 'inc/table.html' with table=virtual_machine_table %}
             {% if perms.virtualization.add_virtualmachine %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'virtualization:virtualmachine_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Machine
                     </a>
@@ -149,7 +149,7 @@
             </div>
             {% include 'inc/table.html' with table=vminterface_table %}
             {% if perms.virtualization.add_vminterface %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VM Interface
                     </a>
@@ -165,7 +165,7 @@
             </div>
             {% include 'inc/table.html' with table=vlan_table %}
             {% if perms.ipam.add_vlan %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VLAN
                     </a>
@@ -182,7 +182,7 @@
             </div>
             {% include 'inc/table.html' with table=controller_table %}
             {% if perms.dcim.add_controller %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:controller_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Controller
                     </a>
@@ -198,7 +198,7 @@
             </div>
             {% include 'inc/table.html' with table=module_table %}
             {% if perms.dcim.add_module %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:module_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Module
                     </a>
@@ -214,7 +214,7 @@
             </div>
             {% include 'inc/table.html' with table=vdc_table %}
             {% if perms.dcim.add_virtualdevicecontext %}
-                <div class="card-footer text-right d-print-none">
+                <div class="card-footer text-end d-print-none">
                     <a href="{% url 'dcim:virtualdevicecontext_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Device Context
                     </a>
