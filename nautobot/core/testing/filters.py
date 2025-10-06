@@ -494,7 +494,6 @@ class FilterTestCases:
             )
 
     class CustomFieldsFilterTestCaseMixin(views.TestCase):
-
         filter_matrix = {
             CustomFieldTypeChoices.TYPE_TEXT: {
                 "value": "Lorem ipsum",
@@ -502,43 +501,57 @@ class FilterTestCases:
                     "": {
                         "lookup_name": "exact match",
                         "test_cases": [
-                            {"search": "foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "Lorem ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "lorem ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": False, "empty": True, "null": False, "value": False}},
-                            {"search": "null",
-                             "expected": {"no_key": False, "empty": False, "null": True, "value": False}},
+                            {
+                                "search": "foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "Lorem ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "lorem ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "null",
+                                "expected": {"no_key": False, "empty": False, "null": True, "value": False},
+                            },
                         ],
                     },
                     "n": {
                         "lookup_name": "not equal",
                         "test_cases": [
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "Lorem ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "lorem ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": False, "null": True, "value": True}},
-                            {"search": "null",
-                             "expected": {"no_key": True, "empty": True, "null": False, "value": True}},
+                            {
+                                "search": "Lorem ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "lorem ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": True},
+                            },
+                            {
+                                "search": "null",
+                                "expected": {"no_key": True, "empty": True, "null": False, "value": True},
+                            },
                         ],
                     },
                     "ic": {
                         "lookup_name": "icontains",
                         "test_cases": [
-                            {"search": "foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "Lorem",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "lorem",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "Lorem",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "lorem",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": False, "null": True, "value": False}}, # TODO: 500 atm
                         ],
@@ -547,12 +560,14 @@ class FilterTestCases:
                         "lookup_name": "not icontains",
                         "test_cases": [
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "Lorem",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "lorem",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "Lorem",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "lorem",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": True, "null": False, "value": True}}, # TODO: 500 atm
                         ],
@@ -560,14 +575,18 @@ class FilterTestCases:
                     "isw": {
                         "lookup_name": "istartswith",
                         "test_cases": [
-                            {"search": "foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "Lorem",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "lorem",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "Lorem",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "lorem",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": False, "null": True, "value": False}}, # TODO: 500 atm
                         ],
@@ -576,12 +595,14 @@ class FilterTestCases:
                         "lookup_name": "not istartswith",
                         "test_cases": [
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "Lorem",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "lorem",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "Lorem",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "lorem",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": True, "null": False, "value": True}}, # TODO: 500 atm
                         ],
@@ -589,14 +610,18 @@ class FilterTestCases:
                     "iew": {
                         "lookup_name": "iendswith",
                         "test_cases": [
-                            {"search": "foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "IPSUM",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "IPSUM",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": False, "null": True, "value": False}}, # TODO: 500 atm
                         ],
@@ -605,12 +630,14 @@ class FilterTestCases:
                         "lookup_name": "not iendswith",
                         "test_cases": [
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "IPSUM",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": "ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "IPSUM",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": True, "null": False, "value": True}}, # TODO: 500 atm
                         ],
@@ -618,43 +645,57 @@ class FilterTestCases:
                     "ie": {
                         "lookup_name": "iexact, case-insensitive match",
                         "test_cases": [
-                            {"search": "foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "Lorem ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "lorem ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": False, "empty": True, "null": False, "value": False}},
-                            {"search": "null",
-                             "expected": {"no_key": False, "empty": False, "null": True, "value": False}},
+                            {
+                                "search": "foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": "Lorem ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "lorem ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": "null",
+                                "expected": {"no_key": False, "empty": False, "null": True, "value": False},
+                            },
                         ],
                     },
                     "nie": {
                         "lookup_name": "not iexact",
                         "test_cases": [
                             {"search": "foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "Lorem ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "lorem ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": False, "null": True, "value": True}},
-                            {"search": "null",
-                             "expected": {"no_key": True, "empty": True, "null": False, "value": True}},
+                            {
+                                "search": "Lorem ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "lorem ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": "null",
+                                "expected": {"no_key": True, "empty": True, "null": False, "value": True},
+                            },
                         ],
                     },
                     "re": {
                         "lookup_name": "regex match (case-sensitive)",
                         "test_cases": [
-                            {"search": ".?foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": ".?ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": ".?IPSUM",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": ".?foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": ".?ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": ".?IPSUM",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": False, "null": True, "value": False}}, # TODO: 500 atm
                         ],
@@ -662,13 +703,18 @@ class FilterTestCases:
                     "nre": {
                         "lookup_name": "not regex match (case-sensitive)",
                         "test_cases": [
-                            {"search": ".?foo", "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": ".?ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": ".?IPSUM",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": ".?foo",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": True},
+                            },
+                            {
+                                "search": ".?ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": ".?IPSUM",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": True},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": True, "null": False, "value": True}}, # TODO: 500 atm
                         ],
@@ -676,14 +722,18 @@ class FilterTestCases:
                     "ire": {
                         "lookup_name": "regex match (case-insensitive)",
                         "test_cases": [
-                            {"search": ".?foo",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": False}},
-                            {"search": ".?ipsum",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": ".?IPSUM",
-                             "expected": {"no_key": False, "empty": False, "null": False, "value": True}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": ".?foo",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": False},
+                            },
+                            {
+                                "search": ".?ipsum",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
+                            {
+                                "search": ".?IPSUM",
+                                "expected": {"no_key": False, "empty": False, "null": False, "value": True},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": False, "null": True, "value": False}}, # TODO: 500 atm
                         ],
@@ -691,14 +741,18 @@ class FilterTestCases:
                     "nire": {
                         "lookup_name": "not regex match (case-insensitive)",
                         "test_cases": [
-                            {"search": ".?foo",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
-                            {"search": ".?ipsum",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": ".?IPSUM",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": False}},
-                            {"search": "",
-                             "expected": {"no_key": True, "empty": True, "null": True, "value": True}},
+                            {
+                                "search": ".?foo",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": True},
+                            },
+                            {
+                                "search": ".?ipsum",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
+                            {
+                                "search": ".?IPSUM",
+                                "expected": {"no_key": True, "empty": True, "null": True, "value": False},
+                            },
                             # {"search": "null",
                             #  "expected": {"no_key": True, "empty": True, "null": False, "value": True}}, # TODO: 500 atm
                         ],
@@ -718,57 +772,65 @@ class FilterTestCases:
         def test_str_custom_field(self):
             model = self.filterset.Meta.model
             for cf_type, test_data in self.filter_matrix.items():
-                cf_label = f"label_{cf_type}"
+                cf_label = f"test_label_{cf_type}"
                 cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=cf_label)
                 cf.content_types.set([ContentType.objects.get_for_model(model)])
 
                 i1, i2, i3, i4 = tested_instances = self.queryset.all()[:4]
                 qs = self.queryset.filter(pk__in=tested_instances)
 
+                # No-key object
                 self.assertIsNone(i1._custom_field_data.get(cf_label))
 
+                # Empty-str as value object
                 i2._custom_field_data[cf_label] = ""
                 i2.save()
 
+                # Null-value object
                 i3._custom_field_data[cf_label] = None
                 i3.save()
 
-                i4._custom_field_data[cf_label] = test_data['value']
+                # Object with actual value
+                i4._custom_field_data[cf_label] = test_data["value"]
                 i4.save()
 
-                with connection.cursor() as cursor:
-                    cursor.execute('select * from dcim_locationtype')
-
-                for lookup, lookup_data in test_data['lookups'].items():
-                    for test_case in lookup_data['test_cases']:
+                for lookup, lookup_data in test_data["lookups"].items():
+                    for test_case in lookup_data["test_cases"]:
                         lookup_expr = f"cf_{cf_label}__{lookup}"
                         if lookup == "":
                             lookup_expr = f"cf_{cf_label}"
 
-                        with self.subTest(f"Testing \"{cf_type}\" type with: {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""):
-                            params = {lookup_expr: [test_case['search']]}
+                        with self.subTest(
+                            f"Testing \"{cf_type}\" type with: {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
+                        ):
+                            if lookup == "":
+                                params = {lookup_expr: test_case["search"]}
+                            else:
+                                params = {lookup_expr: [test_case["search"]]}
                             fs = self.filterset(params, qs)
 
                             filtered = fs.qs
+
                             self.assertTrue(fs.is_valid())
+                            assert_in_msg = f"object expected to be found for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
+                            assert_not_in_msg = f"object expected to be filtered out for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
 
-                            if test_case['expected']['no_key']:
-                                self.assertIn(i1, filtered)
+                            if test_case["expected"]["no_key"]:
+                                self.assertIn(i1, filtered, msg=f"No-key {assert_in_msg}")
                             else:
-                                self.assertNotIn(i1, filtered)
+                                self.assertNotIn(i1, filtered, msg=f"No-key {assert_not_in_msg}")
 
-                            if test_case['expected']['empty']:
-                                self.assertIn(i2, filtered)
+                            if test_case["expected"]["empty"]:
+                                self.assertIn(i2, filtered, msg=f"Empty-value {assert_in_msg}")
                             else:
-                                self.assertNotIn(i2, filtered)
+                                self.assertNotIn(i2, filtered, msg=f"Empty-value {assert_not_in_msg}")
 
-                            if test_case['expected']['null']:
-                                self.assertIn(i3, filtered)
+                            if test_case["expected"]["null"]:
+                                self.assertIn(i3, filtered, msg=f"Null-value {assert_in_msg}")
                             else:
-                                self.assertNotIn(i3, filtered)
+                                self.assertNotIn(i3, filtered, msg=f"Empty-value {assert_not_in_msg}")
 
-                            if test_case['expected']['value']:
-                                self.assertIn(i4, filtered)
+                            if test_case["expected"]["value"]:
+                                self.assertIn(i4, filtered, msg=f"Value-set {assert_in_msg}")
                             else:
-                                self.assertNotIn(i4, filtered)
-
+                                self.assertNotIn(i4, filtered, msg=f"Empty-value {assert_not_in_msg}")
