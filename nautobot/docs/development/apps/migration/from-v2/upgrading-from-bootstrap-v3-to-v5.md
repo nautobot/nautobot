@@ -1,4 +1,4 @@
-# Upgrading from Bootstrap v3.4.1 to v5.x
+# Upgrading from Bootstrap v3 to v5
 
 With the release of Nautobot v3.0, the UI has undergone significant improvements to enhance usability, flexibility, and maintainability. This version introduces an upgrade from [Bootstrap v3.4](https://getbootstrap.com/docs/3.4/) to [Bootstrap v5.3](https://getbootstrap.com/docs/5.3/). This transition brings modern UI enhancements, improved accessibility, and better responsiveness. While these changes provide a more consistent and intuitive user experience, they also introduce necessary modifications that may impact existing custom UI components and templates.
 
@@ -14,6 +14,55 @@ Bootstrap v5.x JavaScript now uses vanilla JavaScript and jQuery dependency has 
 In case you were not using any plugins and had not maintained your own custom CSS or JS code dependent on jQuery or Bootstrap v3.4.1, you don't need to do anything related to dependency management.
 
 Otherwise, you will need to individually review whether the packages and/or modules you are using, are still compatible with Bootstrap 5.x and in case they are not, update them accordingly.
+
+## Migration Script
+
+When Nautobot v3.x is installed, in addition to the `nautobot-server` CLI command, it now also provides a `nautobot-migrate-bootstrap-v3-to-v5` CLI command. This command can be run against your App's `templates` directory in order to autocorrect and/or flag for manual correction many of the below-documented required changes to your CSS and HTML.
+
+```no-highlight
+nautobot-migrate-bootstrap-v3-to-v5 my_app/templates/ --resize
+```
+
+!!! tip "The `--resize` flag"
+    The first time you run `nautobot-migrate-bootstrap-v3-to-v5`, you should use the `--resize` optional parameter, which will resize all Bootstrap column breakpoints in your templates to use the next larger breakpoint. (See [Columns](#columns) below for the details of why this is recommended.) This is the only part of the script that is not idempotent and should not be rerun repeatedly, as each time the script is run with `--resize`, it will adjust the breakpoints upward again. Therefore, on all subsequent runs of the script against your app, you should omit this parameter. Besides this special case, it is otherwise safe to run the script multiple times if desired.
+
+```no-highlight
+nautobot-migrate-bootstrap-v3-to-v5 my_app/templates/
+```
+
+You can also run the script against a single template file if desired:
+
+```no-highlight
+nautobot-migrate-bootstrap-v3-to-v5 my_app/templates/my_app/my_template.html
+```
+
+When run, the script will produce verbose output documenting the files that it is changing, any files that it cannot fix up automatically in full that will need manual review, and finally a summary of the overall results:
+
+```no-highlight
+→ object_new_team.html: 2 class replacements, 6 panel replacements,
+→ metadatatype_create.html: 3 class replacements, 9 panel replacements,
+→ graphqlquery_retrieve.html: 4 class replacements, 7 panel replacements,
+→ role_retrieve.html: 23 class replacements, 36 panel replacements,
+→ approvalworkflowdefinition_update.html: 2 class replacements, 6 panel replacements,
+→ inc/configcontext_format.html: 1 class replacements,
+  !!! Manual review needed for nav-item fixes at:
+    - nautobot/extras/templates/extras/inc/configcontext_format.html - Please review manually 'btn {% if format == 'json' %}btn-primary{% else %}btn-default{% endif %}'
+
+...
+
+=== Global Summary ===
+Total issues fixed: 417
+- Class replacements:          149
+- Extra-breadcrumb fixes:      0
+- <li> in <ol.breadcrumb>:     5
+- <li> in <ul.nav-tabs>:       6
+- Panel class replacements:    257
+- Resizing breakpoint xs:      0
+-------------------------------------
+- Resizing other breakpoints:  0
+```
+
+In the case of the above output snippet, you can see that while the script fixed 417 migration issues automatically, it encountered some uncertainty in `nautobot/extras/templates/extras/inc/configcontext_format.html`, likely due to the Django template logic wrapping the `btn-primary` and `btn-default` classes. In this case you'd (as documented below in [Buttons](#buttons)) likely want to manually replace the `btn-default` case with `btn-secondary`.
 
 ## Bootstrap `data-*` attributes
 
@@ -90,7 +139,7 @@ Example:
 ```
 
 !!! note
-Everything presented in this section was simplified for the default font size equal to `16px`. Were this value overwritten, for accessibility concerns Bootstrap and Nautobot define all sizes in `rem` units, which scale in relation to document root font size, a practice also recommended for app developers.
+    Everything presented in this section was simplified for the default font size equal to `16px`. Were this value overwritten, for accessibility concerns Bootstrap and Nautobot define all sizes in `rem` units, which scale in relation to document root font size, a practice also recommended for app developers.
 
 ## Grid
 
