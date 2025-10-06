@@ -826,7 +826,7 @@ def label_list(value, suffix=""):
         return HTML_NONE
     return format_html_join(
         " ",
-        '<span class="label label-default">{0}{1}</span>',
+        '<span class="badge bg-secondary">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
 

@@ -118,7 +118,7 @@ GITREPOSITORY_PROVIDES = """
 <span class="text-nowrap">
 {% for entry in datasource_contents %}
 <span style="display: inline-block" title="{{ entry.name|title }}"
-class="label label-{% if entry.content_identifier in record.provided_contents %}success{% else %}default{% endif %}">
+class="badge bg-{% if entry.content_identifier in record.provided_contents %}success{% else %}secondary{% endif %}">
 <i class="mdi {{ entry.icon }}"></i></span>
 {% endfor %}
 </span>
@@ -1198,13 +1198,13 @@ class JobLogEntryTable(BaseTable):
 
     def render_log_level(self, value):
         log_level = value.lower()
-        # The css is label-danger for failure items.
+        # The css is bg-danger for failure items.
         if log_level in ["failure", "error", "critical"]:
             log_level = "danger"
         elif log_level == "debug":
-            log_level = "default"
+            log_level = "secondary"
 
-        return format_html('<label class="label label-{}">{}</label>', log_level, value)
+        return format_html('<label class="badge bg-{}">{}</label>', log_level, value)
 
     def render_message(self, value):
         return render_markdown(value)
@@ -1328,11 +1328,11 @@ class JobResultTable(BaseTable):
             ).count()
 
         return format_html(
-            """<label class="label label-default">{}</label>
-            <label class="label label-success">{}</label>
-            <label class="label label-info">{}</label>
-            <label class="label label-warning">{}</label>
-            <label class="label label-danger">{}</label>""",
+            """<label class="badge bg-secondary">{}</label>
+            <label class="badge bg-success">{}</label>
+            <label class="badge bg-info">{}</label>
+            <label class="badge bg-warning">{}</label>
+            <label class="badge bg-danger">{}</label>""",
             record.debug_log_count,
             record.success_log_count,
             record.info_log_count,
