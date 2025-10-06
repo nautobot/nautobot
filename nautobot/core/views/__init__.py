@@ -160,10 +160,13 @@ class AppDocsView(LoginRequiredMixin, View):
 
         # Dir to documentation inside the package
         docs_dir = base_dir / "docs"
-
         # Normalize path to avoid (../) etc.
         normalized_path = posixpath.normpath(path).lstrip("/")
         file_path = docs_dir / normalized_path
+
+        # Additional check to ensure the resolved path is still within docs_dir
+        if not file_path.resolve().is_relative_to(docs_dir.resolve()):
+            return JsonResponse({"detail": "Access denied."}, status=403)
 
         if not file_path.is_file():
             return JsonResponse({"detail": f"File {file_path} not found."}, status=404)

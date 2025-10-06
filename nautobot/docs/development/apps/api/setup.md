@@ -109,4 +109,4 @@ path(
 )
 ```
 
-This allows users to access `/docs/` without specifying the app name. The redirect points to the docs_index route for the specific app.
+This allows users to access `/docs/<app-name>`.

@@ -221,12 +221,37 @@ class AppDocsViewTestCase(TestCase):
 
     def test_redirect_if_not_logged_in(self):
         self.client.logout()
-        url = reverse("docs_index", kwargs={"app_name": self.test_app_name})
-        response = self.client.get(url)
-        # LoginRequiredMixin redirects to /accounts/login/
-        self.assertRedirects(
-            response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
-        )
+        test_cases = [
+            ("docs_index", {"app_name": self.test_app_name}),
+            ("docs_file", {"app_name": self.test_app_name, "path": "css/style.css"}),
+        ]
+
+        for view_name, kwargs in test_cases:
+            with self.subTest(view=view_name):
+                url = reverse(view_name, kwargs=kwargs)
+                response = self.client.get(url)
+                # LoginRequiredMixin redirects to /accounts/login/
+                self.assertRedirects(
+                    response,
+                    expected_url=f"{reverse('login')}?next={url}",
+                    status_code=302,
+                    target_status_code=200,
+                )
+
+    def test_access_denied_path_traversal_attempts(self):
+        """Ensure ../ or similar traversal patterns are rejected."""
+
+        malicious_paths = [
+            "../settings.py",
+            "../../etc/passwd",
+            "docs/../../secret.txt",
+        ]
+
+        for path in malicious_paths:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
 
     def test_serve_index_html_logged_in(self):
         url = reverse("docs_index", kwargs={"app_name": self.test_app_name})
@@ -249,10 +274,13 @@ class AppDocsViewTestCase(TestCase):
         self.assertJSONEqual(response.content, {"detail": "App nonexistent_app not found."})
 
     def test_nonexistent_file(self):
-        url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": "missing.html"})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 404)
-        self.assertIn("File", response.json()["detail"])
+        test_cases = ["/../missing.html", "//../missing.html", "missing.html"]
+        for path in test_cases:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 404)
+                self.assertIn("File", response.json()["detail"])
 
 
 class MediaViewTestCase(TestCase):
