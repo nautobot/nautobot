@@ -1,0 +1,1 @@
+Moved UI source files out of `project-static` to its own dedicated `ui` directory.
