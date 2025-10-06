@@ -7,7 +7,7 @@
         <div class="col-xl-8 offset-lg-2 col-lg-10 offset-md-1">
             <h3 class="mb-16">{% block title %}Add New Member to Virtual Chassis {{ virtual_chassis }}{% endblock %}</h3>
             {% if membership_form.non_field_errors %}
-                <div class="card border-danger mb-16">
+                <div class="card border-danger">
                     <div class="card-header bg-danger-subtle border-danger text-body">
                         <strong>Errors</strong>
                     </div>
@@ -16,7 +16,7 @@
                     </div>
                 </div>
             {% endif %}
-            <div class="card mb-16">
+            <div class="card">
                 <div class="card-header"><strong>Add New Member</strong></div>
                 <div class="card-body">
                     {% render_form member_select_form %}

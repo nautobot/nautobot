@@ -1209,6 +1209,7 @@ textarea {
 /* Cards */
 .card {
   overflow: hidden; /* Fix border-radii for card content. */
+  margin-bottom: map.get($spacers, 16);  /* Default to mb-16 equivalent */
 
   /* When card content is collapsed prevent card bottom border duplication by entirely removing `border-bottom` from card header. */
   &:has(.collapse:not(.show)) .card-header {

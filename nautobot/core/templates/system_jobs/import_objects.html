@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block job_form_wrapper %}
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header">
             <strong>Job Data</strong>
         </div>
@@ -12,7 +12,7 @@
             {% render_field job_form.roll_back_if_error %}
         </div>
     </div>
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
                 <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>

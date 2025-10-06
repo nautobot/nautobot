@@ -41,7 +41,7 @@
                         </div>
                     {% endif %}
                     {% if job_form.non_field_errors or schedule_form.non_field_errors %}
-                        <div class="card border-danger mb-16">
+                        <div class="card border-danger">
                             <div class="card-header bg-danger-subtle border-danger text-body">
                                 <strong>Errors</strong>
                             </div>
@@ -52,7 +52,7 @@
                         </div>
                     {% endif %}
                     {% block job_form_wrapper %}
-                        <div class="card mb-16">
+                        <div class="card">
                             <div class="card-header">
                                 <strong>Job Data</strong>
                             </div>
@@ -63,7 +63,7 @@
                             </div>
                         </div>
                     {% endblock job_form_wrapper %}
-                    <div class="card mb-16 {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
+                    <div class="card {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
                         <div class="card-header {% if job_model.has_sensitive_variables %}bg-warning-subtle border-warning{% endif %}">
                             <strong>Job Execution</strong>
                         </div>
