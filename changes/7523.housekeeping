@@ -1,1 +1,0 @@
-Added `docker-compose.dolt.yml` and supporting files to enable local development and testing against a Dolt database.

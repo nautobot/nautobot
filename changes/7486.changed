@@ -1,1 +1,0 @@
-Changed Prefix table behavior to not show "utilization" by default, as it has significant performance impact when displayed.

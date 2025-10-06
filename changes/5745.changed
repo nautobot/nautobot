@@ -1,2 +1,0 @@
-Upgraded the GraphiQL UI from version 1.x to version 2.4.7, including application of Nautobot UI colors to GraphiQL.
-Changed the return type for the `execute_query` and `execute_saved_query` GraphQL-related python APIs as a consequence of updating the underlying GraphQL libraries.
