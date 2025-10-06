@@ -10,6 +10,7 @@ This document describes all new features and changes in Nautobot 3.0.
 
 ### Job Authors & App Developers
 
+- Apps that provide any user interface will likely require updates to account for the [Bootstrap upgrade from v3.4 to v5.3](#bootstrap-upgrade-from-v34-to-v53) described below.
 - The Data Compliance feature set from the Data Validation Engine App has been moved directly into core. Import paths that reference `nautobot_data_validation_engine.custom_validators.DataComplianceRule` or `nautobot_data_validation_engine.custom_validators.ComplianceError` should be updated to `nautobot.apps.models.DataComplianceRule` and `nautobot.apps.models.ComplianceError`, respectively.
 - Code that calls the GraphQL `execute_query()` and `execute_saved_query()` functions may need to be updated to account for changes to the response object returned by these APIs. Specifically, the `response.to_dict()` method is no longer supported, but instead the returned data and any errors encountered may now be accessed directly as `response.data` and `response.errors` respectively.
 - Filtering data that supports a `type` filter in the REST API now also supports a corresponding `type` filter in GraphQL. (In Nautobot v2.x and earlier, the filter had to be referenced in GraphQL as `_type` instead.) Filtering by `_type` is still supported where applicable but should be considered deprecated; please update your GraphQL queries accordingly.
@@ -26,6 +27,10 @@ This document describes all new features and changes in Nautobot 3.0.
 The Nautobot Data Validation Engine functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature. (...TODO provide more details here...)
 
 ### Changed
+
+#### Bootstrap upgrade from v3.4 to v5.3
+
+Nautobot now uses Bootstrap v5.3 as its underlying theming and layout engine. The base Nautobot UI has been refreshed accordingly. Apps will generally require corresponding updates for their UI to render properly. The impact of this upgrade will be much reduced if the App has already adopted the [UI Component Framework](../development/apps/migration/ui-component-framework/index.md) introduced previously in Nautobot v2.4. A [migration script](../development/apps/migration/from-v2/upgrading-from-bootstrap-v3-to-v5.md#migration-script) is included in Nautobot 3.x to automate many of the HTML and CSS updates for App developers.
 
 #### Device to Multiple Clusters ([#7203](https://github.com/nautobot/nautobot/issues/7203))
 

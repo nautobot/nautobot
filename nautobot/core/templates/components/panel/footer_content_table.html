@@ -7,7 +7,7 @@
 {% endif %}
 
 {% if footer_buttons %}
-    <div class="pull-left">
+    <div class="float-start">
         {% render_components footer_buttons %}
     </div>
     {% if not body_content_table_add_url %}
@@ -17,7 +17,7 @@
 
 {% if body_content_table_add_url %}
     <div class="float-end">
-        <a href="{{ body_content_table_add_url }}" class="btn btn-xs btn-primary">
+        <a href="{{ body_content_table_add_url }}" class="btn btn-sm btn-primary">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
         </a>
     </div>

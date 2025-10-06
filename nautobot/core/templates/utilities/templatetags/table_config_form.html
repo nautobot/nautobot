@@ -22,9 +22,11 @@
                         {{ field }}
                         <span class="form-text mt-8">{{ field.help_text|safe }}</span>
                         <div class="hstack gap-4 mt-8 mx-n4">
+                            {# djlint:off B083 #}
                             <button type="button" class="btn btn-primary btn-sm" id="move-option-up" data-target="{{ field.id_for_label }}"><span class="mdi mdi-arrow-up-bold me-4"></span>Move up</button>
                             <button type="button" class="btn btn-primary btn-sm" id="move-option-down" data-target="{{ field.id_for_label }}"><span class="mdi mdi-arrow-down-bold me-4"></span>Move down</button>
                             <button type="button" class="btn btn-success btn-sm" id="select-all-options" data-target="{{ field.id_for_label }}"><span class="mdi mdi-expand-all-outline me-4"></span>Select all</button>
+                            {# djlint:on B083 #}
                         </div>
                     {% endwith %}
                 </div>

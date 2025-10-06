@@ -534,7 +534,7 @@ class ChoiceFieldColumn(django_tables2.Column):
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
             label = getattr(record, f"get_{name}_display")()
-            return format_html('<span class="label label-{}">{}</span>', css_class, label)
+            return format_html('<span class="badge bg-{}">{}</span>', css_class, label)
         return self.default
 
 
@@ -669,7 +669,7 @@ class TagColumn(django_tables2.TemplateColumn):
     {% for tag in value.all %}
         {% include 'utilities/templatetags/tag.html' %}
     {% empty %}
-        <span class="text-muted">&mdash;</span>
+        <span class="text-secondary">&mdash;</span>
     {% endfor %}
     """
 
@@ -746,9 +746,9 @@ class CustomFieldColumn(django_tables2.Column):
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            template = format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+            template = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
-            template = format_html('<span class="label label-default">{}</span>', value)
+            template = format_html('<span class="badge bg-secondary">{}</span>', value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
             template = format_html('<a href="{}">{}</a>', value, value)
         else:

@@ -8,7 +8,7 @@
     <form action="" method="post" class="h-100 vstack">
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
-            <div class="col-md-6 offset-md-3">
+            <div class="col-lg-6 offset-md-3">
                 {% if form.non_field_errors %}
                     <div class="card border-danger">
                         <div class="card-header"><strong>Errors</strong></div>
@@ -17,7 +17,7 @@
                         </div>
                     </div>
                 {% endif %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header">
                         <strong>{{ component_type|bettertitle }}</strong>
                     </div>

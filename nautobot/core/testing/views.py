@@ -317,7 +317,7 @@ class ViewTestCases:
                     format_html(
                         """
                             <a id="clone-button" class="dropdown-item" href="{}">
-                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                                <span class="mdi mdi-plus-thick text-secondary" aria-hidden="true"></span> Clone {}
                             </a>
                         """,
                         object_clone_url,
