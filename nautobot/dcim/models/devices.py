@@ -18,6 +18,7 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
@@ -1583,8 +1584,8 @@ class Controller(PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-secondary">&mdash;</span>')
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+            return HTML_NONE
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in self.capabilities))
 
     @property
     def wireless_network_assignments(self):
@@ -1680,8 +1681,8 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-secondary">&mdash;</span>')
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+            return HTML_NONE
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in self.capabilities))
 
 
 #
