@@ -25,7 +25,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from nautobot.apps.ui import BaseTextPanel
+
 from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
