@@ -65,12 +65,12 @@ class ObjectsListMixin:
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
         self.browser.execute_script(
-            "document.querySelector('#object_list_form button[type=\"submit\"]').scrollIntoView()"
+            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
         )
         self.browser.find_by_xpath(
-            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
+            '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#object_list_form button[name="_delete"]').click()
+        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
 
     def click_bulk_delete_all(self):
         """
@@ -82,7 +82,7 @@ class ObjectsListMixin:
         """
         Click bulk edit button on bottom of the items table list.
         """
-        self.click_button('#object_list_form button[type="submit"]')
+        self.click_button('#bulk-action-buttons button[type="submit"]')
 
     def click_bulk_edit_all(self):
         """
@@ -312,6 +312,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
+        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
@@ -630,6 +631,8 @@ class BulkOperationsTestCases:
             self.assertJobStatusIsCompleted()
 
             self.go_to_model_list_page()
+            # We set page size to large number to avoid pagination issues
+            self.set_per_page(1000)
             rest_items_count = self.model_expected_counts["all"] - self.model_expected_counts["filtered"]
             self.assertEqual(self.objects_list_visible_items, rest_items_count)
 

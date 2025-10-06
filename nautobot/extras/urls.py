@@ -3,7 +3,6 @@ from django.urls import path
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    GitRepository,
     Job,
     Relationship,
 )
@@ -21,12 +20,14 @@ router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("dynamic-groups", views.DynamicGroupUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("git-repositories", views.GitRepositoryUIViewSet)
 router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("job-results", views.JobResultUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
+router.register("object-changes", views.ObjectChangeUIViewSet)
 router.register("notes", views.NoteUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
@@ -42,9 +43,6 @@ router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
-    # Change logging
-    path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # Config context schema
     path(
         "config-context-schemas/<uuid:pk>/validation/",
@@ -58,74 +56,6 @@ urlpatterns = [
         "contact-associations/assign-contact-team/",
         views.ObjectAssignContactOrTeamView.as_view(),
         name="object_contact_team_assign",
-    ),
-    # Git repositories
-    path(
-        "git-repositories/",
-        views.GitRepositoryListView.as_view(),
-        name="gitrepository_list",
-    ),
-    path(
-        "git-repositories/add/",
-        views.GitRepositoryEditView.as_view(),
-        name="gitrepository_add",
-    ),
-    path(
-        "git-repositories/delete/",
-        views.GitRepositoryBulkDeleteView.as_view(),
-        name="gitrepository_bulk_delete",
-    ),
-    path(
-        "git-repositories/edit/",
-        views.GitRepositoryBulkEditView.as_view(),
-        name="gitrepository_bulk_edit",
-    ),
-    path(
-        "git-repositories/import/",
-        views.GitRepositoryBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="gitrepository_import",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/",
-        views.GitRepositoryView.as_view(),
-        name="gitrepository",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/edit/",
-        views.GitRepositoryEditView.as_view(),
-        name="gitrepository_edit",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/delete/",
-        views.GitRepositoryDeleteView.as_view(),
-        name="gitrepository_delete",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="gitrepository_changelog",
-        kwargs={"model": GitRepository},
-    ),
-    path(
-        "git-repositories/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="gitrepository_notes",
-        kwargs={"model": GitRepository},
-    ),
-    path(
-        "git-repositories/<uuid:pk>/result/",
-        views.GitRepositoryResultView.as_view(),
-        name="gitrepository_result",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/sync/",
-        views.GitRepositorySyncView.as_view(),
-        name="gitrepository_sync",
-    ),
-    path(
-        "git-repositories/<uuid:pk>/dry-run/",
-        views.GitRepositoryDryRunView.as_view(),
-        name="gitrepository_dryrun",
     ),
     # Image attachments
     path(

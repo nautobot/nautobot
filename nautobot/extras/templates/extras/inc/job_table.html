@@ -14,19 +14,19 @@
             </tr>
         </thead>
     {% endif %}
-{% load helpers %}
+    {% load helpers %}
     <tbody>
         {% for row in table.page.object_list|default:table.rows %}
             {% ifchanged row.record.grouping %}
-            <tr>
-                <th colspan="{{ table.columns|length }}">
-                    <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
-                            name="grouping.{{ row.record.grouping }}" data-toggle="collapse"
-                            data-target=".collapseme-{{ row.record.grouping|slugify }}">
-                        {{ row.record.grouping|bettertitle }}
-                    </button>
-                </th>
-            </tr>
+                <tr>
+                    <th colspan="{{ table.columns|length }}">
+                        <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-down"
+                                name="grouping.{{ row.record.grouping }}" data-toggle="collapse"
+                                data-target=".collapseme-{{ row.record.grouping|slugify }}">
+                            {{ row.record.grouping|bettertitle }}
+                        </button>
+                    </th>
+                </tr>
             {% endifchanged %}
             <tr class="{% cycle 'even' 'odd' %} collapseme-{{ row.record.grouping|slugify }}{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %} collapse in" data-parent="#accordion" {{ row.attrs.as_html }}>
                 {% for column, cell in row.items %}
