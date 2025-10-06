@@ -102,6 +102,10 @@ def nav_menu(request):
                                 "name": item_details["name"],
                                 "weight": item_details["weight"],
                             }
+                    if len(nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"]) == 0:
+                        del nav_menu_object["tabs"][tab_name]["groups"][group_name]
+            if len(nav_menu_object["tabs"][tab_name]["groups"]) == 0:
+                del nav_menu_object["tabs"][tab_name]
 
     nav_menu_version_control = None
     if "nautobot_version_control" in django_settings.PLUGINS:
