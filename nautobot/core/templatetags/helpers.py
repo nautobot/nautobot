@@ -514,14 +514,12 @@ def get_docs_url(model):
     elif model._meta.app_label in settings.PLUGINS:
         app_label = model._meta.app_label
         path = f"models/{model._meta.model_name}.html"
-        # Build the dynamic docs URL
-        docs_url = reverse("docs_file", kwargs={"app_name": app_label, "path": path})
         # Check that the file actually exists inside the app's docs folder
         try:
             base_dir = resources.files(app_label) / "docs"
             file_path = base_dir / path
             if file_path.is_file():
-                return docs_url
+                return reverse("docs_file", kwargs={"app_name": app_label, "path": path})
         except ModuleNotFoundError:
             pass
 

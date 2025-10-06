@@ -76,37 +76,22 @@ example_app/
       └── nautobot_logo.svg
 ```
 
-The `docs` directory is the `site_dir` output of MkDocs during the build process.
 
-### Build Process
+### Build Process using MkDocs
 
-Documentation is built using MkDocs:
+If using MkDocs to compile Markdown documentation to HTML, you should ensure that `mkdocs.yml` defines `site_dir` to be the path `<app_name>/docs` so that the compiled HTML is correctly placed in that directory.
 
 ```no-highlight
 mkdocs build --no-directory-urls --strict
 ```
 
-`site_dir` in mkdocs.yml should be always inside the app package like `<app_name>/docs` this defined where output of `mkdocs build` is placed.
-
 ### URL Routing
 
-Two URL patterns are defined for serving documentation:
+The `docs_index` and `docs_files` URL patterns defined in `nautobot.core.urls` are used for serving the documentation of all apps.
 
-```python
-from django.urls import path
-from nautobot.core.views import AppDocsView
+`/docs/example_app/` - serves the `example_app/docs/index.html` file.
 
-urlpatterns = [
-    # Apps docs - Serve the main page
-    path("docs/<str:app>/", AppDocsView.as_view(), name="docs_index"),
-    # Apps docs - Serve assets
-    path("docs/<str:app>/<path:path>", AppDocsView.as_view(), name="docs_file"),
-]
-```
-
-`/docs/example_app/` - serves index.html.
-
-`/docs/example_app/assets/extra.css` - serves static assets referenced in the HTML.
+`/docs/example_app/assets/extra.css` - serves the requested file from `example_app/docs/` and its subdirectories, for example here `example_app/docs/assets/extra.css`.
 
 Both routes go through AppDocsView, which enforces login.
 
