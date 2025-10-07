@@ -1035,21 +1035,45 @@ TAB_CONFIGS = [
 
 # --- Add Components Button Config ---
 ADD_COMPONENTS_CONFIG = [
-    (100, "dcim:consoleporttemplate_add", "Console Ports", "mdi-console", ["dcim.add_consoleporttemplate"]),
+    (100, "dcim:devicetype_consoleporttemplate_add", "Console Ports", "mdi-console", ["dcim.add_consoleporttemplate"]),
     (
         200,
-        "dcim:consoleserverporttemplate_add",
+        "dcim:devicetype_consoleserverporttemplate_add",
         "Console Server Ports",
         "mdi-console-network-outline",
         ["dcim.add_consoleserverporttemplate"],
     ),
-    (300, "dcim:powerporttemplate_add", "Power Ports", "mdi-power-plug-outline", ["dcim.add_powerporttemplate"]),
-    (400, "dcim:poweroutlettemplate_add", "Power Outlets", "mdi-power-socket", ["dcim.add_poweroutlettemplate"]),
-    (500, "dcim:interfacetemplate_add", "Interfaces", "mdi-ethernet", ["dcim.add_interfacetemplate"]),
-    (600, "dcim:frontporttemplate_add", "Front Ports", "mdi-square-rounded-outline", ["dcim.add_frontporttemplate"]),
-    (700, "dcim:rearporttemplate_add", "Rear Ports", "mdi-square-rounded-outline", ["dcim.add_rearporttemplate"]),
-    (800, "dcim:devicebaytemplate_add", "Device Bays", "mdi-circle-outline", ["dcim.add_devicebaytemplate"]),
-    (900, "dcim:modulebaytemplate_add", "Module Bays", "mdi-tray", ["dcim.add_modulebaytemplate"]),
+    (
+        300,
+        "dcim:devicetype_powerporttemplate_add",
+        "Power Ports",
+        "mdi-power-plug-outline",
+        ["dcim.add_powerporttemplate"],
+    ),
+    (
+        400,
+        "dcim:devicetype_poweroutlettemplate_add",
+        "Power Outlets",
+        "mdi-power-socket",
+        ["dcim.add_poweroutlettemplate"],
+    ),
+    (500, "dcim:devicetype_interfacetemplate_add", "Interfaces", "mdi-ethernet", ["dcim.add_interfacetemplate"]),
+    (
+        600,
+        "dcim:devicetype_frontporttemplate_add",
+        "Front Ports",
+        "mdi-square-rounded-outline",
+        ["dcim.add_frontporttemplate"],
+    ),
+    (
+        700,
+        "dcim:devicetype_rearporttemplate_add",
+        "Rear Ports",
+        "mdi-square-rounded-outline",
+        ["dcim.add_rearporttemplate"],
+    ),
+    (800, "dcim:devicetype_devicebaytemplate_add", "Device Bays", "mdi-circle-outline", ["dcim.add_devicebaytemplate"]),
+    (900, "dcim:devicetype_modulebaytemplate_add", "Module Bays", "mdi-tray", ["dcim.add_modulebaytemplate"]),
 ]
 
 
@@ -1142,7 +1166,6 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         label=label,
                         icon=icon,
                         required_permissions=perms,
-                        link_includes_pk=False,
                     )
                     for weight, link_name, label, icon, perms in ADD_COMPONENTS_CONFIG
                 ),

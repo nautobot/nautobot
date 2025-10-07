@@ -879,7 +879,7 @@ def djhtml(context, fix=False):
     command = "djhtml nautobot/*/templates --tabwidth 4"
     if not fix:
         command += " --check"
-    run_command(context, command)
+    run_command(context, f'bash -c "{command}"')  # needed for glob expansion
 
 
 @task
