@@ -114,7 +114,7 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "2.1.4"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
@@ -148,7 +148,7 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "2.1.4"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
