@@ -332,9 +332,11 @@ class LocationRackGroupsPanel(object_detail.Panel):
             return ""
 
         rack_groups = context.get("rack_groups", [])
-        stats = context.get("stats", {})
+        rack_count = context.get("rack_count", 0)
 
         rows = []
+
+        # Render each rack group row
         for rack_group in rack_groups:
             rows.append(
                 self.render_rack_row(
@@ -352,7 +354,7 @@ class LocationRackGroupsPanel(object_detail.Panel):
                 10,
                 "#",
                 "All racks",
-                stats.get("rack_count", 0),
+                rack_count,
                 f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}",
             )
         )
@@ -491,33 +493,6 @@ class LocationUIViewSet(NautobotUIViewSet):
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
 
-        prefix_qs = Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        vlan_qs = VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        circuit_qs = Circuit.objects.restrict(request.user, "view").filter(
-            circuit_terminations__location__in=related_locations
-        )
-
-        # When there is more than one location, the models that can be assigned to more then one location at the same
-        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
-        # a performance penalty.
-        if len(related_locations) > 1:
-            prefix_qs = prefix_qs.distinct()
-            vlan_qs = vlan_qs.distinct()
-            circuit_qs = circuit_qs.distinct()
-
-        stats = {
-            "prefix_count": prefix_qs.count(),
-            "vlan_count": vlan_qs.count(),
-            "circuit_count": circuit_qs.count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location__in=related_locations)
-            .count(),
-        }
-
         rack_groups = (
             RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
             .restrict(request.user, "view")
@@ -526,7 +501,7 @@ class LocationUIViewSet(NautobotUIViewSet):
 
         return {
             "rack_groups": rack_groups,
-            "stats": stats,
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
         }
 
 
