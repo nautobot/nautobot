@@ -8,8 +8,6 @@ jobs:
   # Publish to GitHub followed by pypi
   publish_python:
     if: "${{ ! github.event.release.draft }}"
-    needs:
-      - "ci"
     name: "Publish Python Packages"
     runs-on: "ubuntu-24.04"
     steps:
@@ -43,8 +41,6 @@ jobs:
     if: "${{ ! github.event.release.draft }}"
     name: "Build & Publish Container Images"
     runs-on: "ubuntu-24.04"
-    needs:
-      - "ci"
     strategy:
       fail-fast: true
       matrix:
