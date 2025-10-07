@@ -58,7 +58,7 @@ As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python
 
 ### Housekeeping in v3.0.0a2
 
-- [xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Enhanced `release` GitHub Actions workflow to include prereleases and removed outdated `prerelease` workflow.
+- [#7928](https://github.com/nautobot/nautobot/issues/7928) - Enhanced `release` GitHub Actions workflow to include prereleases and removed outdated `prerelease` workflow.
 
 ## v3.0.0a1 (2025-10-06)
 
