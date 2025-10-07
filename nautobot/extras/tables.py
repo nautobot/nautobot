@@ -1,13 +1,9 @@
 from django.conf import settings
-from django.db.models import QuerySet
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
-from django_tables2.data import TableData
-from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import (
     ApprovalButtonsColumn,
     BaseTable,
@@ -24,7 +20,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
+from .choices import JobResultStatusChoices, MetadataTypeDataTypeChoices
 from .models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1270,69 +1266,27 @@ class JobResultTable(BaseTable):
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Only calculate log counts for "summary" column if it's actually visible.
-        if "summary" in self.columns and self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
-            self.data = TableData.from_data(
-                self.data.data.annotate(
-                    debug_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-                    ),
-                    success_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-                    ),
-                    info_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-                    ),
-                    warning_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-                    ),
-                    error_log_count=count_related(
-                        JobLogEntry,
-                        "job_result",
-                        filter_dict={
-                            "log_level__in": [
-                                LogLevelChoices.LOG_FAILURE,
-                                LogLevelChoices.LOG_ERROR,
-                                LogLevelChoices.LOG_CRITICAL,
-                            ],
-                        },
-                    ),
-                )
-            )
-            self.data.set_table(self)
-            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
-
     def render_summary(self, record):
         """
         Define custom rendering for the summary column.
         """
-        # Normally the *_log_count attributes will be generated efficiently via queryset annotation in the view,
-        # however, we cannot assume that will always be the case. Calculate them inefficiently as a fallback.
-        if not hasattr(record, "debug_log_count"):
-            record.debug_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
-        if not hasattr(record, "success_log_count"):
-            record.success_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
-        if not hasattr(record, "info_log_count"):
-            record.info_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_INFO).count()
-        if not hasattr(record, "warning_log_count"):
-            record.warning_log_count = record.job_log_entries.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-        if not hasattr(record, "error_log_count"):
-            record.error_log_count = record.job_log_entries.filter(
-                log_level__in=[
-                    LogLevelChoices.LOG_FAILURE,
-                    LogLevelChoices.LOG_ERROR,
-                    LogLevelChoices.LOG_CRITICAL,
-                ]
-            ).count()
+        # The *_log_count attributes will be calculated and updated at the end of a Job run when JobResult is saved.
+        # If the values are not present due to a running Job or are missing in any field, skip display.
+        if record.status not in JobResultStatusChoices.READY_STATES or None in [
+            record.debug_log_count,
+            record.success_log_count,
+            record.info_log_count,
+            record.warning_log_count,
+            record.error_log_count,
+        ]:
+            return ""
 
         return format_html(
-            """<label class="label label-default">{}</label>
-            <label class="label label-success">{}</label>
-            <label class="label label-info">{}</label>
-            <label class="label label-warning">{}</label>
-            <label class="label label-danger">{}</label>""",
+            """<label class="badge bg-secondary">{}</label>
+            <label class="badge bg-success">{}</label>
+            <label class="badge bg-info">{}</label>
+            <label class="badge bg-warning">{}</label>
+            <label class="badge bg-danger">{}</label>""",
             record.debug_log_count,
             record.success_log_count,
             record.info_log_count,
@@ -1364,6 +1318,7 @@ class JobResultTable(BaseTable):
             "job_model",
             "user",
             "status",
+            "summary",
             "actions",
         )
 
