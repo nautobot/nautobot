@@ -61,9 +61,9 @@ urlpatterns = [
     # Apps
     path("apps/", include((apps_patterns, "apps"))),
     # Apps docs - Serve the main page
-    path("docs/<str:app_name>/", AppDocsView.as_view(), name="docs_index"),
+    path("docs/<str:app_base_url>/", AppDocsView.as_view(), name="docs_index"),
     # Apps docs - Serve assets
-    path("docs/<str:app_name>/<path:path>", AppDocsView.as_view(), name="docs_file"),
+    path("docs/<str:app_base_url>/<path:path>", AppDocsView.as_view(), name="docs_file"),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO

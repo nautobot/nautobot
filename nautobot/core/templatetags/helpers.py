@@ -8,6 +8,7 @@ from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 
 from django import template
+from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
@@ -488,8 +489,7 @@ def get_docs_url(model):
 
     - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
         - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
-    - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
-    - Plugin models are expected to be documented within their package at
+    - Apps (plugins) are expected to be documented within their package at
       ``docs/models/{model_name}.html`` and are served dynamically through
       the ``AppDocsView`` endpoint (``/docs/<app_name>/<path>``).
 
@@ -506,20 +506,22 @@ def get_docs_url(model):
     Example:
         >>> get_docs_url(location_instance)
         "static/docs/models/dcim/location.html"
-        >>> get_docs_ulr(example_app)
-        "/docs/example_app/models/examplemodel.html"
+        >>> get_docs_url(example_app)
+        "/docs/example-app/models/examplemodel.html"
     """
     if hasattr(model, "documentation_static_path"):
         path = model.documentation_static_path
     elif model._meta.app_label in settings.PLUGINS:
         app_label = model._meta.app_label
+        app_config = apps.get_app_config(app_label)
+        app_base_url = app_config.base_url
         path = f"models/{model._meta.model_name}.html"
         # Check that the file actually exists inside the app's docs folder
         try:
             base_dir = resources.files(app_label) / "docs"
             file_path = base_dir / path
             if file_path.is_file():
-                return reverse("docs_file", kwargs={"app_name": app_label, "path": path})
+                return reverse("docs_file", kwargs={"app_base_url": app_base_url, "path": path})
         except ModuleNotFoundError:
             pass
 

@@ -1,4 +1,3 @@
-from importlib import resources
 import json
 import os
 from pathlib import Path
@@ -195,35 +194,27 @@ class HomeViewTestCase(TestCase):
 class AppDocsViewTestCase(TestCase):
     def setUp(self):
         super().setUp()
-        # Create temporary test package structure
-        self.test_app_name = "test_app"
+        self.test_app_label = "test_app"
+        self.test_base_url = "test-app"
+
+        # Create temp docs dir
         # I use tearDown to clean up, so this is save
-        self.temp_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        self.temp_dir = tempfile.TemporaryDirectory() # pylint: disable=consider-using-with
         self.docs_path = Path(self.temp_dir.name) / "docs"
         self.docs_path.mkdir(parents=True)
         (self.docs_path / "index.html").write_text("<html>Test Index</html>")
         (self.docs_path / "css/style.css").parent.mkdir(parents=True, exist_ok=True)
         (self.docs_path / "css/style.css").write_text("body { background: #fff; }")
 
-        # Patch importlib.resources.files to point to temp_dir only when `test_app`
-        self._original_resources_files = resources.files
-
-        def mock_resources_files(name):
-            if name == "test_app":
-                return Path(self.temp_dir.name)
-            raise ModuleNotFoundError(f"No module named {name}")
-
-        resources.files = mock_resources_files
-
     def tearDown(self):
-        resources.files = self._original_resources_files
         self.temp_dir.cleanup()
+        super().tearDown()
 
     def test_redirect_if_not_logged_in(self):
         self.client.logout()
         test_cases = [
-            ("docs_index", {"app_name": self.test_app_name}),
-            ("docs_file", {"app_name": self.test_app_name, "path": "css/style.css"}),
+            ("docs_index", {"app_base_url": self.test_base_url}),
+            ("docs_file", {"app_base_url": self.test_base_url, "path": "css/style.css"}),
         ]
 
         for view_name, kwargs in test_cases:
@@ -238,8 +229,11 @@ class AppDocsViewTestCase(TestCase):
                     target_status_code=200,
                 )
 
-    def test_access_denied_path_traversal_attempts(self):
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_access_denied_path_traversal_attempts(self, mock_resources_files):
         """Ensure ../ or similar traversal patterns are rejected."""
+        mock_resources_files.return_value = Path(self.temp_dir.name)
 
         malicious_paths = [
             "../settings.py",
@@ -249,35 +243,56 @@ class AppDocsViewTestCase(TestCase):
 
         for path in malicious_paths:
             with self.subTest(path=path):
-                url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": path})
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 403)
 
-    def test_serve_index_html_logged_in(self):
-        url = reverse("docs_index", kwargs={"app_name": self.test_app_name})
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_serve_index_html_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index", kwargs={"app_base_url": self.test_base_url})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test Index")
         self.assertEqual(response["Content-Type"], "text/html")
 
-    def test_serve_css_logged_in(self):
-        url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": "css/style.css"})
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_serve_css_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "background: #fff;")
         self.assertEqual(response["Content-Type"], "text/css")
 
-    def test_nonexistent_app(self):
-        url = reverse("docs_index", kwargs={"app_name": "nonexistent_app"})
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_docs_index_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index", kwargs={"app_base_url": "nonexistent-app"})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
-        self.assertJSONEqual(response.content, {"detail": "App nonexistent_app not found."})
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
 
-    def test_nonexistent_file(self):
-        test_cases = ["/../missing.html", "//../missing.html", "missing.html"]
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_docs_file_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": "nonexistent-app", "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.__init__.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.__init__.resources.files")
+    def test_nonexistent_file(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        test_cases = ["/../missing.html", "//../missing.html", "missing.html", "missing_dir/missing.html"]
         for path in test_cases:
             with self.subTest(path=path):
-                url = reverse("docs_file", kwargs={"app_name": self.test_app_name, "path": path})
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 404)
                 self.assertIn("File", response.json()["detail"])

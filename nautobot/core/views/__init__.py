@@ -63,6 +63,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import StatusTable
 
@@ -152,11 +153,14 @@ class AppDocsView(LoginRequiredMixin, View):
     only for authenticated users.
     """
 
-    def get(self, request, app_name, path="index.html"):
+    def get(self, request, app_base_url, path="index.html"):
+        app_label = BASE_URL_TO_APP_LABEL.get(app_base_url)
+        if not app_label:
+            return JsonResponse({"detail": f"Unknown base_url '{app_base_url}'."}, status=404)
         try:
-            base_dir = resources.files(app_name)
+            base_dir = resources.files(app_label)
         except ModuleNotFoundError:
-            return JsonResponse({"detail": f"App {app_name} not found."}, status=404)
+            return JsonResponse({"detail": f"App {app_label} not found."}, status=404)
 
         # Dir to documentation inside the package
         docs_dir = base_dir / "docs"

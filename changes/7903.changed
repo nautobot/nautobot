@@ -1,2 +1,1 @@
-Application documentation is now served dynamically from the package and access is restricted to authenticated users, replacing the previous static public serving.
-Updated `get_docs_url` implementation to resolve URLs dynamically for apps models (only).
+Changed how App documentation is handled - it is now served via a dedicated endpoint whose access is restricted to authenticated users, replacing the previous static public serving.

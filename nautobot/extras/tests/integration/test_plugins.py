@@ -129,13 +129,13 @@ class AppDocumentationTest(SeleniumTestCase):
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
         self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_add')}")
-        self.assertTrue(self.browser.links.find_by_partial_href("docs/example_app/models/examplemodel.html"))
+        self.assertTrue(self.browser.links.find_by_partial_href("docs/example-app/models/examplemodel.html"))
 
     def test_object_edit_help_not_provided(self):
         """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
         self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:anotherexamplemodel_add')}")
 
-        self.assertFalse(self.browser.links.find_by_partial_href("/docs/example_app/models/anotherexamplemodel.html"))
+        self.assertFalse(self.browser.links.find_by_partial_href("/docs/example-app/models/anotherexamplemodel.html"))
 
 
 class AppReturnUrlTestCase(SeleniumTestCase):

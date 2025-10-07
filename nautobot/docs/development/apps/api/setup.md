@@ -58,7 +58,7 @@ The app source directory contains all of the actual Python code and other resour
 
 ## Serving Apps Documentation
 
-The documentation for each pip-installed application is served dynamically through Django views and is restricted to authenticated users. This approach ensures that:
+The documentation for each installed Nautobot App is served dynamically through Django views and is restricted to authenticated users. This approach ensures that:
 
 * Works regardless of where the app is installed (editable install, virtualenv, system site-packages).
 * Access is protected by Django authentication.
@@ -88,24 +88,26 @@ mkdocs build --no-directory-urls --strict
 
 The `docs_index` and `docs_files` URL patterns defined in `nautobot.core.urls` are used for serving the documentation of all apps.
 
-`/docs/example_app/` - serves the `example_app/docs/index.html` file.
+`/docs/example-app/` - serves the `example_app/docs/index.html` file.
 
-`/docs/example_app/assets/extra.css` - serves the requested file from `example_app/docs/` and its subdirectories, for example here `example_app/docs/assets/extra.css`.
+`/docs/example-app/assets/extra.css` - serves the requested file from `example_app/docs/` and its subdirectories, for example here `example_app/docs/assets/extra.css`.
 
 Both routes go through AppDocsView, which enforces login.
 
 ### Redirect for Each App
 
-Each app should define its own top-level `/docs/` URL that redirects to the appropriate app documentation:
+Each app may define its own top-level `/docs/` URL that redirects to the appropriate app documentation:
 
 ```python
-app_name = example_app
+app_name = "example_app"
+app_config = apps.get_app_config(app_name)
+base_url = app_config.base_url
 path(
     "docs/",
     RedirectView.as_view(pattern_name="docs_index"),
-    {"app_name": app_name},
+    {"app_base_url": base_url},
     name="docs",
 )
 ```
 
-This allows users to access `/docs/<app-name>`.
+This allows users to access `/plugins/example-app/docs/` (as was the recommended URL pattern in Nautobot 2.x) and have it redirect to the new `/docs/example-app/` URL.

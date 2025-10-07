@@ -208,7 +208,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location = models.Location.objects.first()
         self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example_app/models/examplemodel.html")
+        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example-app/models/examplemodel.html")
         # AnotherExampleModel does not have documentation.
         another_model = AnotherExampleModel.objects.create(name="test", number=1)
         self.assertIsNone(helpers.get_docs_url(another_model))

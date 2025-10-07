@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.urls import path
 from django.views.generic import RedirectView
 
@@ -6,6 +7,8 @@ from nautobot.apps.urls import NautobotUIViewSetRouter
 from example_app import views
 
 app_name = "example_app"
+app_config = apps.get_app_config(app_name)
+base_url = app_config.base_url
 router = NautobotUIViewSetRouter()
 # ExampleModel is registered using the ViewSet
 router.register("models", views.ExampleModelUIViewSet)
@@ -17,7 +20,7 @@ urlpatterns = [
     path(
         "docs/",
         RedirectView.as_view(pattern_name="docs_index"),
-        {"app_name": app_name},
+        {"app_base_url": base_url},
         name="docs",
     ),
     # Still have the ability to add routes to a model that is using the NautobotUIViewSet.
