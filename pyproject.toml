@@ -237,6 +237,7 @@ time-machine = "~2.17.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -414,7 +415,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.4.md"
+filename = "nautobot/docs/release-notes/version-3.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

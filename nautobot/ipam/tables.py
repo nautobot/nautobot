@@ -36,7 +36,7 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="badge bg-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}

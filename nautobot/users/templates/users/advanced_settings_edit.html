@@ -7,7 +7,7 @@
         <div class="row align-content-start flex-fill">
             <div class="col-md-8 offset-md-2">
                 {% if form.non_field_errors %}
-                    <div class="card border-danger mb-16">
+                    <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body">
                             <strong>Errors</strong>
                         </div>
@@ -16,7 +16,7 @@
                         </div>
                     </div>
                 {% endif %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header"><strong>Advanced Settings</strong></div>
                     <div class="card-body">
                         {% render_field form.request_profiling %}

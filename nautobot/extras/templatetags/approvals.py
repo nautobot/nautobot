@@ -15,5 +15,5 @@ def render_approval_workflow_state(value):
     """
     if value:
         css_class = ApprovalWorkflowStateChoices.CSS_CLASSES.get(value)
-        return format_html('<span class="label label-{}">{}</span>', css_class, value)
+        return format_html('<span class="badge bg-{}">{}</span>', css_class, value)
     return ""

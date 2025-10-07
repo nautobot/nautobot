@@ -2359,9 +2359,9 @@ class CustomFieldTableTest(TestCase):
             "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
-            "choice_field": '<span class="label label-default">Bar</span>',
+            "choice_field": '<span class="badge bg-secondary">Bar</span>',
             "multi_choice_field": (
-                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>'
+                '<span class="badge bg-secondary">Bar</span> <span class="badge bg-secondary">Baz</span>'
             ),
         }
 
