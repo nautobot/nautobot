@@ -5,10 +5,6 @@ on:
     types: ["published"]  # covers releases, prereleases, and drafts
 
 jobs:
-  # Ensure CI has passed
-  ci:
-    uses: "./.github/workflows/ci_integration.yml"
-
   # Publish to GitHub followed by pypi
   publish_python:
     if: "${{ ! github.event.release.draft }}"
