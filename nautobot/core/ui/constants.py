@@ -1,22 +1,22 @@
 UI_COLORS = {
-    "blue-0": {
-        "light": "#007dff",
-        "dark": "#045ab4",
+    "dodgerblue": {
+        "light": "#339dff",
+        "dark": "#339dff"
+    },
+    "indigo": {
+        "light": "#4e00b1",
+        "dark": "#4e00b1",
     },
     "orange-0": {
         "light": "#e07807",
-        "dark": "#e07807",
+        "dark": "#ff9933",
     },
-    "green-0": {
-        "light": "#1ca92a",
-        "dark": "#005c09",
+    "slateblue": {
+        "light": "#7b61ff",
+        "dark": "#a394ff",
     },
-    "red-0": {
-        "light": "#e01f1f",
-        "dark": "#960606",
-    },
-    "gray-0": {
-        "light": "#505d68",
-        "dark": "#4f5868",
-    },
+    "turquoise": {
+        "light": "#00bfa5",
+        "dark": "#26d7c5",
+    }
 }
