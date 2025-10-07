@@ -3,13 +3,11 @@ import string
 from typing import ClassVar, Iterable, Optional
 
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection
 from django.db.models import Count, Q, QuerySet
 from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
-from django.utils.text import slugify
 from django_filters import FilterSet
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -24,7 +22,7 @@ from nautobot.core.filters import (
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team, CustomField
 from nautobot.tenancy import models
 
@@ -773,7 +771,11 @@ class FilterTestCases:
             model = self.filterset.Meta.model
             for cf_type, test_data in self.filter_matrix.items():
                 cf_label = f"test_label_{cf_type}"
-                cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=cf_label)
+                cf = CustomField.objects.create(
+                    type=CustomFieldTypeChoices.TYPE_TEXT,
+                    label=cf_label,
+                    filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
+                )
                 cf.content_types.set([ContentType.objects.get_for_model(model)])
 
                 i1, i2, i3, i4 = tested_instances = self.queryset.all()[:4]
@@ -810,7 +812,6 @@ class FilterTestCases:
                             fs = self.filterset(params, qs)
 
                             filtered = fs.qs
-
                             self.assertTrue(fs.is_valid())
                             assert_in_msg = f"object expected to be found for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
                             assert_not_in_msg = f"object expected to be filtered out for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
@@ -828,9 +829,9 @@ class FilterTestCases:
                             if test_case["expected"]["null"]:
                                 self.assertIn(i3, filtered, msg=f"Null-value {assert_in_msg}")
                             else:
-                                self.assertNotIn(i3, filtered, msg=f"Empty-value {assert_not_in_msg}")
+                                self.assertNotIn(i3, filtered, msg=f"Null-value {assert_not_in_msg}")
 
                             if test_case["expected"]["value"]:
                                 self.assertIn(i4, filtered, msg=f"Value-set {assert_in_msg}")
                             else:
-                                self.assertNotIn(i4, filtered, msg=f"Empty-value {assert_not_in_msg}")
+                                self.assertNotIn(i4, filtered, msg=f"Value-set {assert_not_in_msg}")

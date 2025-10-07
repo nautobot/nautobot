@@ -59,9 +59,9 @@ class CustomFieldFilterMixin:
         if value in django_filters.constants.EMPTY_VALUES:
             return qs
 
-        if value == "null":
+        if value == "null" or value == ["null"]:
             return self.get_method(qs)(
-                Q(**{f"{self.field_name}__exact": None}) | Q(**{f"{self.field_name}__isnull": True})
+                Q(**{f"{self.field_name}__exact": None}) & Q(**{f"{self.field_name}__isnull": False})
             )
 
         # Custom fields require special handling for exclude filtering.
