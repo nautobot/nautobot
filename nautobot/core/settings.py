@@ -95,11 +95,12 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+    DEVICE_UNIQUENESS = is_truthy(os.environ["NAUTOBOT_DEVICE_UNIQUENESS"])
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -759,12 +760,15 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
-    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
-        default=False,
-        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
-        "Set this to True to use the device name alone as the natural key for Device objects. "
-        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
-        field_type=bool,
+    "DEVICE_UNIQUENESS": ConstanceConfigItem(
+        default="location_tenant_name",
+        help_text=(
+            "Select how Devices are uniquely identified:\n"
+            "- 'location_tenant_name': combination of Location + Tenant + Name\n"
+            "- 'name': Device name must be globally unique\n"
+            "- 'none': No enforced uniqueness (rely on other validation rules or custom validators)"
+        ),
+        field_type=str,
     ),
     "DEPLOYMENT_ID": ConstanceConfigItem(
         default="",
@@ -868,8 +872,9 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Device Constraints": ["DEVICE_UNIQUENESS"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
-    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
+    "Natural Keys": ["LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [

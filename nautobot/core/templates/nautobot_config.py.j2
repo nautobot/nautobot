@@ -361,8 +361,8 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Set this to True to use the device name alone as the natural key for Device objects.
 # Set this to False to use the sequence (name, tenant, location) as the natural key instead.
 #
-# if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-#     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+#     DEVICE_UNIQUENESS = is_truthy(os.environ["NAUTOBOT_DEVICE_UNIQUENESS"])
 
 # Event Brokers
 # EVENT_BROKERS = {}

@@ -25,6 +25,16 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 +++ 2.3.0
     Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
 
++/- 3.0.0
+    The database-level uniqueness constraints on Device ("location", "tenant", "name") have been **removed**.
+    Uniqueness is now enforced entirely at the application level through configurable validators.
+    A new Constance setting, `DEVICE_UNIQUENESS`, defines how devices are uniquely identified:
+    - `"location_tenant_name"` — Device uniqueness is enforced as a combination of Location + Tenant + Name (pre-3.0 behavior).
+    - `"name"` — Device names must be globally unique.
+    - `"none"` — No enforced uniqueness; other validation rules or custom validators may apply.
+    Additionally, the Constance setting `DEVICE_NAME_AS_NATURAL_KEY` has been deprecated. During migration, existing configurations using this setting will be translated to the appropriate `DEVICE_UNIQUENESS` value (`"name"` or `"location_tenant_name"`).
+
+
 ## Developer API
 
 The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:

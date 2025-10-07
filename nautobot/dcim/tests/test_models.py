@@ -1532,7 +1532,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_overrides(self):
         """Ensure that the natural-key for Device is affected by settings/Constance."""
-        with override_config(DEVICE_NAME_AS_NATURAL_KEY=True):
+        with override_config(DEVICE_UNIQUENESS="name"):
             self.assertEqual([self.device.name], self.device.natural_key())
             # self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))

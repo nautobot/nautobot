@@ -1,0 +1,1 @@
+Added new Constance setting `DEVICE_UNIQUENESS` to configure how Device instances are uniquely identified.

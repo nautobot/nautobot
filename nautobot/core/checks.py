@@ -42,6 +42,13 @@ W005 = Warning(
     obj=settings,
 )
 
+W006 = Warning(
+    "DEVICE_NAME_AS_NATURAL_KEY is set in Constance configuration and should be removed. "
+    "This setting has been superseded by DEVICE_UNIQUENESS (see Device Constraints).",
+    id="nautobot.core.W006",
+    obj=settings,
+)
+
 MIN_POSTGRESQL_MAJOR_VERSION = 12
 MIN_POSTGRESQL_MINOR_VERSION = 0
 
@@ -152,4 +159,17 @@ def check_data_validation_engine_installed(app_configs, **kwargs):
     app_name = "nautobot_data_validation_engine"
     if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
         return [E006]
+    return []
+
+
+@register(Tags.compatibility)
+def check_deprecated_device_name_as_natural_key(app_configs, **kwargs):
+    """
+    Warn if the deprecated DEVICE_NAME_AS_NATURAL_KEY setting is still defined.
+
+    This setting existed prior to 3.0 and has been replaced by the
+    DEVICE_UNIQUENESS Constance configuration.
+    """
+    if hasattr(settings, "CONSTANCE_CONFIG") and "DEVICE_NAME_AS_NATURAL_KEY" in settings.CONSTANCE_CONFIG:
+        return [W006]
     return []
