@@ -84,6 +84,69 @@ urlpatterns = [
         views.DeviceTypeImportView.as_view(),
         name="devicetype_import",
     ),
+    path(
+        "device-types/<uuid:pk>/console-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/console-ports/"
+        ),
+        name="devicetype_consoleporttemplate_add",
+    ),
+    path(
+        "devices-types/<uuid:pk>/console-server-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-server-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/console-server-ports/"
+        ),
+        name="devicetype_consoleserverporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/power-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/power-ports/"
+        ),
+        name="devicetype_powerporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/power-outlet-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-outlet-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/power-outlets/"
+        ),
+        name="devicetype_poweroutlettemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/interface-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/interface-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/interfaces/"
+        ),
+        name="devicetype_interfacetemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/front-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/front-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/front-ports/"
+        ),
+        name="devicetype_frontporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/rear-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/rear-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/rear-ports/"
+        ),
+        name="devicetype_rearporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/device-bay-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/device-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/device-bays/"
+        ),
+        name="devicetype_devicebaytemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/module-bay-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
+        ),
+        name="devicetype_modulebaytemplate_add",
+    ),
     # Console port templates
     path(
         "console-port-templates/add/",
