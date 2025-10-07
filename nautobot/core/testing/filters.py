@@ -803,7 +803,7 @@ class FilterTestCases:
                             lookup_expr = f"cf_{cf_label}"
 
                         with self.subTest(
-                            f"Testing \"{cf_type}\" type with: {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
+                            f'Testing "{cf_type}" type with: {lookup_data["lookup_name"]} ({lookup}) = "{test_case["search"]}"'
                         ):
                             if lookup == "":
                                 params = {lookup_expr: test_case["search"]}
@@ -813,8 +813,8 @@ class FilterTestCases:
 
                             filtered = fs.qs
                             self.assertTrue(fs.is_valid())
-                            assert_in_msg = f"object expected to be found for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
-                            assert_not_in_msg = f"object expected to be filtered out for searching {lookup_data['lookup_name']} ({lookup}) = \"{test_case['search']}\""
+                            assert_in_msg = f'object expected to be found for searching {lookup_data["lookup_name"]} ({lookup}) = "{test_case["search"]}"'
+                            assert_not_in_msg = f'object expected to be filtered out for searching {lookup_data["lookup_name"]} ({lookup}) = "{test_case["search"]}"'
 
                             if test_case["expected"]["no_key"]:
                                 self.assertIn(i1, filtered, msg=f"No-key {assert_in_msg}")
