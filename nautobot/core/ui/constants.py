@@ -1,8 +1,5 @@
 UI_COLORS = {
-    "dodgerblue": {
-        "light": "#339dff",
-        "dark": "#339dff"
-    },
+    "dodgerblue": {"light": "#339dff", "dark": "#339dff"},
     "indigo": {
         "light": "#4e00b1",
         "dark": "#4e00b1",
@@ -18,5 +15,5 @@ UI_COLORS = {
     "turquoise": {
         "light": "#00bfa5",
         "dark": "#26d7c5",
-    }
+    },
 }
