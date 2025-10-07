@@ -22,8 +22,8 @@ from nautobot.core.filters import (
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
-from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team, CustomField
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.models import Contact, ContactAssociation, CustomField, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
 
