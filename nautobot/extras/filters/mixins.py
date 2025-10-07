@@ -209,7 +209,7 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
-        if not value or any(v in EMPTY_VALUES for v in value):
+        if not value or any(v in EMPTY_VALUES for v in value) or (hasattr(value, "exists") and not value.exists()):
             return qs
 
         query = self.generate_query(value)

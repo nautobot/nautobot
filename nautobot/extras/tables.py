@@ -39,6 +39,7 @@ from .models import (
     ExternalIntegration,
     GitRepository,
     GraphQLQuery,
+    ImageAttachment,
     Job as JobModel,
     JobButton,
     JobHook,
@@ -113,6 +114,13 @@ class="label label-{% if entry.content_identifier in record.provided_contents %}
 GITREPOSITORY_BUTTONS = """
 <button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
 """
+
+IMAGEATTACHMENT_NAME = """
+<span class="mdi mdi-file-image"></span>
+<a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+"""
+
+IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
@@ -718,6 +726,18 @@ class GraphQLQueryTable(BaseTable):
         )
 
 
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=IMAGEATTACHMENT_NAME, verbose_name="Name")
+    size = tables.TemplateColumn(template_code=IMAGEATTACHMENT_SIZE)
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(ImageAttachment, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
+
+
 def log_object_link(value, record):
     return record.absolute_url or None
 
@@ -757,11 +777,12 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
+                {{ value.date_created|date:SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
                 <span class="text-muted">Never</span>
             {% endif %}
         """,
+        extra_context={"SHORT_DATETIME_FORMAT": settings.SHORT_DATETIME_FORMAT},
         linkify=lambda value: value.get_absolute_url() if value else None,
     )
     last_status = tables.TemplateColumn(
@@ -927,6 +948,7 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
+    duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def __init__(self, *args, **kwargs):
@@ -1090,7 +1112,7 @@ class ObjectMetadataTable(BaseTable):
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
-    value = tables.Column(empty_values=[])
+    value = tables.Column(empty_values=[], order_by=("_value",))
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata

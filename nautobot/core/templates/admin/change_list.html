@@ -2,30 +2,30 @@
 {% load i18n admin_urls static admin_list bootstrapped_goodies_tags %}
 
 {% block extrastyle %}
-  {{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
-  {% if cl.formset %}
-    <link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
-  {% endif %}
-  {% if cl.formset or action_form %}
-    {% url 'admin:jsi18n' as jsi18nurl %}
-    <script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
-  {% endif %}
-  {{ media.css }}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
+    {% if cl.formset %}
+        <link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
+    {% endif %}
+    {% if cl.formset or action_form %}
+        {% url 'admin:jsi18n' as jsi18nurl %}
+        <script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
+    {% endif %}
+    {{ media.css }}
 {% endblock %}
 
 {% block extrahead %}
-{{ block.super }}
-{{ media.js }}
-{% if action_form %}{% if actions_on_top or actions_on_bottom %}
-<script type="text/javascript">
-(function($) {
-    $(document).ready(function($) {
-        $("tr input.action-select").actions();
-    });
-})($);
-</script>
-{% endif %}{% endif %}
+    {{ block.super }}
+    {{ media.js }}
+    {% if action_form %}{% if actions_on_top or actions_on_bottom %}
+        <script type="text/javascript">
+            (function($) {
+                $(document).ready(function($) {
+                    $("tr input.action-select").actions();
+                });
+            })($);
+        </script>
+    {% endif %}{% endif %}
 {% endblock %}
 
 {% if not is_popup %}
@@ -45,60 +45,60 @@
 {% endif %}
 
 {% block object-tools %}
-<div id="content-navbar-collapse" class="navbar-collapse collapse">
-    {% block object-tools-items %}
-        {% if has_add_permission %}
+    <div id="content-navbar-collapse" class="navbar-collapse collapse">
+        {% block object-tools-items %}
+            {% if has_add_permission %}
                 {% url cl.opts|admin_urlname:'add' as add_url %}
                 <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
                     <span class="glyphicon glyphicon-plus"></span> {% blocktrans with cl.opts.verbose_name as name %}Add{% endblocktrans %}
                 </a>
-            </li>
-        {% endif %}
-    {% endblock %}
-</div>
+                </li>
+            {% endif %}
+        {% endblock %}
+    </div>
 {% endblock %}
 
 {% block content %}
-<form class="" id="changelist-form" action="" method="post"{% if cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>{% csrf_token %}
+    <form class="" id="changelist-form" action="" method="post"{% if cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>{% csrf_token %}
 
-{% if cl.formset.errors %}
-<div class="alert alert-danger">
-    <p class="errornote">
-        {% if cl.formset.errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
-    </p>
-    {{ cl.formset.non_form_errors }}
-</div>
-{% endif %}
-
-
-{% with app_name=cl.opts.model_name|lower|slugify %}
-    {% render_with_template_if_exist cl.opts.app_label|lower|add:"/admin_app_"|add:app_name|add:"_description.html" "" %}
-{% endwith %}
-
-{% if action_form and actions_on_top and cl.show_admin_actions %}
-    <div>{% admin_actions %}</div>
-{% endif %}
-
-<div id="content-main">
-    <div class="module{% if cl.has_filters %} filtered{% endif %}" id="_changelist">
-        {% block date_hierarchy %}
-            {% date_hierarchy cl %}
-        {% endblock %}
-
-        {% if cl.formset %}
-            <div>{{ cl.formset.management_form }}</div>
+        {% if cl.formset.errors %}
+            <div class="alert alert-danger">
+                <p class="errornote">
+                    {% if cl.formset.errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+                </p>
+                {{ cl.formset.non_form_errors }}
+            </div>
         {% endif %}
 
-        {% block result_list %}
-            {% result_list cl %}
-        {% endblock %}
-    </div>
-</div>
 
-{% block pagination %}
-    {% pagination cl %}
-{% endblock %}
-</form>
+        {% with app_name=cl.opts.model_name|lower|slugify %}
+            {% render_with_template_if_exist cl.opts.app_label|lower|add:"/admin_app_"|add:app_name|add:"_description.html" "" %}
+        {% endwith %}
+
+        {% if action_form and actions_on_top and cl.show_admin_actions %}
+            <div>{% admin_actions %}</div>
+        {% endif %}
+
+        <div id="content-main">
+            <div class="module{% if cl.has_filters %} filtered{% endif %}" id="_changelist">
+                {% block date_hierarchy %}
+                    {% date_hierarchy cl %}
+                {% endblock %}
+
+                {% if cl.formset %}
+                    <div>{{ cl.formset.management_form }}</div>
+                {% endif %}
+
+                {% block result_list %}
+                    {% result_list cl %}
+                {% endblock %}
+            </div>
+        </div>
+
+        {% block pagination %}
+            {% pagination cl %}
+        {% endblock %}
+    </form>
 {% endblock %}
 
 
