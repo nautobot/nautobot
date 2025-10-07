@@ -12,13 +12,12 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
-from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.data_validation.tests.test_data_compliance_rules import (
     TestFailedDataComplianceRule,
     TestFailedDataComplianceRuleAlt,
 )
-from nautobot.dcim.models import Device, Location, LocationType, PowerFeed, Rack
+from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
 from nautobot.extras.models import Status
 
 User = get_user_model()
@@ -250,21 +249,20 @@ class DataComplianceObjectTestCase(TestCase):
     """Test cases for DataComplianceObjectView."""
 
     def setUp(self):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[0]
-        rack_status = Status.objects.get_for_model(Rack).first()
-        self.rack = Rack.objects.create(name="Rack 1", location=location, status=rack_status)
+        self.device = Device.objects.first()
 
-        t = TestFailedDataComplianceRuleAlt(self.rack)
+        t = TestFailedDataComplianceRuleAlt(self.device)
         t.clean()
         self.user = User.objects.create_user(username="testuser", is_superuser=True)
 
     def test_data_compliance_action(self):
         self.add_permissions("data_validation.view_datacompliance")
         self.client.force_login(self.user)
-        url = reverse("dcim:rack_data-compliance", kwargs={"pk": self.rack.pk})
+        url = reverse("dcim:device_data-compliance", kwargs={"pk": self.device.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("active_tab", response.data)
-        self.assertEqual(response.data["active_tab"], "data_compliance")
-        self.assertIn("table", response.data)
-        self.assertIsInstance(response.data["table"], DataComplianceTableTab)
+        self.assertIn("active_tab", response.context)
+        self.assertEqual(response.context["active_tab"], "data_compliance")
+        self.assertBodyContains(response, "The tenant is wrong")
+        self.assertBodyContains(response, "The name is wrong")
+        self.assertBodyContains(response, "The status is wrong")

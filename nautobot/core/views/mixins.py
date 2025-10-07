@@ -55,7 +55,6 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
@@ -489,8 +488,6 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             return NoteTable
         elif self.action == "changelog":
             return ObjectChangeTable
-        elif self.action == "data_compliance":
-            return DataComplianceTableTab
 
         if self.table_class is None:
             raise NotImplementedError(

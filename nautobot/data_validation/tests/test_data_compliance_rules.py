@@ -19,10 +19,9 @@ class TestFailedDataComplianceRule(DataComplianceRule):
         # attribute
         raise ComplianceError(
             {
-                "tenant": "Tenant",
-                "description": "Description",
-                "name": "Name",
-                "status": "Status",
+                "tenant": "The tenant is wrong",
+                "name": "The name is wrong",
+                "status": "The status is wrong",
             }
         )
 
@@ -39,7 +38,7 @@ class TestPassedDataComplianceRule(DataComplianceRule):
 class TestFailedDataComplianceRuleAlt(TestFailedDataComplianceRule):
     """Test implementation of DataComplianceRule, for dcim.rack."""
 
-    model = "dcim.rack"
+    model = "dcim.device"
 
 
 class TestCompliance(TestCase):
@@ -68,7 +67,7 @@ class TestCompliance(TestCase):
 
     def test_audit_fail(self):
         result = DataCompliance.objects.filter(valid=False).all()
-        self.assertEqual(len(result), 5)
+        self.assertEqual(len(result), 4)
         result = DataCompliance.objects.get(validated_attribute="tenant")
         self.assertEqual(result.compliance_class_name, "TestFailedDataComplianceRule")
         self.assertEqual(result.validated_object, self.s)
@@ -77,10 +76,10 @@ class TestCompliance(TestCase):
 
     def test_validate_replaces_results(self):
         self.assertEqual(
-            len(DataCompliance.objects.filter(compliance_class_name=TestFailedDataComplianceRule.__name__)), 5
+            len(DataCompliance.objects.filter(compliance_class_name=TestFailedDataComplianceRule.__name__)), 4
         )
         TestFailedDataComplianceRule(self.s).clean()
         self.assertEqual(
             len(DataCompliance.objects.filter(compliance_class_name=TestFailedDataComplianceRule.__name__)),
-            5,
+            4,
         )

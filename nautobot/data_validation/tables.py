@@ -23,6 +23,7 @@ class RegularExpressionValidationRuleTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True, order_by=("name",))
     enabled = BooleanColumn()
+    context_processing = BooleanColumn()
     tags = TagColumn()
 
     class Meta(BaseTable.Meta):
