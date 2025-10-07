@@ -43,9 +43,6 @@ router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
 urlpatterns = [
-    # Change logging
-    path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
-    path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
