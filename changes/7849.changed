@@ -1,2 +1,0 @@
-Changed the form field `software_version` on `SoftwareImageFileForm` form to be a dynamic dropdown.
-Changed the form field `platform` on `SoftwareVersionForm` form to be a dynamic dropdown.

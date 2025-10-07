@@ -1,3 +1,0 @@
-Updated documentation dependency `mkdocs-material` to `~9.6.20`.
-Updated documentation dependency `mkdocstrings` to `~0.30.1`.
-Updated development dependency `djhtml` to `>=3.0.9,<4.0.0`.
