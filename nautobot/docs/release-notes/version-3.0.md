@@ -57,7 +57,7 @@ Approval Workflows allows for a multi-stage review and approval of processes bef
 
 #### Data Validation Engine
 
-The Nautobot Data Validation Engine functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature. 
+The Nautobot Data Validation Engine functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature.
 
 The data validation engine offers a set of user definable rules which are used to enforce business constraints on the data in Nautobot. These rules are tied to models and each rule is meant to enforce one aspect of a business use case.
 
