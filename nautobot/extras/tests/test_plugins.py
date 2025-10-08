@@ -353,7 +353,7 @@ class AppListViewTest(TestCase):
                     "name": "Nautobot Example App",
                     "use_cases": ["Example", "Development"],
                     "requires": [],
-                    "docs": "https://example.com/docs/example-app/",
+                    "docs": "https://example.com/docs/example_app/",
                     "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
                     "description": "An example of the kinds of things a Nautobot App can do, including ...",
                     "package_name": "example_app",

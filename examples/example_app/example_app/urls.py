@@ -8,7 +8,7 @@ from example_app import views
 
 app_name = "example_app"
 app_config = apps.get_app_config(app_name)
-base_url = app_config.base_url
+base_url = getattr(app_config, "base_url", None) or app_config.label
 router = NautobotUIViewSetRouter()
 # ExampleModel is registered using the ViewSet
 router.register("models", views.ExampleModelUIViewSet)

@@ -49,5 +49,4 @@ for plugin_path in settings.PLUGINS:
     if urlpatterns is not None:
         plugin_api_patterns.append(path(f"{base_url}/", include((urlpatterns, f"{app.label}-api"))))
 
-    if hasattr(app, "base_url"):
-        BASE_URL_TO_APP_LABEL[app.base_url] = app.label
+    BASE_URL_TO_APP_LABEL[app.base_url] = app.label

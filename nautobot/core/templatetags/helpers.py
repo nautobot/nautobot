@@ -506,7 +506,7 @@ def get_docs_url(model):
     Example:
         >>> get_docs_url(location_instance)
         "static/docs/models/dcim/location.html"
-        >>> get_docs_url(example_app)
+        >>> get_docs_url(example_model)
         "/docs/example-app/models/examplemodel.html"
     """
     if hasattr(model, "documentation_static_path"):
@@ -514,7 +514,7 @@ def get_docs_url(model):
     elif model._meta.app_label in settings.PLUGINS:
         app_label = model._meta.app_label
         app_config = apps.get_app_config(app_label)
-        app_base_url = app_config.base_url
+        app_base_url = getattr(app_config, "base_url", None) or app_config.label
         path = f"models/{model._meta.model_name}.html"
         # Check that the file actually exists inside the app's docs folder
         try:

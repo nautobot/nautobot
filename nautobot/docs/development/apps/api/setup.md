@@ -101,7 +101,7 @@ Each app may define its own top-level `/docs/` URL that redirects to the appropr
 ```python
 app_name = "example_app"
 app_config = apps.get_app_config(app_name)
-base_url = app_config.base_url
+base_url = getattr(app_config, "base_url", None) or app_config.label
 path(
     "docs/",
     RedirectView.as_view(pattern_name="docs_index"),
