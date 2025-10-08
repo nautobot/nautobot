@@ -5,9 +5,10 @@ import inspect
 from logging import getLogger
 
 from django.conf import settings
+from django.conf.urls import include
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
-from django.urls import get_resolver, URLPattern
+from django.urls import clear_url_caches, get_resolver, path, URLPattern
 from packaging import version
 
 from nautobot.core.apps import (
@@ -105,9 +106,24 @@ class NautobotAppConfig(NautobotConfig):
         """Callback after plugin app is loaded."""
         # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
 
+        from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL, plugin_patterns, plugin_api_patterns
+
         # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
         urlpatterns = import_string_optional(f"{self.__module__}.urls.urlpatterns")
         api_urlpatterns = import_string_optional(f"{self.__module__}.api.urls.urlpatterns")
+
+        base_url = self.base_url or self.label
+
+        if urlpatterns is not None:
+            plugin_patterns.append(path(f"{base_url}/", include((urlpatterns, self.label))))
+
+        if api_urlpatterns is not None:
+            plugin_api_patterns.append(path(f"{base_url}/", include((api_urlpatterns, f"{self.label}-api"))))
+
+        if any([urlpatterns, api_urlpatterns]):
+            clear_url_caches()
+
+        BASE_URL_TO_APP_LABEL[base_url] = self.label
 
         self.features = {
             "api_urlpatterns": sorted(
