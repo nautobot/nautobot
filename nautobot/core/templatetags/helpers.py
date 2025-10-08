@@ -31,7 +31,7 @@ from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
+HTML_NONE = mark_safe('<span class="text-secondary">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -71,7 +71,7 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
         >>> hyperlinked_object(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object("Hello")
         'Hello'
         >>> hyperlinked_object(location)
@@ -113,7 +113,7 @@ def placeholder(value):
 
     Example:
         >>> placeholder("")
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> placeholder("hello")
         "hello"
     """
@@ -183,13 +183,13 @@ def render_boolean(value):
         (str): HTML
             '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
             - or -
-            '<span class="text-muted">&mdash;</span>' if None value
+            '<span class="text-secondary">&mdash;</span>' if None value
             - or -
             '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
 
     Examples:
         >>> render_boolean(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> render_boolean(True or "arbitrary string" or 1)
         '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
         >>> render_boolean(False or "" or 0)
@@ -846,7 +846,7 @@ def label_list(value, suffix=""):
         return HTML_NONE
     return format_html_join(
         " ",
-        '<span class="label label-default">{0}{1}</span>',
+        '<span class="badge bg-secondary">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
 
@@ -1328,7 +1328,7 @@ def hyperlinked_object_target_new_tab(value, field="display"):
         >>> hyperlinked_object_target_new_tab(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
         >>> hyperlinked_object_target_new_tab(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object_target_new_tab("Hello")
         'Hello'
         >>> hyperlinked_object_target_new_tab(location)

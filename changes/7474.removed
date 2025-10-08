@@ -1,5 +1,0 @@
-Removed `approval_required` and `approval_required_override` flags from the Job model and base implementation class.
-Removed the `validate` method from `JobSerializer` that checked `approval_required` against `has_sensitive_variables`.
-Removed logic from the `clean` method in the Job model that validated `approval_required` against `has_sensitive_variables`.
-Removed HTML code related to the `approval_required` field.
-Removed `ScheduledJobApprovalQueueListView` and `JobApprovalRequestView` with all relevant files, methods and tests.

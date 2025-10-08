@@ -317,7 +317,7 @@ class ViewTestCases:
                     format_html(
                         """
                             <a id="clone-button" class="dropdown-item" href="{}">
-                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                                <span class="mdi mdi-plus-thick text-secondary" aria-hidden="true"></span> Clone {}
                             </a>
                         """,
                         object_clone_url,
@@ -1277,6 +1277,7 @@ class ViewTestCases:
                                 sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
                             )
                         else:
+                            self.assertIn(key, bulk_edit_form.fields)
                             self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

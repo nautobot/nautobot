@@ -325,7 +325,7 @@ def consolidate_detail_view_action_buttons(context):
     edit_button_classes = "btn btn-warning"
     delete_button_classes = "dropdown-item text-danger"
     clone_button_classes = "dropdown-item"
-    clone_icon = "mdi mdi-plus-thick text-muted"
+    clone_icon = "mdi mdi-plus-thick text-secondary"
     delete_button_fragment = f"<li>{delete_button_fragment}</li>"
 
     if render_edit_button:

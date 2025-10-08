@@ -57,6 +57,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -121,6 +122,7 @@ __all__ = (
     "ControllerManagedDeviceGroupFilterSet",
     "DeviceBayFilterSet",
     "DeviceBayTemplateFilterSet",
+    "DeviceClusterAssignmentFilterSet",
     "DeviceFamilyFilterSet",
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
@@ -133,6 +135,7 @@ __all__ = (
     "InterfaceRedundancyGroupAssociationFilterSet",
     "InterfaceRedundancyGroupFilterSet",
     "InterfaceTemplateFilterSet",
+    "InterfaceVDCAssignmentFilterSet",
     "InventoryItemFilterSet",
     "LocationFilterSet",
     "LocationTypeFilterSet",
@@ -841,10 +844,18 @@ class DeviceFilterSet(
         queryset=Rack.objects.all(),
         to_field_name="name",
     )
+    # TODO: This is deprecated, left for backwards compatibility.
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="clusters",
         queryset=Cluster.objects.all(),
         to_field_name="name",
         label="VM cluster (name or ID)",
+    )
+    clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="clusters",
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="VM clusters (name or ID)",
     )
     is_full_depth = django_filters.BooleanFilter(
         field_name="device_type__is_full_depth",
@@ -2385,3 +2396,43 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
             "module_bay_id",
             "tags",
         ]
+
+
+class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
+    """Filters for DeviceClusterAssignment model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "device__asset_tag": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "device__serial": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "cluster__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Cluster (name or ID)",
+    )
+
+    class Meta:
+        model = DeviceClusterAssignment
+        fields = ["device", "cluster"]

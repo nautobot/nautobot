@@ -8,10 +8,10 @@
         {{ pk_form.pk }}
         {{ formset.management_form }}
         <div class="row align-content-start flex-fill">
-            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+            <div class="col-xl-8 offset-lg-2 col-lg-10 offset-md-1">
                 <h3 class="mb-16">{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}</h3>
                 {% if vc_form.non_field_errors %}
-                    <div class="card border-danger mb-16">
+                    <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body">
                             <strong>Errors</strong>
                         </div>
@@ -20,7 +20,7 @@
                         </div>
                     </div>
                 {% endif %}
-                <div class="card card-mb-16">
+                <div class="card">
                     <div class="card-header"><strong>Virtual Chassis</strong></div>
                     <div class="card-body">
                         {% render_field vc_form.name %}
@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 {% include 'inc/extras_features_edit_form_fields.html' with form=vc_form %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header"><strong>Members</strong></div>
                     <table class="card-body">
                         <thead>

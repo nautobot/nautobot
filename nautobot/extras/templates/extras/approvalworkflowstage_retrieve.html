@@ -7,7 +7,7 @@
             href="{% url 'extras:approvalworkflowstage_approve' object.pk %}?return_url={{request.path}}"
             class="btn btn-success{% if not object.is_active_stage or request.user in object.users_that_already_approved %} disabled{% endif %}"
         >
-            <i class="mdi mdi-check"></i> Approve
+            <span class="mdi mdi-check"></span> Approve
         </a>
     </span>
     <span title="{% if not object.is_active_stage %}This stage is not active{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}">
@@ -15,7 +15,7 @@
             href="{% url 'extras:approvalworkflowstage_deny' object.pk %}?return_url={{request.path}}"
             class="btn btn-danger {% if not object.is_active_stage or request.user in object.users_that_already_approved %} disabled{% endif %}"
         >
-            <i class="mdi mdi-close"></i> Deny
+            <span class="mdi mdi-close"></span> Deny
         </a>
     </span>
 {% endblock buttons %}

@@ -2112,9 +2112,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
-        initial_params={"clusters": "$cluster"},
+        initial_params={"clusters__in": "$clusters"},
     )
-    cluster = DynamicModelChoiceField(
+    clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
         query_params={"cluster_group": "$cluster_group"},
@@ -2160,7 +2160,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "primary_ip6",
             "secrets_group",
             "cluster_group",
-            "cluster",
+            "clusters",
             "tenant_group",
             "tenant",
             "vrfs",
@@ -2238,6 +2238,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["clusters"] = self.instance.clusters.values_list("id", flat=True)
             self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
         else:
@@ -2274,6 +2275,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.clusters.set(self.cleaned_data["clusters"])
         return instance
 
 
@@ -2306,7 +2308,12 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    add_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Add to clusters"
+    )
+    remove_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Remove from clusters"
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2329,7 +2336,6 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
-            "cluster",
             "comments",
             "secrets_group",
             "device_redundancy_group",

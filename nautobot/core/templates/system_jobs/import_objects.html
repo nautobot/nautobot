@@ -3,7 +3,7 @@
 {% load form_helpers %}
 
 {% block job_form_wrapper %}
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header">
             <strong>Job Data</strong>
         </div>
@@ -12,7 +12,7 @@
             {% render_field job_form.roll_back_if_error %}
         </div>
     </div>
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
                 <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
@@ -142,7 +142,7 @@
                         <span class="text-warning"><i class="mdi mdi-key-link"></i></span><code>${field.foreign_key}</code>
                     `;
                 } else {
-                    td.innerHTML = '<span class="text-muted">—</span>';
+                    td.innerHTML = '<span class="text-secondary">—</span>';
                 }
                 tr.appendChild(td);
 
@@ -156,15 +156,15 @@
                         }
                     }
                     td.innerHTML += `
-                        <button type="button" class="btn btn-default btn-xs" data-toggle="modal"
-                                data-target="#${ field.name }_choices">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#${ field.name }_choices">
                             <i class="mdi mdi-help-circle"></i>
                         </button>
                         <div class="modal fade" id="${field.name}_choices" tabindex="-1" role="dialog">
                             <div class="modal-dialog" role="document">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                         <h4 class="modal-title"><code>${field.name}</code> Choices</h4>
@@ -178,7 +178,7 @@
                         </div>
                     `;
                 } else {
-                    td.innerHTML = '<span class="text-muted">—</span>';
+                    td.innerHTML = '<span class="text-secondary">—</span>';
                 }
                 tr.appendChild(td);
 
@@ -190,7 +190,7 @@
                     td.innerHTML += `${field.label}<br>`;
                 }
                 if (field.format) {
-                    td.innerHTML += `<small class="text-muted">Format: ${field.format}</small>`
+                    td.innerHTML += `<small class="text-secondary">Format: ${field.format}</small>`
                 }
                 tr.appendChild(td);
 

@@ -193,7 +193,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    cluster = tables.LinkColumn(viewname="virtualization:cluster", args=[Accessor("cluster__pk")])
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list",
+        url_params={"devices": "pk"},
+        verbose_name="Clusters",
+    )
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
@@ -228,7 +232,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
-            "cluster",
+            "cluster_count",
             "virtual_chassis",
             "vc_position",
             "vc_priority",
@@ -259,7 +263,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -1483,7 +1487,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1547,7 +1551,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):

@@ -1,2 +1,0 @@
-Dropped support for Python 3.9. Python 3.10 is now the minimum version required by Nautobot.
-Added support for Python 3.13. Python 3.13 is now the maximum version required by Nautobot.

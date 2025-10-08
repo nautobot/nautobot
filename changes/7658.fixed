@@ -1,4 +1,0 @@
-Fixed a bug in CSV rendering of VarbinaryIPField values on Dolt.
-Fixed a bug in `settings.py` when using `NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql`.
-Fixed a bug in Git repository refreshing where a data failure was not correctly detected under Dolt.
-Fixed a bug in `get_celery_queues()` caching.

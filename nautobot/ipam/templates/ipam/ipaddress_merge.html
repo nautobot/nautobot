@@ -17,8 +17,8 @@
     <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
         <div class="row align-content-start flex-fill">
-            <div class="col-md-10 offset-md-1">
-                <div class="card border-info mb-16">
+            <div class="col-lg-10 offset-md-1">
+                <div class="card border-info">
                     <div class="card-header bg-info-subtle border-info fw-medium text-body"><strong>Confirm Merging IP Addresses</strong></div>
                     <div class="card-body">
                         <p><strong>Warning:</strong> The following operation will merge some or all of these {{ queryset.count }} IP Address records. Please select the record(s) you wish to merge and the attribute values you want to carry forward to the merged record.</p>
@@ -26,8 +26,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-10 offset-md-1">
-                <div class="card mb-16">
+            <div class="col-lg-10 offset-md-1">
+                <div class="card">
                     <div class="table-responsive">
                         <table class="table table-hover nb-table-headings">
                             <thead>
@@ -160,7 +160,7 @@
                                                     {% elif value or value == 0 %}
                                                         {{ value }}
                                                     {% else %}
-                                                        <span class="text-muted">&mdash;</span>
+                                                        <span class="text-secondary">&mdash;</span>
                                                     {% endif %}
                                                 </label>
                                             </td>
@@ -195,7 +195,7 @@
                                                         {% else %}
                                                             <td>
                                                                 <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
-                                                                <label for="cr_{{relationship.key}}"><span class="text-muted">&mdash;</span></label>
+                                                                <label for="cr_{{relationship.key}}"><span class="text-secondary">&mdash;</span></label>
                                                             </td>
                                                         {% endif %}
                                                     {% endfor %}

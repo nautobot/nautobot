@@ -15,7 +15,7 @@
         {% endfor %}
         <div class="row align-content-start flex-fill">
             <div class="col-md-8 offset-md-2">
-                <div class="card border-danger mb-16" id="confirm-bulk-deletion">
+                <div class="card border-danger" id="confirm-bulk-deletion">
                     <div class="card-header bg-danger-subtle border-danger text-body">
                         <strong>Confirm Bulk Deletion</strong>
                     </div>
@@ -27,7 +27,7 @@
             </div>
             {% if table %}
                 <div class="col-md-8 offset-md-2">
-                    <div class="card mb-16">
+                    <div class="card">
                         <div class="table-responsive">
                             {% render_table table 'inc/table.html' %}
                         </div>

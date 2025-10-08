@@ -30,7 +30,7 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -90,7 +90,7 @@ from nautobot.ipam.tables import (
 )
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -777,7 +777,7 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
 
         return super().render_value(key, value, context)
 
@@ -984,7 +984,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-type-add-components-button"},
                 icon="mdi-plus-thick",
@@ -2011,7 +2011,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         queryset = super().get_queryset()
         if self.detail:  # TODO: change to self.action == "retrieve" as a part of addressing NAUTOBOT-1051
             queryset = queryset.select_related(
-                "cluster__cluster_group",
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
                 "device_type__device_family",
@@ -2026,7 +2025,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 "status",
                 "tenant__tenant_group",
                 "virtual_chassis",
-            ).prefetch_related("images", "software_image_files")
+            ).prefetch_related("clusters", "images", "software_image_files")
         if self.action == "config_context":
             queryset = queryset.annotate_config_context_data()
         return queryset
@@ -2117,7 +2116,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
-                    return mark_safe('<span class="label label-warning">Not racked</span>')
+                    return mark_safe('<span class="badge bg-warning">Not racked</span>')
                 return helpers.HTML_NONE
             if key == "device_redundancy_group" and value is not None:
                 instance = get_obj_from_context(context, self.context_object_key)
@@ -2282,7 +2281,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
@@ -2413,7 +2412,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "device_redundancy_group",
                     "controller_managed_device_group",
                     "controller_managed_device_group__controller",
-                    "cluster",
                     "software_version",
                 ],
                 key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
@@ -2421,7 +2419,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "primary_ip4": [render_ip_with_nat],
                     "primary_ip6": [render_ip_with_nat],
                 },
-                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
+                hide_if_unset=["controller_managed_device_group__controller"],
             ),
             DevicePowerUtilizationPanel(
                 weight=100,
@@ -2437,6 +2435,15 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
                 show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=250,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Clusters",
+                table_class=ClusterTable,
+                table_filter="devices",
+                show_table_config_button=False,
+                exclude_columns=["device_count"],
             ),
             object_detail.ObjectsTablePanel(
                 weight=300,
@@ -5084,7 +5091,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         """
 
         type_class = instance.get_type_class()
-        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+        return format_html('<span class="badge bg-{}">{}</span>', type_class, instance.get_type_display())
 
     def _get_connected_target(self, instance):
         """Return (label, value) for the connected row."""
@@ -5170,9 +5177,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         Render the Path Status as a label based on the path status (active or not).
         """
         path_status = (
-            '<span class="label label-success">Reachable</span>'
+            '<span class="badge bg-success">Reachable</span>'
             if getattr(instance, "path", None) and instance.path.is_active
-            else '<span class="label label-danger">Not Reachable</span>'
+            else '<span class="badge bg-danger">Not Reachable</span>'
         )
         return format_html(path_status)  # Safely render HTML
 

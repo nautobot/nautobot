@@ -878,11 +878,11 @@ class DeviceTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -895,11 +895,11 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -1294,11 +1294,11 @@ class ModuleTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -1311,11 +1311,11 @@ class ModuleTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -2276,7 +2276,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[1].pk,
             "primary_ip4": None,
             "primary_ip6": None,
-            "cluster": None,
+            "clusters": [cluster.pk],
             "secrets_group": secrets_groups[1].pk,
             "virtual_chassis": None,
             "vc_position": None,
@@ -2299,7 +2299,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[2].pk,
             "location": locations[1].pk,
             "rack": racks[1].pk,
-            "cluster": cluster.pk,
+            "add_clusters": [cluster.pk],
             "comments": "An older device",
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
@@ -2320,7 +2320,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         add_vdc_url = reverse("dcim:virtualdevicecontext_add")
         return_url = device.get_absolute_url()
         expected_add_vdc_button_html = f"""
-        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-xs">
+        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-sm">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add virtual device context
         </a>
         """
@@ -2482,7 +2482,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
@@ -2868,7 +2868,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()

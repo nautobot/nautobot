@@ -1,2 +1,0 @@
-Renamed the new `nautobot.nautobot_data_validation_engine` app to `nautobot.data_validation`.
-Regenerated the database schema migrations for `nautobot.data_validation` models.
