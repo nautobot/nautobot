@@ -1,9 +1,4 @@
-from django.apps import apps
-from django.conf import settings
-from django.conf.urls import include
 from django.urls import path
-
-from nautobot.core.utils.module_loading import import_string_optional
 
 from . import views
 
