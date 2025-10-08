@@ -92,7 +92,7 @@ The `docs_file` URL pattern defined in `nautobot.core.urls` is used for serving 
 
 `/docs/example-app/assets/extra.css` — serves the requested file directly from `example_app/docs/` and its subdirectories (for example, `example_app/docs/assets/extra.css`).
 
-Each app’s own `docs/` endpoint (defined in its urls.py) redirects to this shared route using the appropriate `base_ur`l and `path="index.html"` parameters.
+Each app’s own `docs/` endpoint (defined in its `urls.py`) redirects to this shared route using the appropriate `base_url` and `path="index.html"` parameters.
 
 All documentation files are served dynamically by AppDocsView, which enforces login.
 
