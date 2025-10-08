@@ -54,6 +54,15 @@ As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v3.0.0a2 (2025-10-07)
+
+!!! note
+    v3.0.0a1 was inadvertently not published to PyPI and Docker image registries. v3.0.0a2 does not contain any changes to Nautobot code compared to v3.0.0a1, but should fix the publishing failure.
+
+### Housekeeping in v3.0.0a2
+
+- [#7928](https://github.com/nautobot/nautobot/issues/7928) - Enhanced `release` GitHub Actions workflow to include prereleases and removed outdated `prerelease` workflow.
+
 ## v3.0.0a1 (2025-10-06)
 
 ### Added in v3.0.0a1
