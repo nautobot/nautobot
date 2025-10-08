@@ -564,7 +564,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self._handle_validation_error(e)
         except ObjectDoesNotExist:
             form = self._handle_object_does_not_exist(form)
-        except NotImplementedError:
+        except NotImplementedError as error:
+            self.logger.debug(f"NotImplementedError raised on action {self.action} resulting in error: {error}")
             self._handle_not_implemented_error()
 
         if not self.has_error:
