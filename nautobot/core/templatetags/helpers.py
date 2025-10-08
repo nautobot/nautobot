@@ -524,9 +524,9 @@ def get_docs_url(model):
                 return reverse("docs_file", kwargs={"app_base_url": app_base_url, "path": path})
         except ModuleNotFoundError:
             pass
-
         logger.debug("No documentation found for %s (expected at %s)", type(model), path)
-        return None
+        # define path to try to get static
+        path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
     elif model._meta.app_label == "extras":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
     else:
