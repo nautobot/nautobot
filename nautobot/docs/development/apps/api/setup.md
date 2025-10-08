@@ -86,13 +86,15 @@ mkdocs build --no-directory-urls --strict
 
 ### URL Routing
 
-The `docs_index` and `docs_files` URL patterns defined in `nautobot.core.urls` are used for serving the documentation of all apps.
+The `docs_file` URL pattern defined in `nautobot.core.urls` is used for serving documentation files for all installed apps.
 
-`/docs/example-app/` - serves the `example_app/docs/index.html` file.
+`/docs/example-app/` — redirects to `/docs/example-app/index.html`, which serves the `example_app/docs/index.html` file.
 
-`/docs/example-app/assets/extra.css` - serves the requested file from `example_app/docs/` and its subdirectories, for example here `example_app/docs/assets/extra.css`.
+`/docs/example-app/assets/extra.css` — serves the requested file directly from `example_app/docs/` and its subdirectories (for example, `example_app/docs/assets/extra.css`).
 
-Both routes go through AppDocsView, which enforces login.
+Each app’s own `docs/` endpoint (defined in its urls.py) redirects to this shared route using the appropriate `base_ur`l and `path="index.html"` parameters.
+
+All documentation files are served dynamically by AppDocsView, which enforces login.
 
 ### Redirect for Each App
 
@@ -104,7 +106,7 @@ app_config = apps.get_app_config(app_name)
 base_url = getattr(app_config, "base_url", None) or app_config.label
 path(
     "docs/",
-    RedirectView.as_view(pattern_name="docs_index"),
+    RedirectView.as_view(pattern_name="docs_index_redirect"),
     {"app_base_url": base_url},
     name="docs",
 )

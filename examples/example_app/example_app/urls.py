@@ -19,7 +19,7 @@ urlpatterns = [
     path("config/", views.ExampleAppConfigView.as_view(), name="config"),
     path(
         "docs/",
-        RedirectView.as_view(pattern_name="docs_index"),
+        RedirectView.as_view(pattern_name="docs_index_redirect"),
         {"app_base_url": base_url},
         name="docs",
     ),

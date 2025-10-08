@@ -210,24 +210,43 @@ class AppDocsViewTestCase(TestCase):
         self.temp_dir.cleanup()
         super().tearDown()
 
-    def test_redirect_if_not_logged_in(self):
-        self.client.logout()
-        test_cases = [
-            ("docs_index", {"app_base_url": self.test_base_url}),
-            ("docs_file", {"app_base_url": self.test_base_url, "path": "css/style.css"}),
-        ]
+    def test_docs_index_redirect(self):
+        """Ensure /docs/<base_url>/ redirects to /docs/<base_url>/index.html."""
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/docs/{self.test_base_url}/index.html")
 
-        for view_name, kwargs in test_cases:
-            with self.subTest(view=view_name):
-                url = reverse(view_name, kwargs=kwargs)
-                response = self.client.get(url)
-                # LoginRequiredMixin redirects to /accounts/login/
-                self.assertRedirects(
-                    response,
-                    expected_url=f"{reverse('login')}?next={url}",
-                    status_code=302,
-                    target_status_code=200,
-                )
+    def test_docs_index_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+
+        # First, the redirect to /docs/<base_url>/index.html
+        self.assertEqual(response.status_code, 302)
+        redirect_url = f"/docs/{self.test_base_url}/index.html"
+        self.assertEqual(response["Location"], redirect_url)
+
+        # Follow the redirect to AppDocsView, which should require login
+        response = self.client.get(redirect_url)
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={redirect_url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    def test_docs_file_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        # LoginRequiredMixin redirects to /accounts/login/
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={url}",
+            status_code=302,
+            target_status_code=200,
+        )
 
     @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
     @mock.patch("nautobot.core.views.resources.files")
@@ -251,8 +270,8 @@ class AppDocsViewTestCase(TestCase):
     @mock.patch("nautobot.core.views.resources.files")
     def test_serve_index_html_logged_in(self, mock_resources_files):
         mock_resources_files.return_value = Path(self.temp_dir.name)
-        url = reverse("docs_index", kwargs={"app_base_url": self.test_base_url})
-        response = self.client.get(url)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url, "path": "index.html"})
+        response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test Index")
         self.assertEqual(response["Content-Type"], "text/html")
@@ -271,8 +290,8 @@ class AppDocsViewTestCase(TestCase):
     @mock.patch("nautobot.core.views.resources.files")
     def test_docs_index_nonexistent_app(self, mock_resources_files):
         mock_resources_files.return_value = Path(self.temp_dir.name)
-        url = reverse("docs_index", kwargs={"app_base_url": "nonexistent-app"})
-        response = self.client.get(url)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": "nonexistent-app"})
+        response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, 404)
         self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
 
