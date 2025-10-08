@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
@@ -206,10 +208,19 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location = models.Location.objects.first()
         self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(helpers.get_docs_url(example_model), static("example_app/docs/models/examplemodel.html"))
+        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example-app/models/examplemodel.html")
         # AnotherExampleModel does not have documentation.
         another_model = AnotherExampleModel.objects.create(name="test", number=1)
         self.assertIsNone(helpers.get_docs_url(another_model))
+
+    def test_get_docs_url_module_not_found(self):
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
+        # that is listed in settings.PLUGINS but doesn't actually exist on disk.
+        # This ensures the `except ModuleNotFoundError` branch is covered.
+        with patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError):
+            result = helpers.get_docs_url(example_model)
+        self.assertIsNone(result)
 
     def test_has_perms(self):
         self.assertTrue(callable(helpers.has_perms))
