@@ -9,7 +9,6 @@ from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import urlencode
-from django.utils.module_loading import import_string
 from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
@@ -31,7 +30,7 @@ from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
     NavMenuTab,
     NAV_CONTEXT_NAMES,
 )
-
+from nautobot.core.utils.module_loading import import_string_optional
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -60,19 +59,11 @@ class NautobotConfig(AppConfig):
         """
         Ready function initiates the import application.
         """
-        try:
-            homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
+        if homepage_layout := import_string_optional(f"{self.name}.{self.homepage_layout}"):
             register_homepage_panels(self.path, self.label, homepage_layout)
-        except ImportError as err:
-            if "circular import" in str(err):
-                raise
 
-        try:
-            menu_items = import_string(f"{self.name}.{self.menu_tabs}")
+        if menu_items := import_string_optional(f"{self.name}.{self.menu_tabs}"):
             register_menu_items(menu_items)
-        except ImportError as err:
-            if "circular import" in str(err):
-                raise
 
 
 def create_or_check_entry(grouping, record, key, path):

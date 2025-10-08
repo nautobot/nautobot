@@ -7,7 +7,24 @@ import os
 import pkgutil
 import sys
 
+from django.utils.module_loading import import_string
+
 logger = logging.getLogger(__name__)
+
+
+def import_string_optional(dotted_path):
+    """An extension/wrapper of Django's `import_string()` that returns `None` if no such dotted path exists."""
+    try:
+        return import_string(dotted_path)
+    except ModuleNotFoundError:
+        # No such module
+        return None
+    except ImportError as err:
+        if "does not define" in str(err):
+            # Exception raised by Django if the module exists but has no such attribute
+            return None
+        # Maybe a legitimate problem with the import?
+        raise
 
 
 @contextmanager

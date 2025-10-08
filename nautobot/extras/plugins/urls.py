@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls import include
 from django.urls import path
 
-from nautobot.extras.plugins.utils import import_object
+from nautobot.core.utils.module_loading import import_string_optional
 
 from . import views
 
@@ -40,12 +40,12 @@ for plugin_path in settings.PLUGINS:
     base_url = app.base_url or app.label
 
     # Check if the plugin specifies any base URLs
-    urlpatterns = import_object(f"{plugin_path}.urls.urlpatterns")
+    urlpatterns = import_string_optional(f"{plugin_path}.urls.urlpatterns")
     if urlpatterns is not None:
         plugin_patterns.append(path(f"{base_url}/", include((urlpatterns, app.label))))
 
     # Check if the plugin specifies any API URLs
-    urlpatterns = import_object(f"{plugin_path}.api.urls.urlpatterns")
+    urlpatterns = import_string_optional(f"{plugin_path}.api.urls.urlpatterns")
     if urlpatterns is not None:
         plugin_api_patterns.append(path(f"{base_url}/", include((urlpatterns, f"{app.label}-api"))))
 

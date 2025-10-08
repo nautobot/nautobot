@@ -18,9 +18,9 @@ from nautobot.core.apps import (
 )
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.utils.module_loading import import_string_optional
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
-from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import register_datasource_contents, registry
 from nautobot.extras.secrets import register_secrets_provider
 
@@ -106,8 +106,8 @@ class NautobotAppConfig(NautobotConfig):
         # We don't call super().ready here because we don't need or use the on-ready behavior of a core Nautobot app
 
         # Introspect URL patterns and models to make available to the installed-plugins detail UI view.
-        urlpatterns = import_object(f"{self.__module__}.urls.urlpatterns")
-        api_urlpatterns = import_object(f"{self.__module__}.api.urls.urlpatterns")
+        urlpatterns = import_string_optional(f"{self.__module__}.urls.urlpatterns")
+        api_urlpatterns = import_string_optional(f"{self.__module__}.api.urls.urlpatterns")
 
         self.features = {
             "api_urlpatterns": sorted(
@@ -123,36 +123,31 @@ class NautobotAppConfig(NautobotConfig):
         }
 
         # Register banner function (if defined)
-        banner_function = import_object(f"{self.__module__}.{self.banner_function}")
-        if banner_function is not None:
+        if banner_function := import_string_optional(f"{self.__module__}.{self.banner_function}"):
             register_banner_function(banner_function)
             self.features["banner"] = True
 
         # Register model validators (if defined)
-        validators = import_object(f"{self.__module__}.{self.custom_validators}")
-        if validators is not None:
+        if validators := import_string_optional(f"{self.__module__}.{self.custom_validators}"):
             register_custom_validators(validators)
             self.features["custom_validators"] = sorted(set(validator.model for validator in validators))
 
         # Register datasource contents (if defined)
-        datasource_contents = import_object(f"{self.__module__}.{self.datasource_contents}")
-        if datasource_contents is not None:
+        if datasource_contents := import_string_optional(f"{self.__module__}.{self.datasource_contents}"):
             register_datasource_contents(datasource_contents)
             self.features["datasource_contents"] = datasource_contents
 
         # Register GraphQL types (if defined)
-        graphql_types = import_object(f"{self.__module__}.{self.graphql_types}")
-        if graphql_types is not None:
+        if graphql_types := import_string_optional(f"{self.__module__}.{self.graphql_types}"):
             register_graphql_types(graphql_types)
 
         # Import jobs (if present)
         # Note that we do *not* auto-call `register_jobs()` - the App is responsible for doing so when imported.
-        jobs = import_object(f"{self.__module__}.{self.jobs}")
-        if jobs is not None:
+        if jobs := import_string_optional(f"{self.__module__}.{self.jobs}"):
             self.features["jobs"] = jobs
 
         # Import metrics (if present)
-        metrics = import_object(f"{self.__module__}.{self.metrics}")
+        metrics = import_string_optional(f"{self.__module__}.{self.metrics}")
         if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
             register_metrics(metrics)
             self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
@@ -161,19 +156,16 @@ class NautobotAppConfig(NautobotConfig):
             nautobot_database_ready.connect(signal_callback, sender=self)
 
         # Register plugin navigation menu items (if defined)
-        menu_items = import_object(f"{self.__module__}.{self.menu_items}")
-        if menu_items is not None:
+        if menu_items := import_string_optional(f"{self.__module__}.{self.menu_items}"):
             register_plugin_menu_items(self.verbose_name, menu_items)
             self.features["nav_menu"] = menu_items
 
-        homepage_layout = import_object(f"{self.__module__}.{self.homepage_layout}")
-        if homepage_layout is not None:
+        if homepage_layout := import_string_optional(f"{self.__module__}.{self.homepage_layout}"):
             register_homepage_panels(self.path, self.label, homepage_layout)
             self.features["home_page"] = homepage_layout
 
         # Register template content (if defined)
-        template_extensions = import_object(f"{self.__module__}.{self.template_extensions}")
-        if template_extensions is not None:
+        if template_extensions := import_string_optional(f"{self.__module__}.{self.template_extensions}"):
             register_template_extensions(template_extensions)
             self.features["template_extensions"] = sorted(set(extension.model for extension in template_extensions))
 
@@ -185,15 +177,13 @@ class NautobotAppConfig(NautobotConfig):
             pass
 
         # Register secrets providers (if any)
-        secrets_providers = import_object(f"{self.__module__}.{self.secrets_providers}")
-        if secrets_providers is not None:
+        if secrets_providers := import_string_optional(f"{self.__module__}.{self.secrets_providers}"):
             for secrets_provider in secrets_providers:
                 register_secrets_provider(secrets_provider)
             self.features["secrets_providers"] = secrets_providers
 
         # Register custom filters (if any)
-        filter_extensions = import_object(f"{self.__module__}.{self.filter_extensions}")
-        if filter_extensions is not None:
+        if filter_extensions := import_string_optional(f"{self.__module__}.{self.filter_extensions}"):
             register_filter_extensions(filter_extensions, self.name)
             self.features["filter_extensions"] = {"filterset_fields": [], "filterform_fields": []}
             for filter_extension in filter_extensions:
@@ -207,8 +197,7 @@ class NautobotAppConfig(NautobotConfig):
                     )
 
         # Register override view (if any)
-        override_views = import_object(f"{self.__module__}.{self.override_views}")
-        if override_views is not None:
+        if override_views := import_string_optional(f"{self.__module__}.{self.override_views}"):
             for qualified_view_name, view in override_views.items():
                 view_class_name = view.view_class.__name__ if hasattr(view, "view_class") else view.cls.__name__
                 self.features.setdefault("overridden_views", []).append(
@@ -272,8 +261,7 @@ class NautobotAppConfig(NautobotConfig):
 
     def _register_table_extensions(self):
         """Register tables extensions (if any)."""
-        table_extensions = import_object(f"{self.__module__}.{self.table_extensions}")
-        if table_extensions is not None:
+        if table_extensions := import_string_optional(f"{self.__module__}.{self.table_extensions}"):
             register_table_extensions(table_extensions, self.name)
             self.features["table_extensions"] = get_table_extension_features(table_extensions)
 
