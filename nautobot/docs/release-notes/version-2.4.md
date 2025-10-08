@@ -166,6 +166,139 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.19 (2025-09-29)
+
+### Added in v2.4.19
+
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Added support for `distinct` optional parameter when defining an `ObjectsTablePanel` UI component.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Added `description` filter for the VRF and IPAddress models.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added support for disabling a `DistinctViewTab` without hiding it by providing a `disabled_message` in the render context.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added support for `hide_if_empty` optional parameter on `DistinctViewTab`.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added support for optional `required_permissions` on all `Component` subclasses to hide components when the user lacks appropriate permissions.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Added special-case support for rendering a related Cluster (including its Cluster Group) and related Rack (including its Rack Group) in `KeyValueTablePanel`.
+- [#7862](https://github.com/nautobot/nautobot/issues/7862) - Added support for `Button.render_on_tab_id` parameter to scope UI Component buttons to a specific view tab.
+- [#7862](https://github.com/nautobot/nautobot/issues/7862) - Added `should_render_content()` API to `Tab` and `DistinctViewTab` to avoid rendering tab contents unnecessarily when a different tab or set of tabs is displayed.
+
+### Changed in v2.4.19
+
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Changed UI `ObjectsTablePanel` to only apply `.distinct()` to queries when explicitly requested, instead of unconditionally. Improves performance of rendering these tables in most cases.
+- [#7471](https://github.com/nautobot/nautobot/issues/7471) - Changed `DeviceType` detail view to apply proper ordering to the table of related `SoftwareImageFile` records.
+- [#7606](https://github.com/nautobot/nautobot/issues/7606) - Changed "Side A" and "Side Z" column in circuit table to show shorter `location.name` instead of `location.display`.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Changed the jobs `BulkDeleteObjects` and `BulkEditObjects` to be hidden by default.
+- [#7821](https://github.com/nautobot/nautobot/issues/7821) - Changed the maximum allowed value for rack height from 100 to 500.
+- [#7844](https://github.com/nautobot/nautobot/issues/7844) - Implemented UI Component Framework `breadcrumbs` for core views that were previously using `extra_breadcrumbs` template block overrides.
+- [#7844](https://github.com/nautobot/nautobot/issues/7844) - Refactored `JobResultUIViewSet` to use UI Component Framework `breadcrumbs`.
+- [#7849](https://github.com/nautobot/nautobot/issues/7849) - Changed the form field `software_version` on `SoftwareImageFileForm` form to be a dynamic dropdown.
+- [#7849](https://github.com/nautobot/nautobot/issues/7849) - Changed the form field `platform` on `SoftwareVersionForm` form to be a dynamic dropdown.
+
+### Fixed in v2.4.19
+
+- [#7651](https://github.com/nautobot/nautobot/issues/7651) - Improved GraphQL query performance when querying many-to-many and many-to-one related objects such as `{ tenant_groups { tenants { name }}}`.
+- [#7763](https://github.com/nautobot/nautobot/issues/7763) - Fixed an intermittent test failure for `test_anonymous_user_get_shared_views_only`.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed bulk object edit and bulk delete not considering filtering of saved views.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed buttons on bulk views not adhering to the "all" toggle.
+- [#7809](https://github.com/nautobot/nautobot/issues/7809) - Fixed circular import error by lazy importing job based classes into core views.
+- [#7810](https://github.com/nautobot/nautobot/issues/7810) - Improved performance for device detail view by avoiding to calculate the location tree more often than needed.
+- [#7812](https://github.com/nautobot/nautobot/issues/7812) - Fixed prefix/circuit count for location detail view stats panel.
+- [#7818](https://github.com/nautobot/nautobot/issues/7818) - Fixed incorrect closing HTML tag in `body_content_data_table.html`.
+- [#7818](https://github.com/nautobot/nautobot/issues/7818) - Added call to `mark_safe()` on rendered HTML captured by `captureas` template-tag.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Fixed rendering of table-panel footers when both `footer_buttons` and a `body_content_table_add_url` are defined.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Fixed incorrect URL paths for actions under `DeviceType`, for example `/dcim/device-types/<pk>/consoleports/` is now corrected to `/dcim/device-types/<pk>/console-ports/`.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Enhanced `NautobotUIViewSetMixin` to correctly set the `active_tab` when rendering a detail action other than the default `"retrieve"`.
+- [#7833](https://github.com/nautobot/nautobot/issues/7833) - Fixed an exception when rendering an object detail view with no corresponding list view.
+- [#7835](https://github.com/nautobot/nautobot/issues/7835) - Fixed an MRO error in generic views by consistently placing `UIComponentsMixin` at the beginning of base classes.
+- [#7855](https://github.com/nautobot/nautobot/issues/7855) - Fixed NoteUIViewSet to correctly populate `user` and `user_name` fields on Note creation.
+- [#7858](https://github.com/nautobot/nautobot/issues/7858) - Fixed the `InstanceBreadcrumbsItem` and `InstanceParentBreadcrumbsItem` to not format label with title-casing.
+- [#7858](https://github.com/nautobot/nautobot/issues/7858) - Fixed the Breadcrumbs Items classes to not format label with title-casing for custom labels.
+- [#7863](https://github.com/nautobot/nautobot/issues/7863) - Fixed a circular-import issue seen in some Apps following #7825.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Fixed an error in rendering the Device detail view when the device has a controller-managed device group with null `capabilities`.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Fixed inability to specify null `capabilities` when editing a Controller or Controller Managed Device Group via the REST API.
+
+### Documentation in v2.4.19
+
+- [#7845](https://github.com/nautobot/nautobot/issues/7845) - Documented options for controlling Celery worker prefetching behavior in the "Task Queues" guide.
+
+### Housekeeping in v2.4.19
+
+- [#7627](https://github.com/nautobot/nautobot/issues/7627) - Refactored ObjectChange model related UI views to use `NautobotUIViewSet`.
+- [#7794](https://github.com/nautobot/nautobot/issues/7794) - Refactored Prefix model related UI views to use `UI component framework` and `NautobotUIViewSet`.
+- [#7797](https://github.com/nautobot/nautobot/issues/7797) - Updated documentation dependency `mkdocs-material` to `~9.6.20`.
+- [#7797](https://github.com/nautobot/nautobot/issues/7797) - Updated documentation dependency `mkdocstrings` to `~0.30.1`.
+- [#7797](https://github.com/nautobot/nautobot/issues/7797) - Updated development dependency `djhtml` to `>=3.0.9,<4.0.0`.
+- [#7810](https://github.com/nautobot/nautobot/issues/7810) - Added CTE query count tracking to GetObjectViewTestCase test cases to keep track of and minimize the query count.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Refactored Device model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+- [#7825](https://github.com/nautobot/nautobot/issues/7825) - Refactored VirtualMachine model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+- [#7854](https://github.com/nautobot/nautobot/issues/7854) - Add DjHTML and djLint to the project and run it against all Django template files. Include this additional check in pre-commit script and pull request CI workflow.
+- [#7864](https://github.com/nautobot/nautobot/issues/7864) - Updated the recursive query failure message for the `GetObjectViewTestCase.test_get_object_with_permission` generic test.
+- [#7877](https://github.com/nautobot/nautobot/issues/7877) - Updated the `ControllerFactory` and `ControllerManagedDeviceGroupFactory` to potentially create records with a null `capabilities` field.
+
+## v2.4.18 (2025-09-15)
+
+### Security in v2.4.18
+
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated dependency `Django` to `~4.2.24` to mitigate `CVE-2025-57833`.
+
+### Added in v2.4.18
+
+- [#7614](https://github.com/nautobot/nautobot/issues/7614) - Added Bulk Edit functionality for the DynamicGroup model.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Added usage of `{% render_title %}` and `{% render_breadcrumbs %}` in `object_list.html` and `object_retrieve.html` templates.
+- [#7727](https://github.com/nautobot/nautobot/issues/7727) - EXPERIMENTAL: Enabled caching of App-generated Prometheus metrics. This is an experimental feature and may be removed or changed in future releases.
+- [#7758](https://github.com/nautobot/nautobot/issues/7758) - Added SavedView capability to JobResults model.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Added support for `ObjectFieldsPanel(...fields="__all__", additional_fields=[...])` to allow inclusion of properties, reverse relations, nested lookups, and other attributes not normally included in `__all__`.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Enhanced `ObjectFieldsPanel` to support nested lookup of object fields, such as `fields=["rack__rack_group"]`.
+
+### Changed in v2.4.18
+
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated Devices, Prefixes, Plugins, Circuits views to use UI Component Framework Breadcrumbs.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context.
+- [#7687](https://github.com/nautobot/nautobot/issues/7687) - Updated `ObjectListView` to instantiate default `Breadcrumbs` and `Titles` and pass it in context along with `verbose_name_plural` and `view_action`.
+- [#7784](https://github.com/nautobot/nautobot/issues/7784) - Changed `ObjectFieldsPanel.__init__` behavior to raise an error if `exclude_fields` is specified in combination with any value of `fields` other than `"__all__"`.
+- [#7795](https://github.com/nautobot/nautobot/issues/7795) - Changed CircuitTermination UI `Port Speed` and `Upstream Speed` fields back to single field `Speed` with arrows.
+- [#7801](https://github.com/nautobot/nautobot/issues/7801) - Updated Breadcrumbs docs and `UIComponentsMixin` order in some classes.
+
+### Fixed in v2.4.18
+
+- [#7330](https://github.com/nautobot/nautobot/issues/7330) - Fixed a `FieldError` exception when sorting tree-model (Location, LocationType, RackGroup, etc.) tables by a custom field column.
+- [#7330](https://github.com/nautobot/nautobot/issues/7330) - Fixed removal of list-view filters when reverting the table sorting to default.
+- [#7631](https://github.com/nautobot/nautobot/issues/7631) - Fixed duplicate records returned in some cases by `DynamicGroup.update_cached_members()`.
+- [#7723](https://github.com/nautobot/nautobot/issues/7723) - Fixed bug in which `Device` objects could be saved when they didn't have to be.
+- [#7748](https://github.com/nautobot/nautobot/issues/7748) - Updated `last_run` column in `JobTable` to avoid referencing settings directly inside TemplateColumn. Since `django-tables2` does not include context processors when rendering column templates, using `settings.SHORT_DATETIME_FORMAT` caused lookup errors or pickling issues. Now the required format `settings.SHORT_DATETIME_FORMAT` is passed explicitly via `extra_context`, ensuring correct rendering in both views and table contexts.
+- [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv4 /31 Prefix records might be assigned the wrong `parent` Prefix.
+- [#7753](https://github.com/nautobot/nautobot/issues/7753) - Fixed a bug in which IPv6 records such as `::1/128` might be assigned the wrong `parent` Prefix.
+- [#7754](https://github.com/nautobot/nautobot/issues/7754) - Fixed issue with `FilterTestCases.test_tenant_group` where the filter query could return the same `TenantGroup` object multiple times.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed column ordering issue by disabling `orderable` for `PowerFeedTable.occupied_positions`, `PowerFeedTable.phase_designation`, and `JobResultTable.duration`.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Fixed `ObjectMetadataTable.value` column ordering issue by adding missing `order_by` attribute.
+- [#7774](https://github.com/nautobot/nautobot/issues/7774) - Fixed incorrect rendering of Nautobot `n` icon in some browsers.
+- [#7783](https://github.com/nautobot/nautobot/issues/7783) - Fixed an issue where you could not set the virtual chassis master.
+- [#7789](https://github.com/nautobot/nautobot/issues/7789) - Changed certain filter fields to prevent unnecessary SELECT DISTINCT queries.
+- [#7803](https://github.com/nautobot/nautobot/issues/7803) - Fixed a regression in the handling of `ObjectFieldsPanel(ignore_nonexistent_fields=True)` introduced by #7784.
+- [#7808](https://github.com/nautobot/nautobot/issues/7808) - Fixed double `Notes` or `Change Log` added in title.
+
+### Dependencies in v2.4.18
+
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated dependency `cryptography` to `~45.0.7`.
+- [#7793](https://github.com/nautobot/nautobot/issues/7793) - Updated dependency `django-silk` to `~5.4.3`.
+
+### Documentation in v2.4.18
+
+- [#7787](https://github.com/nautobot/nautobot/issues/7787) - Updated NautobotAppConfig docs to add `searchable_models` link.
+
+### Housekeeping in v2.4.18
+
+- [#7614](https://github.com/nautobot/nautobot/issues/7614) - Refactored DynamicGroup model related UI views to use `NautobotUIViewSet`.
+- [#7632](https://github.com/nautobot/nautobot/issues/7632) - Refactored GitRepository model related UI views to use `NautobotUIViewSet`.
+- [#7669](https://github.com/nautobot/nautobot/issues/7669) - Refactored Note model related UI views to use `UI component framework`.
+- [#7689](https://github.com/nautobot/nautobot/issues/7689) - Refactored CustomField model related UI views to use `UI component framework`.
+- [#7700](https://github.com/nautobot/nautobot/issues/7700) - Refactored VirtualChassis model related UI views to use `UI component framework`.
+- [#7760](https://github.com/nautobot/nautobot/issues/7760) - Updated Prefix API test to avoid a potential spurious failure.
+- [#7764](https://github.com/nautobot/nautobot/issues/7764) - Updated development dependency `ruff` to `~0.12.12`.
+- [#7765](https://github.com/nautobot/nautobot/issues/7765) - Added a test to ensure model properties are not orderable.
+- [#7767](https://github.com/nautobot/nautobot/issues/7767) - Updated CI workflows and Docker image build to use Poetry 2.1.4.
+- [#7778](https://github.com/nautobot/nautobot/issues/7778) - Fixed unintended carry-over of data changes between subsequent subtests in `FilterTestCase.test_q_filter_valid`.
+- [#7786](https://github.com/nautobot/nautobot/issues/7786) - Updated ReadTheDocs build to use poetry instead of pip.
+- [#7804](https://github.com/nautobot/nautobot/issues/7804) - Changed development docker-compose environment to not start the `selenium` container by default.
+- [#7804](https://github.com/nautobot/nautobot/issues/7804) - Changed `invoke tests` to auto-start the `selenium` container as needed when running integration tests.
+
 ## v2.4.17 (2025-09-02)
 
 ### Security in v2.4.17

@@ -16,11 +16,11 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
-from django.utils.functional import cached_property
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -38,17 +38,23 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
+    AncestorsBreadcrumbs,
     BaseBreadcrumbItem,
     Breadcrumbs,
+    context_object_attr,
     InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
+    ViewNameBreadcrumbItem,
 )
 from nautobot.core.ui.bulk_buttons import (
     BulkDeleteButton,
+    BulkDisconnectButton,
     BulkEditButton,
     BulkRenameButton,
 )
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -66,23 +72,26 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import get_obj_from_context
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings
-from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
-from nautobot.extras.tables import DynamicGroupTable
-from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
-from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable, VRFTable
+from nautobot.dcim.ui import RackBreadcrumbs
+from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
+from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
+from nautobot.ipam.tables import (
+    InterfaceIPAddressTable,
+    InterfaceVLANTable,
+    ServiceTable,
+    VRFDeviceAssignmentTable,
+    VRFTable,
+)
+from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
-from nautobot.wireless.models import (
-    ControllerManagedDeviceGroupRadioProfileAssignment,
-    ControllerManagedDeviceGroupWirelessNetworkAssignment,
-)
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
@@ -238,6 +247,7 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -281,27 +291,35 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
+    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
 
     def get_extra_context(self, request, instance):
         if instance is None:
             return super().get_extra_context(request, instance)
-        related_locations = (
+        # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
+        # ensure it is only performed once rather than as a subquery for each of the different count stats.
+        related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
+        prefix_count_queryset = Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations)
+        vlan_count_queryset = VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations)
+        circuit_count_queryset = Circuit.objects.restrict(request.user, "view").filter(
+            circuit_terminations__location__in=related_locations
+        )
+        # When there is more than one location, the models that can be assigned to more then one location at the same
+        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
+        # a performance penalty.
+        if len(related_locations) > 1:
+            prefix_count_queryset = prefix_count_queryset.distinct()
+            vlan_count_queryset = vlan_count_queryset.distinct()
+            circuit_count_queryset = circuit_count_queryset.distinct()
         stats = {
+            "prefix_count": prefix_count_queryset.count(),
+            "vlan_count": vlan_count_queryset.count(),
+            "circuit_count": circuit_count_queryset.count(),
             "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
             "device_count": Device.objects.restrict(request.user, "view")
             .filter(location__in=related_locations)
-            .count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .distinct()
-            .count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
-            .filter(circuit_terminations__location__in=related_locations)
             .count(),
             "vm_count": VirtualMachine.objects.restrict(request.user, "view")
             .filter(cluster__location__in=related_locations)
@@ -515,6 +533,7 @@ class RackGroupUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             racks = (
                 Rack.objects.restrict(request.user, "view")
+                # Note this filter - we want the table to include racks assigned to child rack groups as well
                 .filter(rack_group__in=instance.descendants(include_self=True))
                 .select_related("role", "location", "tenant")
             )
@@ -546,6 +565,7 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
+    breadcrumbs = RackBreadcrumbs()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -590,6 +610,10 @@ class RackElevationListView(generic.ObjectListView):
     filterset_form = forms.RackFilterForm
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
+    view_titles = Titles(titles={"list": "Rack Elevation"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:rack_elevation_list", label="Rack Elevation")]}
+    )
 
     def extra_context(self):
         racks = self.queryset
@@ -641,14 +665,26 @@ class RackReservationUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackReservationSerializer
     table_class = tables.RackReservationTable
     queryset = RackReservation.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("rack")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.KeyValueTablePanel(
+            object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 label="Rack",
-                context_data_key="rack_data",
+                fields=["rack__location", "rack__rack_group", "rack"],
+                key_transforms={
+                    "rack__location": "Location",
+                    "rack__rack_group": "Rack Group",
+                },
             ),
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
@@ -663,23 +699,6 @@ class RackReservationUIViewSet(NautobotUIViewSet):
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            context["rack_data"] = self.get_rack_context(instance)
-        return context
-
-    def get_rack_context(self, instance):
-        rack = getattr(instance, "rack", None)
-        if not rack:
-            return {}
-
-        return {
-            "location": rack.location,
-            "rack_group": rack.rack_group,
-            "rack": rack,
-        }
 
     def get_object(self):
         obj = super().get_object()
@@ -773,6 +792,15 @@ def bulk_footer_buttons(form_id: str, model):
     ]
 
 
+def bulk_cable_termination_footer_buttons(form_id: str, model):
+    return [
+        BulkRenameButton(form_id=form_id, model=model),
+        BulkEditButton(form_id=form_id, model=model),
+        BulkDisconnectButton(form_id=form_id, model=model),
+        BulkDeleteButton(form_id=form_id, model=model),
+    ]
+
+
 # --- Tab Configuration ---
 TAB_CONFIGS = [
     (
@@ -861,21 +889,45 @@ TAB_CONFIGS = [
 
 # --- Add Components Button Config ---
 ADD_COMPONENTS_CONFIG = [
-    (100, "dcim:consoleporttemplate_add", "Console Ports", "mdi-console", ["dcim.add_consoleporttemplate"]),
+    (100, "dcim:devicetype_consoleporttemplate_add", "Console Ports", "mdi-console", ["dcim.add_consoleporttemplate"]),
     (
         200,
-        "dcim:consoleserverporttemplate_add",
+        "dcim:devicetype_consoleserverporttemplate_add",
         "Console Server Ports",
         "mdi-console-network-outline",
         ["dcim.add_consoleserverporttemplate"],
     ),
-    (300, "dcim:powerporttemplate_add", "Power Ports", "mdi-power-plug-outline", ["dcim.add_powerporttemplate"]),
-    (400, "dcim:poweroutlettemplate_add", "Power Outlets", "mdi-power-socket", ["dcim.add_poweroutlettemplate"]),
-    (500, "dcim:interfacetemplate_add", "Interfaces", "mdi-ethernet", ["dcim.add_interfacetemplate"]),
-    (600, "dcim:frontporttemplate_add", "Front Ports", "mdi-square-rounded-outline", ["dcim.add_frontporttemplate"]),
-    (700, "dcim:rearporttemplate_add", "Rear Ports", "mdi-square-rounded-outline", ["dcim.add_rearporttemplate"]),
-    (800, "dcim:devicebaytemplate_add", "Device Bays", "mdi-circle-outline", ["dcim.add_devicebaytemplate"]),
-    (900, "dcim:modulebaytemplate_add", "Module Bays", "mdi-tray", ["dcim.add_modulebaytemplate"]),
+    (
+        300,
+        "dcim:devicetype_powerporttemplate_add",
+        "Power Ports",
+        "mdi-power-plug-outline",
+        ["dcim.add_powerporttemplate"],
+    ),
+    (
+        400,
+        "dcim:devicetype_poweroutlettemplate_add",
+        "Power Outlets",
+        "mdi-power-socket",
+        ["dcim.add_poweroutlettemplate"],
+    ),
+    (500, "dcim:devicetype_interfacetemplate_add", "Interfaces", "mdi-ethernet", ["dcim.add_interfacetemplate"]),
+    (
+        600,
+        "dcim:devicetype_frontporttemplate_add",
+        "Front Ports",
+        "mdi-square-rounded-outline",
+        ["dcim.add_frontporttemplate"],
+    ),
+    (
+        700,
+        "dcim:devicetype_rearporttemplate_add",
+        "Rear Ports",
+        "mdi-square-rounded-outline",
+        ["dcim.add_rearporttemplate"],
+    ),
+    (800, "dcim:devicetype_devicebaytemplate_add", "Device Bays", "mdi-circle-outline", ["dcim.add_devicebaytemplate"]),
+    (900, "dcim:devicetype_modulebaytemplate_add", "Module Bays", "mdi-tray", ["dcim.add_modulebaytemplate"]),
 ]
 
 
@@ -888,6 +940,7 @@ def make_bulk_tab(weight, tab_name, label, url_name, related_attr, table_class, 
         label=label,
         url_name=url_name,
         related_object_attribute=related_attr,
+        hide_if_empty=True,
         panels=(
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -914,6 +967,14 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DeviceTypeSerializer
     table_class = tables.DeviceTypeTable
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -927,6 +988,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.SoftwareImageFileTable,
                 table_filter="device_types",
+                order_by_fields=["image_file_name"],
                 select_related_fields=["software_version", "status"],
                 exclude_columns=["actions", "tags"],
                 related_field_name="device_types",
@@ -958,7 +1020,6 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         label=label,
                         icon=icon,
                         required_permissions=perms,
-                        link_includes_pk=False,
                     )
                     for weight, link_name, label, icon, perms in ADD_COMPONENTS_CONFIG
                 ),
@@ -980,7 +1041,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="frontports",
+        url_path="front-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_frontporttemplate"],
     )
@@ -990,7 +1051,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="rearports",
+        url_path="rear-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_rearporttemplate"],
     )
@@ -1000,7 +1061,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="consoleports",
+        url_path="console-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleporttemplate"],
     )
@@ -1010,7 +1071,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="consoleserverports",
+        url_path="console-server-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_consoleserverporttemplate"],
     )
@@ -1020,7 +1081,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="powerports",
+        url_path="power-ports",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_powerporttemplate"],
     )
@@ -1030,7 +1091,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="poweroutlets",
+        url_path="power-outlets",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_poweroutlettemplate"],
     )
@@ -1040,7 +1101,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="devicebays",
+        url_path="device-bays",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_devicebaytemplate"],
     )
@@ -1050,7 +1111,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="modulebays",
+        url_path="module-bays",
         custom_view_base_action="view",
         custom_view_additional_permissions=["dcim.view_modulebaytemplate"],
     )
@@ -1121,6 +1182,14 @@ class ModuleTypeUIViewSet(
         "front-ports": forms.FrontPortTemplateImportForm,
         "module-bays": forms.ModuleBayTemplateImportForm,
     }
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="manufacturer", parent_lookup_key="name"),
+            ]
+        }
+    )
 
     def get_required_permission(self):
         view_action = self.get_action()
@@ -1890,15 +1959,65 @@ class PlatformUIViewSet(NautobotUIViewSet):
 #
 
 
-class DeviceBreadcrumbsMixin:
+class DeviceComponentPageMixin:
+    """
+    This class hold the breadcrumbs paths for Device Components Pages like console ports.
+    Depending on whether the component is associated with a device or a module, the appropriate breadcrumb path will be rendered.
+
+    For example:
+    - Console Port assigned to the module: Modules / <Module name and link to details> / Console Ports (dcim/modules/<id>/console-ports/) / <Console Port name>
+    - Console Port assigned to the device: Devices / <Device name and link to details> / Console Ports (dcim/devices/<id>/console-ports/) / <Console Port name>
+    """
+
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
+                ),
+                ViewNameBreadcrumbItem(
+                    view_name_key="device_breadcrumb_url",
+                    should_render=lambda c: c["object"].device is not None and c.get("device_breadcrumb_url"),
+                    reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
+                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                ),
+                ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
+                InstanceBreadcrumbItem(
+                    instance=lambda c: c["object"].module, should_render=lambda c: c["object"].device is None
+                ),
+                ViewNameBreadcrumbItem(
+                    view_name_key="module_breadcrumb_url",
+                    should_render=lambda c: c["object"].device is None and c.get("module_breadcrumb_url"),
+                    reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
+                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                ),
+            ]
+        }
+    )
+    view_titles = Titles(
+        titles={
+            "detail": "{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}"
+        }
+    )
+
+
+class DeviceUIViewSet(NautobotUIViewSet):
+    queryset = Device.objects.select_related(
+        "device_type__manufacturer",  # Needed for __str__() on device_type
+    )
+    filterset_class = filters.DeviceFilterSet
+    filterset_form_class = forms.DeviceFilterForm
+    table_class = tables.DeviceTable
+    form_class = forms.DeviceForm
+    bulk_update_form_class = forms.DeviceBulkEditForm
+    serializer_class = serializers.DeviceSerializer
+
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Device),
-                ModelBreadcrumbItem(
-                    model=Device,
-                    reverse_query_params=lambda c: {"location": c["object"].location.pk},
-                ),
+                InstanceParentBreadcrumbItem(parent_key="location"),
                 InstanceBreadcrumbItem(
                     instance=lambda c: c["object"].parent_bay.device,
                     should_render=lambda c: hasattr(c["object"], "parent_bay"),
@@ -1910,39 +2029,62 @@ class DeviceBreadcrumbsMixin:
         }
     )
 
-
-class DeviceListView(generic.ObjectListView):
-    queryset = Device.objects.select_related(
-        "device_type__manufacturer",  # Needed for __str__() on device_type
-    )
-    filterset = filters.DeviceFilterSet
-    filterset_form = forms.DeviceFilterForm
-    table = tables.DeviceTable
-    template_name = "dcim/device_list.html"
-
-
-class DeviceView(generic.ObjectView):
-    queryset = Device.objects.select_related(
-        "cluster__cluster_group",
-        "controller_managed_device_group__controller",
-        "device_redundancy_group",
-        "device_type__device_family",
-        "location",
-        "platform",
-        "primary_ip4",
-        "primary_ip6",
-        "rack__rack_group",
-        "role",
-        "secrets_group",
-        "software_version",
-        "status",
-        "tenant__tenant_group",
-    ).prefetch_related("images", "software_image_files")
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.detail:  # TODO: change to self.action == "retrieve" as a part of addressing NAUTOBOT-1051
+            queryset = queryset.select_related(
+                "cluster__cluster_group",
+                "controller_managed_device_group__controller",
+                "device_redundancy_group",
+                "device_type__device_family",
+                "location",
+                "platform",
+                "primary_ip4",
+                "primary_ip6",
+                "rack__rack_group",
+                "role",
+                "secrets_group",
+                "software_version",
+                "status",
+                "tenant__tenant_group",
+                "virtual_chassis",
+            ).prefetch_related("images", "software_image_files")
+        if self.action == "config_context":
+            queryset = queryset.annotate_config_context_data()
+        return queryset
 
     class DeviceDetailContent(object_detail.ObjectDetailContent):
         """
         Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
         """
+
+        class DeviceDynamicGroupsTextPanel(object_detail.BaseTextPanel):
+            """Panel displaying a note about caching of dynamic groups."""
+
+            def __init__(
+                self,
+                *,
+                weight,
+                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
+                label="Dynamic Group caching",
+                **kwargs,
+            ):
+                super().__init__(weight=weight, render_as=render_as, label=label, **kwargs)
+
+            def get_value(self, context):
+                dg_list_url = reverse("extras:dynamicgroup_list")
+                job_run_url = reverse(
+                    "extras:job_run_by_class_path",
+                    kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
+                )
+                return (
+                    "Dynamic group membership is cached for performance reasons, "
+                    "therefore this page may not always be up-to-date.\n\n"
+                    "You can refresh the membership of any specific group by viewing it from the list below or from the "
+                    f"[Dynamic Groups list view]({dg_list_url}).\n\n"
+                    "You can also refresh the membership of **all** groups by running the "
+                    f"[Refresh Dynamic Group Caches job]({job_run_url})."
+                )
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -1959,8 +2101,9 @@ class DeviceView(generic.ObjectView):
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
                     panels=(
+                        self.DeviceDynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
-                            weight=100,
+                            weight=200,
                             table_class=DynamicGroupTable,
                             table_attribute="dynamic_groups",
                             exclude_columns=["content_type"],
@@ -1971,6 +2114,191 @@ class DeviceView(generic.ObjectView):
                     ),
                 )
             )
+
+    class DeviceFieldsPanel(object_detail.ObjectFieldsPanel):
+        """
+        ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
+        """
+
+        def render_value(self, key, value, context):
+            if key == "position":
+                instance = get_obj_from_context(context, self.context_object_key)
+                try:
+                    if instance.parent_bay is not None:
+                        parent = instance.parent_bay.device
+                        display = format_html(
+                            "{} / {}",
+                            helpers.hyperlinked_object(parent),
+                            helpers.hyperlinked_object(instance.parent_bay),
+                        )
+                        if parent.position is not None:
+                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
+                        return display
+                except DeviceBay.DoesNotExist:
+                    pass
+                if instance.rack is not None and value is not None:
+                    return format_html("U{} / {}", value, instance.get_face_display())
+                if instance.rack is not None and instance.device_type.u_height:
+                    return mark_safe('<span class="label label-warning">Not racked</span>')
+                return helpers.HTML_NONE
+            if key == "device_redundancy_group" and value is not None:
+                instance = get_obj_from_context(context, self.context_object_key)
+                return format_html(
+                    '{} <span class="badge badge-default">Priority: {}</span>',
+                    helpers.hyperlinked_object(value),
+                    instance.device_redundancy_group_priority,
+                )
+            if key == "software_version":
+                instance = get_obj_from_context(context, self.context_object_key)
+                return render_software_version_and_image_files(instance, value, context)
+
+            return super().render_value(key, value, context)
+
+    class DeviceVirtualChassisMembersTablePanel(object_detail.ObjectsTablePanel):
+        """ObjectsTablePanel that only renders if the device belongs to a virtual-chassis."""
+
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.virtual_chassis is not None
+
+        def get_extra_context(self, context):
+            extra_context = super().get_extra_context(context)
+            obj = get_obj_from_context(context)
+            extra_context["virtual_chassis"] = obj.virtual_chassis
+            extra_context["body_content_table_list_url"] = (
+                reverse("dcim:device_list") + "?virtual_chassis=" + str(obj.virtual_chassis.pk)
+            )
+            return extra_context
+
+    class DevicePowerUtilizationPanel(object_detail.Panel):
+        """Panel showing a table of PDU calculated power utilization per power-port on the device."""
+
+        def should_render(self, context):
+            """Only render if the device is a PDU, i.e. has both power-ports and power-outlets."""
+            instance = get_obj_from_context(context)
+            return instance.all_power_ports.exists() and instance.all_power_outlets.exists()
+
+        def render_body_content(self, context):
+            """Render a table with one row per power-port and additional rows per leg for three-phase power."""
+            instance = get_obj_from_context(context)
+            header = mark_safe(
+                "<tr><th>Input</th><th>Outlets</th><th>Allocated</th><th>Available</th><th>Utilization</th></tr>"
+            )
+            body = mark_safe("")
+            for powerport in instance.all_power_ports.all():
+                utilization = powerport.get_power_draw()
+                # Table row for each power-port
+                powerfeed = powerport.connected_endpoint
+                if powerfeed is not None and powerfeed.available_power:
+                    available_power = powerfeed.available_power
+                    utilization_data = Context(
+                        helpers.utilization_graph_raw_data(utilization["allocated"], powerfeed.available_power)
+                    )
+                    utilization_graph = object_detail.render_component_template(
+                        "utilities/templatetags/utilization_graph.html", utilization_data
+                    )
+                else:
+                    available_power = helpers.HTML_NONE
+                    utilization_graph = helpers.HTML_NONE
+                body += format_html(
+                    "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    helpers.hyperlinked_object(powerport),
+                    utilization["outlet_count"],
+                    utilization["allocated"],
+                    available_power,
+                    utilization_graph,
+                )
+
+                # Indented table row for each leg of a three-phase power-port.
+                for leg in utilization["legs"]:
+                    if powerfeed is not None and powerfeed.available_power:
+                        available_power = powerfeed.available_power / 3
+                        utilization_data = Context(
+                            helpers.utilization_graph_raw_data(leg["allocated"], powerfeed.available_power / 3)
+                        )
+                        utilization_graph = object_detail.render_component_template(
+                            "utilities/templatetags/utilization_graph.html", utilization_data
+                        )
+                    else:
+                        available_power = helpers.HTML_NONE
+                        utilization_graph = helpers.HTML_NONE
+                    body += format_html(
+                        """<tr><td style="padding-left: 20px">{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>""",
+                        f"Leg {leg['name']}",
+                        leg["outlet_count"],
+                        leg["allocated"],
+                        available_power,
+                        utilization_graph,
+                    )
+            return header + body
+
+    class DeviceImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
+        """
+        ObjectsTablePanel with a custom _get_table_add_url() implementation.
+
+        Needed because the URL is `/dcim/devices/<pk>/images/add/`, not `extras/image-attachments/add?device=<pk>`.
+        """
+
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
+
+            if not request.user.has_perms(["extras.add_imageattachment"]):
+                return None
+            return reverse("dcim:device_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
+
+    class DeviceModuleBaysTab(object_detail.DistinctViewTab):
+        """DistinctViewTab for device module-bays; shows both the module and module-bay count as a badge."""
+
+        def render_label(self, context):
+            obj = get_obj_from_context(context)
+            module_count = obj.module_bays.filter(installed_module__isnull=False).count()
+            return format_html(
+                "{} {}",
+                self.label,
+                render_to_string(
+                    "utilities/templatetags/badge.html", helpers.badge(f"{module_count}/{self.related_object_count}")
+                ),
+            )
+
+    class DeviceInterfacesTablePanel(object_detail.ObjectsTablePanel):
+        """ObjectsTablePanel for device interfaces; shows the "Device" column if the device is a VirtualChassis master."""
+
+        def get_extra_context(self, context):
+            extra_context = super().get_extra_context(context)
+            obj = get_obj_from_context(context)
+            if VirtualChassis.objects.filter(master=obj).exists():
+                extra_context["body_content_table"].columns.show("device")
+            return extra_context
+
+    class DeviceWirelessTab(object_detail.DistinctViewTab):
+        """
+        DistinctViewTab that only renders if the device belongs to a wireless-capable controller_managed_device_group.
+        """
+
+        def should_render(self, context):
+            if not super().should_render(context):
+                return False
+            obj = get_obj_from_context(context)
+            return (
+                obj.controller_managed_device_group is not None
+                and isinstance(obj.controller_managed_device_group.capabilities, list)  # it's potentially None
+                and "wireless" in obj.controller_managed_device_group.capabilities
+            )
+
+    class DeviceNAPALMTab(object_detail.DistinctViewTab):
+        """DistinctViewTab for device NAPALM getters; disables the tab if the device/platform isn't set appropriately."""
+
+        def render_label_wrapper(self, context):
+            obj = get_obj_from_context(context)
+            if obj.platform is None:
+                with context.update({"disabled_message": "No platform assigned to this device"}):
+                    return super().render_label_wrapper(context)
+            if not obj.platform.napalm_driver:
+                with context.update({"disabled_message": "No NAPALM driver assigned for this platform"}):
+                    return super().render_label_wrapper(context)
+            return super().render_label_wrapper(context)
 
     object_detail_content = DeviceDetailContent(
         extra_buttons=(
@@ -2055,485 +2383,664 @@ class DeviceView(generic.ObjectView):
                 ),
             ),
         ),
-        panels=(),  # not yet ported over due to complexity of this template
-        # TODO
-        #     ObjectFieldsPanel(
-        #         weight=100,
-        #         section=SectionChoices.LEFT_HALF,
-        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
-        #         # TODO add device_type.device_family, device_type.u_height,
-        #     ),
-        #     TODO: Virtual Chassis panel
-        #     ObjectFieldsPanel(
-        #         weight=110,
-        #         section=SectionChoices.LEFT_HALF,
-        #         label="Virtual Chassis",
-        #     ),
-        #     ObjectFieldsPanel(
-        #         weight=120,
-        #         section=SectionChoices.LEFT_HALF,
-        #         label="Management",
-        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
-        #     ),
-        #     TODO: power utilization panel
-        #     ObjectsTablePanel(
-        #       weight=100,
-        #       section=SectionChoices.RIGHT_HALF,
-        #       table_title="Power Utilization",
-        #       table_class=???,
-        #       table_filter="device",
-        #     ),
-        #     ObjectsTablePanel(
-        #         weight=100,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_title="Assigned VRFs",
-        #         table_class=VRFDeviceAssignmentTable,
-        #         table_filter="device",
-        #         exclude_columns=["virtual_machine", "device"],
-        #     ),
-        #     TODO: services panel
-        #     ObjectsTablePanel(
-        #         weight=200,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_class=???,
-        #         table_filter="device",
-        #     ),
-        #     TODO: images panel
-        #     ObjectsTablePanel(
-        #         weight=300,
-        #         section=SectionChoices.RIGHT_HALF,
-        #         table_class=???,
-        #         table_filter="device",
-        #     ),
-        #     ObjectsTablePanel(
-        #         weight=100,
-        #         section=SectionChoices.FULL_WIDTH,
-        #         table_class=tables.VirtualDeviceContextTable,
-        #         table_filter="device",
-        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
-        #         exclude_columns=["device"],
-        #     ),
-        # ),
+        panels=(
+            DeviceFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "location",
+                    "rack",
+                    "position",
+                    "tenant",
+                    "device_type__device_family",
+                    "device_type",
+                    "serial",
+                    "asset_tag",
+                ],
+                key_transforms={"device_type__device_family": "Device Family"},
+                value_transforms={
+                    "device_type": [lambda v: format_html("{} ({}U)", helpers.hyperlinked_object(v), v.u_height)],
+                },
+            ),
+            DeviceVirtualChassisMembersTablePanel(
+                weight=110,
+                section=SectionChoices.LEFT_HALF,
+                context_table_key="vc_members_table",
+                table_title="Virtual Chassis",
+                related_field_name="vc_master",
+                show_table_config_button=False,
+                add_button_route=None,
+                footer_buttons=[
+                    object_detail.Button(
+                        weight=100,
+                        label="View Virtual Chassis",
+                        icon="mdi-arrow-right-bold",
+                        size="xs",
+                        link_name="dcim:virtualchassis",
+                        context_object_key="virtual_chassis",
+                    ),
+                ],
+            ),
+            DeviceFieldsPanel(
+                weight=120,
+                section=SectionChoices.LEFT_HALF,
+                label="Management",
+                fields=[
+                    "role",
+                    "platform",
+                    "status",
+                    "primary_ip4",
+                    "primary_ip6",
+                    "secrets_group",
+                    "device_redundancy_group",
+                    "controller_managed_device_group",
+                    "controller_managed_device_group__controller",
+                    "cluster",
+                    "software_version",
+                ],
+                key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
+                value_transforms={
+                    "primary_ip4": [render_ip_with_nat],
+                    "primary_ip6": [render_ip_with_nat],
+                },
+                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
+            ),
+            DevicePowerUtilizationPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Power Utilization",
+                body_wrapper_template_path="components/panel/body_wrapper_generic_table.html",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Assigned VRFs",
+                table_class=VRFDeviceAssignmentTable,
+                table_filter="device",
+                exclude_columns=["related_object_type", "related_object_name"],
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Services",
+                table_class=ServiceTable,
+                table_filter="device",
+                exclude_columns=["parent"],
+                include_columns=["ip_addresses"],
+                show_table_config_button=False,
+            ),
+            DeviceImageAttachmentsTablePanel(
+                weight=400,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Images",
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="device",
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Virtual Device Contexts",
+                table_class=tables.VirtualDeviceContextTable,
+                table_filter="device",
+                exclude_columns=["device"],
+                show_table_config_button=False,
+            ),
+        ),
+        extra_tabs=(
+            DeviceModuleBaysTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
+                tab_id="module_bays",
+                label="Module Bays",
+                url_name="dcim:device_modulebays",
+                related_object_attribute="module_bays",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Module Bays",
+                        table_class=tables.DeviceModuleBayTable,
+                        prefetch_related_fields=["installed_module", "installed_module__status"],
+                        table_filter="parent_device",  # TODO: is this right or should we use table_attribute=module_bays?
+                        tab_id="module_bays",
+                        enable_bulk_actions=True,
+                        form_id="module-bays-form",
+                        footer_buttons=bulk_footer_buttons(form_id="module-bays-form", model=ModuleBay),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
+                tab_id="interfaces",
+                label="Interfaces",
+                url_name="dcim:device_interfaces",
+                related_object_attribute="vc_interfaces",
+                hide_if_empty=True,
+                panels=(
+                    DeviceInterfacesTablePanel(
+                        # TODO: .prefetch_related(ip_addresses.restrict, member_interfaces.restrict)
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Interfaces",
+                        table_class=tables.DeviceModuleInterfaceTable,
+                        table_attribute="vc_interfaces",
+                        order_by_fields=["_name"],
+                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=["cable", "lag"],
+                        related_field_name="device",
+                        tab_id="interfaces",
+                        enable_bulk_actions=True,
+                        form_id="interfaces-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="interfaces-form", model=Interface
+                        ),
+                        include_paginator=True,
+                        header_extra_content_template_path="dcim/inc/device_interface_filter.html",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 300,
+                tab_id="front_ports",
+                label="Front Ports",
+                url_name="dcim:device_frontports",
+                related_object_attribute="all_front_ports",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Front Ports",
+                        table_class=tables.DeviceModuleFrontPortTable,
+                        table_attribute="all_front_ports",
+                        select_related_fields=["cable", "rear_port"],
+                        related_field_name="device",
+                        tab_id="front_ports",
+                        enable_bulk_actions=True,
+                        form_id="front-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="front-ports-form", model=FrontPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 400,
+                tab_id="rear_ports",
+                label="Rear Ports",
+                url_name="dcim:device_rearports",
+                related_object_attribute="all_rear_ports",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Rear Ports",
+                        table_class=tables.DeviceModuleRearPortTable,
+                        table_attribute="all_rear_ports",
+                        select_related_fields=["cable"],
+                        related_field_name="device",
+                        tab_id="rear_ports",
+                        enable_bulk_actions=True,
+                        form_id="rear-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(form_id="rear-ports-form", model=RearPort),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 500,
+                tab_id="console_ports",
+                label="Console Ports",
+                url_name="dcim:device_consoleports",
+                related_object_attribute="all_console_ports",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Console Ports",
+                        table_class=tables.DeviceModuleConsolePortTable,
+                        table_attribute="all_console_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
+                        related_field_name="device",
+                        tab_id="console_ports",
+                        enable_bulk_actions=True,
+                        form_id="console-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="console-ports-form", model=ConsolePort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 600,
+                tab_id="console_server_ports",
+                label="Console Server Ports",
+                url_name="dcim:device_consoleserverports",
+                related_object_attribute="all_console_server_ports",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Console Server Ports",
+                        table_class=tables.DeviceModuleConsoleServerPortTable,
+                        table_attribute="all_console_server_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
+                        related_field_name="device",
+                        tab_id="console_server_ports",
+                        enable_bulk_actions=True,
+                        form_id="console-server-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="console-server-ports-form", model=ConsoleServerPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 700,
+                tab_id="power_ports",
+                label="Power Ports",
+                url_name="dcim:device_powerports",
+                related_object_attribute="all_power_ports",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Power Ports",
+                        table_class=tables.DeviceModulePowerPortTable,
+                        table_attribute="all_power_ports",
+                        select_related_fields=["cable"],
+                        prefetch_related_fields=["_path__destination"],
+                        related_field_name="device",
+                        tab_id="power_ports",
+                        enable_bulk_actions=True,
+                        form_id="power-ports-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="power-ports-form", model=PowerPort
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 800,
+                tab_id="power_outlets",
+                label="Power Outlets",
+                url_name="dcim:device_poweroutlets",
+                related_object_attribute="all_power_outlets",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Power Outlets",
+                        table_class=tables.DeviceModulePowerOutletTable,
+                        table_attribute="all_power_outlets",
+                        select_related_fields=["cable", "power_port"],
+                        prefetch_related_fields=["_path__destination"],
+                        related_field_name="device",
+                        tab_id="power_outlets",
+                        enable_bulk_actions=True,
+                        form_id="power-outlets-form",
+                        footer_buttons=bulk_cable_termination_footer_buttons(
+                            form_id="power-outlets-form", model=PowerOutlet
+                        ),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 900,
+                tab_id="device_bays",
+                label="Device Bays",
+                url_name="dcim:device_devicebays",
+                related_object_attribute="device_bays",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Device Bays",
+                        table_class=tables.DeviceDeviceBayTable,
+                        select_related_fields=["installed_device__device_type__manufacturer"],
+                        table_filter="device",
+                        tab_id="device_bays",
+                        enable_bulk_actions=True,
+                        form_id="device-bays-form",
+                        footer_buttons=bulk_footer_buttons(form_id="device-bays-form", model=DeviceBay),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1000,
+                tab_id="inventory",
+                label="Inventory",
+                url_name="dcim:device_inventory",
+                related_object_attribute="inventory_items",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Inventory Items",
+                        table_class=tables.DeviceInventoryItemTable,
+                        select_related_fields=["manufacturer"],
+                        table_filter="device",
+                        tab_id="inventory",
+                        enable_bulk_actions=True,
+                        form_id="inventory-form",
+                        footer_buttons=bulk_footer_buttons(form_id="inventory-form", model=InventoryItem),
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            DeviceWirelessTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1100,
+                tab_id="wireless",
+                label="Wireless",
+                url_name="dcim:device_wireless",
+                related_object_attribute="controller_managed_device_group",
+                panels=(
+                    object_detail.ObjectFieldsPanel(
+                        weight=100,
+                        section=SectionChoices.LEFT_HALF,
+                        label="Controller Managed Device Group",
+                        fields=["controller_managed_device_group", "controller_managed_device_group__controller"],
+                        key_transforms={
+                            "controller_managed_device_group": "Name",
+                            "controller_managed_device_group__controller": "Controller",
+                        },
+                    ),
+                    object_detail.ObjectsTablePanel(
+                        weight=200,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Wireless Networks",
+                        table_class=BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                        table_attribute="wireless_network_assignments",
+                        related_field_name="controller_device_redundancy_group",
+                        tab_id="wireless",
+                        include_paginator=True,
+                        exclude_columns=["controller_managed_device_group", "controller"],
+                    ),
+                    object_detail.ObjectsTablePanel(
+                        weight=300,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Radio Profiles",
+                        table_class=ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+                        table_attribute="radio_profile_assignments",
+                        related_field_name="controller_device_redundancy_group",
+                        tab_id="wireless",
+                        include_paginator=True,
+                        exclude_columns=["controller_managed_device_group"],
+                    ),
+                ),
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1200,
+                tab_id="status",
+                label="Status",
+                url_name="dcim:device_status",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
+                tab_id="lldp_neighbors",
+                label="LLDP Neighbors",
+                url_name="dcim:device_lldp_neighbors",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
+                tab_id="config",
+                label="Configuration",
+                url_name="dcim:device_config",
+                required_permissions=["dcim.napalm_read_device"],
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
+                tab_id="config_context",
+                label="Config Context",
+                url_name="dcim:device_configcontext",
+                required_permissions=["extras.view_configcontext"],
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
-        # VirtualChassis members
-        if instance.virtual_chassis is not None:
-            vc_members = (
-                Device.objects.restrict(request.user, "view")
-                .filter(virtual_chassis=instance.virtual_chassis)
-                .order_by("vc_position")
-            )
-        else:
-            vc_members = []
+        extra_context = super().get_extra_context(request, instance)
 
-        # Services
-        services = Service.objects.restrict(request.user, "view").filter(device=instance)
+        if self.detail:  # TODO: change to `if self.action == "retrieve"` as a part of addressing NAUTOBOT-1051
+            # VirtualChassis members
+            if instance.virtual_chassis is not None:
+                vc_members = (
+                    Device.objects.restrict(request.user, "view")
+                    .filter(virtual_chassis=instance.virtual_chassis)
+                    .order_by("vc_position")
+                )
+                vc_members_table = tables.VirtualChassisMembersTable(vc_members)
+            else:
+                vc_members_table = None
+            extra_context["vc_members_table"] = vc_members_table
 
-        # VRF assignments
-        vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
+        return extra_context
 
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(
-                request.user, "view"
-            ).filter(device_types=instance.device_type)
-            if not software_version_images.exists():
-                software_version_images = instance.software_version.software_image_files.restrict(
-                    request.user, "view"
-                ).filter(default_image=True)
-        else:
-            software_version_images = []
+    @action(
+        detail=True,
+        url_path="dynamic-groups",
+        url_name="dynamicgroups",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_dynamicgroup"],
+    )
+    def dynamic_groups(self, request, *args, **kwargs):
+        return Response({})
 
-        modulebay_count = instance.module_bays.count()
-        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+    @action(
+        detail=True,
+        url_path="console-ports",
+        url_name="consoleports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleport"],
+    )
+    def console_ports(self, request, *args, **kwargs):
+        return Response({})
 
-        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
-            "tenant", "primary_ip4", "primary_ip6"
+    @action(
+        detail=True,
+        url_path="console-server-ports",
+        url_name="consoleserverports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_consoleserverport"],
+    )
+    def console_server_ports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="device-bays",
+        url_name="devicebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_devicebay"],
+    )
+    def device_bays(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="front-ports",
+        url_name="frontports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_frontport"],
+    )
+    def front_ports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="interfaces",
+        url_name="interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
+    )
+    def interfaces(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="inventory",
+        url_name="inventory",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_inventoryitem"],
+    )
+    def inventory(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="module-bays",
+        url_name="modulebays",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebay"],
+    )
+    def module_bays(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="power-outlets",
+        url_name="poweroutlets",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_poweroutlet"],
+    )
+    def power_outlets(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="power-ports",
+        url_name="powerports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_powerport"],
+    )
+    def power_ports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="rear-ports",
+        url_name="rearports",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_rearport"],
+    )
+    def rear_ports(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="wireless",
+        url_name="wireless",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_controllermanageddevicegroup"],
+    )
+    def wireless(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="status",
+        url_name="status",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
+    )
+    def status(self, request, *args, **kwargs):
+        return Response(
+            {
+                "template": "dcim/device/status.html",
+            },
         )
-        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
-        vdc_url = reverse("dcim:virtualdevicecontext_add")
-        return_url = instance.get_absolute_url()
-        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(vdcs_table)
-
-        return {
-            **super().get_extra_context(request, instance),
-            "services": services,
-            "software_version_images": software_version_images,
-            "vc_members": vc_members,
-            "vrf_table": vrf_table,
-            "active_tab": "device",
-            "modulebay_count": modulebay_count,
-            "module_count": f"{module_count}/{modulebay_count}",
-            "vdcs_table": vdcs_table,
-            "vdcs_table_add_url": vdcs_table_add_url,
-        }
-
-
-class DeviceComponentTabView(generic.ObjectView):
-    queryset = Device.objects.all()
-
-    def get_extra_context(self, request, instance):
-        modulebay_count = instance.module_bays.count()
-        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
-
-        return {
-            "modulebay_count": modulebay_count,
-            "module_count": f"{module_count}/{modulebay_count}",
-        }
-
-
-class DeviceConsolePortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/consoleports.html"
-
-    def get_extra_context(self, request, instance):
-        consoleports = (
-            instance.all_console_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
-            consoleport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "consoleport_table": consoleport_table,
-            "active_tab": "console-ports",
-        }
-
-
-class DeviceConsoleServerPortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/consoleserverports.html"
-
-    def get_extra_context(self, request, instance):
-        consoleserverports = (
-            instance.all_console_server_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
-            data=consoleserverports, user=request.user, orderable=False
-        )
-        if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
-            "dcim.delete_consoleserverport"
-        ):
-            consoleserverport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "consoleserverport_table": consoleserverport_table,
-            "active_tab": "console-server-ports",
-        }
-
-
-class DevicePowerPortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/powerports.html"
-
-    def get_extra_context(self, request, instance):
-        powerports = (
-            instance.all_power_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
-        powerport_table = tables.DeviceModulePowerPortTable(data=powerports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
-            powerport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "powerport_table": powerport_table,
-            "active_tab": "power-ports",
-        }
-
-
-class DevicePowerOutletsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/poweroutlets.html"
-
-    def get_extra_context(self, request, instance):
-        poweroutlets = (
-            instance.all_power_outlets.restrict(request.user, "view")
-            .select_related("cable", "power_port")
-            .prefetch_related("_path__destination")
-        )
-        poweroutlet_table = tables.DeviceModulePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
-            poweroutlet_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "poweroutlet_table": poweroutlet_table,
-            "active_tab": "power-outlets",
-        }
-
-
-class DeviceInterfacesView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/interfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
-            .prefetch_related(
-                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
-                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
-                "_path__destination",
-                "tags",
-            )
-            .select_related("lag", "cable")
-            .order_by("_name")
-        )
-        interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
-        if VirtualChassis.objects.filter(master=instance).exists():
-            interface_table.columns.show("device")
-        if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
-            interface_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "interface_table": interface_table,
-            "active_tab": "interfaces",
-        }
-
-
-class DeviceFrontPortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/frontports.html"
-
-    def get_extra_context(self, request, instance):
-        frontports = instance.all_front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
-        frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
-            frontport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "frontport_table": frontport_table,
-            "active_tab": "front-ports",
-        }
-
-
-class DeviceRearPortsView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/rearports.html"
-
-    def get_extra_context(self, request, instance):
-        rearports = instance.all_rear_ports.restrict(request.user, "view").select_related("cable")
-        rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
-            rearport_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "rearport_table": rearport_table,
-            "active_tab": "rear-ports",
-        }
-
-
-class DeviceDeviceBaysView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/devicebays.html"
-
-    def get_extra_context(self, request, instance):
-        devicebays = (
-            DeviceBay.objects.restrict(request.user, "view")
-            .filter(device=instance)
-            .select_related(
-                "installed_device__device_type__manufacturer",
-            )
-        )
-        devicebay_table = tables.DeviceDeviceBayTable(data=devicebays, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_devicebay") or request.user.has_perm("dcim.delete_devicebay"):
-            devicebay_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "devicebay_table": devicebay_table,
-            "active_tab": "device-bays",
-        }
-
-
-class DeviceModuleBaysView(DeviceComponentTabView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/modulebays.html"
-
-    def get_extra_context(self, request, instance):
-        # note: Device modules tab shouldn't show descendant modules until a proper tree view is implemented
-        modulebays = (
-            ModuleBay.objects.restrict(request.user, "view")
-            .filter(parent_device=instance)
-            .prefetch_related("installed_module__status", "installed_module")
-        )
-        modulebay_table = tables.DeviceModuleBayTable(data=modulebays, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
-            modulebay_table.columns.show("pk")
-
-        return {
-            **super().get_extra_context(request, instance),
-            "modulebay_table": modulebay_table,
-            "active_tab": "module-bays",
-        }
-
-
-class DeviceInventoryView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/inventory.html"
-
-    def get_extra_context(self, request, instance):
-        inventoryitems = (
-            InventoryItem.objects.restrict(request.user, "view").filter(device=instance).select_related("manufacturer")
-        )
-        inventoryitem_table = tables.DeviceInventoryItemTable(data=inventoryitems, user=request.user, orderable=False)
-        if request.user.has_perm("dcim.change_inventoryitem") or request.user.has_perm("dcim.delete_inventoryitem"):
-            inventoryitem_table.columns.show("pk")
-
-        return {
-            "inventoryitem_table": inventoryitem_table,
-            "active_tab": "inventory",
-        }
-
-
-class DeviceStatusView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/status.html"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "active_tab": "status",
-        }
-
-
-class DeviceLLDPNeighborsView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/lldp_neighbors.html"
-
-    def get_extra_context(self, request, instance):
+    @action(
+        detail=True,
+        url_path="lldp-neighbors",
+        url_name="lldp_neighbors",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
+    )
+    def lldp_neighbors(self, request, *args, **kwargs):
+        instance = self.get_object()
         interfaces = (
             instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
+        return Response(
+            {
+                "template": "dcim/device/lldp_neighbors.html",
+                "interfaces": interfaces,
+            },
+        )
 
-        return {
-            "interfaces": interfaces,
-            "active_tab": "lldp-neighbors",
-        }
-
-
-class DeviceConfigView(generic.ObjectView):
-    additional_permissions = ["dcim.napalm_read_device"]
-    queryset = Device.objects.all()
-    template_name = "dcim/device/config.html"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "active_tab": "config",
-        }
-
-
-class DeviceConfigContextView(ObjectConfigContextView):
-    base_template = "dcim/device/base.html"
-
-    @cached_property
-    def queryset(self):  # pylint: disable=method-hidden
-        """
-        A cached_property rather than a class attribute because annotate_config_context_data() is unsafe at import time.
-        """
-        return Device.objects.annotate_config_context_data()
-
-
-class DeviceChangeLogView(ObjectChangeLogView):
-    base_template = "dcim/device/base.html"
-
-
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
-    base_template = "dcim/device/base.html"
-
-
-class DeviceEditView(generic.ObjectEditView):
-    queryset = Device.objects.all()
-    model_form = forms.DeviceForm
-    template_name = "dcim/device_edit.html"
-
-
-class DeviceDeleteView(generic.ObjectDeleteView):
-    queryset = Device.objects.all()
-
-
-class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Device.objects.all()
-    table = tables.DeviceImportTable
-
-
-class DeviceBulkEditView(generic.BulkEditView):
-    queryset = Device.objects.select_related(
-        "tenant",
-        "location",
-        "rack",
-        "role",
-        "device_type__manufacturer",
-        "secrets_group",
-        "device_redundancy_group",
-        "controller_managed_device_group",
+    @action(
+        detail=True,
+        url_path="config",
+        url_name="config",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.napalm_read_device"],
     )
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
-    form = forms.DeviceBulkEditForm
-
-
-class DeviceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
-    filterset = filters.DeviceFilterSet
-    table = tables.DeviceTable
-
-
-class DeviceWirelessView(generic.ObjectView):
-    queryset = Device.objects.all()
-    template_name = "dcim/device/wireless.html"
-
-    def get_extra_context(self, request, instance):
-        controller_managed_device_group = instance.controller_managed_device_group
-        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
-        wireless_networks_table = BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-            data=wireless_networks, user=request.user, orderable=False
+    def config(self, request, *args, **kwargs):
+        return Response(
+            {
+                "template": "dcim/device/config.html",
+            },
         )
-        wireless_networks_table.columns.hide("controller_managed_device_group")
-        wireless_networks_table.columns.hide("controller")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(wireless_networks_table)
 
-        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
-            controller_managed_device_group=controller_managed_device_group
-        ).select_related("radio_profile", "controller_managed_device_group")
-        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
-            data=radio_profiles, user=request.user, orderable=False
-        )
-        radio_profiles_table.columns.hide("controller_managed_device_group")
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(radio_profiles_table)
+    @action(
+        detail=True,
+        url_path="config-context",
+        url_name="configcontext",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_configcontext"],
+    )
+    def config_context(self, request, *args, **kwargs):
+        instance = self.get_object()
 
-        return {
-            "wireless_networks_table": wireless_networks_table,
-            "radio_profiles_table": radio_profiles_table,
-            "active_tab": "wireless",
+        # Determine user's preferred output format
+        if request.GET.get("data_format") in ["json", "yaml"]:
+            data_format = request.GET.get("data_format")
+            if request.user.is_authenticated:
+                request.user.set_config("extras.configcontext.format", data_format, commit=True)
+        elif request.user.is_authenticated:
+            data_format = request.user.get_config("extras.configcontext.format", "json")
+        else:
+            data_format = "json"
+
+        context = {
+            "object": instance,
+            "content_type": ContentType.objects.get_for_model(self.queryset.model),
+            "verbose_name": self.queryset.model._meta.verbose_name,
+            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
+            **common_detail_view_context(request, instance),
+            "rendered_context": instance.get_config_context(),
+            "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
+            "format": data_format,
+            "template": "extras/object_configcontext.html",
+            "base_template": "dcim/device.html",
         }
+
+        return Response(context)
 
 
 #
@@ -3007,7 +3514,7 @@ class ConsolePortListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class ConsolePortView(generic.ObjectView):
+class ConsolePortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsolePort.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3073,7 +3580,7 @@ class ConsoleServerPortListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class ConsoleServerPortView(generic.ObjectView):
+class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsoleServerPort.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3139,7 +3646,7 @@ class PowerPortListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class PowerPortView(generic.ObjectView):
+class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerPort.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3205,7 +3712,7 @@ class PowerOutletListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class PowerOutletView(generic.ObjectView):
+class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerOutlet.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3271,7 +3778,10 @@ class InterfaceListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class InterfaceView(generic.ObjectView):
+class InterfaceView(
+    DeviceComponentPageMixin,
+    generic.ObjectView,
+):
     queryset = Interface.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3401,7 +3911,7 @@ class FrontPortListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class FrontPortView(generic.ObjectView):
+class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = FrontPort.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3467,7 +3977,7 @@ class RearPortListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class RearPortView(generic.ObjectView):
+class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = RearPort.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3533,7 +4043,7 @@ class DeviceBayListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class DeviceBayView(generic.ObjectView):
+class DeviceBayView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = DeviceBay.objects.all()
 
     def get_extra_context(self, request, instance):
@@ -3695,6 +4205,36 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             ),
         )
     )
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                # Breadcrumb path if ModuleBay is linked with device
+                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].parent_device),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_device"),
+                    should_render=context_object_attr("parent_device"),
+                ),
+                ViewNameBreadcrumbItem(
+                    view_name_key="device_breadcrumb_url",
+                    should_render=lambda c: c["object"].parent_device and c.get("device_breadcrumb_url"),
+                    reverse_kwargs=lambda c: {"pk": c["object"].parent_device.pk},
+                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                ),
+                # Breadcrumb path if ModuleBay is linked with module
+                ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].parent_device is None),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_module"),
+                    should_render=lambda c: c["object"].parent_device is None,
+                ),
+                ViewNameBreadcrumbItem(
+                    view_name_key="module_breadcrumb_url",
+                    should_render=lambda c: c["object"].parent_device is None and c.get("module_breadcrumb_url"),
+                    reverse_kwargs=lambda c: {"pk": c["object"].parent_module.pk},
+                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -3748,7 +4288,7 @@ class InventoryItemListView(generic.ObjectListView):
     action_buttons = ("import", "export")
 
 
-class InventoryItemView(generic.ObjectView):
+class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
 
     def get_extra_context(self, request, instance):
@@ -4108,6 +4648,10 @@ class ConsoleConnectionsListView(ConnectionsListView):
     table = tables.ConsoleConnectionTable
     template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Console Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:console_connections_list", label="Console Connections")]}
+    )
 
     def extra_context(self):
         return {
@@ -4124,6 +4668,10 @@ class PowerConnectionsListView(ConnectionsListView):
     table = tables.PowerConnectionTable
     template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Power Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:power_connections_list", label="Power Connections")]}
+    )
 
     def extra_context(self):
         return {
@@ -4140,6 +4688,12 @@ class InterfaceConnectionsListView(ConnectionsListView):
     table = tables.InterfaceConnectionTable
     template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
+    view_titles = Titles(titles={"list": "Interface Connections"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "list": [ViewNameBreadcrumbItem(view_name="dcim:interface_connections_list", label="Interface Connections")]
+        }
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -4182,10 +4736,11 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VirtualChassisBulkEditForm
     filterset_class = filters.VirtualChassisFilterSet
     filterset_form_class = forms.VirtualChassisFilterForm
-    form_class = forms.VirtualChassisCreateForm
     serializer_class = serializers.VirtualChassisSerializer
     table_class = tables.VirtualChassisTable
     queryset = VirtualChassis.objects.all()
+    create_form_class = forms.VirtualChassisCreateForm
+    update_form_class = forms.VirtualChassisForm
 
     class MembersObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
@@ -4390,6 +4945,17 @@ class PowerPanelUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PowerPanelSerializer
     table_class = tables.PowerPanelTable
     queryset = PowerPanel.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("location")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("rack_group"), should_render=context_object_attr("rack_group")
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -4464,6 +5030,19 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
     queryset = PowerFeed.objects.all()
     serializer_class = serializers.PowerFeedSerializer
     table_class = tables.PowerFeedTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("power_panel.location")),
+                InstanceBreadcrumbItem(instance=context_object_attr("power_panel")),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("rack"),
+                    should_render=context_object_attr("rack"),
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -5180,6 +5759,14 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("device")),
+            ]
+        }
+    )
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
