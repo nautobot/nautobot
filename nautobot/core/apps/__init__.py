@@ -63,14 +63,16 @@ class NautobotConfig(AppConfig):
         try:
             homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
             register_homepage_panels(self.path, self.label, homepage_layout)
-        except ImportError:
-            pass
+        except ImportError as err:
+            if "circular import" in str(err):
+                raise
 
         try:
             menu_items = import_string(f"{self.name}.{self.menu_tabs}")
             register_menu_items(menu_items)
-        except ImportError:
-            pass
+        except ImportError as err:
+            if "circular import" in str(err):
+                raise
 
 
 def create_or_check_entry(grouping, record, key, path):
