@@ -1,1 +1,1 @@
-Stored JobLogEntry counts on JobResult for static summary display
+Stored JobLogEntry counts on JobResult for more efficient display of this information in list views.
