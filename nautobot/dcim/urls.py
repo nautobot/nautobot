@@ -1087,7 +1087,6 @@ urlpatterns = [
         RedirectView.as_view(url="/dcim/inventory-items/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/inventory/"),
         name="device_inventoryitems_add",
     ),
-    # Cables
     # Console/power/interface connections (read-only)
     path(
         "console-connections/",
