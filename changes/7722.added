@@ -1,2 +1,2 @@
-Added `DataComplianceMixin` and applied to base models.
-Added `DataComplianceMixin` to `nautobot.apps.models`.
+Added `DataComplianceModelMixin` and applied to base models.
+Added `DataComplianceModelMixin` to `nautobot.apps.models`.

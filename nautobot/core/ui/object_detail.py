@@ -2184,9 +2184,7 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
         super().__init__(url_name="", tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def get_extra_context(self, context: Context):
-        instance = get_obj_from_context(context)
-        url_name = get_route_for_model(instance, "data-compliance")
-        return {"url": reverse(url_name, kwargs={"pk": get_obj_from_context(context).pk})}
+        return {"url": get_obj_from_context(context).get_data_compliance_url()}
 
     def should_render(self, context: Context):
         if not super().should_render(context):

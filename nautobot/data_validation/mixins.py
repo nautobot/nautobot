@@ -7,7 +7,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.utils.lookup import get_route_for_model
 
 
-class DataComplianceMixin:
+class DataComplianceModelMixin:
     """
     Adds a `get_data_compliance_url` that can be applied to instances.
     """

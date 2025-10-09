@@ -2,7 +2,7 @@ import logging
 
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import TagsField
-from nautobot.data_validation.mixins import DataComplianceMixin
+from nautobot.data_validation.mixins import DataComplianceModelMixin
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.mixins import (
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrganizationalModel(
-    DataComplianceMixin,
+    DataComplianceModelMixin,
     ChangeLoggedModel,
     ContactMixin,
     CustomFieldModel,
@@ -42,7 +42,7 @@ class OrganizationalModel(
 
 
 class PrimaryModel(
-    DataComplianceMixin,
+    DataComplianceModelMixin,
     ChangeLoggedModel,
     ContactMixin,
     CustomFieldModel,

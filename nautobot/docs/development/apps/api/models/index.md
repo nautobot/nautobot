@@ -39,7 +39,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
     In previous Nautobot releases, a model could opt in to support of Dynamic Groups by including the `DynamicGroupMixin` mixin class. This class is now deprecated, and models should use the newly added `DynamicGroupsModelMixin` mixin class in its place.
 
 +++ 3.0.0 "Support for Data Compliance on OrganizationalModel and PrimaryModel"
-    Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
+    Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceModelMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

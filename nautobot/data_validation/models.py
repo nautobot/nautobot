@@ -62,7 +62,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         return construct_cache_key(self, method_name="get_enabled_for_model", branch_aware=True)
 
 
-class ValidationRuleMixin(models.Model):
+class ValidationRuleModelMixin(models.Model):
     """Base model for all validation engine rule models."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -103,7 +103,7 @@ class ValidationRuleMixin(models.Model):
     "relationships",
     "webhooks",
 )
-class RegularExpressionValidationRule(ValidationRuleMixin, PrimaryModel):
+class RegularExpressionValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a regular expression to a given model field."""
 
     regular_expression = models.TextField()
@@ -167,7 +167,7 @@ class RegularExpressionValidationRule(ValidationRuleMixin, PrimaryModel):
     "relationships",
     "webhooks",
 )
-class MinMaxValidationRule(ValidationRuleMixin, PrimaryModel):
+class MinMaxValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies min/max constraints to a given numeric model field."""
 
     min = models.FloatField(
@@ -233,7 +233,7 @@ class MinMaxValidationRule(ValidationRuleMixin, PrimaryModel):
     "relationships",
     "webhooks",
 )
-class RequiredValidationRule(ValidationRuleMixin, PrimaryModel):
+class RequiredValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a required constraint to a given model field."""
 
     clone_fields = ["enabled", "content_type", "error_message"]
@@ -281,7 +281,7 @@ class RequiredValidationRule(ValidationRuleMixin, PrimaryModel):
     "relationships",
     "webhooks",
 )
-class UniqueValidationRule(ValidationRuleMixin, PrimaryModel):
+class UniqueValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """
     A type of validation rule that applies a unique constraint to a given model field.
 
