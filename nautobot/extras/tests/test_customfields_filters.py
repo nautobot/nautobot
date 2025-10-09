@@ -189,7 +189,7 @@ class CustomFieldsFilters:
             cf.content_types.set([ContentType.objects.get_for_model(model)])
 
             i1, i2, i3, i4 = tested_instances = self.queryset.all()[:4]
-            qs = self.queryset.filter(pk__in=tested_instances)
+            qs = self.queryset.filter(pk__in=[i.pk for i in tested_instances])
 
             # No-key object
             self.assertIsNone(i1._custom_field_data.get(cf_label))
