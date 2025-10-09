@@ -59,4 +59,5 @@ In the Python ORM, objects can be retrieved using the `get_by_natural_key()` met
 
 Nautobot provides settings for overriding the default behavior of the natural key for some models. These allow the natural key to be formed by a single field instead of a combination of fields. For more information, see the documentation for the settings listed below.
 
+- [`DEVICE_UNIQUENESS`](../../../../user-guide/administration/configuration/settings.md#device_uniqueness)
 - [`LOCATION_NAME_AS_NATURAL_KEY`](../../../../user-guide/administration/configuration/settings.md#location_name_as_natural_key)

@@ -2,8 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
+from constance import config
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.http.request import QueryDict
+from django.urls import reverse
 
 from nautobot.core.testing import TestCase, ViewTestCases
 from nautobot.data_validation.models import (
@@ -17,6 +20,7 @@ from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.data_validation.tests.test_data_compliance_rules import TestFailedDataComplianceRule
 from nautobot.data_validation.views import DataComplianceObjectView
+from nautobot.dcim.choices import DeviceUniquenessChoices
 from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
 from nautobot.extras.models import Status
 
@@ -275,3 +279,77 @@ class DataComplianceObjectTestCase(TestCase):
         view.dispatch(mock_request, **kwargs)
         mocked_dispatch.assert_called()
         mocked_dispatch.assert_called_with(mock_request, other_arg="other_arg", another_arg="another_arg")
+
+
+class DeviceConstraintsViewTest(TestCase):
+    """Tests for the DeviceConstraintsView."""
+
+    def setUp(self):
+        self.url = reverse("data_validation:device-constraints")
+        self.device_ct = ContentType.objects.get_for_model(Device)
+
+    def test_get_view_renders_successfully(self):
+        """GET should render the form correctly."""
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "data_validation/device_constraints.html")
+        self.assertIn("form", response.context)
+        self.assertContains(response, "Device Constraints")
+
+    def test_post_updates_device_uniqueness_and_creates_required_rule(self):
+        """POST with DEVICE_NAME_REQUIRED=True should create a RequiredValidationRule."""
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        response = self.client.post(
+            self.url,
+            {
+                "DEVICE_UNIQUENESS": DeviceUniquenessChoices.NAME,
+                "DEVICE_NAME_REQUIRED": True,
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, self.url)
+        self.assertEqual(config.DEVICE_UNIQUENESS, "name")
+
+        rule_exists = RequiredValidationRule.objects.filter(
+            content_type=self.device_ct,
+            field="name",
+        ).exists()
+        self.assertTrue(rule_exists)
+
+    def test_post_disables_required_rule(self):
+        """POST with DEVICE_NAME_REQUIRED=False should delete the RequiredValidationRule."""
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        RequiredValidationRule.objects.create(
+            name="Required Name rule",
+            content_type=self.device_ct,
+            field="name",
+        )
+        self.assertTrue(RequiredValidationRule.objects.filter(content_type=self.device_ct, field="name").exists())
+
+        response = self.client.post(
+            self.url,
+            {
+                "DEVICE_UNIQUENESS": DeviceUniquenessChoices.LOCATION_TENANT_NAME,
+                "DEVICE_NAME_REQUIRED": False,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, self.url)
+        self.assertEqual(config.DEVICE_UNIQUENESS, DeviceUniquenessChoices.LOCATION_TENANT_NAME)
+
+        self.assertFalse(RequiredValidationRule.objects.filter(content_type=self.device_ct, field="name").exists())
+
+    def test_invalid_post_rerenders_form(self):
+        """If form is invalid, the view should re-render without redirect."""
+        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        self.client.force_login(user)
+        response = self.client.post(self.url, {"DEVICE_UNIQUENESS": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "data_validation/device_constraints.html")
+        self.assertIn("form", response.context)
+        self.assertTrue(response.context["form"].errors)

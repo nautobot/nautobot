@@ -758,6 +758,10 @@ properties:
       "`nautobot-server send_installation_metrics`": "../tools/nautobot-server.md#send_installation_metrics"
     type: "string"
     version_added: "1.6.0"
+  DEVICE_NAME_AS_NATURAL_KEY:
+    default: false
+    description: >-
+      Replaced by `DEVICE_UNIQUENESS` in v3.0.0
   DEVICE_UNIQUENESS:
     default: "location_tenant_name"
     description: >-
@@ -766,6 +770,10 @@ properties:
         - 'location_tenant_name': combination of Location + Tenant + Name
         - 'name': Device name must be globally unique
         - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+      The `DEVICE_UNIQUENESS` setting also determines which fields Nautobot treats as the natural key for a Device.
+        - If set to "location_tenant_name", the natural key is the combination of Name, Tenant, and Location.
+        - If set to "name", the natural key is the device name alone.
+        - If set to "none", Nautobot falls back to using the primary key for uniqueness.
     environment_variable: "NAUTOBOT_DEVICE_UNIQUENESS"
     is_constance_config: true
     type: "string"

@@ -100,7 +100,7 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 #   - 'name': Device name must be globally unique
 #   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
 if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
-    DEVICE_UNIQUENESS = is_truthy(os.environ["NAUTOBOT_DEVICE_UNIQUENESS"])
+    DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -872,9 +872,8 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
-    "Device Constraints": ["DEVICE_UNIQUENESS"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
-    "Natural Keys": ["LOCATION_NAME_AS_NATURAL_KEY"],
+    "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [

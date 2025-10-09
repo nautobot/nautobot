@@ -1,5 +1,6 @@
 """Forms for data_validation."""
 
+from constance import config
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 
@@ -22,6 +23,8 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.dcim.choices import DeviceUniquenessChoices
+from nautobot.dcim.models import Device
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -300,3 +303,31 @@ class DataComplianceFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
     q = forms.CharField(required=False, label="Search")
+
+
+#
+# Device Constraints
+#
+
+
+class DeviceConstraintsForm(BootstrapMixin, forms.Form):
+    DEVICE_UNIQUENESS = forms.ChoiceField(
+        choices=DeviceUniquenessChoices.CHOICES,
+        label="Device Uniqueness",
+        required=True,
+    )
+    DEVICE_NAME_REQUIRED = forms.BooleanField(
+        label="Device name required",
+        initial=False,
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["DEVICE_UNIQUENESS"].initial = getattr(config, "DEVICE_UNIQUENESS", DeviceUniquenessChoices.DEFAULT)
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        name_rule_exists = RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists()
+
+        self.fields["DEVICE_NAME_REQUIRED"].initial = name_rule_exists

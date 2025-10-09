@@ -60,6 +60,11 @@ menu_items = (
                         name="Data Compliance",
                         permissions=["data_validation.view_datacompliance"],
                     ),
+                    NavMenuItem(
+                        link="data_validation:device-constraints",
+                        name="Device Constraints",
+                        permissions=["data_validation.change_deviceconstraints"],
+                    ),
                 ),
             ),
         ),

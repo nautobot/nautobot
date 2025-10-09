@@ -16,6 +16,7 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceUniquenessChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -1532,11 +1533,24 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_overrides(self):
         """Ensure that the natural-key for Device is affected by settings/Constance."""
-        with override_config(DEVICE_UNIQUENESS="name"):
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME):
             self.assertEqual([self.device.name], self.device.natural_key())
             # self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))
             # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME):
+            self.assertEqual(
+                [self.device.name, self.device.tenant, self.device.location.name], self.device.natural_key()
+            )
+            self.assertEqual(
+                self.device,
+                Device.objects.get_by_natural_key([self.device.name, self.device.tenant, self.device.location]),
+            )
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE):
+            self.assertEqual([str(self.device.pk)], self.device.natural_key())
+            self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.pk]))
 
         with override_config(LOCATION_NAME_AS_NATURAL_KEY=True):
             self.assertEqual([self.device.name, None, self.device.location.name], self.device.natural_key())

@@ -1,15 +1,19 @@
 """Views for data_validation."""
 
+from constance import config
 from django.apps import apps as global_apps
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import redirect, render
 from django_tables2 import RequestConfig
 
+from nautobot.apps.ui import Breadcrumbs, Titles, ViewNameBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
-from nautobot.core.views.generic import ObjectView
+from nautobot.core.views.generic import GenericView, ObjectView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
@@ -29,6 +33,7 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.dcim.models import Device
 from nautobot.extras.utils import get_base_template
 
 #
@@ -192,3 +197,57 @@ class DataComplianceObjectView(ObjectView):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         RequestConfig(request, paginate).configure(compliance_table)
         return {"active_tab": request.GET["tab"], "table": compliance_table, "base_template": base_template}
+
+
+class DeviceConstraintsView(GenericView):
+    template_name = "data_validation/device_constraints.html"
+    view_titles = Titles(titles={"*": "Device Constraints"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "*": [
+                ViewNameBreadcrumbItem(view_name="data_validation:device-constraints", label="Device Constraints"),
+            ],
+        },
+    )
+
+    def get(self, request):
+        form = forms.DeviceConstraintsForm()
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
+            },
+        )
+
+    def post(self, request):
+        form = forms.DeviceConstraintsForm(request.POST)
+        if form.is_valid():
+            config.DEVICE_UNIQUENESS = form.cleaned_data["DEVICE_UNIQUENESS"]
+            device_ct = ContentType.objects.get_for_model(Device)
+            if form.cleaned_data["DEVICE_NAME_REQUIRED"]:
+                RequiredValidationRule.objects.create(
+                    name="Required Name rule",
+                    content_type=device_ct,
+                    field="name",
+                )
+            else:
+                RequiredValidationRule.objects.filter(
+                    content_type=device_ct,
+                    field="name",
+                ).delete()
+
+            messages.success(request, "Device constraints have been updated successfully.")
+            return redirect("data_validation:device-constraints")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
+            },
+        )

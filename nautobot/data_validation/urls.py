@@ -20,5 +20,6 @@ urlpatterns = [
         views.DataComplianceObjectView.as_view(),
         name="data-compliance-tab",
     ),
+    path("device-constraints/", views.DeviceConstraintsView.as_view(), name="device-constraints"),
 ]
 urlpatterns += router.urls

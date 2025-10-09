@@ -24,6 +24,7 @@ from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    DeviceUniquenessChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
@@ -683,13 +684,14 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Check DEVICE_UNIQUENESS from settings or Constance and return proper field.
         """
-        # Should we also handle other choices?
-        if get_settings_or_config("DEVICE_UNIQUENESS") == "name":
+        if get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.NAME:
             # opt-in simplified "pseudo-natural-key"
             return ["name"]
-        else:
+        elif get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
             # true natural-key given current uniqueness constraints
             return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
+        else:
+            return ["pk"]
 
     class Meta:
         ordering = ("_name",)  # Name may be null
