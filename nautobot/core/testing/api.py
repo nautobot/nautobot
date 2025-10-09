@@ -475,7 +475,7 @@ class APIViewTestCases:
             list_url = f"{self._get_list_url()}"
 
             # With exclude_m2m query parameter not set
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
                 response = self.client.get(list_url, **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -490,7 +490,7 @@ class APIViewTestCases:
                         self.assertNotIn(field, response_data)
 
             # With exclude_m2m query parameter set to True
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
                 response = self.client.get(list_url + "?exclude_m2m=true", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -500,7 +500,7 @@ class APIViewTestCases:
                     self.assertNotIn(field, response_data)
 
             # With exclude_m2m query parameter set to False
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
                 response = self.client.get(list_url + "?exclude_m2m=false", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
