@@ -21,7 +21,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     RelationshipSideChoices,
 )
-from nautobot.extras.filters.customfields import (
+from nautobot.extras.filter_mixins_customfields import (
     CustomFieldBooleanFilter,
     CustomFieldCharFilter,
     CustomFieldDateFilter,

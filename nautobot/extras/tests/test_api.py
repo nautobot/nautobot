@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
@@ -1793,6 +1793,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
         self.assertIsInstance(response.data["job_result"], dict)
 
+    @tag("example_app")
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
         self.add_permissions("extras.add_gitrepository")
@@ -2481,6 +2482,7 @@ class JobTest(
             "Unable to schedule job: Job may have sensitive input variables",
         )
 
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_when_approval_workflow_defined(self, mock_get_worker_count):
@@ -4744,9 +4746,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
-        tag = Tag.objects.filter(name=data["name"])
+        tags = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
-        self.assertFalse(tag.exists())
+        self.assertFalse(tags.exists())
         self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
@@ -4783,9 +4785,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()
-        tag_content_types = list(tag.content_types.all())
-        url = self._get_detail_url(tag)
+        tag_instance = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()
+        tag_content_types = list(tag_instance.content_types.all())
+        url = self._get_detail_url(tag_instance)
         data = {"color": ColorChoices.COLOR_LIME}
 
         response = self.client.patch(url, data, format="json", **self.header)
@@ -4795,9 +4797,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
             sorted(response.data["content_types"]), sorted([f"{ct.app_label}.{ct.model}" for ct in tag_content_types])
         )
 
-        tag.refresh_from_db()
-        self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
-        self.assertEqual(list(tag.content_types.all()), tag_content_types)
+        tag_instance.refresh_from_db()
+        self.assertEqual(tag_instance.color, ColorChoices.COLOR_LIME)
+        self.assertEqual(list(tag_instance.content_types.all()), tag_content_types)
 
 
 #

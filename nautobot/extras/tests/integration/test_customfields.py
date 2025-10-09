@@ -111,7 +111,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
             self.assertEqual(len(table.find_by_css(".formset_row-custom_field_choices")), 5)
 
             # And 6 after clicking "Add another..."
-            self.browser.find_by_css(".add-row").click()
+            self.click_button(".add-row")
             rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
             self.fill_input("custom_field_choices-5-value", "choice3")
@@ -172,7 +172,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
 
         # Gather the rows, delete the first one, add a new one.
         table = self.browser.find_by_id("custom-field-choices")
-        self.browser.find_by_css(".add-row").click()  # Add a new row
+        self.click_button(".add-row")  # Add a new row
         rows = table.find_by_css(".formset_row-custom_field_choices")
         rows.first.find_by_css(".delete-row").click()  # Delete first row
 

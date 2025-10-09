@@ -11,9 +11,9 @@ from nautobot.core.filters import (
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
-from nautobot.ipam.filters import PrefixFilter
+from nautobot.ipam.filter_mixins import PrefixFilter
 from nautobot.ipam.models import IPAddress, RouteTarget, VLAN, VRF
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
