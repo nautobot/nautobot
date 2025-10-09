@@ -7,6 +7,8 @@ from nautobot.extras.plugins.utils import import_object
 
 from . import views
 
+BASE_URL_TO_APP_LABEL = {}
+
 # Initialize URL base, API, and admin URL patterns for plugins
 apps_patterns = [
     path("installed-apps/", views.InstalledAppsView.as_view(), name="apps_list"),
@@ -46,3 +48,5 @@ for plugin_path in settings.PLUGINS:
     urlpatterns = import_object(f"{plugin_path}.api.urls.urlpatterns")
     if urlpatterns is not None:
         plugin_api_patterns.append(path(f"{base_url}/", include((urlpatterns, f"{app.label}-api"))))
+
+    BASE_URL_TO_APP_LABEL[app.base_url] = app.label
