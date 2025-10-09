@@ -25,7 +25,7 @@ In Nautobot 3.0, API endpoints now exclude many-to-many (M2M) relationship field
 
 - **Direct API consumers:** Update your API queries to include M2M fields as needed. For example: `http://nautobot.example.com/api/dcim/devices/?exclude_m2m=False`.
 - **pynautobot users:** Add `exclude_m2m=False` to pynautobot to maintain prior behavior. For example: `import pynautobot; pynautobot.api(url, token, exclude_m2m=False)`.
-- **nautobot Ansiblr users:** There is not change required.
+- **Nautobot Ansible users:** There is not change required.
 
 Review your API usage to ensure that any required M2M fields are explicitly requested after upgrading.
 
