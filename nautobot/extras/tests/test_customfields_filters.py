@@ -443,7 +443,7 @@ class CustomFieldsFilters:
             i5.save()
 
         @staticmethod
-        def get_negated_test_cases(lookup: str, test_cases: dict):
+        def get_negated_test_cases(lookup: str, test_cases: list):
             negated_test_cases = []
             for test_case in test_cases:
                 expected = {key: not value for key, value in test_case["expected"].items()}
