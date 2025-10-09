@@ -34,7 +34,6 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
     - `"none"` — No enforced uniqueness; other validation rules or custom validators may apply.
     Additionally, the Constance setting `DEVICE_NAME_AS_NATURAL_KEY` has been deprecated. During migration, existing configurations using this setting will be translated to the appropriate `DEVICE_UNIQUENESS` value (`"name"` or `"location_tenant_name"`).
 
-
 ## Developer API
 
 The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:
