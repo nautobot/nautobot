@@ -11,7 +11,10 @@ def migrate_device_uniqueness_setting(apps, schema_editor):
     """
     Migrate deprecated DEVICE_NAME_AS_NATURAL_KEY setting to DEVICE_UNIQUENESS and DEVICE_NAME_REQUIRED.
     """
-    old_value = get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY")
+    try:
+        old_value = get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY")
+    except AttributeError:
+        old_value = None
     new_value = DeviceUniquenessChoices.NAME if old_value else DeviceUniquenessChoices.LOCATION_TENANT_NAME
 
     # Update or create DEVICE_UNIQUENESS in Constance
@@ -33,7 +36,7 @@ def reverse_migrate_device_uniqueness_setting(apps, schema_editor):
     except Constance.DoesNotExist:
         return
 
-    if device_uniqueness == "name":
+    if device_uniqueness == DeviceUniquenessChoices.NAME:
         Constance.objects.update_or_create(key="DEVICE_NAME_AS_NATURAL_KEY", defaults={"value": True})
     else:
         Constance.objects.update_or_create(key="DEVICE_NAME_AS_NATURAL_KEY", defaults={"value": False})

@@ -22,24 +22,17 @@ def get_settings_or_config(variable_name, fallback=None):
     if hasattr(settings, variable_name):
         return getattr(settings, variable_name)
     # django-constance 4.x removed some built-in error handling here, so we have to do it ourselves now
+    with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError):
+        return getattr(config, variable_name)
+    logger.warning(
+        'Configuration "%s" is not in settings, and could not read from the Constance database table '
+        "(perhaps not initialized yet?)",
+        variable_name,
+    )
     if variable_name in settings.CONSTANCE_CONFIG:
-        with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError, KeyError):
-            return getattr(config, variable_name)
-
-        logger.warning(
-            'Configuration "%s" is not in settings, and could not read from the Constance database table '
-            "(perhaps not initialized yet?)",
-            variable_name,
-        )
-        # If Constance exists in CONFIG but database is not ready
-        default = settings.CONSTANCE_CONFIG[variable_name].default
-        logger.warning(
-            'Using default value of "%s" from Constance configuration for "%s" because database is not ready',
-            default,
-            variable_name,
-        )
+        default = settings.CONSTANCE_CONFIG[variable_name][0]
+        logger.warning('Using default value of "%s" from Constance configuration for "%s"', default, variable_name)
         return default
-
     logger.warning(
         'Constance configuration does not include an entry for "%s" - must return %s', variable_name, fallback
     )
