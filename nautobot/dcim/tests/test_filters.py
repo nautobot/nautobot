@@ -1080,7 +1080,6 @@ class LocationTypeFilterSetTestCase(
 class LocationFilterSetTestCase(
     FilterTestCases.FilterTestCase,
     FilterTestCases.TenancyFilterTestCaseMixin,
-    CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin,
 ):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
@@ -1387,7 +1386,7 @@ class ManufacturerTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.C
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
 
-class DeviceFamilyTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
+class DeviceFamilyTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceFamily.objects.all()
     filterset = DeviceFamilyFilterSet
     generic_filter_tests = [

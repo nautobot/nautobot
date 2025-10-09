@@ -36,16 +36,20 @@ class CustomFieldFilterMixin:
         super().__init__(*args, **kwargs)
         self.field_name = f"_custom_field_data__{self.field_name}"
 
-    def generate_query(self, gg_value):
-        if self.lookup_expr == "icontains":
-            # This method may be called from extras.models.DynamicGroup._generate_query_for_filter method
-            # to generate proper query for given field. But at this point, we don't know if the field will be negated or not
-            # That's why we're preparing query that works both: for positional filtering and negated one.
-            # For positional filtering, when we're expecting some value, the field must exists (key in custom field data JSONB)
-            # and value can't be None (null in db)
-            # For negated filtering we're expecting field without some value, but key may be missing or value can be None (null in db)
-            # Please refer to the filter method below, for more context.
-            value_match = Q(**{f"{self.field_name}__icontains": gg_value})
+    def generate_query(self, value):
+        # This method may be called from extras.models.DynamicGroup._generate_query_for_filter method
+        # to generate proper query for given field. But at this point, we don't know if the field will be negated or not
+        # That's why we're preparing query that works both: for positional filtering and negated one.
+        # For positional filtering, when we're expecting some value, the field must exists (key in custom field data JSONB)
+        # and value can't be None (null in db)
+        # For negated filtering we're expecting field without some value, but key may be missing or value can be None (null in db)
+        # Please refer to the filter method below, for more context.
+
+        if value == "null" or value == ["null"]:
+            return Q(**{f"{self.field_name}__exact": None}) & Q(**{f"{self.field_name}__isnull": False})
+
+        if self.lookup_expr not in ["exact", "iexact"]:
+            value_match = Q(**{f"{self.field_name}__{self.lookup_expr}": value})
             value_is_not_none = ~Q(**{f"{self.field_name}__exact": None})
             key_is_present_in_jsonb = Q(
                 **{f"{self.field_name}__isnull": False}
@@ -53,7 +57,7 @@ class CustomFieldFilterMixin:
 
             return value_match & value_is_not_none & key_is_present_in_jsonb
 
-        return Q(**{f"{self.field_name}__{self.lookup_expr}": gg_value})
+        return Q(**{f"{self.field_name}__{self.lookup_expr}": value})
 
     def filter(self, qs, value):
         if value in django_filters.constants.EMPTY_VALUES:
