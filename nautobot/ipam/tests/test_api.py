@@ -1619,7 +1619,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
         response = self.client.get(
-            self._get_detail_url(nat_inside) + "?depth=1",
+            self._get_detail_url(nat_inside) + "?depth=1&exclude_m2m=false",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
