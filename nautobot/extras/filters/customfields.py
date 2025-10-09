@@ -44,20 +44,16 @@ class CustomFieldFilterMixin:
         # and value can't be None (null in db)
         # For negated filtering we're expecting field without some value, but key may be missing or value can be None (null in db)
         # Please refer to the filter method below, for more context.
-
         if value == "null" or value == ["null"]:
             return Q(**{f"{self.field_name}__exact": None}) & Q(**{f"{self.field_name}__isnull": False})
 
-        if self.lookup_expr not in ["exact", "iexact"]:
-            value_match = Q(**{f"{self.field_name}__{self.lookup_expr}": value})
-            value_is_not_none = ~Q(**{f"{self.field_name}__exact": None})
-            key_is_present_in_jsonb = Q(
-                **{f"{self.field_name}__isnull": False}
-            )  # __isnull and __has_key has same output in case of JSONB fields
+        value_match = Q(**{f"{self.field_name}__{self.lookup_expr}": value})
+        value_is_not_none = ~Q(**{f"{self.field_name}__exact": None})
+        key_is_present_in_jsonb = Q(
+            **{f"{self.field_name}__isnull": False}
+        )  # __isnull and __has_key has same output in case of JSONB fields
 
-            return value_match & value_is_not_none & key_is_present_in_jsonb
-
-        return Q(**{f"{self.field_name}__{self.lookup_expr}": value})
+        return value_match & value_is_not_none & key_is_present_in_jsonb
 
     def filter(self, qs, value):
         if value in django_filters.constants.EMPTY_VALUES:
