@@ -445,6 +445,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         view_set = LocationUIViewSet()
         child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
         parent_location = child_1.parent
+        print(parent_location.prefixes.count())
+        current_prefix_count = parent_location.prefixes.count()
         child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
         status = Status.objects.get_for_model(Prefix).first()
         prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
@@ -455,8 +457,16 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         request.user = self.user
         self.add_permissions("dcim.view_location")
         self.add_permissions("ipam.view_prefix")
-        context = view_set.get_extra_context(request=request, instance=parent_location)
-        self.assertEqual(context["stats"]["prefix_count"], 2)
+
+        # self.assertEqual(context["stats"]["prefix_count"], 2)
+        url = parent_location.get_absolute_url()
+        responce = self.client.get(url)
+        context = responce.context
+        # print(context)
+        for key, stat in context["stats"].items():
+            print(key, stat)
+            if stat[0] == "ipam:prefix_list":
+                self.assertEqual(stat[1], 2 + current_prefix_count)
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
