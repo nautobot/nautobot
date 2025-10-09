@@ -1088,7 +1088,6 @@ urlpatterns = [
         name="device_inventoryitems_add",
     ),
     # Cables
-    path("cables/import/", views.CableBulkImportView.as_view(), name="cable_import"),  # 3.0 TODO: remove, unused
     # Console/power/interface connections (read-only)
     path(
         "console-connections/",
