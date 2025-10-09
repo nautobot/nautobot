@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
@@ -1793,6 +1793,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
         self.assertIsInstance(response.data["job_result"], dict)
 
+    @tag("example_app")
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
         self.add_permissions("extras.add_gitrepository")
@@ -2481,6 +2482,7 @@ class JobTest(
             "Unable to schedule job: Job may have sensitive input variables",
         )
 
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_when_approval_workflow_defined(self, mock_get_worker_count):

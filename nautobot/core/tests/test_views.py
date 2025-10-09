@@ -3,11 +3,10 @@ import os
 from pathlib import Path
 import re
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import urllib.parse
 
 from django.apps import apps
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -687,6 +686,7 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
+    @tag("example_app")
     def test_metrics_extensibility(self):
         """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
@@ -709,6 +709,7 @@ class MetricsViewTestCase(TestCase):
             self.query_and_parse_metrics()
             self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
 
+    @tag("example_app")
     @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
     def test_enabled_metrics_cache_enabled(self):
         """Assert that multiple calls to metrics with caching returns expected response."""
@@ -889,10 +890,7 @@ class SilkUIAccessTestCase(TestCase):
 
 
 class ExampleViewWithCustomPermissionsTest(TestCase):
-    @skipIf(
-        "example_app" not in settings.PLUGINS,
-        "example_app not in settings.PLUGINS",
-    )
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_permission_classes_attribute_is_enforced(self):
         """

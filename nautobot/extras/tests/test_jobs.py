@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.utils import timezone
 
@@ -286,6 +286,7 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    @tag("example_app")
     def test_app_dynamic_jobs(self):
         """
         Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
