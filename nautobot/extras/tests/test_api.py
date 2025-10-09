@@ -4746,9 +4746,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
-        tag = Tag.objects.filter(name=data["name"])
+        tags = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
-        self.assertFalse(tag.exists())
+        self.assertFalse(tags.exists())
         self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
@@ -4785,9 +4785,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()
-        tag_content_types = list(tag.content_types.all())
-        url = self._get_detail_url(tag)
+        tag_instance = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()
+        tag_content_types = list(tag_instance.content_types.all())
+        url = self._get_detail_url(tag_instance)
         data = {"color": ColorChoices.COLOR_LIME}
 
         response = self.client.patch(url, data, format="json", **self.header)
@@ -4797,9 +4797,9 @@ class TagTest(APIViewTestCases.APIViewTestCase):
             sorted(response.data["content_types"]), sorted([f"{ct.app_label}.{ct.model}" for ct in tag_content_types])
         )
 
-        tag.refresh_from_db()
-        self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
-        self.assertEqual(list(tag.content_types.all()), tag_content_types)
+        tag_instance.refresh_from_db()
+        self.assertEqual(tag_instance.color, ColorChoices.COLOR_LIME)
+        self.assertEqual(list(tag_instance.content_types.all()), tag_content_types)
 
 
 #

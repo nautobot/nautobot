@@ -3517,10 +3517,10 @@ class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
 
     def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+        instance = Tag(name="Testing Unicode: 台灣")
+        instance.save()
 
-        self.assertEqual(tag.name, "Testing Unicode: 台灣")
+        self.assertEqual(instance.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
