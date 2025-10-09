@@ -488,7 +488,7 @@ class APIViewTestCases:
                         self.assertIsInstance(response_data[field], list)
                     else:
                         self.assertNotIn(field, response_data)
-            
+
             # With exclude_m2m query parameter set to True
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
                 response = self.client.get(list_url + "?exclude_m2m=true", **self.header)
@@ -498,7 +498,7 @@ class APIViewTestCases:
             for response_data in response.data["results"]:
                 for field in m2m_fields:
                     self.assertNotIn(field, response_data)
-            
+
             # With exclude_m2m query parameter set to False
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
                 response = self.client.get(list_url + "?exclude_m2m=false", **self.header)
