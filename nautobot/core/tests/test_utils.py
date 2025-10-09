@@ -20,7 +20,7 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
@@ -1131,6 +1131,29 @@ class TestModuleLoadingUtils(TestCase):
                 permitted, reason = check_name_safe_to_import_privately(invalid)
                 self.assertFalse(permitted)
                 self.assertIsInstance(reason, str)
+
+    def test_import_string_optional(self):
+        with self.subTest("Nonexistent module should return None"):
+            self.assertIsNone(import_string_optional("no_such_module.no_such_attribute"))
+            self.assertIsNone(import_string_optional("no_such_module.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_submodule.no_such_attribute"))
+
+        with self.subTest("Existing module but nonexistent attribute should return None"):
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("sys.no_such_attribute"))
+
+        with self.subTest("Other import errors should propagate upward still"):
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.invalid_import.MyJob")
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.missing_import.MyJob")
+
+        with self.subTest("Successful imports should succeed"):
+            self.assertEqual(
+                import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
+            )
 
 
 class TestQuerySetUtils(TestCase):
