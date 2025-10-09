@@ -7,7 +7,7 @@ At a high-level overview, consider the following impacting changes:
 | Type                   | Description                                                             | Impact                     |
 |------------------------|-------------------------------------------------------------------------|----------------------------|
 | Filter Fields          | Changes to filter fields                                                | 🟠 May require updates to API queries, Dynamic Groups, Permissions, and Saved Views. Tooling is provided to assist with updates. |
-| Default to Exclude M2M | API now defaults to exclude many-to-many relationships unless specified | 🟠 No impact when using pynautobot; direct API calls may require adjustments.            |
+| Default to Exclude M2M | API now defaults to exclude many-to-many relationships unless specified | 🟠 Minor adjustments using pynautobot or API calls may require adjustments.              |
 | Jobs Approval Process  | Updates to job approval process to use Workflow Approvals               | 🟢 Minor changes; see details below for updated permissions and workflow.                |
 | GraphiQL               | Upgrade to Graphene V3                                                  | 🟢 No impact for most UI or API users; those using internal APIs may notice differences. |
 | Authorized Docs        | Documentation now requires user authorization                           | 🟢 No functional impact for users with logins.                                           |
@@ -23,14 +23,15 @@ TODO: Follow up
 
 In Nautobot 3.0, API endpoints now exclude many-to-many (M2M) relationship fields by default in their responses. This change helps improve performance and reduces unnecessary data transfer. If your integrations or scripts rely on M2M fields being present in API responses, you will need to explicitly request these fields using the `?exclude_m2m=False` query parameter.
 
-- **pynautobot users:** No action is required, as pynautobot automatically honors prior behavior.
 - **Direct API consumers:** Update your API queries to include M2M fields as needed. For example: `http://nautobot.example.com/api/dcim/devices/?exclude_m2m=False`.
+- **pynautobot users:** Add `exclude_m2m=False` to pynautobot to maintain prior behavior. For example: `import pynautobot; pynautobot.api(url, token, exclude_m2m=False)`.
+- **nautobot Ansiblr users:** There is not change required.
 
 Review your API usage to ensure that any required M2M fields are explicitly requested after upgrading.
 
 ## Jobs Approval Process
 
-When upgrading to Nautobot 3.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
+Prior to upgrading to Nautobot 3.x, upgrade to at least Nautobot 2.4.15 so that the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
 
 - Running the command doesn't approve/run/deny jobs, it just identifies the ones that need such action to be performed as a separate step, namely to run the job or delete the scheduled job.
     - After running this command to identify the impacted Jobs, and completing the upgrade to Nautobot 3.x, you'll want to define appropriate approval workflows to apply to those jobs.

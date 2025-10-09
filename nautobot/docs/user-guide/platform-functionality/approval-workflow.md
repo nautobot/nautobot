@@ -365,7 +365,7 @@ Approval actions are controlled not only by permissions but also by **approver g
 
 ### From Nautobot 2.x
 
-If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
+If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available in Nautobot 2.4.15+ to identify Jobs and Scheduled Jobs that have `approval_required=True`.
 
 - Running the command doesn't approve/run/deny jobs, it just identifies the ones that need such action to be performed as a separate step.
 - After running this command to identify the impacted Jobs, and completing the upgrade to Nautobot 3.x, you'll want to define appropriate approval workflows to apply to those jobs.

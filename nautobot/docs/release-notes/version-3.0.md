@@ -15,7 +15,7 @@ This document describes all new features and changes in Nautobot 3.0.
 - Apps that provide any user interface will likely require updates to account for the [Bootstrap upgrade from v3.4 to v5.3](#bootstrap-upgrade-from-v34-to-v53) described below.
 - The Data Compliance feature set from the Data Validation Engine App has been moved directly into core. Import paths that reference `nautobot_data_validation_engine.custom_validators.DataComplianceRule` or `nautobot_data_validation_engine.custom_validators.ComplianceError` should be updated to `nautobot.apps.models.DataComplianceRule` and `nautobot.apps.models.ComplianceError`, respectively.
 - Code that calls the GraphQL `execute_query()` and `execute_saved_query()` functions may need to be updated to account for changes to the response object returned by these APIs. Specifically, the `response.to_dict()` method is no longer supported, but instead the returned data and any errors encountered may now be accessed directly as `response.data` and `response.errors` respectively.
-    - Filtering data that supports a `type` filter in the REST API now also supports a corresponding `type` filter in GraphQL. (In Nautobot v2.x and earlier, the filter had to be referenced in GraphQL as `_type` instead.) Filtering by `_type` is still supported where applicable but should be considered deprecated; please update your GraphQL queries accordingly.
+- Filtering data that supports a `type` filter in the REST API now also supports a corresponding `type` filter in GraphQL. (In Nautobot v2.x and earlier, the filter had to be referenced in GraphQL as `_type` instead.) Filtering by `_type` is still supported where applicable but should be considered deprecated; please update your GraphQL queries accordingly.
 - As a part of adding support for associating a [Device to multiple Clusters](#device-to-multiple-clusters-7203), the Device REST API no longer supports a `cluster` field; the field has been renamed to `clusters` and is now a list of related Clusters rather than a single record. See below for more details.
 
 ## Release Overview
@@ -26,15 +26,15 @@ This document describes all new features and changes in Nautobot 3.0.
 
 Nautobot 3.0 introduces a refreshed user interface, building on the migration from Bootstrap 3 to Bootstrap 5 with several major enhancements:
 
-##### Search
+**Search**
 
 The search experience has been completely reimagined. A single, always-available search bar is now present throughout the application, accessible via `Ctrl+K` or `Command+K`. Advanced search syntax, such as `in:<model name>`, allows you to target specific models directly. The search results page now provides clearer visibility into active search parameters and makes it easy to distinguish between basic and advanced queries.
 
-##### Saved Views
+**Saved Views**
 
 Saved Views have been improved to display their type more prominently, making it easier to identify when a Saved View is active and to understand the filters or configurations being applied. This streamlines workflows and reduces confusion when working with complex data sets.
 
-##### Navigation Bar
+**Navigation Bar**
 
 The Navigation Bar has been redesigned for greater efficiency and usability. It now features support for marking items as favorites, incorporates intuitive icons, and uses a modern flyout design to maximize space and accessibility. Navigation is more consolidated, helping users quickly find and access key areas of Nautobot.
 
@@ -48,7 +48,7 @@ TODO: Fill in
 
 #### Approval Workflow
 
-Approval Workflows allows for a multi-stage review and approval of processes before making changes, running or creating specific objects in the system. They are defined in advance and attached to specific models based on certain constraints. Use cases include:
+[Approval Workflows](../user-guide/platform-functionality/approval-workflow.md) allows for a multi-stage review and approval of processes before making changes, running or creating specific objects in the system. They are defined in advance and attached to specific models based on certain constraints. Use cases include:
 
 - Preventing accidental deletion of critical data by requiring manager approval before deletion jobs run.
 - Requiring security team sign-off before enabling network changes in production.
@@ -57,7 +57,7 @@ Approval Workflows allows for a multi-stage review and approval of processes bef
 
 #### Data Validation Engine
 
-The Nautobot Data Validation Engine functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature.
+The [Nautobot Data Validation Engine](../user-guide/platform-functionality/data-validation.md) functionality previously provided as a separate Nautobot App has been migrated into Nautobot as a core feature.
 
 The data validation engine offers a set of user definable rules which are used to enforce business constraints on the data in Nautobot. These rules are tied to models and each rule is meant to enforce one aspect of a business use case.
 
@@ -72,7 +72,7 @@ Additionally Data Compliance allows you to create validations on your data witho
 
 #### ECharts
 
-ECharts is now included in the base image, with abstractions provided to easily add custom charts using ECharts.
+[ECharts](https://echarts.apache.org/en/index.html) is now included in the base image, with abstractions provided to easily add [custom charts using ECharts](../user-guide/platform-functionality/echarts.md).
 
 #### GraphQL
 
@@ -98,6 +98,10 @@ Note that due to technical limitations, the Device REST API does *not* support a
 
 Buttons were removed from the NavBar as our research indicated they were infrequently used and caused clutter.
 
+#### Job Approval Process
+
+The Job Approval process was removed and replaced by Workflow Approvals.
+
 ### Dependencies
 
 #### GraphQL and GraphiQL Updates
@@ -110,7 +114,7 @@ As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python
 
 #### Added Echarts
 
-Added the Javscript Library Echarts version 6.0.0.
+Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
