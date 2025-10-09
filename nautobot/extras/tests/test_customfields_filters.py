@@ -312,9 +312,7 @@ class CustomFieldsFilters:
             test_data = self.filter_matrix[CustomFieldTypeChoices.TYPE_TEXT]
             self.create_custom_field(self.filterset.Meta.model, cf_label)
 
-            no_key_object, empty_str_object, null_value_object, matched_value, not_matched_value = instances = (
-                self.queryset.all()[:5]
-            )
+            instances = self.queryset.all()[:5]
             self.prepare_custom_fields_values(cf_label, instances, test_data["value"], "not-matched")
             qs = self.queryset.filter(pk__in=[instance.pk for instance in instances])
 
@@ -348,7 +346,7 @@ class CustomFieldsFilters:
                 # Dynamic Groups filtering logic do negation at higher level than standard filtersets classes
                 # Below I'm generating the "negated" expected test cases, but lookup stays "positional"
                 # It will be negated during passing to qs.filter method
-                negated_test_cases = self.get_negated_test_cases(lookup, lookup_data["test_cases"])
+                negated_test_cases = self.get_negated_test_cases(lookup_data["lookup"], lookup_data["test_cases"])
 
                 for lookup, test_case in negated_test_cases:
                     assert_in_msg = f'object expected to be found for searching `{lookup}` ({lookup_data["name"]}) = "{test_case["search"]}"'
