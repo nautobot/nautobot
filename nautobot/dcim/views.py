@@ -4609,11 +4609,6 @@ class CableCreateView(generic.ObjectEditView):
         )
 
 
-class CableBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Cable.objects.all()
-    table = tables.CableTable
-
-
 #
 # Connections
 #
