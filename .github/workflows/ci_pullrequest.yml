@@ -190,7 +190,7 @@ jobs:
       - name: "Run pylint"
         run: "poetry run invoke pylint"
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.9)"
+    name: "Unit tests (PostgreSQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -218,7 +218,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
@@ -299,7 +299,7 @@ jobs:
       - "djhtml"
       - "djlint"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.9)"
+    name: "Run migrations against test dataset (MySQL and Python 3.10)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -329,7 +329,7 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "2.1.4"
-          python-version: "3.9"
+          python-version: "3.10"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
     needs:

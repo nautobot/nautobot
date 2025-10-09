@@ -41,6 +41,9 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 --- 2.4.0 "Python 3.8"
     Python 3.8 support was removed.
 
+--- 2.4.20 "Python 3.9"
+    Python 3.9 support was removed.
+
 ## Notices
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
