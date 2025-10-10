@@ -4,6 +4,7 @@ from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
+from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.forms.fields import (
@@ -1080,6 +1081,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
+    @tag("example_app")
     def test_group_overloaded_filter_form_field(self):
         """FilterForm fields can overload how they pass in the values."""
 

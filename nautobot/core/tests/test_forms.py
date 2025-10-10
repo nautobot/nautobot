@@ -3,7 +3,7 @@ from unittest import mock
 from django import forms as django_forms
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
-from django.test import TestCase
+from django.test import tag, TestCase
 from django.urls import reverse
 from netaddr import IPNetwork
 
@@ -618,6 +618,7 @@ class DynamicFilterFormTest(TestCase):
     #         DynamicFilterForm()
     #     self.assertEqual("'DynamicFilterForm' object requires `filterset_class` attribute", str(err.exception))
 
+    @tag("example_app")
     def test_dynamic_filter_form(self):
         form = forms.DynamicFilterForm(filterset=extras_filters.StatusFilterSet())
         location_form = forms.DynamicFilterForm(filterset=dcim_filters.LocationFilterSet())
