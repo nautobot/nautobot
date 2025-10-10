@@ -2,11 +2,11 @@ import logging
 
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import TagsField
-from nautobot.data_validation.mixins import DataComplianceModelMixin
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.mixins import (
     ContactMixin,
+    DataComplianceModelMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,

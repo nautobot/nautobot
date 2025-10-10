@@ -37,7 +37,6 @@ from nautobot.core.models.utils import (
 )
 from nautobot.core.models.validators import EnhancedURLValidator, ExclusionValidator, ValidRegexValidator
 from nautobot.data_validation.custom_validators import ComplianceError, DataComplianceRule
-from nautobot.data_validation.mixins import DataComplianceModelMixin
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContextModel,
@@ -49,6 +48,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.mixins import (
     ApprovableModelMixin,
     ContactMixin,
+    DataComplianceModelMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
     NotesMixin,

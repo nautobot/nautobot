@@ -270,7 +270,6 @@ class ConfigContextSchema(OrganizationalModel):
     )
 
     documentation_static_path = "docs/user-guide/core-data-model/extras/configcontextschema.html"
-    is_data_compliance_model = False
 
     def __str__(self):
         if self.owner:
@@ -843,7 +842,6 @@ class Note(ChangeLoggedModel, BaseModel):
     objects = BaseManager.from_queryset(NotesQuerySet)()
 
     is_metadata_associable_model = False
-    is_data_compliance_model = False
 
     class Meta:
         ordering = ["created"]
@@ -1009,7 +1007,6 @@ class Webhook(
         "Leave blank to use the system defaults.",
         default="",
     )
-    is_data_compliance_model = False
 
     class Meta:
         ordering = ("name",)
