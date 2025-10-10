@@ -1,0 +1,1 @@
+Patched logic in social_django to prevent account takeover vulnerability risk from CVE-2025-61783 until we can upgrade to a version of social_django that includes the fix (5.6.0 or later).
