@@ -3,7 +3,7 @@
 from django.utils.html import format_html
 import django_tables2 as tables
 
-from nautobot.core.tables import BaseTable, TagColumn, ToggleColumn
+from nautobot.core.tables import BaseTable, BooleanColumn, TagColumn, ToggleColumn
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -21,7 +21,9 @@ class RegularExpressionValidationRuleTable(BaseTable):
     """Base table for the RegularExpressionValidationRule model."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(order_by=("name",))
+    name = tables.Column(linkify=True, order_by=("name",))
+    enabled = BooleanColumn()
+    context_processing = BooleanColumn()
     tags = TagColumn()
 
     class Meta(BaseTable.Meta):
@@ -60,7 +62,8 @@ class MinMaxValidationRuleTable(BaseTable):
     """Base table for the MinMaxValidationRule model."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(order_by=("name",))
+    name = tables.Column(linkify=True, order_by=("name",))
+    enabled = BooleanColumn()
     tags = TagColumn()
 
     class Meta(BaseTable.Meta):
@@ -99,7 +102,8 @@ class RequiredValidationRuleTable(BaseTable):
     """Base table for the RequiredValidationRule model."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(order_by=("name",))
+    name = tables.Column(linkify=True, order_by=("name",))
+    enabled = BooleanColumn()
     tags = TagColumn()
 
     class Meta(BaseTable.Meta):
@@ -134,7 +138,8 @@ class UniqueValidationRuleTable(BaseTable):
     """Base table for the UniqueValidationRule model."""
 
     pk = ToggleColumn()
-    name = tables.LinkColumn(order_by=("name",))
+    name = tables.Column(linkify=True, order_by=("name",))
+    enabled = BooleanColumn()
     tags = TagColumn()
 
     class Meta(BaseTable.Meta):
@@ -186,6 +191,7 @@ class DataComplianceTable(BaseTable):
     id = tables.Column(linkify=True, verbose_name="ID")
     validated_object = tables.RelatedLinkColumn()
     validated_attribute = ValidatedAttributeColumn()
+    valid = BooleanColumn()
 
     def order_validated_object(self, queryset, is_descending):
         """Reorder table by string representation of validated_object."""
@@ -226,6 +232,7 @@ class DataComplianceTableTab(BaseTable):
     """Base table for viewing the DataCompliance related to a single object."""
 
     validated_attribute = ValidatedAttributeColumn()
+    valid = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         """Meta class for DataComplianceTableTab."""

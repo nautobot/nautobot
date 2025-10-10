@@ -446,7 +446,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.factory = RequestFactory()
         self.request = self.factory.get("/")
         self.request.user = self.user
-        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata"]
+        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata", "data_compliance"]
 
     def test_default_extra_tabs_exist(self):
         """

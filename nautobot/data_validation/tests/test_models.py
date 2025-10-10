@@ -3,6 +3,7 @@ Model test cases
 """
 
 import re
+from unittest import TestCase
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
@@ -376,3 +377,17 @@ class UniqueValidationRuleModelTestCase(ValidationRuleModelTestCases.ValidationR
             )
 
             rule.clean()
+
+
+class ValidationRuleModelMixinTestCase(TestCase):
+    """
+    Validate ValidationRuleModelMixin is working as intended.
+    """
+
+    def test_is_data_compliance_model(self):
+        """Validate is_data_compliance_model is set correctly on models using ValidationRuleModelMixin."""
+        # These models should have is_data_compliance_model = False
+        self.assertFalse(MinMaxValidationRule.is_data_compliance_model)
+        self.assertFalse(RegularExpressionValidationRule.is_data_compliance_model)
+        self.assertFalse(RequiredValidationRule.is_data_compliance_model)
+        self.assertFalse(UniqueValidationRule.is_data_compliance_model)
