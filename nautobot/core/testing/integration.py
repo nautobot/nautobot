@@ -271,7 +271,6 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def click_navbar_entry(self, parent_menu_name, child_menu_name):
         """
         Helper function to click on a parent menu and child menu in the navigation bar.
-        Waits until the child menu is active.
         """
         parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
         parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
