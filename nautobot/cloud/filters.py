@@ -9,7 +9,7 @@ from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.filters import PrefixFilter
+from nautobot.ipam.filter_mixins import PrefixFilter
 
 
 class CloudAccountFilterSet(NautobotFilterSet):

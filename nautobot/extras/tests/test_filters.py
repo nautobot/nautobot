@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, RequestFactory
+from django.test import override_settings, RequestFactory, tag
 from django.utils.timezone import now
 
 from nautobot.core.jobs import BulkDeleteObjects
@@ -1331,6 +1331,7 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
         params = {"dryrun_default": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
+    @tag("example_app")
     def test_hidden(self):
         params = {"hidden": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
@@ -1341,6 +1342,7 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
         )
 
+    @tag("example_app")
     def test_is_job_hook_receiver(self):
         params = {"is_job_hook_receiver": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
