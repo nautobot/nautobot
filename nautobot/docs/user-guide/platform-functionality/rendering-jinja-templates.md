@@ -73,7 +73,7 @@ The link will only appear when viewing a device with a manufacturer name of "Cis
 
 !!! note
     To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
-    
+
 
 ## Examples
 
@@ -115,7 +115,7 @@ The REST API also supports object-based context by providing both `content_type`
 ```json
 {
   "template_code": "Device {{ obj.name }} is located in {{ obj.location.name }}",
-  "content_type": "dcim.device",  
+  "content_type": "dcim.device",
   "object_uuid": "123e4567-e89b-12d3-a456-426614174000"
 }
 ```
