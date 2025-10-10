@@ -68,15 +68,6 @@
                 {% endif %}
             </ul>
         </div>
-        {% comment %} TODO: 3.0 Remove legacy import_button and export button {% endcomment %}
-        {% if permissions.add and 'import' in action_buttons %}
-            {% block import_button %}
-            {% endblock import_button %}
-        {% endif %}
-        {% if 'export' in action_buttons %}
-            {% block export_button %}
-            {% endblock export_button %}
-        {% endif %}
         <div class="align-items-center d-flex gap-4">
             {% if model.is_saved_view_model %}
                 <button
