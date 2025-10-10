@@ -431,6 +431,24 @@ $kbd-bg:        var(--#{$prefix}secondary-bg);
 /* 4. Include any default map overrides here */
 $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 
+/* Breakpoints */
+$grid-breakpoints: (
+  xs: 0,
+  sm: 816px,
+  md: 1008px,
+  lg: 1232px,
+  xl: 1440px,
+  xxl: 1900px,
+);
+
+$container-max-widths: (
+  sm: 736px,
+  md: 928px,
+  lg: 1152px,
+  xl: 1360px,
+  xxl: 1820px
+);
+
 /* 5. Include remainder of required parts */
 @import "bootstrap/scss/maps";
 @import "bootstrap/scss/mixins";
