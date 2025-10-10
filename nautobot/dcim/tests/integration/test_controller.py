@@ -1,5 +1,4 @@
 from django.urls import reverse
-from selenium.webdriver.support.ui import WebDriverWait
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.models import JobResult
