@@ -364,8 +364,11 @@ class CoreConfig(NautobotConfig):
             logger.warning("Maintenance mode enabled: disabling update of most recent login time")
             user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
 
+        # SECURITY
+        # Patch social_django to prevent account takeover vulnerability
         from social_django.models import DjangoStorage
 
+        # TODO: Remove this patch when we can upgrade to a version of social_django that includes the fix.
         patch_django_storage(DjangoStorage)
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
