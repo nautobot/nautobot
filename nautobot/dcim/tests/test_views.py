@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
-from django.test.client import RequestFactory
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
@@ -109,7 +108,6 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
-    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -442,31 +440,30 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
     def test_get_extra_context(self):
-        view_set = LocationUIViewSet()
         child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
         parent_location = child_1.parent
-        print(parent_location.prefixes.count())
-        current_prefix_count = parent_location.prefixes.count()
         child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
         status = Status.objects.get_for_model(Prefix).first()
         prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
         prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
         prefix_1.locations.set([child_1, child_2])
         prefix_2.locations.set([child_1, child_2])
-        request = RequestFactory().get(parent_location.get_absolute_url())
-        request.user = self.user
+
         self.add_permissions("dcim.view_location")
         self.add_permissions("ipam.view_prefix")
 
-        # self.assertEqual(context["stats"]["prefix_count"], 2)
         url = parent_location.get_absolute_url()
-        responce = self.client.get(url)
-        context = responce.context
-        # print(context)
-        for key, stat in context["stats"].items():
-            print(key, stat)
+        context = self.client.get(url).context
+        prefix_count = Prefix.objects.filter(location__in=parent_location.descendants(include_self=True)).count()
+
+        # Ensure that the context contains "stats" and the expected stat for prefix_list
+        self.assertIn("stats", context)
+        found = False
+        for stat in context["stats"].values():
             if stat[0] == "ipam:prefix_list":
-                self.assertEqual(stat[1], 2 + current_prefix_count)
+                self.assertEqual(stat[1], prefix_count)
+                found = True
+        self.assertTrue(found, "ipam:prefix_list stat not found in context['stats']")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
