@@ -34,7 +34,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 # Background task processing
-celery = ">=5.5.3,<5.6.0"
+celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
@@ -88,7 +88,7 @@ django-tree-queries = "~0.20.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = ">=3.16.1,<3.17.0"
+djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
@@ -104,11 +104,7 @@ graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.25.1"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency for now to require a version with https://github.com/celery/kombu/pull/2007
-# This can be removed once we increate the lower bound of permitted versions of Celery itself above.
-kombu = ">=5.5.4,<5.6.0"
+jsonschema = "^4.7.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^33.1.0"
 # Rendering of markdown files to HTML
@@ -116,19 +112,19 @@ Markdown = "~3.8.2"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.7", optional = true}
 # NAPALM automation library
-napalm = {version = ">=5.1.0,<6.0.0", optional = true}
+napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.15.0"
+netutils = "^1.14.0"
 # HTML sanitization
 nh3 = "~0.3.1"
 # Handling of version numbers
-packaging = ">=25.0"
+packaging = ">=23.1"
 # Image processing library
-Pillow = "^11.3.0"
+Pillow = "^11.0"
 # Custom prometheus metrics
 prometheus-client = "~0.22.1"
 # PostgreSQL database adapter
@@ -208,7 +204,7 @@ mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
-djhtml = ">=3.0.10,<4.0.0"
+djhtml = "~3.0.10"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
