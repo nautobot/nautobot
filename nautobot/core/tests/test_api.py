@@ -988,6 +988,114 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.assertEqual(response.data["rendered_template"], expected_response)
         self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
 
+    def test_render_jinja_template_json_reserved_keys_edge_cases(self):
+        """Test reserved keys with user data in JSON mode."""
+
+        test_cases = [
+            # obj key with user data (bring this back)
+            {
+                "name": "obj_user_data",
+                "context": {"obj": {"name": "test-object"}},
+                "template": "{{ obj.name }}",
+                "expected": "test-object",
+            },
+            # user key with user data
+            {
+                "name": "user_user_data",
+                "context": {"user": {"username": "john", "role": "admin"}},
+                "template": "{{ user.username }}-{{ user.role }}",
+                "expected": "john-admin",
+            },
+            # perms as different types
+            {
+                "name": "perms_list",
+                "context": {"perms": ["admin", "user"]},
+                "template": "{{ perms|join(',') }}",
+                "expected": "admin,user",
+            },
+            {"name": "perms_string", "context": {"perms": "admin"}, "template": "{{ perms }}", "expected": "admin"},
+            {
+                "name": "perms_dict",
+                "context": {"perms": {"role": "admin", "level": 5}},
+                "template": "{{ perms.role }}-{{ perms.level }}",
+                "expected": "admin-5",
+            },
+            # debug with user data
+            {
+                "name": "debug_user_data",
+                "context": {"debug": {"level": "verbose", "trace": True}},
+                "template": "{{ debug.level }}-{{ debug.trace }}",
+                "expected": "verbose-True",
+            },
+            # request key preservation
+            {
+                "name": "request_user_data",
+                "context": {"request": {"method": "POST", "authenticated": True}},
+                "template": "{{ request.method }}:{{ request.authenticated }}",
+                "expected": "POST:True",
+            },
+            # Mixed reserved and custom keys
+            {
+                "name": "mixed_keys",
+                "context": {
+                    "obj": {"id": 123},
+                    "custom": {"data": "value"},
+                    "perms": ["read"],
+                    "config": {"timeout": 30},
+                },
+                "template": "{{ obj.id }}-{{ custom.data }}-{{ perms[0] }}-{{ config.timeout }}",
+                "expected": "123-value-read-30",
+            },
+        ]
+
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": case["template"],
+                        "context": case["context"],
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.data["rendered_template"], case["expected"])
+
+    def test_render_jinja_template_context_serialization_edge_cases(self):
+        """Test edge cases for context serialization."""
+
+        test_cases = [
+            # None values in reserved keys
+            {
+                "name": "none_values",
+                "context": {"obj": None, "debug": None},
+                "template": "{{ obj is none }}-{{ debug is none }}",
+                "expected": "True-True",
+            },
+            # Falsy but valid values
+            {
+                "name": "falsy_values",
+                "context": {"perms": [], "debug": False, "obj": {}},
+                "template": "{{ perms|length }}-{{ debug }}-{{ obj|length }}",
+                "expected": "0-False-0",
+            },
+        ]
+
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": case["template"],
+                        "context": case["context"],
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.data["rendered_template"], case["expected"])
+
     def test_render_jinja_template_with_empty_context(self):
         """Test that empty context {} is valid for static templates."""
         response = self.client.post(

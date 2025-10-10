@@ -1051,7 +1051,12 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         serializable_context = {}
 
         for key, value in context.items():
-            if key in ("obj", "user"):
+            # Skip request entirely
+            if key == "request":
+                continue
+
+            # Apply appropriate serialization based on key and value type
+            if key in ("obj", "user") and isinstance(value, BaseModel):
                 serializable_context[key] = serialize_object_v2(value)
             elif key == "perms":
                 # Convert permissions set to list (always works)
@@ -1059,11 +1064,5 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             elif key == "debug":
                 # Boolean value, always serializable
                 serializable_context[key] = value
-            elif key == "request":
-                continue
-            else:
-                # Log unexpected keys for debugging
-                logger.warning(f"Unexpected context key in object mode: {key}")
-                serializable_context[key] = str(value)
 
         return serializable_context
