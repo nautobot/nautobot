@@ -368,7 +368,7 @@ class CoreConfig(NautobotConfig):
         # Patch social_django to prevent account takeover vulnerability
         from social_django.models import DjangoStorage
 
-        # TODO: Remove this patch when we can upgrade to a version of social_django that includes the fix.
+        # TODO: When upgrading to 5.6.0 or later, remove the patch
         patch_django_storage(DjangoStorage)
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)

@@ -83,11 +83,10 @@ def patch_django_storage(original_django_storage):
         adopts the fail-closed change described in
         https://github.com/python-social-auth/social-app-django/pull/803
 
-        The modified lines are called out with "Nautobot-specific logic" comments below.
+        The modified lines are called out with "Patched logic" comments below.
     """
 
     def patched_create_user(cls, *args, **kwargs):
-        print("I am nachos")
         username_field = cls.username_field()
         if "username" in kwargs:
             if username_field not in kwargs:
@@ -120,9 +119,9 @@ def patch_django_storage(original_django_storage):
             # except cls.user_model().DoesNotExist:
             #     raise exc
 
-            # BEGIN Nautobot-specific logic
+            # BEGIN Patched logic
             raise AuthAlreadyAssociated(None) from exc
-            # END Nautobot-specific logic
+            # END Patched logic
         return user
 
     # Apply the patch to the original DjangoStorage.user.create_user method
