@@ -281,6 +281,9 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["mode"]
+    validation_excluded_fields = [
+        "tagged_vlans",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
