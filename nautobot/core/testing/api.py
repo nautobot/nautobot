@@ -471,12 +471,13 @@ class APIViewTestCases:
             With exclude_m2m query parameter not set, we should only see the default many-to-many fields.
             """
             m2m_fields = self.get_m2m_fields()
+            if not m2m_fields:
+                self.skipTest("No many-to-many fields to test")
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             list_url = f"{self._get_list_url()}"
 
             # With exclude_m2m query parameter not set
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
-                response = self.client.get(list_url, **self.header)
+            response = self.client.get(list_url, **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
@@ -490,8 +491,7 @@ class APIViewTestCases:
                         self.assertNotIn(field, response_data)
 
             # With exclude_m2m query parameter set to True
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
-                response = self.client.get(list_url + "?exclude_m2m=true", **self.header)
+            response = self.client.get(list_url + "?exclude_m2m=true", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
@@ -500,8 +500,7 @@ class APIViewTestCases:
                     self.assertNotIn(field, response_data)
 
             # With exclude_m2m query parameter set to False
-            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]):
-                response = self.client.get(list_url + "?exclude_m2m=false", **self.header)
+            response = self.client.get(list_url + "?exclude_m2m=false", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)

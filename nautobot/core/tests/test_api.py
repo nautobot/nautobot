@@ -533,7 +533,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        # Default behavior - m2m fields included
+        # With exclude_m2m query parameter set to False
         view = self.SimpleIPAddressViewSet()
         view.action_map = {"get": "list"}
         request = APIRequestFactory().get(
