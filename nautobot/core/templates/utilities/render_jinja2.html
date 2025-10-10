@@ -113,7 +113,7 @@
             const uuidGroup = document.getElementById("object_uuid_group");
 
             if (mode === "object") {
-                // 💾 Save current JSON data before hiding
+                // Save current JSON data before hiding
                 savedFormData.jsonContext = document.getElementById("id_context").value;
                 
                 jsonGroup.style.display = "none";
@@ -123,7 +123,7 @@
                 // Clear JSON field (for submission logic)
                 document.getElementById("id_context").value = "{}";
 
-                // 🔄 Restore previously saved object data
+                // Restore previously saved object data
                 if (savedFormData.objectContentType !== null) {
                     document.getElementById("id_content_type").value = savedFormData.objectContentType;
                 }
@@ -135,7 +135,7 @@
                 document.getElementById("id_content_type").setAttribute("required", "");
                 document.getElementById("id_object_uuid").setAttribute("required", "");
             } else {
-                // 💾 Save current object data before hiding
+                // Save current object data before hiding
                 savedFormData.objectContentType = document.getElementById("id_content_type").value;
                 savedFormData.objectUuid = document.getElementById("id_object_uuid").value;
                 
@@ -149,7 +149,7 @@
                 document.getElementById("id_content_type").removeAttribute("required");
                 document.getElementById("id_object_uuid").removeAttribute("required");
 
-                // 🔄 Restore previously saved JSON data
+                // Restore previously saved JSON data
                 if (savedFormData.jsonContext !== null) {
                     document.getElementById("id_context").value = savedFormData.jsonContext;
                 }
