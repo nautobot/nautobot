@@ -1,0 +1,1 @@
+Added object context mode to Jinja template renderer, allowing users to select Nautobot objects as template context instead of only JSON data.
