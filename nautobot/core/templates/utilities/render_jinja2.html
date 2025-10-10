@@ -31,7 +31,7 @@
                 <div class="panel-heading"><strong>Template</strong></div>
                 <div class="panel-body">
                     {% render_field form.template_code %}
-                    
+
                     <div class="form-group">
                         <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
                         <div class="col-md-9">
@@ -42,11 +42,11 @@
                             {% endfor %}
                         </div>
                     </div>
-                    
+
                     <div id="json_context_group">
                         {% render_field form.context %}
                     </div>
-                    
+
                     <div id="object_content_type_group" style="display: none;">
                         <div class="form-group">
                             <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
@@ -58,7 +58,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div id="object_uuid_group" style="display: none;">
                         <div class="form-group">
                             <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
@@ -100,32 +100,59 @@
             return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         };
 
+        // Variables to preserve form data when switching between modes
+        let savedFormData = {
+            jsonContext: null,
+            objectContentType: null, 
+            objectUuid: null
+        };
+
         function toggleContextMode(mode) {
             const jsonGroup = document.getElementById("json_context_group");
             const contentTypeGroup = document.getElementById("object_content_type_group");
             const uuidGroup = document.getElementById("object_uuid_group");
 
             if (mode === "object") {
+                // 💾 Save current JSON data before hiding
+                savedFormData.jsonContext = document.getElementById("id_context").value;
+                
                 jsonGroup.style.display = "none";
                 contentTypeGroup.style.display = "block";
                 uuidGroup.style.display = "block";
 
-                // Clear JSON context and make it not required
+                // Clear JSON field (for submission logic)
                 document.getElementById("id_context").value = "{}";
+
+                // 🔄 Restore previously saved object data
+                if (savedFormData.objectContentType !== null) {
+                    document.getElementById("id_content_type").value = savedFormData.objectContentType;
+                }
+                if (savedFormData.objectUuid !== null) {
+                    document.getElementById("id_object_uuid").value = savedFormData.objectUuid;
+                }
 
                 // Make object fields required
                 document.getElementById("id_content_type").setAttribute("required", "");
                 document.getElementById("id_object_uuid").setAttribute("required", "");
             } else {
+                // 💾 Save current object data before hiding
+                savedFormData.objectContentType = document.getElementById("id_content_type").value;
+                savedFormData.objectUuid = document.getElementById("id_object_uuid").value;
+                
                 jsonGroup.style.display = "block";
                 contentTypeGroup.style.display = "none";
                 uuidGroup.style.display = "none";
 
-                // Clear object fields and make them not required
+                // Clear object fields (for submission logic)
                 document.getElementById("id_content_type").value = "";
                 document.getElementById("id_object_uuid").value = "";
                 document.getElementById("id_content_type").removeAttribute("required");
                 document.getElementById("id_object_uuid").removeAttribute("required");
+
+                // 🔄 Restore previously saved JSON data
+                if (savedFormData.jsonContext !== null) {
+                    document.getElementById("id_context").value = savedFormData.jsonContext;
+                }
             }
         }
 
