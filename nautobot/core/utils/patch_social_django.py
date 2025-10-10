@@ -7,7 +7,7 @@ from social_core.exceptions import AuthAlreadyAssociated
 Social Auth Account Takeover Vulnerability Patch
 =================================================
 
-This module patches a medium security vulnerability in social_django that allows
+This module patches CVE-2025-61783, a medium security vulnerability in social_django that allows
 account takeover when using OAuth providers that don't verify email addresses.
 
 VULNERABILITY OVERVIEW
