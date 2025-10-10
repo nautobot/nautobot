@@ -1,2 +1,0 @@
-Enhanced the `release` GitHub Actions workflow to include prereleases and removed outdated `prerelease` workflow.
-Removed requirement of (re)running the `ci_integration` workflow as a part of the `release` workflow.
