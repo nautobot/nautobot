@@ -7,7 +7,9 @@ from django.db.models import Model
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.expected_conditions import element_to_be_clickable
 from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 from splinter.exceptions import ElementDoesNotExist
@@ -456,6 +458,8 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         btn = self.browser.find_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
         self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
+        # Scrolling may be asynchronous, wait until it's actually clickable.
+        WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
         btn.click()
 
     def fill_input(self, input_name, input_value):

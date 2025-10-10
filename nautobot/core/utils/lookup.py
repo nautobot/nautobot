@@ -11,8 +11,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import ForeignKey, Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
-from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
+
+from nautobot.core.utils.module_loading import import_string_optional
 
 
 def resolve_attr(obj, dotted_field):
@@ -181,13 +182,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
-    try:
-        return import_string(object_path)
-    # The name of the module is not correct or unable to find the desired object for this model
-    except (AttributeError, ImportError, ModuleNotFoundError):
-        pass
-
-    return None
+    return import_string_optional(object_path)
 
 
 def get_filterset_for_model(model):

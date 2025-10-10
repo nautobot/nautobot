@@ -33,7 +33,18 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
-from nautobot.extras.filters.customfields import (
+from nautobot.extras.filter_mixins import (
+    ConfigContextRoleFilter,
+    CreatedUpdatedModelFilterSetMixin,
+    CustomFieldModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
+    RelationshipFilter,
+    RelationshipModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+    StatusFilter,
+    StatusModelFilterSetMixin,
+)
+from nautobot.extras.filter_mixins_customfields import (
     CustomFieldBooleanFilter,
     CustomFieldCharFilter,
     CustomFieldDateFilter,
@@ -44,17 +55,6 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
-)
-from nautobot.extras.filters.mixins import (
-    ConfigContextRoleFilter,
-    CreatedUpdatedModelFilterSetMixin,
-    CustomFieldModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
-    RelationshipFilter,
-    RelationshipModelFilterSetMixin,
-    RoleModelFilterSetMixin,
-    StatusFilter,
-    StatusModelFilterSetMixin,
 )
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -787,7 +787,7 @@ class CustomLinkFilterSet(BaseFilterSet):
 #
 
 # Must be imported **after* NautobotFilterSet class is defined to avoid a circular import loop.
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin  # noqa: E402
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin  # noqa: E402
 
 
 class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):

@@ -39,11 +39,12 @@ class NautobotParallelTestSuite(ParallelTestSuite):
 
 class NautobotTestRunner(DiscoverRunner):
     """
-    Custom test runner that excludes (slow) integration and migration tests by default.
+    Custom test runner that excludes (slow) integration and migration tests by default among others.
 
     This test runner is aware of our use of the "integration" tag and only runs integration tests if
     explicitly passed in with `nautobot-server test --tag integration`.
     Similarly, it only runs migration tests if explicitly called with `--tag migration_test`.
+    Similarly, it only runs tests that require the example app(s) if those are present in settings.PLUGINS.
 
     By Nautobot convention, integration tests must be tagged with "integration". The base
     `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
@@ -58,6 +59,10 @@ class NautobotTestRunner(DiscoverRunner):
     parallel_test_suite = NautobotParallelTestSuite
 
     exclude_tags = ["integration", "migration_test"]
+    if "example_app" not in settings.PLUGINS:
+        exclude_tags.append("example_app")
+    if "example_app_with_view_override" not in settings.PLUGINS:
+        exclude_tags.append("example_app_with_view_override")
 
     @classmethod
     def add_arguments(cls, parser):

@@ -1,6 +1,9 @@
+from django.test import tag
+
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
+@tag("example_app")
 class AppNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 

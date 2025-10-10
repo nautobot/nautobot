@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
@@ -102,8 +102,6 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
-
-from example_app.jobs import ExampleJob
 
 User = get_user_model()
 
@@ -1961,6 +1959,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
 
 
+@tag("example_app")
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
@@ -1976,6 +1975,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        from example_app.jobs import ExampleJob
+
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
@@ -3516,10 +3517,10 @@ class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
 
     def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+        instance = Tag(name="Testing Unicode: 台灣")
+        instance.save()
 
-        self.assertEqual(tag.name, "Testing Unicode: 台灣")
+        self.assertEqual(instance.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
