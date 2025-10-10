@@ -103,7 +103,7 @@
         // Variables to preserve form data when switching between modes
         let savedFormData = {
             jsonContext: null,
-            objectContentType: null, 
+            objectContentType: null,
             objectUuid: null
         };
 
@@ -115,7 +115,7 @@
             if (mode === "object") {
                 // Save current JSON data before hiding
                 savedFormData.jsonContext = document.getElementById("id_context").value;
-                
+
                 jsonGroup.style.display = "none";
                 contentTypeGroup.style.display = "block";
                 uuidGroup.style.display = "block";
