@@ -1,0 +1,2 @@
+Fixed interface filtering on `VirtualMachine` and `Device` detail views.
+Fixed `DeviceType` add components views to correctly add the `DeviceType` to form.
