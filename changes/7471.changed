@@ -1,2 +1,0 @@
-Changed UI `ObjectsTablePanel` to only apply `.distinct()` to queries when explicitly requested, instead of unconditionally. Improves performance of rendering these tables in most cases.
-Changed `DeviceType` detail view to apply proper ordering to the table of related `SoftwareImageFile` records.
