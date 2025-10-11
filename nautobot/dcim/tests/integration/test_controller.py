@@ -38,6 +38,7 @@ class ControllerTestCase(SeleniumTestCase):
 
         # Create Controller
         self.click_navbar_entry("Devices", "Controllers")
+
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:controller_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:controller_add"))
