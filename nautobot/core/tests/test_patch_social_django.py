@@ -4,6 +4,8 @@ Test suite for social_django storage patch.
 This tests that the monkeypatch correctly replaces the vulnerable create_user
 method with the secure version that raises AuthAlreadyAssociated instead of
 silently returning an existing user.
+
+Please see nautobot/core/utils/patch_social_django.py for details on the patch.
 """
 
 from unittest.mock import MagicMock, patch
