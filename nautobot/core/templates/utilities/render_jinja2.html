@@ -24,49 +24,50 @@
 
 
 {% block content %}
-<form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
-    <div class="row">
-        <div class="col-lg-6 col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Template</strong></div>
-                <div class="panel-body">
-                    {% render_field form.template_code %}
+    <form class="form form-horizontal" onsubmit="handleFormSubmit(event)" id="render_jinja_template_form">
+        <div class="row">
+            <div class="col-lg-6 col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Template</strong></div>
+                    <div class="panel-body">
+                        {% render_field form.template_code %}
 
-                    <div class="form-group">
-                        <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
-                        <div class="col-md-9">
-                            {% for choice in form.context_mode %}
-                                <label class="radio-inline">
-                                    {{ choice.tag }} {{ choice.choice_label }}
-                                </label>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div id="json_context_group">
-                        {% render_field form.context %}
-                    </div>
-
-                    <div id="object_content_type_group" style="display: none;">
                         <div class="form-group">
-                            <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
+                            <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
                             <div class="col-md-9">
-                                {{ form.content_type }}
-                                {% if form.content_type.help_text %}
-                                    <span class="help-block">{{ form.content_type.help_text }}</span>
-                                {% endif %}
+                                {% for choice in form.context_mode %}
+                                    <label class="radio-inline">
+                                        {{ choice.tag }} {{ choice.choice_label }}
+                                    </label>
+                                {% endfor %}
                             </div>
                         </div>
-                    </div>
 
-                    <div id="object_uuid_group" style="display: none;">
-                        <div class="form-group">
-                            <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
-                            <div class="col-md-9">
-                                {{ form.object_uuid }}
-                                {% if form.object_uuid.help_text %}
-                                    <span class="help-block">{{ form.object_uuid.help_text }}</span>
-                                {% endif %}
+                        <div id="json_context_group">
+                            {% render_field form.context %}
+                        </div>
+
+                        <div id="object_content_type_group" style="display: none;">
+                            <div class="form-group">
+                                <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
+                                <div class="col-md-9">
+                                    {{ form.content_type }}
+                                    {% if form.content_type.help_text %}
+                                        <span class="help-block">{{ form.content_type.help_text }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="object_uuid_group" style="display: none;">
+                            <div class="form-group">
+                                <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
+                                <div class="col-md-9">
+                                    {{ form.object_uuid }}
+                                    {% if form.object_uuid.help_text %}
+                                        <span class="help-block">{{ form.object_uuid.help_text }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -138,7 +139,7 @@
                 // Save current object data before hiding
                 savedFormData.objectContentType = document.getElementById("id_content_type").value;
                 savedFormData.objectUuid = document.getElementById("id_object_uuid").value;
-                
+
                 jsonGroup.style.display = "block";
                 contentTypeGroup.style.display = "none";
                 uuidGroup.style.display = "none";
