@@ -77,7 +77,7 @@ class EChartsTypeTheme(ChoiceSet):
     LIGHT = "default"
     DARK = "dark"
 
-    DEFAULT = DARK
+    DEFAULT = LIGHT
 
     CHOICES = (
         (LIGHT, "Default theme"),
