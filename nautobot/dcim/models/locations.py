@@ -274,8 +274,7 @@ class Location(TreeModel, PrimaryModel):
         super().validate_unique(exclude=exclude)
 
     def clean(self):
-        super().clean()
-
+        """Check that the model is internally consistent and valid."""
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
         if self.present_in_database:
@@ -299,6 +298,8 @@ class Location(TreeModel, PrimaryModel):
                                 "a Location of the same type as its parent."
                             }
                         )
+                    else:  # Prevent a nested location from being its own ancestor.
+                        super().clean()  # Calls TreeModel.clean() to perform this check.
                 else:  # No parent type, and not nestable, therefore should never have a parent.
                     raise ValidationError(
                         {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
@@ -320,6 +321,8 @@ class Location(TreeModel, PrimaryModel):
                             f"of the same type or of type {self.location_type.parent} as its parent."
                         }
                     )
+                else:  # Prevent a nested location from being its own ancestor.
+                    super().clean()  # Calls TreeModel.clean() to perform this check.
             else:
                 if self.parent.location_type != self.location_type.parent:  # pylint: disable=no-member
                     raise ValidationError(
