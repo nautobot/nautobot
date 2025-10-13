@@ -16,7 +16,9 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
@@ -2695,6 +2697,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
         )
         status = Status.objects.get_for_model(Device).first()
+        cls.intf_status = Status.objects.get_for_model(Interface).first()
         cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
@@ -2883,6 +2886,162 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         interface.remove_ip_addresses(self.device.primary_ip6)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
+
+    def _assert_invalid_speed_duplex(self, if_type, speed=None, duplex="", expected_error=""):
+        iface = Interface(
+            device=self.device,
+            name=f"test-{if_type}",
+            type=if_type,
+            status=self.intf_status,
+            speed=speed,
+            duplex=duplex,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn(expected_error, str(cm.exception))
+
+    def test_disallowed_speed_and_duplex_matrix(self):
+        """Test that interface types with no speed or duplex disallow those settings."""
+        test_cases = [
+            # LAG
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "LAG interfaces do not have an operational speed.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "LAG interfaces do not have duplex settings.",
+            ),
+            # Virtual
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to virtual or wireless interfaces.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to virtual or wireless interfaces.",
+            ),
+            # Wireless
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to virtual or wireless interfaces.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to virtual or wireless interfaces.",
+            ),
+            # Copper (negative speed is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, -100, None, "Ensure this value is greater than or equal to 0."),
+            # Copper (speed as a string is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, "100 Mbps", None, "value must be an integer."),
+            # Copper (invalid duplex is invalid)
+            (
+                InterfaceTypeChoices.TYPE_1GE_FIXED,
+                InterfaceSpeedChoices.SPEED_1M,
+                "invalid",
+                "Value 'invalid' is not a valid choice.",
+            ),
+            # Optical (no duplex allowed)
+            (
+                InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                InterfaceSpeedChoices.SPEED_1M,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is only applicable to copper twisted-pair interfaces.",
+            ),
+        ]
+        for if_type, speed, duplex, expected_error in test_cases:
+            with self.subTest(f"{if_type} with speed={speed} and duplex={duplex}"):
+                self._assert_invalid_speed_duplex(if_type, speed, duplex, expected_error)
+
+    def test_copper_allows_duplex_and_non_negative_speed(self):
+        """Test that copper interfaces allow duplex and non-negative speed."""
+        iface = Interface(
+            device=self.device,
+            name="eth1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,  # 1000BASE-T
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        # Should not raise
+        iface.full_clean()
+
+        iface.speed = 0
+        iface.full_clean()
+
+    def test_optical_disallows_duplex_allows_speed(self):
+        """Test that optical interfaces do not allow duplex and allow positive speed."""
+        # Duplex set should error
+        iface_bad = Interface(
+            device=self.device,
+            name="xe0",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface_bad.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        # Speed positive should pass
+        iface_ok = Interface(
+            device=self.device,
+            name="xe1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_10G,
+        )
+        iface_ok.full_clean()
+
+    def test_changing_copper_interface_with_speed_and_duplex_to_optical_fails(self):
+        """Test that changing a copper interface with speed and duplex to an optical interface fails."""
+
+        with self.subTest("speed"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                speed=InterfaceSpeedChoices.SPEED_1G,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_LAG
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("LAG interfaces do not have an operational speed.", str(cm.exception))
+
+        with self.subTest("duplex"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
 
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

@@ -45,6 +45,14 @@
                 <td>{{ object.get_type_display }}</td>
             </tr>
             <tr>
+                <td>Speed</td>
+                <td>{{ object.speed|humanize_speed|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Duplex</td>
+                <td>{{ object.duplex|placeholder }}</td>
+            </tr>
+            <tr>
                 <td>Enabled</td>
                 <td>{{ object.enabled | render_boolean }}</td>
             </tr>

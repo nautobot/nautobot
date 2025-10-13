@@ -19,6 +19,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
@@ -663,6 +664,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
+    # Operational attributes (distinct from interface type capabilities)
+    speed = models.PositiveIntegerField(null=True, blank=True, help_text="Operational speed")
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
@@ -796,6 +800,43 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                             )
                         }
                     )
+
+        # Speed/Duplex validation
+        self._validate_speed_and_duplex()
+
+    def _validate_speed_and_duplex(self):
+        """Validate operational speed (Kbps) and duplex based on interface type."""
+        copper_twisted_pair_types = {
+            InterfaceTypeChoices.TYPE_100ME_FIXED,
+            InterfaceTypeChoices.TYPE_1GE_FIXED,
+            InterfaceTypeChoices.TYPE_2GE_FIXED,
+            InterfaceTypeChoices.TYPE_5GE_FIXED,
+            InterfaceTypeChoices.TYPE_10GE_FIXED,
+            InterfaceTypeChoices.TYPE_100ME_T1,
+        }
+
+        # LAG does not have speed/duplex
+        if self.is_lag:
+            if self.speed:
+                raise ValidationError({"speed": "LAG interfaces do not have an operational speed."})
+            if self.duplex:
+                raise ValidationError({"duplex": "LAG interfaces do not have duplex settings."})
+            return
+
+        # Check settings by interface type
+        if self.is_virtual or self.is_wireless:
+            if self.speed:
+                raise ValidationError({"speed": "Speed is not applicable to virtual or wireless interfaces."})
+            if self.duplex:
+                raise ValidationError({"duplex": "Duplex is not applicable to virtual or wireless interfaces."})
+            return
+        elif self.type in copper_twisted_pair_types:
+            # Duplex allowed on copper twisted-pair types (optional)
+            return
+        else:
+            # Optical/backplane/etc do not use duplex
+            if self.duplex:
+                raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     def add_ip_addresses(
         self,

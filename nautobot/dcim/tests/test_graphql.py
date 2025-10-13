@@ -3,7 +3,7 @@ from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
-from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
     Controller,
     Device,
@@ -51,6 +51,22 @@ class GraphQLTestCase(TestCase):
                 status=interface_status,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
                 mac_address=None,
+            ),
+            Interface.objects.create(
+                device=self.device,
+                name="eth2",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                speed=InterfaceSpeedChoices.SPEED_1G,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            ),
+            Interface.objects.create(
+                device=self.device,
+                name="eth3",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                speed=InterfaceSpeedChoices.SPEED_10G,
+                duplex="",
             ),
         )
         for interface in self.interfaces:
@@ -135,3 +151,30 @@ class GraphQLTestCase(TestCase):
             self.assertFalse(resp["data"].get("error"))
             for device in resp["data"]["devices"]:
                 self.assertNotEqual(device["serial"], "")
+
+        with self.subTest("interface speed/duplex fields on device query"):
+            query = "query { devices { name interfaces { name speed duplex } } }"
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            interfaces = [i for d in resp["data"]["devices"] if d["name"] == self.device.name for i in d["interfaces"]]
+            eth2 = next(i for i in interfaces if i["name"] == "eth2")
+            eth3 = next(i for i in interfaces if i["name"] == "eth3")
+            self.assertEqual(eth2["speed"], InterfaceSpeedChoices.SPEED_1G)
+            self.assertEqual(eth2["duplex"], InterfaceDuplexChoices.DUPLEX_FULL)
+            self.assertEqual(eth3["speed"], InterfaceSpeedChoices.SPEED_10G)
+            self.assertEqual(eth3["duplex"], None)
+
+        with self.subTest("interfaces root filter by speed and duplex"):
+            query = f'query {{ interfaces(speed: "{InterfaceSpeedChoices.SPEED_1G}") {{ name }} }}'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            names = {i["name"] for i in resp["data"]["interfaces"]}
+            self.assertIn("eth2", names)
+            self.assertNotIn("eth3", names)
+
+            query = 'query { interfaces(duplex: ["full"]) { name } }'
+            resp = execute_query(query, user=self.user).to_dict()
+            self.assertFalse(resp["data"].get("error"))
+            names = {i["name"] for i in resp["data"]["interfaces"]}
+            self.assertIn("eth2", names)
+            self.assertNotIn("eth3", names)

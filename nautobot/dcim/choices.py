@@ -1138,6 +1138,55 @@ class InterfaceModeChoices(ChoiceSet):
     )
 
 
+class InterfaceDuplexChoices(ChoiceSet):
+    DUPLEX_AUTO = "auto"
+    DUPLEX_FULL = "full"
+    DUPLEX_HALF = "half"
+
+    CHOICES = (
+        (DUPLEX_AUTO, "Auto"),
+        (DUPLEX_FULL, "Full"),
+        (DUPLEX_HALF, "Half"),
+    )
+
+
+class InterfaceSpeedChoices(ChoiceSet):
+    # Stored in Kbps (for compatibility with humanize_speed filter)
+    SPEED_1M = 1_000
+    SPEED_10M = 10_000
+    SPEED_100M = 100_000
+    SPEED_1G = 1_000_000
+    SPEED_2_5G = 2_500_000
+    SPEED_5G = 5_000_000
+    SPEED_10G = 10_000_000
+    SPEED_25G = 25_000_000
+    SPEED_40G = 40_000_000
+    SPEED_50G = 50_000_000
+    SPEED_100G = 100_000_000
+    SPEED_200G = 200_000_000
+    SPEED_400G = 400_000_000
+    SPEED_800G = 800_000_000
+    SPEED_1600G = 1_600_000_000
+
+    CHOICES = (
+        (SPEED_1M, "1 Mbps"),
+        (SPEED_10M, "10 Mbps"),
+        (SPEED_100M, "100 Mbps"),
+        (SPEED_1G, "1 Gbps"),
+        (SPEED_2_5G, "2.5 Gbps"),
+        (SPEED_5G, "5 Gbps"),
+        (SPEED_10G, "10 Gbps"),
+        (SPEED_25G, "25 Gbps"),
+        (SPEED_40G, "40 Gbps"),
+        (SPEED_50G, "50 Gbps"),
+        (SPEED_100G, "100 Gbps"),
+        (SPEED_200G, "200 Gbps"),
+        (SPEED_400G, "400 Gbps"),
+        (SPEED_800G, "800 Gbps"),
+        (SPEED_1600G, "1.6 Tbps"),
+    )
+
+
 class InterfaceStatusChoices(ChoiceSet):
     STATUS_PLANNED = "planned"
     STATUS_ACTIVE = "active"

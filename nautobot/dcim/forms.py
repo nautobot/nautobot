@@ -84,8 +84,10 @@ from .choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
     PortTypeChoices,
@@ -3131,6 +3133,7 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
+    speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mac_address = forms.CharField(required=False, label="MAC address")
@@ -3161,6 +3164,15 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
         help_text="Assigned LAG interface",
+    )
+    # Use TypedChoiceField so blanks map to None and values coerce to int (Kbps)
+    speed = forms.TypedChoiceField(
+        choices=add_blank_choice(InterfaceSpeedChoices),
+        required=False,
+        widget=StaticSelect2(),
+        label="Speed",
+        coerce=int,
+        empty_value=None,
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -3199,6 +3211,9 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "device": "$device",
         },
     )
+    # speed = forms.ChoiceField(
+    #     choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
+    # )
 
     class Meta:
         model = Interface
@@ -3215,6 +3230,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "bridge",
             "lag",
             "mac_address",
+            "speed",
+            "duplex",
             "ip_addresses",
             "virtual_device_contexts",
             "mtu",
@@ -3230,6 +3247,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         widgets = {
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
+            "speed": StaticSelect2(),
+            "duplex": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
@@ -3305,6 +3324,17 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         },
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
+    speed = forms.TypedChoiceField(
+        choices=add_blank_choice(InterfaceSpeedChoices),
+        required=False,
+        widget=StaticSelect2(),
+        label="Speed",
+        coerce=int,
+        empty_value=None,
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
     mgmt_only = forms.BooleanField(
         required=False,
         label="Management only",
@@ -3351,6 +3381,8 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "status",
         "role",
         "type",
+        "speed",
+        "duplex",
         "enabled",
         "parent_interface",
         "bridge",
@@ -3384,6 +3416,12 @@ class InterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
+    speed = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     field_order = (
         "name_pattern",
@@ -3397,6 +3435,8 @@ class InterfaceBulkCreateForm(
         "mgmt_only",
         "description",
         "mode",
+        "speed",
+        "duplex",
         "tags",
     )
 
@@ -3416,6 +3456,12 @@ class ModuleInterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
+    speed = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     field_order = (
         "name_pattern",
@@ -3429,13 +3475,28 @@ class ModuleInterfaceBulkCreateForm(
         "mgmt_only",
         "description",
         "mode",
+        "speed",
+        "duplex",
         "tags",
     )
 
 
 class InterfaceBulkEditForm(
     form_from_model(
-        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+        Interface,
+        [
+            "label",
+            "type",
+            "parent_interface",
+            "bridge",
+            "lag",
+            "mac_address",
+            "mtu",
+            "description",
+            "mode",
+            "speed",
+            "duplex",
+        ],
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
@@ -3479,6 +3540,12 @@ class InterfaceBulkEditForm(
         label="VRF",
         required=False,
     )
+    speed = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     class Meta:
         nullable_fields = [
@@ -3490,6 +3557,8 @@ class InterfaceBulkEditForm(
             "mtu",
             "description",
             "mode",
+            "speed",
+            "duplex",
             "untagged_vlan",
             "tagged_vlans",
             "vrf",

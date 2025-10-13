@@ -158,6 +158,9 @@ class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndp
     # so for consistency, we'll keep that same representation in GraphQL.
     mac_address = graphene.String(required=False)
 
+    speed = graphene.Int(required=False)
+    duplex = graphene.String(required=False)
+
     # Field Definitions
     cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
