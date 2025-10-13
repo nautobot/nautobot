@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from django.contrib.contenttypes.models import ContentType
 from django.template import Context
 from django.test import RequestFactory
 from django.urls import reverse
@@ -330,6 +331,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         """
         cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
         content = CloudResourceTypeUIViewSet.object_detail_content
+        content_type = ContentType.objects.get_for_model(CloudResourceType)
 
         # Main detail view renders all base tabs and no DistinctViewTabs
         request = self.factory.get(cloud_resource_type.get_absolute_url())
@@ -337,6 +339,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         context_data = {
             "request": request,
             "object": cloud_resource_type,
+            "content_type": content_type,
             "settings": {},
             "csrf_token": "",
             "perms": [],
