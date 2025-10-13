@@ -35,7 +35,7 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-from nautobot.dcim.filters.mixins import (
+from nautobot.dcim.filter_mixins import (
     CableTerminationModelFilterSetMixin,
     DeviceComponentModelFilterSetMixin,
     DeviceComponentTemplateModelFilterSetMixin,
@@ -104,7 +104,7 @@ from nautobot.extras.filters import (
 from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork

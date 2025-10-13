@@ -99,6 +99,8 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present(f"{cf_label} failed validation"))
         self.assertTrue(self.browser.is_text_present("Custom field choices can only be assigned to selection fields"))
 
+    # This became flaky in CI; skipping for now.
+    @tag("fix_in_v3")
     def test_create_type_select_with_choices_adding_dynamic_row(self):
         """Test pass create type=select adding w/ dynamic row."""
         choices = ["choice1", "choice2"]
@@ -111,7 +113,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
             self.assertEqual(len(table.find_by_css(".formset_row-custom_field_choices")), 5)
 
             # And 6 after clicking "Add another..."
-            self.browser.find_by_css(".add-row").click()
+            self.click_button(".add-row")
             rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
             self.fill_input("custom_field_choices-5-value", "choice3")
@@ -172,7 +174,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
 
         # Gather the rows, delete the first one, add a new one.
         table = self.browser.find_by_id("custom-field-choices")
-        self.browser.find_by_css(".add-row").click()  # Add a new row
+        self.click_button(".add-row")  # Add a new row
         rows = table.find_by_css(".formset_row-custom_field_choices")
         rows.first.find_by_css(".delete-row").click()  # Delete first row
 

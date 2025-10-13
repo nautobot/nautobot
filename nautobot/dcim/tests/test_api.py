@@ -1471,6 +1471,9 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
+    validation_excluded_fields = [
+        "software_image_files",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2168,6 +2171,9 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
     model = Interface
     peer_termination_type = Interface
     choices_fields = ["mode", "type"]
+    validation_excluded_fields = [
+        "tagged_vlans",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):

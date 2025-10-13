@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import override_settings
+from django.test import override_settings, tag
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -20,7 +20,7 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
@@ -29,8 +29,6 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
-
-from example_app.models import ExampleModel
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -372,10 +370,13 @@ class GetFooForModelTest(TestCase):
             # both primary_ip4 and primary_ip6 are candidates
             lookup.get_related_field_for_models(dcim_models.Device, ipam_models.IPAddress)
 
+    @tag("example_app")
     def test_get_route_for_model(self):
         """
         Test that `get_route_for_model` returns the appropriate URL route name for various inputs.
         """
+        from example_app.models import ExampleModel
+
         # UI
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list"), "dcim:device_list")
@@ -423,10 +424,13 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
         self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
 
+    @tag("example_app")
     def test_get_model_for_view_name(self):
         """
         Test that `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
         """
+        from example_app.models import ExampleModel
+
         with self.subTest("Test core UI view."):
             self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
             self.assertEqual(lookup.get_model_for_view_name("dcim:device"), dcim_models.Device)
@@ -1127,6 +1131,29 @@ class TestModuleLoadingUtils(TestCase):
                 permitted, reason = check_name_safe_to_import_privately(invalid)
                 self.assertFalse(permitted)
                 self.assertIsInstance(reason, str)
+
+    def test_import_string_optional(self):
+        with self.subTest("Nonexistent module should return None"):
+            self.assertIsNone(import_string_optional("no_such_module.no_such_attribute"))
+            self.assertIsNone(import_string_optional("no_such_module.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_submodule.no_such_attribute"))
+
+        with self.subTest("Existing module but nonexistent attribute should return None"):
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("sys.no_such_attribute"))
+
+        with self.subTest("Other import errors should propagate upward still"):
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.invalid_import.MyJob")
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.missing_import.MyJob")
+
+        with self.subTest("Successful imports should succeed"):
+            self.assertEqual(
+                import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
+            )
 
 
 class TestQuerySetUtils(TestCase):

@@ -1,6 +1,8 @@
 import contextlib
 import datetime
+from importlib import resources
 import logging
+import mimetypes
 import os
 import platform
 import posixpath
@@ -16,7 +18,7 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.http import FileResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
@@ -61,6 +63,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import StatusTable
 
@@ -142,6 +145,40 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class AppDocsView(LoginRequiredMixin, View):
+    """
+    Serve documentation files for any pip-installed app from inside the package,
+    only for authenticated users.
+    """
+
+    def get(self, request, app_base_url, path="index.html"):
+        app_label = BASE_URL_TO_APP_LABEL.get(app_base_url)
+        if not app_label:
+            return JsonResponse({"detail": f"Unknown base_url '{app_base_url}'."}, status=404)
+        try:
+            base_dir = resources.files(app_label)
+        except ModuleNotFoundError:
+            return JsonResponse({"detail": f"App {app_label} not found."}, status=404)
+
+        # Dir to documentation inside the package
+        docs_dir = base_dir / "docs"
+        # Normalize path to avoid (../) etc.
+        normalized_path = posixpath.normpath(path).lstrip("/")
+        file_path = docs_dir / normalized_path
+
+        # Additional check to ensure the resolved path is still within docs_dir
+        if not file_path.resolve().is_relative_to(docs_dir.resolve()):
+            return JsonResponse({"detail": "Access denied."}, status=403)
+
+        if not file_path.is_file():
+            return JsonResponse({"detail": f"File {file_path} not found."}, status=404)
+
+        # Determine the MIME type based on the file extension and return the file as an HTTP response.
+        # This ensures that browsers interpret the file correctly (e.g., HTML, CSS, JS, images).
+        content_type, _ = mimetypes.guess_type(str(file_path))
+        return FileResponse(open(file_path, "rb"), content_type=content_type)
 
 
 class MediaView(AccessMixin, View):
