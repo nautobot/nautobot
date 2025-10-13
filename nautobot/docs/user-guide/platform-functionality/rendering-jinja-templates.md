@@ -46,7 +46,6 @@ All [built-in Jinja2 filters](./template-filters.md) are available and it's also
 You can quickly test templates against any object by navigating to the object's detail page, clicking on the "Advanced" tab, and selecting "Test with Jinja Renderer":
 ![Image of Advanced object info with Jinja2 link](../../img/object_advanced_jinja2_link.png)
 
-
 This will open the Jinja renderer with the object pre-selected:
 
 ![Image of Jinja Renderer UI with Content Type and UUID prepopulated](../../img/object_jinja_renderer_form.png)
@@ -73,7 +72,6 @@ The link will only appear when viewing a device with a manufacturer name of "Cis
 
 !!! note
     To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
-
 
 ## Examples
 
