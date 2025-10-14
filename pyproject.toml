@@ -141,6 +141,8 @@ PyYAML = "~6.0.3"
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
 social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
+# NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
+#       that addresses a security vulnerability in social-auth-app-django 5.4.3
 social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.3"
