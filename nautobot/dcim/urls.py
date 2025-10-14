@@ -7,7 +7,6 @@ from nautobot.ipam.views import ServiceEditView
 
 from . import views
 from .models import (
-    Cable,
     ConsolePort,
     ConsoleServerPort,
     Device,
@@ -26,6 +25,7 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
+router.register("cables", views.CableUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -83,6 +83,69 @@ urlpatterns = [
         "device-types/import/",
         views.DeviceTypeImportView.as_view(),
         name="devicetype_import",
+    ),
+    path(
+        "device-types/<uuid:pk>/console-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/console-ports/"
+        ),
+        name="devicetype_consoleporttemplate_add",
+    ),
+    path(
+        "devices-types/<uuid:pk>/console-server-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-server-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/console-server-ports/"
+        ),
+        name="devicetype_consoleserverporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/power-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/power-ports/"
+        ),
+        name="devicetype_powerporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/power-outlet-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-outlet-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/power-outlets/"
+        ),
+        name="devicetype_poweroutlettemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/interface-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/interface-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/interfaces/"
+        ),
+        name="devicetype_interfacetemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/front-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/front-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/front-ports/"
+        ),
+        name="devicetype_frontporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/rear-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/rear-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/rear-ports/"
+        ),
+        name="devicetype_rearporttemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/device-bay-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/device-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/device-bays/"
+        ),
+        name="devicetype_devicebaytemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/module-bay-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
+        ),
+        name="devicetype_modulebaytemplate_add",
     ),
     # Console port templates
     path(
@@ -1023,26 +1086,6 @@ urlpatterns = [
         "devices/<uuid:pk>/inventory-items/add/",
         RedirectView.as_view(url="/dcim/inventory-items/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/inventory/"),
         name="device_inventoryitems_add",
-    ),
-    # Cables
-    path("cables/", views.CableListView.as_view(), name="cable_list"),
-    path("cables/import/", views.CableBulkImportView.as_view(), name="cable_import"),  # 3.0 TODO: remove, unused
-    path("cables/edit/", views.CableBulkEditView.as_view(), name="cable_bulk_edit"),
-    path("cables/delete/", views.CableBulkDeleteView.as_view(), name="cable_bulk_delete"),
-    path("cables/<uuid:pk>/", views.CableView.as_view(), name="cable"),
-    path("cables/<uuid:pk>/edit/", views.CableEditView.as_view(), name="cable_edit"),
-    path("cables/<uuid:pk>/delete/", views.CableDeleteView.as_view(), name="cable_delete"),
-    path(
-        "cables/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="cable_changelog",
-        kwargs={"model": Cable},
-    ),
-    path(
-        "cables/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="cable_notes",
-        kwargs={"model": Cable},
     ),
     # Console/power/interface connections (read-only)
     path(

@@ -1,13 +1,12 @@
-<<<<<<< HEAD
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Cable</strong>
         </div>
-        <table class="table table-hover card-body attr-table">
+        <table class="table table-hover panel-body attr-table">
             <tr>
                 <td>Type</td>
                 <td>{{ object.get_type_display|placeholder }}</td>
@@ -26,9 +25,9 @@
                 <td>Color</td>
                 <td>
                     {% if object.color %}
-                        <span class="label nb-color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
+                        <span class="label color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
                     {% else %}
-                        <span class="text-secondary">&mdash;</span>
+                        <span class="text-muted">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -38,7 +37,7 @@
                     {% if object.length %}
                         {{ object.length }} {{ object.get_length_unit_display }}
                     {% else %}
-                        <span class="text-secondary">&mdash;</span>
+                        <span class="text-muted">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -47,20 +46,16 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Termination A</strong>
         </div>
         {% include 'dcim/inc/cable_termination.html' with termination=object.termination_a %}
     </div>
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Termination B</strong>
         </div>
         {% include 'dcim/inc/cable_termination.html' with termination=object.termination_b %}
     </div>
 {% endblock content_right_page %}
-=======
-{% extends 'dcim/cable_retrieve.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
->>>>>>> develop

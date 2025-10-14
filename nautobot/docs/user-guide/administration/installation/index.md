@@ -119,10 +119,14 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 --- 2.4.0 "Python 3.8 support removed"
     Python 3.8 support was removed.
 
+<<<<<<< HEAD
 +++ 3.0.0 "Python 3.13 support added"
     Python 3.13 support was added.
 
 --- 3.0.0 "Python 3.9 support removed"
+=======
+--- 2.4.20 "Python 3.9 support removed"
+>>>>>>> develop
     Python 3.9 support was removed.
 
 #### Database
