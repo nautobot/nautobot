@@ -63,7 +63,7 @@ menu_items = (
                     NavMenuItem(
                         link="data_validation:device-constraints",
                         name="Device Constraints",
-                        permissions=["data_validation.change_deviceconstraints"],
+                        permissions=["dcim.view_device"],
                     ),
                 ),
             ),

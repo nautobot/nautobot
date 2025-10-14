@@ -28,7 +28,7 @@ class DeviceUniquenessValidator(CustomValidator):
                     {
                         "__all__": (
                             f"A device named '{obj.name}' already exists in this location: {obj.location} and tenant: {obj.tenant}. "
-                            "Device names must be unique per (Location, Tenant)."
+                            "Device names must be unique per (Location, Tenant) when DEVICE_UNIQUENESS='location_tenant_name'."
                         )
                     }
                 )
@@ -39,7 +39,7 @@ class DeviceUniquenessValidator(CustomValidator):
                 self.validation_error(
                     {
                         "name": (
-                            f"A device named '{obj.name}' already exists. "
+                            f"At least one other device named '{obj.name}' already exists. "
                             "Device names must be globally unique when DEVICE_UNIQUENESS='name'."
                         )
                     }

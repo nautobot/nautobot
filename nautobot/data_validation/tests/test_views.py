@@ -289,8 +289,8 @@ class DeviceConstraintsViewTest(TestCase):
         self.device_ct = ContentType.objects.get_for_model(Device)
 
     def test_get_view_renders_successfully(self):
-        """GET should render the form correctly."""
-        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        """GET by non-admin should render the form correctly."""
+        user = get_user_model().objects.create_user(username="testuser")
         self.client.force_login(user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
@@ -298,9 +298,27 @@ class DeviceConstraintsViewTest(TestCase):
         self.assertIn("form", response.context)
         self.assertContains(response, "Device Constraints")
 
+    def test_post_as_non_admin_denied(self):
+        """POST by non-admin should be denied."""
+        user = get_user_model().objects.create_user(username="normaluser")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            self.url,
+            data={
+                "DEVICE_UNIQUENESS": DeviceUniquenessChoices.LOCATION_TENANT_NAME,
+                "DEVICE_NAME_REQUIRED": True,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 403)
+
+        # No rule should be created
+        self.assertFalse(RequiredValidationRule.objects.filter(content_type=self.device_ct, field="name").exists())
+
     def test_post_updates_device_uniqueness_and_creates_required_rule(self):
         """POST with DEVICE_NAME_REQUIRED=True should create a RequiredValidationRule."""
-        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        user = get_user_model().objects.create_user(username="testuser", is_staff=True)
         self.client.force_login(user)
         response = self.client.post(
             self.url,
@@ -322,7 +340,7 @@ class DeviceConstraintsViewTest(TestCase):
 
     def test_post_disables_required_rule(self):
         """POST with DEVICE_NAME_REQUIRED=False should delete the RequiredValidationRule."""
-        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        user = get_user_model().objects.create_user(username="testuser", is_staff=True)
         self.client.force_login(user)
         RequiredValidationRule.objects.create(
             name="Required Name rule",
@@ -346,7 +364,7 @@ class DeviceConstraintsViewTest(TestCase):
 
     def test_invalid_post_rerenders_form(self):
         """If form is invalid, the view should re-render without redirect."""
-        user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
+        user = get_user_model().objects.create_user(username="testuser", is_staff=True)
         self.client.force_login(user)
         response = self.client.post(self.url, {"DEVICE_UNIQUENESS": ""})
         self.assertEqual(response.status_code, 200)

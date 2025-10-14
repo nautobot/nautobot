@@ -1,6 +1,5 @@
 """Forms for data_validation."""
 
-from constance import config
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 
@@ -16,6 +15,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -325,7 +325,9 @@ class DeviceConstraintsForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["DEVICE_UNIQUENESS"].initial = getattr(config, "DEVICE_UNIQUENESS", DeviceUniquenessChoices.DEFAULT)
+        self.fields["DEVICE_UNIQUENESS"].initial = get_settings_or_config(
+            "DEVICE_UNIQUENESS", fallback=DeviceUniquenessChoices.DEFAULT
+        )
 
         device_ct = ContentType.objects.get_for_model(Device)
         name_rule_exists = RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists()

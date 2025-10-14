@@ -223,12 +223,14 @@ class DeviceConstraintsView(GenericView):
         )
 
     def post(self, request):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return self.handle_no_permission()
         form = forms.DeviceConstraintsForm(request.POST)
         if form.is_valid():
             config.DEVICE_UNIQUENESS = form.cleaned_data["DEVICE_UNIQUENESS"]
             device_ct = ContentType.objects.get_for_model(Device)
             if form.cleaned_data["DEVICE_NAME_REQUIRED"]:
-                RequiredValidationRule.objects.create(
+                RequiredValidationRule.objects.get_or_create(
                     name="Required Name rule",
                     content_type=device_ct,
                     field="name",

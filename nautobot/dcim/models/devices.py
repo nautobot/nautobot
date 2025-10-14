@@ -685,11 +685,11 @@ class Device(PrimaryModel, ConfigContextModel):
         Check DEVICE_UNIQUENESS from settings or Constance and return proper field.
         """
         if get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.NAME:
-            # opt-in simplified "pseudo-natural-key"
+            # Simplified pseudo-natural key (opt-in for name-only uniqueness)
             return ["name"]
         elif get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
-            # true natural-key given current uniqueness constraints
-            return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
+            # Full natural key based on tenant, location, and name
+            return ["name", "tenant", "location"]
         else:
             return ["pk"]
 
