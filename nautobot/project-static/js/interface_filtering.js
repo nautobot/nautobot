@@ -1,17 +1,21 @@
-// Inteface filtering
-$('input.interface-filter').on('input', function() {
-    let filter = new RegExp(this.value);
-    let interface;
+// Interface filtering
+document.querySelectorAll('input.interface-filter').forEach(input => {
+    input.addEventListener('input', function() {
+        const filter = new RegExp(this.value);
+        const rows = document.querySelectorAll('table > tbody > tr');
+        const toggleChecked = document.querySelector('input.toggle')?.checked || false;
 
-    for (interface of $('table > tbody > tr')) {
-        if (filter.test(interface.getAttribute('data-name'))) {
-            // Match the toggle in case the filter now matches the interface
-            $(interface).find('input:checkbox[name=pk]').prop('checked', $('input.toggle').prop('checked'));
-            $(interface).show();
-        } else {
-            // Uncheck to prevent actions from including it when it doesn't match
-            $(interface).find('input:checkbox[name=pk]').prop('checked', false);
-            $(interface).hide();
-        }
-    }
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name') || '';
+            const checkbox = row.querySelector('input[type="checkbox"][name="pk"]');
+
+            if (filter.test(name)) {
+                if (checkbox) checkbox.checked = toggleChecked;
+                row.style.display = '';
+            } else {
+                if (checkbox) checkbox.checked = false;
+                row.style.display = 'none';
+            }
+        });
+    });
 });

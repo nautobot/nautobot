@@ -73,6 +73,7 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "data_compliance": "view",
     "approve": "change",
     "deny": "change",
 }
@@ -532,7 +533,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         form.add_error(None, msg)
         return form
 
-    def _handle_not_implemented_error(self):
+    def _handle_not_implemented_error(self, error):
+        self.logger.debug(f"NotImplementedError raised on action {self.action} resulting in error: {error}")
         # Blanket handler for NotImplementedError raised by form helper functions
         msg = "Please provide the appropriate mixin before using this helper function"
         messages.error(self.request, msg)
@@ -567,8 +569,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self._handle_validation_error(e)
         except ObjectDoesNotExist:
             form = self._handle_object_does_not_exist(form)
-        except NotImplementedError:
-            self._handle_not_implemented_error()
+        except NotImplementedError as error:
+            self._handle_not_implemented_error(error)
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
@@ -1527,3 +1529,13 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for a DataCompliance to show up for a given object.
+    """
+
+    @drf_action(detail=True)
+    def data_compliance(self, request, *args, **kwargs):
+        return Response({})

@@ -986,6 +986,9 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "address": "Carnegie Hall, New York, NY",
     }
+    validation_excluded_fields = [
+        "teams",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -4812,6 +4815,9 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "address": "Carnegie Hall, New York, NY",
     }
+    validation_excluded_fields = [
+        "contacts",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):

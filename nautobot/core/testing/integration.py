@@ -378,8 +378,10 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             sidenav_button.click()
         child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
+        old_url = self.browser.url
         child_menu.click()
 
+        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
@@ -391,7 +393,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_name("_create", wait_time=5), "Page failed to load")
 
     def click_edit_form_create_button(self):
         """
@@ -401,7 +403,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_css(".alert-success", wait_time=5), "Page failed to load")
 
     def _fill_select2_field(self, field_name, value, search_box_class=None):
         """

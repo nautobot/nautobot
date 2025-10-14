@@ -1,9 +1,8 @@
 """Unit tests for data_validation views."""
 
-from unittest.mock import MagicMock, patch
-
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.http.request import QueryDict
+from django.urls import reverse
 
 from nautobot.core.testing import TestCase, ViewTestCases
 from nautobot.data_validation.models import (
@@ -13,12 +12,15 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
-from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
-from nautobot.data_validation.tests.test_data_compliance_rules import TestFailedDataComplianceRule
-from nautobot.data_validation.views import DataComplianceObjectView
+from nautobot.data_validation.tests.test_data_compliance_rules import (
+    TestFailedDataComplianceRule,
+    TestFailedDataComplianceRuleAlt,
+)
 from nautobot.dcim.models import Device, Location, LocationType, PowerFeed
 from nautobot.extras.models import Status
+
+User = get_user_model()
 
 
 class RegularExpressionValidationRuleTestCase(ValidationRuleTestCaseMixin, ViewTestCases.PrimaryObjectViewTestCase):
@@ -247,31 +249,20 @@ class DataComplianceObjectTestCase(TestCase):
     """Test cases for DataComplianceObjectView."""
 
     def setUp(self):
-        location_type = LocationType(name="Region")
-        location_type.validated_save()
-        s = Location(
-            name="Test Location 1",
-            location_type=LocationType.objects.get_by_natural_key("Region"),
-            status=Status.objects.get_by_natural_key("Active"),
-        )
-        s.save()
-        t = TestFailedDataComplianceRule(s)
+        self.device = Device.objects.first()
+
+        t = TestFailedDataComplianceRuleAlt(self.device)
         t.clean()
+        self.user = User.objects.create_user(username="testuser", is_superuser=True)
 
-    def test_get_extra_context(self):
-        view = DataComplianceObjectView()
-        location = Location.objects.first()
-        mock_request = MagicMock()
-        mock_request.GET = QueryDict("tab=data_validation:1")
-        result = view.get_extra_context(mock_request, location)
-        self.assertEqual(result["active_tab"], "data_validation:1")
-        self.assertIsInstance(result["table"], DataComplianceTableTab)
-
-    @patch("nautobot.core.views.generic.ObjectView.dispatch")
-    def test_dispatch(self, mocked_dispatch):
-        view = DataComplianceObjectView()
-        mock_request = MagicMock()
-        kwargs = {"model": "dcim.location", "other_arg": "other_arg", "another_arg": "another_arg"}
-        view.dispatch(mock_request, **kwargs)
-        mocked_dispatch.assert_called()
-        mocked_dispatch.assert_called_with(mock_request, other_arg="other_arg", another_arg="another_arg")
+    def test_data_compliance_action(self):
+        self.add_permissions("data_validation.view_datacompliance")
+        self.client.force_login(self.user)
+        url = reverse("dcim:device_data-compliance", kwargs={"pk": self.device.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("active_tab", response.context)
+        self.assertEqual(response.context["active_tab"], "data_compliance")
+        self.assertBodyContains(response, "The tenant is wrong")
+        self.assertBodyContains(response, "The name is wrong")
+        self.assertBodyContains(response, "The status is wrong")

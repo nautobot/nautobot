@@ -11,9 +11,10 @@ class NautobotUIViewSet(
     mixins.ObjectBulkUpdateViewMixin,
     mixins.ObjectChangeLogViewMixin,
     mixins.ObjectNotesViewMixin,
+    mixins.ObjectDataComplianceViewMixin,
 ):
     """
     Nautobot BaseViewSet that is intended for UI use only. It provides default Nautobot functionalities such as
     `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()`
-    `notes()`, `changelog()` and `list()` actions.
+    `notes()`, `changelog()`, `list()`, and `data_compliance()` actions.
     """
