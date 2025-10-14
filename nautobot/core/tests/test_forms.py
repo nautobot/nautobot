@@ -639,7 +639,7 @@ class DynamicFilterFormTest(TestCase):
                 filters_mod = sys.modules.get(f"{app_config.name}.filters")
                 if not filters_mod:
                     continue
-                for name, obj in inspect.getmembers(filters_mod):
+                for _name, obj in inspect.getmembers(filters_mod):
                     if (
                         inspect.isclass(obj)  # Check if obj is a class
                         and issubclass(obj, FilterSet)  # Check if obj is a subclass of FilterSet
