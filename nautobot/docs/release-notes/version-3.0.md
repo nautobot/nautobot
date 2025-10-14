@@ -114,6 +114,13 @@ Buttons were removed from the NavBar as our research indicated they were infrequ
 
 The Job Approval process was removed and replaced by Workflow Approvals.
 
+#### Removed Python Code
+
+Many previously deprecated classes have been fully removed now (see full table below).
+
+??? info "Full table of code removals"
+    {data-table user-guide/administration/upgrading/from-v2/tables/v3-code-removals.yaml}
+
 ### Dependencies
 
 #### GraphQL and GraphiQL Updates
