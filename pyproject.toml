@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.19"
+version = "2.4.20"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -15,7 +15,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -33,15 +32,15 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9.2,<3.13"
+python = ">=3.10,<3.13"
 # Background task processing
-celery = ">=5.3.6,<5.6.0"
+celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~45.0.7"
 # Fundamental web framework for Nautobot
-Django = "~4.2.24"
+Django = "~4.2.25"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -89,7 +88,7 @@ django-tree-queries = "~0.20.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = ">=3.15.2,<3.17.0"
+djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
@@ -106,10 +105,6 @@ graphene-django-optimizer = "~0.8.0"
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
-# Messaging library for Python - dependency of Celery
-# Included as an explicit dependency for now to require a version with https://github.com/celery/kombu/pull/2007
-# This can be removed once we increate the lower bound of permitted versions of Celery itself above.
-kombu = ">=5.4.2,<5.6.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^33.1.0"
 # Rendering of markdown files to HTML
@@ -125,7 +120,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.3.0"
+nh3 = "~0.3.1"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -134,18 +129,20 @@ Pillow = "^11.0"
 prometheus-client = "~0.22.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.10"
+psycopg2-binary = "~2.9.11"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.4"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
-PyYAML = "~6.0.2"
+PyYAML = "~6.0.3"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
 social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
+# NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
+#       that addresses a security vulnerability in social-auth-app-django 5.4.3
 social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.3"
@@ -194,13 +191,10 @@ markdown-version-annotations = "~1.0.1"
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "^0.4.0"
-# Allow Markdown files to include other files
-# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.20"
+mkdocs-material = "~9.6.21"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -212,11 +206,11 @@ mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
-djhtml = ">=3.0.9,<4.0.0"
+djhtml = "~3.0.10"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
-pylint = "~3.3.8"
+pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
@@ -272,7 +266,7 @@ extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
-py-version = "3.9"
+py-version = "3.10"
 ignore-paths = [
     ".*third_party.*",
     "nautobot/extras/tests/git_data/02-invalid-files/",
@@ -390,7 +384,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
