@@ -1520,6 +1520,9 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
+        from nautobot.core.utils.config import get_settings_or_config
+
+        print("DEVICE_UNIQUENESS: ", get_settings_or_config("DEVICE_UNIQUENESS"))
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
         # self.assertEqual(
         #     construct_composite_key([self.device.name, None, *self.device.location.natural_key()]),
