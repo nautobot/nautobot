@@ -1,0 +1,1 @@
+Updated dependency `python-ldap` to `~3.4.5` to mitigate `CVE-2025-61911` and `CVE-2025-61912`. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
