@@ -362,7 +362,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Set this to False to use the sequence (name, tenant, location) as the natural key instead.
 #
 # if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
-#     DEVICE_UNIQUENESS = is_truthy(os.environ["NAUTOBOT_DEVICE_UNIQUENESS"])
+#     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 # EVENT_BROKERS = {}
