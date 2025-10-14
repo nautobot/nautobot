@@ -1,2 +1,0 @@
-Updated dependency `celery` to `~5.5.3`.
-Removed direct dependency on `kombu` as the newer version of `celery` includes an appropriate dependency.

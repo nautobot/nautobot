@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import datetime
+from importlib import resources
 import json
 import logging
 import re
@@ -7,6 +8,7 @@ from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 
 from django import template
+from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
@@ -29,7 +31,7 @@ from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
+HTML_NONE = mark_safe('<span class="text-secondary">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -69,7 +71,7 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
         >>> hyperlinked_object(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object("Hello")
         'Hello'
         >>> hyperlinked_object(location)
@@ -111,7 +113,7 @@ def placeholder(value):
 
     Example:
         >>> placeholder("")
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> placeholder("hello")
         "hello"
     """
@@ -181,13 +183,13 @@ def render_boolean(value):
         (str): HTML
             '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
             - or -
-            '<span class="text-muted">&mdash;</span>' if None value
+            '<span class="text-secondary">&mdash;</span>' if None value
             - or -
             '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
 
     Examples:
         >>> render_boolean(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> render_boolean(True or "arbitrary string" or 1)
         '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
         >>> render_boolean(False or "" or 0)
@@ -483,11 +485,13 @@ def percentage(x, y):
 @library.filter()
 @register.filter()
 def get_docs_url(model):
-    """Return the likely static documentation path for the specified model, if it can be found/predicted.
+    """Return the documentation URL for the specified model, if it can be found/predicted.
 
     - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
         - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
-    - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
+    - Apps (plugins) are expected to be documented within their package at
+      ``docs/models/{model_name}.html`` and are served dynamically through
+      the ``AppDocsView`` endpoint (``/docs/<app_name>/<path>``).
 
     Any model can define a `documentation_static_path` class attribute if it needs to override the above expectations.
 
@@ -502,10 +506,26 @@ def get_docs_url(model):
     Example:
         >>> get_docs_url(location_instance)
         "static/docs/models/dcim/location.html"
+        >>> get_docs_url(example_model)
+        "/docs/example-app/models/examplemodel.html"
     """
     if hasattr(model, "documentation_static_path"):
         path = model.documentation_static_path
     elif model._meta.app_label in settings.PLUGINS:
+        app_label = model._meta.app_label
+        app_config = apps.get_app_config(app_label)
+        app_base_url = getattr(app_config, "base_url", None) or app_config.label
+        path = f"models/{model._meta.model_name}.html"
+        # Check that the file actually exists inside the app's docs folder
+        try:
+            base_dir = resources.files(app_label) / "docs"
+            file_path = base_dir / path
+            if file_path.is_file():
+                return reverse("docs_file", kwargs={"app_base_url": app_base_url, "path": path})
+        except ModuleNotFoundError:
+            pass
+        logger.debug("No documentation found for %s (expected at %s)", type(model), path)
+        # define path to try to get static
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
     elif model._meta.app_label == "extras":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
@@ -826,7 +846,7 @@ def label_list(value, suffix=""):
         return HTML_NONE
     return format_html_join(
         " ",
-        '<span class="label label-default">{0}{1}</span>',
+        '<span class="badge bg-secondary">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
 
@@ -1308,7 +1328,7 @@ def hyperlinked_object_target_new_tab(value, field="display"):
         >>> hyperlinked_object_target_new_tab(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
         >>> hyperlinked_object_target_new_tab(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object_target_new_tab("Hello")
         'Hello'
         >>> hyperlinked_object_target_new_tab(location)

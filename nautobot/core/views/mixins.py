@@ -73,6 +73,7 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "data_compliance": "view",
     "approve": "change",
     "deny": "change",
 }
@@ -1527,3 +1528,13 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for a DataCompliance to show up for a given object.
+    """
+
+    @drf_action(detail=True)
+    def data_compliance(self, request, *args, **kwargs):
+        return Response({})

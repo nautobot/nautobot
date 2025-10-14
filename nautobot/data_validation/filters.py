@@ -1,6 +1,5 @@
 """Filtering for data_validation."""
 
-from nautobot.apps.filters import NautobotFilterSet
 from nautobot.core.filters import ContentTypeMultipleChoiceFilter, SearchFilter
 from nautobot.data_validation.models import (
     DataCompliance,
@@ -9,6 +8,7 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.utils import FeatureQuery
 
 

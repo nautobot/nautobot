@@ -1,0 +1,3 @@
+Added `example_app` and `example_app_with_view_override` tags to unit and integration tests that depend on these Apps.
+Added support for `--config-file` option to `invoke tests` and added alternative config `nautobot/core/tests/nautobot_config_without_example_apps.py` to run tests without enabling the example Apps.
+Enhanced Nautobot test runner to automatically exclude tests tagged with `example_app` and/or `example_app_with_view_override` when those Apps are not enabled.

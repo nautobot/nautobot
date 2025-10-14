@@ -17,6 +17,7 @@ from rest_framework import serializers, status
 from rest_framework.relations import ManyRelatedField
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
+from nautobot.core import constants
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
@@ -294,8 +295,9 @@ class APIViewTestCases:
             m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             list_url = f"{self._get_list_url()}?depth=0"
+            # With exclude_m2m query parameter set to False
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
-                response = self.client.get(list_url, **self.header)
+                response = self.client.get(list_url + "&exclude_m2m=false", **self.header)
             base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -340,9 +342,9 @@ class APIViewTestCases:
                                 app_label, model_name = object_type.split(".")
                                 ContentType.objects.get(app_label=app_label, model=model_name)
 
-            list_url += "&exclude_m2m=true"
+            # With exclude_m2m query parameter set to True
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
-                response = self.client.get(list_url, **self.header)
+                response = self.client.get(list_url + "&exclude_m2m=true", **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -387,8 +389,9 @@ class APIViewTestCases:
             m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
             list_url = f"{self._get_list_url()}?depth=1"
+            # With exclude_m2m query parameter set to False
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
-                response = self.client.get(list_url, **self.header)
+                response = self.client.get(list_url + "&exclude_m2m=false", **self.header)
             base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -420,9 +423,9 @@ class APIViewTestCases:
                                 self.assertTrue(is_uuid(response_data[field]["id"]))
                             self.assertGreater(len(response_data[field].keys()), 3, response_data[field])
 
-            list_url += "&exclude_m2m=true"
+            # With exclude_m2m query parameter set to True
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
-                response = self.client.get(list_url, **self.header)
+                response = self.client.get(list_url + "&exclude_m2m=true", **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -457,6 +460,54 @@ class APIViewTestCases:
                 for field in m2m_fields:
                     self.assertNotIn(field, response_data)
                 # TODO: we should assert that all other fields are still present, but there's a few corner cases...
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_exclude_m2m(self):
+            """
+            GET a list of objects with or without the "exclude_m2m" parameter.
+
+            With exclude_m2m query parameter set to True, we should see no many-to-many fields.
+            With exclude_m2m query parameter set to False, we should see all many-to-many fields.
+            With exclude_m2m query parameter not set, we should only see the default many-to-many fields.
+            """
+            m2m_fields = self.get_m2m_fields()
+            if not m2m_fields:
+                self.skipTest("No many-to-many fields to test")
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            list_url = f"{self._get_list_url()}"
+
+            # With exclude_m2m query parameter not set
+            response = self.client.get(list_url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    if field in constants.DEFAULT_M2M_FIELDS:
+                        self.assertIn(field, response_data)
+                        self.assertIsInstance(response_data[field], list)
+                    else:
+                        self.assertNotIn(field, response_data)
+
+            # With exclude_m2m query parameter set to True
+            response = self.client.get(list_url + "?exclude_m2m=true", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertNotIn(field, response_data)
+
+            # With exclude_m2m query parameter set to False
+            response = self.client.get(list_url + "?exclude_m2m=false", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertIn(field, response_data)
+                    self.assertIsInstance(response_data[field], list)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):

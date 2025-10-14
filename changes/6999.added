@@ -1,1 +1,0 @@
-Added a data migration to update the `module_name` of jobs provided by Nautobot Data Validation Engine.

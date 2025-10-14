@@ -6,7 +6,7 @@
         <div class="row align-content-start flex-fill">
             <div class="col-md-8 offset-md-2">
                 {% for token in tokens %}
-                    <div class="card{% if token.is_expired %} border-danger{% endif %} mb-16">
+                    <div class="card{% if token.is_expired %} border-danger{% endif %}">
                         <div class="card-header nb-text-none{% if token.is_expired %} bg-danger-subtle border-danger text-body{% endif %}">
                             <div class="d-print-none float-end">
                                 <a class="btn btn-sm btn-success copy-token" data-clipboard-target="#token_{{ token.pk }}">

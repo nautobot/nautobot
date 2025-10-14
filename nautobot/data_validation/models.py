@@ -62,7 +62,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         return construct_cache_key(self, method_name="get_enabled_for_model", branch_aware=True)
 
 
-class ValidationRule(PrimaryModel):
+class ValidationRuleModelMixin(models.Model):
     """Base model for all validation engine rule models."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -83,6 +83,8 @@ class ValidationRule(PrimaryModel):
     objects = ValidationRuleManager()
     documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
+    is_data_compliance_model = False
+
     class Meta:
         """Model metadata for all validation engine rule models."""
 
@@ -101,7 +103,7 @@ class ValidationRule(PrimaryModel):
     "relationships",
     "webhooks",
 )
-class RegularExpressionValidationRule(ValidationRule):
+class RegularExpressionValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a regular expression to a given model field."""
 
     regular_expression = models.TextField()
@@ -165,7 +167,7 @@ class RegularExpressionValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class MinMaxValidationRule(ValidationRule):
+class MinMaxValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies min/max constraints to a given numeric model field."""
 
     min = models.FloatField(
@@ -231,7 +233,7 @@ class MinMaxValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class RequiredValidationRule(ValidationRule):
+class RequiredValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a required constraint to a given model field."""
 
     clone_fields = ["enabled", "content_type", "error_message"]
@@ -279,7 +281,7 @@ class RequiredValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class UniqueValidationRule(ValidationRule):
+class UniqueValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """
     A type of validation rule that applies a unique constraint to a given model field.
 
@@ -334,6 +336,8 @@ class DataCompliance(PrimaryModel):
     validated_attribute_value = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, default="")
     valid = models.BooleanField(blank=False, null=False)
     message = models.TextField(blank=True, default="")
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for Audit model."""

@@ -1,2 +1,0 @@
-Added `hide_in_diff_view` flag to hide `ObjectChange`, `JobLogEntry` and `JobResult` diffs in version control app.
-Marked users app as not version controlled - `is_version_controlled=False`.

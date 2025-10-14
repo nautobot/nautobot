@@ -10,10 +10,10 @@
 {% block content %}
     <form method="post">
         {% csrf_token %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Interfaces</strong>
-                <div class="pull-right col-md-2 d-print-none">
+                <div class="float-end col-lg-2 d-print-none">
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>

@@ -114,7 +114,7 @@ GITREPOSITORY_PROVIDES = """
 <span class="text-nowrap">
 {% for entry in datasource_contents %}
 <span style="display: inline-block" title="{{ entry.name|title }}"
-class="label label-{% if entry.content_identifier in record.provided_contents %}success{% else %}default{% endif %}">
+class="badge bg-{% if entry.content_identifier in record.provided_contents %}success{% else %}secondary{% endif %}">
 <i class="mdi {{ entry.icon }}"></i></span>
 {% endfor %}
 </span>
@@ -370,7 +370,7 @@ class ApprovalWorkflowStageTable(BaseTable):
         {% if record.remaining_approvals == 1 %}
         {{ record.remaining_approvals }} more approval needed
         {% elif record.remaining_approvals == 0 %}
-        <span class="text-muted">&mdash;</span>
+        <span class="text-secondary">&mdash;</span>
         {% else %}
         {{ record.remaining_approvals }} more approvals needed
         {% endif %}
@@ -1095,7 +1095,7 @@ class JobTable(BaseTable):
             {% if value %}
                 {{ value.date_created|date:SHORT_DATETIME_FORMAT }} by {{ value.user }}
             {% else %}
-                <span class="text-muted">Never</span>
+                <span class="text-secondary">Never</span>
             {% endif %}
         """,
         extra_context={"SHORT_DATETIME_FORMAT": settings.SHORT_DATETIME_FORMAT},
@@ -1194,13 +1194,13 @@ class JobLogEntryTable(BaseTable):
 
     def render_log_level(self, value):
         log_level = value.lower()
-        # The css is label-danger for failure items.
+        # The css is bg-danger for failure items.
         if log_level in ["failure", "error", "critical"]:
             log_level = "danger"
         elif log_level == "debug":
-            log_level = "default"
+            log_level = "secondary"
 
-        return format_html('<label class="label label-{}">{}</label>', log_level, value)
+        return format_html('<label class="badge bg-{}">{}</label>', log_level, value)
 
     def render_message(self, value):
         return render_markdown(value)

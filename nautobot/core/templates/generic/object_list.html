@@ -140,7 +140,7 @@
                         <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
                         {% if table.paginator.num_pages > 1 %}
                             <div class="table-responsive">
-                                <div id="select_all_box" class="visually-hidden card mb-16 d-print-none">
+                                <div id="select_all_box" class="visually-hidden card d-print-none">
                                     <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
                                         <div class="form-check flex-grow-1 mb-0">
                                             <input class="form-check-input" id="select_all" name="_all" type="checkbox">

@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.utils import timezone
 
@@ -286,6 +286,7 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    @tag("example_app")
     def test_app_dynamic_jobs(self):
         """
         Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
@@ -1281,10 +1282,10 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         status = models.Status.objects.get_for_model(Location).first()
         loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
         models.ObjectChange.objects.all().delete()
-        tag = models.Tag.objects.create(name="A Test Tag")
-        tag.content_types.add(ContentType.objects.get_for_model(Location))
+        tag_instance = models.Tag.objects.create(name="A Test Tag")
+        tag_instance.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
-            loc.tags.add(tag)
+            loc.tags.add(tag_instance)
         job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
         self.assertIsNotNone(job_result)
         expected_log_messages = [

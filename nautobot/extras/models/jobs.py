@@ -252,6 +252,7 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -439,6 +440,8 @@ class JobHook(OrganizationalModel):
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
 
+    is_data_compliance_model = False
+
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
 
     class Meta:
@@ -529,6 +532,7 @@ class JobLogEntry(BaseModel):
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
@@ -580,6 +584,7 @@ class JobQueue(PrimaryModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["name"]
@@ -610,6 +615,7 @@ class JobQueueAssignment(BaseModel):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = ["job", "job_queue"]
@@ -688,6 +694,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
+    is_data_compliance_model = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1096,6 +1103,7 @@ class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesM
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
@@ -1122,6 +1130,7 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+    is_data_compliance_model = False
 
     def __str__(self):
         return str(self.ident)
@@ -1259,6 +1268,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     no_changes = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
+    is_data_compliance_model = False
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
