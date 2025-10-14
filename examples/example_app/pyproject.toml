@@ -9,11 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-<<<<<<< HEAD
 python = ">=3.10,<3.14"
-=======
-python = ">=3.10,<3.13"
->>>>>>> develop
 
 [tool.poetry.dev-dependencies]
 

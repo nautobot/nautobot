@@ -372,19 +372,11 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         """
         Helper function to click on a parent menu and child menu in the navigation bar.
         """
-<<<<<<< HEAD
         section_xpath = f"//*[@id='sidenav']//li[@data-section-name='{parent_menu_name}']"
         sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
         if not sidenav_button["aria-expanded"] == "true":
             sidenav_button.click()
         child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
-=======
-        parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
-        parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
-        if not parent_menu["aria-expanded"] == "true":
-            parent_menu.click()
-        child_menu_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]"
->>>>>>> develop
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
         child_menu.click()

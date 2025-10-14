@@ -5,21 +5,9 @@ on:
     types: ["published"]  # covers releases, prereleases, and drafts
 
 jobs:
-<<<<<<< HEAD
-  # Ensure CI has passed
-  ci:
-    uses: "./.github/workflows/ci_integration.yml"
-
   # Publish to GitHub followed by pypi
   publish_python:
     if: "${{ ! github.event.release.draft }}"
-    needs:
-      - "ci"
-=======
-  # Publish to GitHub followed by pypi
-  publish_python:
-    if: "${{ ! github.event.release.draft }}"
->>>>>>> develop
     name: "Publish Python Packages"
     runs-on: "ubuntu-24.04"
     steps:
@@ -56,11 +44,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-<<<<<<< HEAD
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
-=======
-        python-version: [ "3.10", "3.11", "3.12" ]
->>>>>>> develop
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:

@@ -30,11 +30,8 @@ from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
     NavMenuTab,
     NAV_CONTEXT_NAMES,
 )
-<<<<<<< HEAD
 from nautobot.core.utils.module_loading import import_string_optional
-=======
 from nautobot.core.utils.patch_social_django import patch_django_storage
->>>>>>> develop
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
