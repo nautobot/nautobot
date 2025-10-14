@@ -83,7 +83,9 @@
                             "args": [
                                 "celery",
                                 "worker",
-                                "--config=development/nautobot_config.py"
+                                "-l",
+                                "INFO",
+                                "--events"
                             ],
                             "django": true,
                             "autoStartBrowser": false,
