@@ -1,2 +1,0 @@
-Fixed exclude filtering of text-type custom fields in UI/API Filters and Dynamic Groups.
-Fixed exact filtering by null values for custom fields.
