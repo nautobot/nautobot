@@ -433,14 +433,15 @@ $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 
 /* Breakpoints */
 $grid-breakpoints: (
-  xs: 0,
-  sm: 816px,
-  md: 1008px,
-  lg: 1232px,
-  xl: 1440px,
-  xxl: 1900px,
+  xs: 0,          // original 0
+  sm: 816px,      // original 576px + 240px sidenav width
+  md: 1008px,     // original 768px + 240px sidenav width
+  lg: 1232px,     // original 992px + 240px sidenav width
+  xl: 1440px,     // original 1200px + 240px sidenav width
+  xxl: 1900px,    // original 1400px + 240px sidenav width + some more px experimentally added for 4k screens
 );
 
+/* Container max widths are set to "grid width - 80px" */
 $container-max-widths: (
   sm: 736px,
   md: 928px,

@@ -1,0 +1,2 @@
+Increased default Bootstrap 5 breakpoints to narrow down view a little bit faster because of sidenav width.
+Updated login page for better scaling on different screen sizes.
