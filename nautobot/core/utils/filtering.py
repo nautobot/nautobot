@@ -140,7 +140,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(
         field, ContentTypeMultipleChoiceFilter
     ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
-        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        # models that have such a filter and the `verbose_name_plural` does not match, we can lookup the feature name.
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
