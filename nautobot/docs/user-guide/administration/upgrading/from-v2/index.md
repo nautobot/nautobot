@@ -21,11 +21,11 @@ TODO: Follow up
 
 ## Default to Exclude M2M
 
-In Nautobot 3.0, API endpoints now exclude many-to-many (M2M) relationship fields by default in their responses. This change helps improve performance and reduces unnecessary data transfer. If your integrations or scripts rely on M2M fields being present in API responses, you will need to explicitly request these fields using the `?exclude_m2m=False` query parameter.
+In Nautobot 3.0, API endpoints now exclude many-to-many (M2M) relationship fields (except for `tags`, `content_types`, and `object_types`) by default in their responses. This change helps improve performance and reduces unnecessary data transfer. If your integrations or scripts rely on M2M fields being present in API responses, you will need to explicitly request these fields using the `exclude_m2m=False` query parameter.
 
 - **Direct API consumers:** Update your API queries to include M2M fields as needed. For example: `http://nautobot.example.com/api/dcim/devices/?exclude_m2m=False`.
-- **pynautobot users:** Add `exclude_m2m=False` to pynautobot to maintain prior behavior. For example: `import pynautobot; pynautobot.api(url, token, exclude_m2m=False)`.
-- **Nautobot Ansible users:** There is not change required.
+- **pynautobot users (v3.0.0+):** Add `exclude_m2m=False` to an individual request (`nb.dcim.devices.all(exclude_m2m=False)`) or set the default for all requests to pynautobot (`import pynautobot; nb = pynautobot.api(url, token, exclude_m2m=False)`) to maintain prior behavior.
+- **Nautobot Ansible users (v6.0.0+):** There is no change required when using module or inventory plugins. When using a lookup plugin, you will need to use the `api_filters` parameter to include M2M fields. For example: `api_filters='exclude_m2m=False'`.
 
 Review your API usage to ensure that any required M2M fields are explicitly requested after upgrading.
 

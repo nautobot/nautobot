@@ -1293,11 +1293,13 @@ textarea {
   &.bg-danger,
   &.bg-info,
   &.bg-primary,
+  &.bg-secondary,
   &.bg-success,
   &.bg-warning,
   &.text-bg-danger,
   &.text-bg-info,
   &.text-bg-primary,
+  &.text-bg-secondary,
   &.text-bg-success,
   &.text-bg-warning {
     --#{$prefix}badge-color: var(--#{$prefix}body-bg);

@@ -31,6 +31,7 @@ article ul li {
         - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
+        - Data Compliance (`is_data_compliance_model = False`, OrganizationalModel/PrimaryModel only)
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!

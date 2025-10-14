@@ -15,8 +15,12 @@ This document describes all new features and changes in Nautobot 3.0.
 - Apps that provide any user interface will likely require updates to account for the [Bootstrap upgrade from v3.4 to v5.3](#bootstrap-upgrade-from-v34-to-v53) described below.
 - The Data Compliance feature set from the Data Validation Engine App has been moved directly into core. Import paths that reference `nautobot_data_validation_engine.custom_validators.DataComplianceRule` or `nautobot_data_validation_engine.custom_validators.ComplianceError` should be updated to `nautobot.apps.models.DataComplianceRule` and `nautobot.apps.models.ComplianceError`, respectively.
 - Code that calls the GraphQL `execute_query()` and `execute_saved_query()` functions may need to be updated to account for changes to the response object returned by these APIs. Specifically, the `response.to_dict()` method is no longer supported, but instead the returned data and any errors encountered may now be accessed directly as `response.data` and `response.errors` respectively.
+
+### REST API Users
+
 - Filtering data that supports a `type` filter in the REST API now also supports a corresponding `type` filter in GraphQL. (In Nautobot v2.x and earlier, the filter had to be referenced in GraphQL as `_type` instead.) Filtering by `_type` is still supported where applicable but should be considered deprecated; please update your GraphQL queries accordingly.
 - As a part of adding support for associating a [Device to multiple Clusters](#device-to-multiple-clusters-7203), the Device REST API no longer supports a `cluster` field; the field has been renamed to `clusters` and is now a list of related Clusters rather than a single record. See below for more details.
+- The REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. Pynautobot and Nautobot Ansible users should ensure they are on the latest versions to maintain backwards compatibility. See [Many-to-Many Fields in REST API](#many-to-many-fields-in-rest-api-7459) below for more details.
 
 ## Release Overview
 
@@ -91,6 +95,14 @@ The Device model has replaced its single `cluster` foreign-key field with a many
 To provide a modicum of backwards-compatibility, the Device model and queryset still support a singular `cluster` property which can be retrieved and (in some cases) set for the case of a single associated Cluster, but App authors, Job Authors, and GraphQL users are encouraged to migrate to using `clusters` as soon as possible. The `cluster` property will raise a `MultipleObjectsReturned` exception if the Device in question has more than one associated Cluster.
 
 Note that due to technical limitations, the Device REST API does *not* support a `cluster` field in Nautobot v3, so users of the REST API *must* migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
+
+#### Many-to-Many Fields in REST API ([#7459](https://github.com/nautobot/nautobot/issues/7459))
+
+In order to improve performance at scale, the REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. See [Filtering Included Fields](../user-guide/platform-functionality/rest-api/filtering.md#filtering-included-fields) for more details.
+
+Pynautobot users should ensure they add `exclude_m2m=False` to an individual request (`nb.dcim.devices.all(exclude_m2m=False)`) or (in pynautobot v3.0.0+) set the default for all requests (`import pynautobot; nb = pynautobot.api(url, token, exclude_m2m=False)`) to maintain prior behavior.
+
+Nautobot Ansible users (using v6.0.0+ and pynautobot v3.0.0+) should see no change required when using module or inventory plugins. When using a lookup plugin, however, they will need to use the `api_filters` parameter to include M2M fields. For example: `api_filters='exclude_m2m=False'`.
 
 ### Removed
 
