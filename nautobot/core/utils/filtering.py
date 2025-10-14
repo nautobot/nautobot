@@ -17,7 +17,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
-PLURAL_NAME_SUBSTITUTIONS = {
+MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
     "cables": "cable_terminations",
     "metadata_types": "metadata",
     "object_metadata": "metadata",
@@ -144,7 +144,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
-        plural_name = PLURAL_NAME_SUBSTITUTIONS.get(plural_name, plural_name)
+        plural_name = MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING.get(plural_name, plural_name)
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

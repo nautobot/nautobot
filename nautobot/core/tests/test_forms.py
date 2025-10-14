@@ -658,7 +658,7 @@ class DynamicFilterFormTest(TestCase):
                 try:
                     field = get_filterset_parameter_form_field(model, filter_name, filterset=filterset)
                     self.assertIsNotNone(field, "Field was unexpectedly None")
-                except Exception as e:
+                except KeyError as e:
                     self.fail(
                         f"A filter failed to operate due to mismatched plural name:"
                         f" Check nautobot.core.utils.filtering #PLURAL_NAME_SUBSTITUTIONS:"
