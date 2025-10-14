@@ -12,7 +12,6 @@ from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
-from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
@@ -21,8 +20,7 @@ from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
-from nautobot.core.utils.module_loading import import_modules_privately
-from nautobot.extras.plugins.utils import import_object
+from nautobot.core.utils.module_loading import import_modules_privately, import_string_optional
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -140,7 +138,7 @@ def _import_dynamic_jobs_from_apps():
                 del sys.modules[job.__module__]
 
         # Load app jobs
-        app_config.features["jobs"] = import_object(f"{app_config.__module__}.{app_config.jobs}")
+        app_config.features["jobs"] = import_string_optional(f"{app_config.__module__}.{app_config.jobs}")
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -220,7 +218,7 @@ def nautobot_kombu_json_loads_hook(data):
         qual_name = data.pop("__nautobot_type__")
         branch_name = data.pop("__nautobot_branch__", None)
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
-        cls = import_string(qual_name)  # fully qualified dotted import path
+        cls = import_string_optional(qual_name)  # fully qualified dotted import path
         if cls:
 
             def get_object():

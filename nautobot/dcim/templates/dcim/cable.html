@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Cable</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Type</td>
                 <td>{{ object.get_type_display|placeholder }}</td>
@@ -27,7 +27,7 @@
                     {% if object.color %}
                         <span class="label nb-color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -37,7 +37,7 @@
                     {% if object.length %}
                         {{ object.length }} {{ object.get_length_unit_display }}
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -46,14 +46,14 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Termination A</strong>
         </div>
         {% include 'dcim/inc/cable_termination.html' with termination=object.termination_a %}
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Termination B</strong>
         </div>
         {% include 'dcim/inc/cable_termination.html' with termination=object.termination_b %}

@@ -1,2 +1,0 @@
-Increased `name` fields' length to 255 for RegularExpressionValidationRule, MinMaxValidationRule, RequiredValidationRule, and UniqueValidationRule.
-Specified a Generic Relation from BaseModel class to DataCompliance class so that if an object is deleted, its associated data compliance objects will also be deleted.

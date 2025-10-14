@@ -263,7 +263,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -1487,7 +1487,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1551,7 +1551,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):

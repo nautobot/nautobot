@@ -27,7 +27,7 @@
                 {% block tabs %}{% endblock %}
                 {% block form_errors %}
                     {% if form.non_field_errors or model_form.non_field_errors %}
-                        <div class="card border-danger mb-16">
+                        <div class="card border-danger">
                             <div class="card-header bg-danger-subtle border-danger text-body">
                                 <strong>Errors</strong>
                             </div>
@@ -39,7 +39,7 @@
                     {% endif %}
                 {% endblock %}
                 {% block form %}
-                    <div class="card mb-16">
+                    <div class="card">
                         <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
                         <div class="card-body">
                             {% block form_fields %}

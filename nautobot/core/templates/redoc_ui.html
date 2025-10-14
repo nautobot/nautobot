@@ -51,6 +51,13 @@
 
         {# Redoc doesn't change outer page styles. #}
         body { margin: 0; padding: 0; }
+
+        [data-bs-theme="dark"] .redoc-wrap,
+        [data-bs-theme="dark"] .redoc-wrap > :last-child,
+        [data-bs-theme="dark"] .redoc-wrap .api-content > [data-section-id] > [data-section-id] > :last-child,
+        [data-bs-theme="dark"] .redoc-wrap .menu-content .operation-type {
+            filter: hue-rotate(180deg) invert(1);
+        }
     </style>
 {% endblock extra_styles %}
 

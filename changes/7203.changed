@@ -1,1 +1,0 @@
-Removed bespoke "Add Devices to Cluster" and "Remove Devices from Cluster" forms/views and added this functionality into the base Cluster edit and bulk-edit forms/views.

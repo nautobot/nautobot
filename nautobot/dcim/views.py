@@ -777,7 +777,7 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
 
         return super().render_value(key, value, context)
 
@@ -2116,7 +2116,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
-                    return mark_safe('<span class="label label-warning">Not racked</span>')
+                    return mark_safe('<span class="badge bg-warning">Not racked</span>')
                 return helpers.HTML_NONE
             if key == "device_redundancy_group" and value is not None:
                 instance = get_obj_from_context(context, self.context_object_key)
@@ -5091,7 +5091,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         """
 
         type_class = instance.get_type_class()
-        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+        return format_html('<span class="badge bg-{}">{}</span>', type_class, instance.get_type_display())
 
     def _get_connected_target(self, instance):
         """Return (label, value) for the connected row."""
@@ -5177,9 +5177,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         Render the Path Status as a label based on the path status (active or not).
         """
         path_status = (
-            '<span class="label label-success">Reachable</span>'
+            '<span class="badge bg-success">Reachable</span>'
             if getattr(instance, "path", None) and instance.path.is_active
-            else '<span class="label label-danger">Not Reachable</span>'
+            else '<span class="badge bg-danger">Not Reachable</span>'
         )
         return format_html(path_status)  # Safely render HTML
 

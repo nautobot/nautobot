@@ -192,6 +192,10 @@ class ViewTestCases:
             with CaptureQueriesContext(connection) as capture_queries_context:
                 response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
+            # TODO: some models (e.g. JobResult) intentionally do NOT display the full `.display` in the detail view,
+            # but only use the `.name` or `str()`.
+            # This check will always pass in the case where the Example App is installed, because of the banner
+            # it adds, but can/should/may? fail otherwise.
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
             # If any Relationships are defined, they should appear in the response
@@ -317,7 +321,7 @@ class ViewTestCases:
                     format_html(
                         """
                             <a id="clone-button" class="dropdown-item" href="{}">
-                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                                <span class="mdi mdi-plus-thick text-secondary" aria-hidden="true"></span> Clone {}
                             </a>
                         """,
                         object_clone_url,

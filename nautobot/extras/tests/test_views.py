@@ -2346,6 +2346,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
         self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_views_contain_boolean_filter_params(self):
         """
@@ -3899,6 +3900,7 @@ class JobButtonRenderingTestCase(TestCase):
             )
 
 
+@tag("example_app")
 class JobCustomTemplateTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

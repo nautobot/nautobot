@@ -1,5 +1,16 @@
 # Release Notes
 
+## [3.0 - November 2025](version-3.0.md)
+
+- Major UI refresh: Bootstrap 5 migration, new navigation, and global search
+- Approval Workflow system for multi-stage job and change approvals
+- VPN Models
+- Device Uniqueness Updates
+- Data Validation Engine integrated into core
+- Enhanced Search and updated Saved Views
+- ECharts integration for custom charting
+- Updated GraphQL UI and API
+
 ## [2.4 - January 2025](version-2.4.md)
 
 - Virtual Device Context Data Models
