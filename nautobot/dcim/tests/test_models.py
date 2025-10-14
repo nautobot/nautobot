@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import caches
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Model
@@ -1424,6 +1425,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
     def setUp(self):
+        # clear Constance cache
+        cache = caches[settings.CONSTANCE_DATABASE_CACHE_BACKEND]
+        cache.clear()
+
         manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -1520,9 +1525,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
-        from nautobot.core.utils.config import get_settings_or_config
-
-        print("DEVICE_UNIQUENESS: ", get_settings_or_config("DEVICE_UNIQUENESS"))
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
         # self.assertEqual(
         #     construct_composite_key([self.device.name, None, *self.device.location.natural_key()]),
