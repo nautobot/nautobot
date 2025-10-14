@@ -758,10 +758,6 @@ properties:
       "`nautobot-server send_installation_metrics`": "../tools/nautobot-server.md#send_installation_metrics"
     type: "string"
     version_added: "1.6.0"
-  DEVICE_NAME_AS_NATURAL_KEY:
-    default: false
-    description: >-
-      Replaced by `DEVICE_UNIQUENESS` in v3.0.0
   DEVICE_UNIQUENESS:
     default: "location_tenant_name"
     description: >-
