@@ -661,7 +661,7 @@ class DynamicFilterFormTest(TestCase):
                 except KeyError as e:
                     self.fail(
                         f"A filter failed to operate due to mismatched plural name:"
-                        f" Check nautobot.core.utils.filtering #PLURAL_NAME_SUBSTITUTIONS:"
+                        f" Check MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING:"
                         f" FilterClass: {filterset_class.__name__} name: {filter_name}: {e}"
                     )
 
