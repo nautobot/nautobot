@@ -4,8 +4,10 @@ from constance import config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.core.cache import caches
 
 from nautobot.core.testing import TestCase, ViewTestCases
+from nautobot.core import settings
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -276,6 +278,12 @@ class DeviceConstraintsViewTest(TestCase):
     def setUp(self):
         self.url = reverse("data_validation:device-constraints")
         self.device_ct = ContentType.objects.get_for_model(Device)
+
+    def tearDown(self):
+        """Reset Constance config and clear cache."""
+        config.DEVICE_UNIQUENESS = DeviceUniquenessChoices.DEFAULT
+        cache = caches[settings.CONSTANCE_DATABASE_CACHE_BACKEND]
+        cache.clear()
 
     def test_get_view_renders_successfully(self):
         """GET by non-admin should render the form correctly."""

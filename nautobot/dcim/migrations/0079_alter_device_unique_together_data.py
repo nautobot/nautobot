@@ -14,7 +14,7 @@ def migrate_device_uniqueness_setting(apps, schema_editor):
     try:
         old_value = get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY")
     except AttributeError:
-        old_value = None
+        old_value = False
     new_value = DeviceUniquenessChoices.NAME if old_value else DeviceUniquenessChoices.LOCATION_TENANT_NAME
 
     # Update or create DEVICE_UNIQUENESS in Constance
@@ -48,6 +48,7 @@ def reverse_migrate_device_uniqueness_setting(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0078_alter_device_unique_together"),
+        ("constance", "0003_drop_pickle"),
     ]
 
     operations = [

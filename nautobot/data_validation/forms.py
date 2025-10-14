@@ -317,7 +317,7 @@ class DeviceConstraintsForm(BootstrapMixin, forms.Form):
         required=True,
     )
     DEVICE_NAME_REQUIRED = forms.BooleanField(
-        label="Device name required",
+        label="Device name required (cannot be blank or null)",
         initial=False,
         required=False,
     )
