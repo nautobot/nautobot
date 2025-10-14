@@ -1144,6 +1144,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     filterset_class = filters.GitRepositoryFilterSet
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
+    view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -1192,6 +1193,10 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             "object": instance,
             "active_tab": "result",
             "verbose_name": instance._meta.verbose_name,
+            "view_titles": self.get_view_titles(),
+            "breadcrumbs": self.get_breadcrumbs(),
+            "detail": True,
+            "view_action": "result",
         }
 
         return render(request, "extras/gitrepository_result.html", context)
