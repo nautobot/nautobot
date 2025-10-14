@@ -3,11 +3,11 @@
 from constance import config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from django.core.cache import caches
+from django.urls import reverse
 
-from nautobot.core.testing import TestCase, ViewTestCases
 from nautobot.core import settings
+from nautobot.core.testing import TestCase, ViewTestCases
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
