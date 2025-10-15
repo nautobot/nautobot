@@ -1,0 +1,1 @@
+Fixed changelog list view not working when there was data referenced `ContentType's` in the database but not installed.
