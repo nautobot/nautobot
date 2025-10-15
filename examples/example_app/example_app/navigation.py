@@ -1,5 +1,6 @@
 from nautobot.apps.ui import (
     NavMenuAddButton,
+    NavMenuButton,
     NavMenuGroup,
     NavMenuItem,
     NavMenuTab,
@@ -39,6 +40,15 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="plugins:example_app:anotherexamplemodel_add",
+                                permissions=[
+                                    "example_app.add_anotherexamplemodel",
+                                ],
+                            ),
+                            NavMenuButton(
+                                title="Run Example Job",
+                                icon_class="mdi mdi-robot-industrial",
+                                link="extras:job_run_by_class_path",
+                                args=["example_app.jobs.ExampleEverythingJob"],
                                 permissions=[
                                     "example_app.add_anotherexamplemodel",
                                 ],
