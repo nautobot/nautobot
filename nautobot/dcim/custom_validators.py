@@ -20,11 +20,11 @@ class DeviceUniquenessValidator(CustomValidator):
         ).exists()
 
         # Rule 1: If we don't set DEVICE_NAME_REQUIRED then it's acceptable for any number of devices to be "unnamed",
-        # regardless of the DEVICE_UNIQUENESS setting
-        if obj.name is None and not device_name_required:
+        # regardless of the DEVICE_UNIQUENESS setting. Note that we consider both `None` and `""` to be "unnamed".
+        if not obj.name and not device_name_required:
             return
 
-        # If the not obj.name and device_name_required, this will be detected by RequiredValidationRule.
+        # If not obj.name and device_name_required, this will be detected by RequiredValidationRule.
 
         if uniqueness_mode == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
             # Rule 2: name is not None, tenant is None, given location --> no duplicates
