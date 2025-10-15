@@ -74,7 +74,7 @@ def invalidate_max_depth_cache(sender, **kwargs):
 
     # If the instance is a TreeNode, and it has siblings, skip invalidating the cache.
     instance = kwargs.get("instance", None)
-    if isinstance(instance, TreeNode) and not kwargs.get("raw", False):
+    if isinstance(instance, TreeNode):
         try:
             parent = getattr(instance, "parent", None)
         except instance.DoesNotExist:
