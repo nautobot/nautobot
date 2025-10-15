@@ -431,6 +431,18 @@ $kbd-bg:        var(--#{$prefix}secondary-bg);
 /* 4. Include any default map overrides here */
 $theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
 
+/* Breakpoints */
+$sidenav-width-for-breakpoints: 240px; // this is only for calculations below; sidenav has separate variable in rem in Layout section
+
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px + $sidenav-width-for-breakpoints,
+  md: 768px + $sidenav-width-for-breakpoints,
+  lg: 992px + $sidenav-width-for-breakpoints,
+  xl: 1200px + $sidenav-width-for-breakpoints,
+  xxl: 1400px + $sidenav-width-for-breakpoints + 260px // added 260px for 4k screens to break later and let col-xxl-n be smaller
+);
+
 /* 5. Include remainder of required parts */
 @import "bootstrap/scss/maps";
 @import "bootstrap/scss/mixins";
@@ -1454,7 +1466,8 @@ textarea {
 $nb-drawer-closed-width: 0;
 $nb-drawer-open-width: 20rem; /* 320px */
 $sidenav-width-collapsed: 4rem; /* 64px */
-$sidenav-width-expanded: 15rem; /* 240px */
+$sidenav-width-expanded: ($sidenav-width-for-breakpoints / 16px) * 1rem; /* 16px is default browser conversion rate */
+/* we're converting to rem to have better web accessibility support */
 
 * {
   margin: 0;
