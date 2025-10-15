@@ -8,7 +8,6 @@ Docker images are published for multiple supported Python versions. The default 
 
 Currently images are pushed for the following Python versions:
 
-* 3.9
 * 3.10
 * 3.11
 * 3.12
@@ -18,6 +17,9 @@ Currently images are pushed for the following Python versions:
 
 --- 2.4.0 "Removed Python 3.8"
     Python 3.8 was removed from the set of published images as Python 3.8 is now end-of-life.
+
+--- 2.4.20 "Removed Python 3.9"
+    Python 3.9 was removed from the set of published images as Python 3.9 is now end-of-life.
 
 ## Platforms
 

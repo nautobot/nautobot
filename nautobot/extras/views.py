@@ -1306,6 +1306,27 @@ class GraphQLQueryUIViewSet(
     table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Query",
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["name", "query", "variables"],
+                value_transforms={
+                    "query": [lambda val: format_html('<pre><code class="language-graphql">{}</code></pre>', val)],
+                    "variables": [lambda val: helpers.render_json(val, syntax_highlight=True, pretty_print=True)],
+                },
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=object_detail.SectionChoices.RIGHT_HALF,
+                body_content_template_path="extras/inc/graphqlquery_execute.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        )
+    )
+
 
 #
 # Image attachments
