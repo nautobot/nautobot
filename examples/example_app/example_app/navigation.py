@@ -44,15 +44,6 @@ menu_items = (
                                     "example_app.add_anotherexamplemodel",
                                 ],
                             ),
-                            NavMenuButton(
-                                title="Run Example Job",
-                                icon_class="mdi mdi-robot-industrial",
-                                link="extras:job_run_by_class_path",
-                                args=["example_app.jobs.ExampleEverythingJob"],
-                                permissions=[
-                                    "example_app.add_anotherexamplemodel",
-                                ],
-                            ),
                         ),
                     ),
                 ),
