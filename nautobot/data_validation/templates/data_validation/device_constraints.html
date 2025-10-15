@@ -37,7 +37,7 @@
                         {% render_field form.DEVICE_UNIQUENESS %}
                         {% render_field form.DEVICE_NAME_REQUIRED %}
                         {% if not request.user.is_staff %}
-                            <p class="text-muted mt-2 text-center">
+                            <p class="text-secondary mt-2 text-center">
                                 <em>You do not have permission to modify these settings.</em>
                             </p>
                         {% endif %}
@@ -56,6 +56,6 @@
                         -->Cancel
                 </a>
             {% endif %}
-            </div>
+        </div>
     </form>
 {% endblock %}
