@@ -1,1 +1,0 @@
-Fixed `invoke djhtml` task not working correctly in Docker compose.

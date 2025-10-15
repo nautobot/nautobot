@@ -1,1 +1,0 @@
-Removed unnecessary and error-prone cache logic from the `PathEndpoint.connected_endpoint` property.
