@@ -1229,14 +1229,13 @@ class ObjectChangeTable(BaseTable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Only prefetch if all content types are valid
-        if not any(ct.model_class() is None for ct in ContentType.objects.all()):
+        if all(ct.model_class() is not None for ct in ContentType.objects.all()):
             self.add_conditional_prefetch("object_repr", "changed_object")
         else:
             error_message = dedent("""\
-                            **** WARNING: ****
                             One or more ContentType entries in the database are invalid.
                             This will likely cause performance degradation when viewing the Object Change log.
-                            A trusted administrator could follow these steps to clean up include:
+                            An administrator can follow these steps to resolve common issues:
                              - Run `nautobot-server remove_stale_contenttypes`
                              - Run `nautobot-server migrate <app_label> zero` for any app labels which no longer exist
                              - Manually dropping tables for any models which have been removed from Nautobot or its plugins from your database
@@ -1247,13 +1246,13 @@ class ObjectChangeTable(BaseTable):
                                             "<app_label_of_removed_plugin_1>",
                                             "<app_label_of_removed_plugin_2>",
                                         ]
-                                    ) | ContentType.objects.filter(model__icontains="demo")
+                                    ) | ContentType.objects.filter(model__icontains="<name_of_removed_model_1>")
                                     # Review the queryset before running delete
                                     qs.delete()
                                    ```
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
-            logger.error(error_message)
+            logger.warning(error_message)
 
 
 #
