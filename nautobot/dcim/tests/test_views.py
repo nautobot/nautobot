@@ -454,7 +454,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = parent_location.get_absolute_url()
         context = self.client.get(url).context
-        prefix_count = Prefix.objects.filter(location__in=parent_location.descendants(include_self=True)).distinct().count()
+        prefix_count = (
+            Prefix.objects.filter(location__in=parent_location.descendants(include_self=True)).distinct().count()
+        )
 
         # Ensure that the context contains "stats" and the expected stat for prefix_list
         self.assertIn("stats", context)
