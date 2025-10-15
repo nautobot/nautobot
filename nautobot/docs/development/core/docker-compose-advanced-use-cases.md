@@ -171,7 +171,7 @@ You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debuggi
 - **Local: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs. Remember to stop the "celery-beat" and "celery-worker" containers to make sure new jobs hit this worker instance
 
 !!! note
-    You can run tests with the VS Code Test Explorer panel, or with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
+    You can run tests with the VS Code [Test Explorer panel](https://code.visualstudio.com/docs/debugtest/testing#_run-and-debug-tests), or with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
 
 ### Special Workflow for Containers on Remote Servers
 
