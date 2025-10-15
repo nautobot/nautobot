@@ -197,7 +197,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
-        render_on_tab_id="main",
+        render_on_tab_id="__all__",
         **kwargs,
     ):
         """
@@ -258,8 +258,11 @@ class Button(Component):
         }
 
     def should_render(self, context: Context):
+        # Only show if the user has the permission, which is enforce in super.
         if not super().should_render(context):
             return False
+        if self.render_on_tab_id == "__all__":
+            return True
         return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
