@@ -14,7 +14,6 @@ limitations under the License.
 
 import os
 import re
-import time
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
@@ -472,33 +471,6 @@ def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
     docker_compose(context, "down --volumes --remove-orphans")
-
-
-@task(help={"workspace_launch": "Relaunch vscode using workspace file? Defaults to True."})
-def vscode(context, workspace_launch=True):
-    """Visual Studio Code specific environment helpers.
-
-    workspace_launch: This will re-launch VSCode using the workspace file/settings. Has no
-    affect if user is already in the workspace.
-    """
-    if not HAS_PYYAML:
-        raise Exit("You must install pyyaml ('pip install --user pyyaml') to use this command.")
-
-    # Setup PYTHON
-    env_file_path = os.path.join(BASE_DIR, "development/.env")
-    try:
-        with open(env_file_path, "r") as env_file_obj:
-            lines = env_file_obj.readlines()
-    except FileNotFoundError:
-        lines = []
-    finally:
-        cleaned_lines = [og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|PYTHON_VER)=", og_line)]
-        cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")
-        cleaned_lines.append(f"NAUTOBOT_VER={get_nautobot_major_minor_version(context)}")
-        with open(env_file_path, "w") as env_file_obj:
-            env_file_obj.write("\n".join(cleaned_lines))
-
-    context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
 @task(
