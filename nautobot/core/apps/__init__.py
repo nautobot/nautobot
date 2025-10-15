@@ -31,7 +31,7 @@ from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
     NavMenuTab,
     NAV_CONTEXT_NAMES,
 )
-
+from nautobot.core.utils.patch_social_django import patch_django_storage
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -363,6 +363,13 @@ class CoreConfig(NautobotConfig):
         if settings.MAINTENANCE_MODE:
             logger.warning("Maintenance mode enabled: disabling update of most recent login time")
             user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
+
+        # SECURITY
+        # Patch social_django to prevent account takeover vulnerability
+        from social_django.models import DjangoStorage
+
+        # TODO: When upgrading to 5.6.0 or later, remove the patch
+        patch_django_storage(DjangoStorage)
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
 
