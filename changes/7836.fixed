@@ -1,1 +1,0 @@
-Fixed the test `ControllerTestCase.test_controller_bulk_edit` from failing on a race condition. 
