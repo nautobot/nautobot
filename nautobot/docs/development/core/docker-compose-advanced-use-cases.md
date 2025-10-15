@@ -145,7 +145,12 @@ Keycloak admin console is reachable via `http://localhost:8087/admin/` with user
 | `nautobot_admin`   | `admin123`  |
 | `nautobot_auditor` | `audit123`  |
 
-## Microsoft Visual Studio Code Integration
+
+### Dev Containers Setup
+
++/- 2.1.2
+
+### Using Dev Containers
 
 For users of Microsoft Visual Studio Code, several files are included to ease development and integrate with the [VS Code Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). The following related files are found relative to the root of the project:
 
@@ -153,11 +158,6 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 - `nautobot.code-workspace` - VS Code workspace configuration for Nautobot
 - `development/docker-compose.nohealthcheck.yml` - Docker compose override file used to remove healh checks set in `docker-compose.yml`. Useful for VS Code Dev Containers where no process is spawned and the container would never be healthy.
 
-### Dev Containers Setup
-
-+/- 2.1.2
-
-### Using Dev Containers
 
 To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers.
 
