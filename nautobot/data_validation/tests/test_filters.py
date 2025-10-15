@@ -40,9 +40,7 @@ class ValidationRuleFilterTestCaseMixin(ValidationRuleTestCaseMixin):
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
-class RegularExpressionValidationRuleFilterTestCase(
-    ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase
-):
+class RegularExpressionValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.FilterTestCase):
     """
     Filterset test cases for the RegularExpressionValidationRule model
     """
@@ -52,6 +50,7 @@ class RegularExpressionValidationRuleFilterTestCase(
     filterset = RegularExpressionValidationRuleFilterSet
     generic_filter_tests = [
         ("id",),
+        ("name",),
         ("regular_expression",),
         ("error_message",),
         ("field",),
@@ -91,7 +90,7 @@ class RegularExpressionValidationRuleFilterTestCase(
         )
 
 
-class MinMaxValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
+class MinMaxValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.FilterTestCase):
     """
     Filterset test cases for the MinMaxValidationRule model
     """
@@ -101,6 +100,7 @@ class MinMaxValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, Filt
     filterset = MinMaxValidationRuleFilterSet
     generic_filter_tests = [
         ("id",),
+        ("name",),
         ("error_message",),
         ("field",),
     ]
@@ -144,7 +144,7 @@ class MinMaxValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, Filt
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
 
-class RequiredValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
+class RequiredValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.FilterTestCase):
     """
     Filterset test cases for the RequiredValidationRule model
     """
@@ -154,6 +154,7 @@ class RequiredValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, Fi
     filterset = RequiredValidationRuleFilterSet
     generic_filter_tests = [
         ("id",),
+        ("name",),
         ("error_message",),
         ("field",),
     ]
@@ -189,7 +190,7 @@ class RequiredValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, Fi
         )
 
 
-class UniqueValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.NameOnlyFilterTestCase):
+class UniqueValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.FilterTestCase):
     """
     Filterset test cases for the UniqueValidationRule model
     """
@@ -199,6 +200,7 @@ class UniqueValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, Filt
     filterset = UniqueValidationRuleFilterSet
     generic_filter_tests = [
         ("id",),
+        ("name",),
         ("error_message",),
         ("field",),
         ("max_instances",),
