@@ -16,7 +16,9 @@ class NavMenuTestCase(TestCase):
         """Verify that menu items and buttons have the correct text and expected permissions."""
         for tab in registry["nav_menu"]["tabs"]:
             for group in registry["nav_menu"]["tabs"][tab]["groups"]:
-                for item_url, item_details in registry["nav_menu"]["tabs"][tab]["groups"][group]["items"].items():
+                for item_url, item_details in registry["nav_menu"]["tabs"][tab][
+                    "groups"
+                ][group]["items"].items():
                     with self.subTest(f"{tab} > {group} > {item_url}"):
                         view_func = resolve(item_url.split("?")[0]).func
                         try:
@@ -38,21 +40,33 @@ class NavMenuTestCase(TestCase):
                                 "Job Approval Queue",
                                 "Wireless Controllers",
                             }:
-                                expected_name = bettertitle(view_model._meta.verbose_name_plural)
+                                expected_name = bettertitle(
+                                    view_model._meta.verbose_name_plural
+                                )
                                 if expected_name == "VM Interfaces":
                                     expected_name = "Interfaces"
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"
-                                elif expected_name == "Controller Managed Device Groups":
+                                elif (
+                                    expected_name == "Controller Managed Device Groups"
+                                ):
                                     expected_name = "Device Groups"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.
-                                self.assertIn(get_permission_for_model(view_model, "view"), item_details["permissions"])
+                                self.assertIn(
+                                    get_permission_for_model(view_model, "view"),
+                                    item_details["permissions"],
+                                )
                         except AttributeError:
                             # Not a model view?
                             self.assertIn(
-                                item_details["name"], {"Apps Marketplace", "Installed Apps", "Interface Connections"}
+                                item_details["name"],
+                                {
+                                    "Apps Marketplace",
+                                    "Installed Apps",
+                                    "Interface Connections",
+                                },
                             )
 
                     for button, button_details in item_details["buttons"].items():
@@ -60,14 +74,21 @@ class NavMenuTestCase(TestCase):
                             # Currently all core menu items should have just a single Add button
                             self.assertEqual(button, "Add")
                             self.assertEqual(
-                                button_details["permissions"], {get_permission_for_model(view_model, "add")}
+                                button_details["permissions"],
+                                {get_permission_for_model(view_model, "add")},
                             )
                             self.assertEqual(
                                 resolve(button_details["link"].split("?")[0]).view_name,
                                 get_route_for_model(view_model, "add"),
                             )
-                            self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
-                            self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
+                            self.assertEqual(
+                                button_details["button_class"],
+                                ButtonActionColorChoices.ADD,
+                            )
+                            self.assertEqual(
+                                button_details["icon_class"],
+                                ButtonActionIconChoices.ADD,
+                            )
 
     def test_permissions_rollup(self):
         menus = registry["nav_menu"]
@@ -79,12 +100,17 @@ class NavMenuTestCase(TestCase):
                 for item_details in group_details["items"].values():
                     item_perms = item_details["permissions"]
                     # If any item has no permissions restriction, then the group has no permissions restriction
-                    if expected_perms[f"{tab_name}:{group_name}"] is None or not item_perms:
+                    if (
+                        expected_perms[f"{tab_name}:{group_name}"] is None
+                        or not item_perms
+                    ):
                         expected_perms[f"{tab_name}:{group_name}"] = None
                     else:
                         expected_perms[f"{tab_name}:{group_name}"] |= item_perms
                 group_perms = group_details["permissions"]
-                self.assertEqual(expected_perms[f"{tab_name}:{group_name}"], group_perms)
+                self.assertEqual(
+                    expected_perms[f"{tab_name}:{group_name}"], group_perms
+                )
                 # if any group has no permissions restriction, then the tab has no permissions restriction
                 if expected_perms[tab_name] is None or not group_perms:
                     expected_perms[tab_name] = None
