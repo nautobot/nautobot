@@ -1,0 +1,1 @@
+Updated Renovate configuration to open separate PRs for NPM dependency updates versus Python dependency updates.
