@@ -21,12 +21,10 @@ class DeviceUniquenessValidator(CustomValidator):
 
         # Rule 1: If we don't set DEVICE_NAME_REQUIRED then it's acceptable for any number of devices to be "unnamed",
         # regardless of the DEVICE_UNIQUENESS setting
-        if not obj.name and not device_name_required:
+        if obj.name is None and not device_name_required:
             return
 
-        # If name is None but is required validation error will be returned
-        if not obj.name:
-            self.validation_error({"name": "Device name is required."})
+        # If the not obj.name and device_name_required, this will be detected by RequiredValidationRule.
 
         if uniqueness_mode == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
             # Rule 2: name is not None, tenant is None, given location --> no duplicates
@@ -35,12 +33,13 @@ class DeviceUniquenessValidator(CustomValidator):
                 duplicates = Device.objects.filter(
                     name=obj.name,
                     tenant__isnull=True,
+                    location=obj.location,
                 ).exclude(pk=obj.pk)
                 if duplicates.exists():
                     self.validation_error(
                         {
                             "__all__": (
-                                f"A device named '{obj.name}' with no tenant already exists. "
+                                f"A device named '{obj.name}' with no tenant already exists in this location: {obj.location}. "
                                 "Device names must be unique when tenant is None and DEVICE_UNIQUENESS='location_tenant_name'."
                             )
                         }

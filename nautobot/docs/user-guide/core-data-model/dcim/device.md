@@ -26,12 +26,13 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
     Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
 
 +/- 3.0.0
-    The database-level uniqueness constraints on Device ("location", "tenant", "name") have been **removed**.
-    Uniqueness is now enforced entirely at the application level through configurable validators.
+    The database-level uniqueness constraint ("location", "tenant", "name") on Device has been **removed**.
+    Uniqueness in this regard is now enforced at the application level through configurable validators.
     A new Constance setting, `DEVICE_UNIQUENESS`, defines how devices are uniquely identified:
     - `"location_tenant_name"` — Device uniqueness is enforced as a combination of Location + Tenant + Name (pre-3.0 behavior).
     - `"name"` — Device names must be globally unique.
     - `"none"` — No enforced uniqueness; other validation rules or custom validators may apply.
+    Note that **physical uniqueness constraints** such as rack position and virtual chassis position remain enforced at the database level, only the logical uniqueness constraint has been moved to application-level validation.
     Additionally, the Constance setting `DEVICE_NAME_AS_NATURAL_KEY` has been deprecated. During migration, existing configurations using this setting will be translated to the appropriate `DEVICE_UNIQUENESS` value (`"name"` or `"location_tenant_name"`).
 
 ## Developer API

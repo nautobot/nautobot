@@ -367,6 +367,7 @@ class DeviceConstraintsViewTest(TestCase):
 
         # No rule should be created
         self.assertFalse(RequiredValidationRule.objects.filter(content_type=self.device_ct, field="name").exists())
+        self.assertEqual(config.DEVICE_UNIQUENESS, self.initial_setting)
 
     def test_post_updates_device_uniqueness_and_creates_required_rule(self):
         """POST with DEVICE_NAME_REQUIRED=True should create a RequiredValidationRule."""
@@ -431,3 +432,4 @@ class DeviceConstraintsViewTest(TestCase):
                 self.assertTemplateUsed(response, "data_validation/device_constraints.html")
                 self.assertIn("form", response.context)
                 self.assertTrue(response.context["form"].errors)
+                self.assertEqual(config.DEVICE_UNIQUENESS, self.initial_setting)

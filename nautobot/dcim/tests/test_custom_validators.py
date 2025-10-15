@@ -41,8 +41,38 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
             status=self.device_status,
             tenant=self.tenant,
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as contextmanager:
             dup_device.full_clean()
+        self.assertIn(
+            f"A device named '{self.device_name}' already exists in this location: {self.location} and tenant: {self.tenant}. ",
+            str(contextmanager.exception),
+        )
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
+    def test_disallow_duplicate_devices_with_empty_name_when_uniqueness_is_location_tenant_name(self):
+        """Disallow duplicate devices with empty name when DEVICE_UNIQUENESS="location_tenant_name"."""
+        Device.objects.create(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        empty_name = Device(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        with self.assertRaises(ValidationError) as contextmanager:
+            empty_name.full_clean()
+        self.assertIn(
+            f"A device named '{empty_name.name}' already exists in this location: {self.location} and tenant: {self.tenant}. ",
+            str(contextmanager.exception),
+        )
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
     def test_different_tenant_allows_duplicate_name(self):
@@ -91,8 +121,12 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
             role=self.device_role,
             status=self.device_status,
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as contextmanager:
             dup.full_clean()
+        self.assertIn(
+            f"A device named '{dup.name}' with no tenant already exists in this location: {self.location}. ",
+            str(contextmanager.exception),
+        )
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
     def test_duplicate_name_globally_fails(self):
@@ -107,8 +141,11 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
             status=self.device_status,
             tenant=tenant,
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as contextmanager:
             dup_device.full_clean()
+        self.assertIn(
+            f"At least one other device named '{dup_device.name}' already exists. ", str(contextmanager.exception)
+        )
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
     def test_different_name_succeeds(self):
@@ -150,6 +187,30 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
         unnamed2.full_clean()  # should not raise
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
+    def test_disallow_duplicate_devices_with_empty_name_when_uniqueness_is_name(self):
+        """Disallow duplicate devices with empty name when DEVICE_UNIQUENESS="name"."""
+        Device.objects.create(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        empty_name = Device(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        with self.assertRaises(ValidationError) as contextmanager:
+            empty_name.full_clean()
+        self.assertIn(
+            f"At least one other device named '{empty_name.name}' already exists. ", str(contextmanager.exception)
+        )
+
     def test_unnamed_device_fails_if_name_is_required(self):
         """Unnamed device should raise a ValidationError if DEVICE_NAME_REQUIRED is True."""
         unnamed = Device(
@@ -161,8 +222,26 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
             status=self.device_status,
         )
         RequiredValidationRule.objects.create(content_type=ContentType.objects.get_for_model(Device), field="name")
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as contextmanager:
             unnamed.full_clean()
+        # This error is from RequiredValidationRule
+        self.assertIn("{'name': ['This field cannot be blank.']}", str(contextmanager.exception))
+
+    def test_empty_device_fails_if_name_is_required(self):
+        """Empty name device should raise a ValidationError if DEVICE_NAME_REQUIRED is True."""
+        unnamed = Device(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        RequiredValidationRule.objects.create(content_type=ContentType.objects.get_for_model(Device), field="name")
+        with self.assertRaises(ValidationError) as contextmanager:
+            unnamed.full_clean()
+        # This error is from RequiredValidationRule
+        self.assertIn("{'name': ['This field cannot be blank.']}", str(contextmanager.exception))
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE)
     def test_no_uniqueness_enforced(self):
@@ -178,3 +257,24 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
 
         # Should NOT raise any error since uniqueness enforcement is off
         dup_device.full_clean()
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE)
+    def test_allow_duplicate_devices_with_empty_name_when_uniqueness_is_none(self):
+        """Allow duplicate devices with empty name when DEVICE_UNIQUENESS="none"."""
+        Device.objects.create(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        empty_name = Device(
+            name="",
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        empty_name.full_clean()

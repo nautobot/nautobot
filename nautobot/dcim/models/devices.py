@@ -901,6 +901,11 @@ class Device(PrimaryModel, ConfigContextModel):
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
 
+        # to avoid circular import
+        from nautobot.dcim.custom_validators import DeviceUniquenessValidator
+
+        DeviceUniquenessValidator(self).clean()
+
         super().save(*args, **kwargs)
 
         # Apply any pending cluster assignment that was deferred during creation
