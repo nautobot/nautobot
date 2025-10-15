@@ -1,5 +1,0 @@
-Updated dependency `celery` to `~5.5.3` and removed explicit direct dependency on `kombu` as a side effect.
-Updated dependency `djangorestframework` to `~3.16.1`.
-Updated dependency `nh3` to `~0.3.1`.
-Updated dependency `psycopg2-binary` to `~2.9.11`.
-Updated dependency `PyYAML` to `~6.0.3`.
