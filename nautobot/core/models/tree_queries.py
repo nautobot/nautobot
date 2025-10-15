@@ -22,15 +22,17 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         Dynamically computes ancestors either through the tree or through the `parent` foreign key depending on whether
         tree fields are present on `of`.
         """
+
+        # If `of` is a UUID, i.e. pk, retrieve the corresponding model instance with tree fields disabled.
         if isinstance(of, uuid.UUID):
             of = self.model.objects.without_tree_fields().get(pk=of)
+
         # If `of` has `tree_depth` defined, i.e. if it was retrieved from the database on a queryset where tree fields
         # were enabled (see `TreeQuerySet.with_tree_fields` and `TreeQuerySet.without_tree_fields`), use the default
         # implementation from `tree_queries.query.TreeQuerySet`.
-        # Furthermore, if `of` doesn't have a parent field we also have to defer to the tree-based implementation which
-        # will then annotate the tree fields and proceed as usual.
         if hasattr(of, "tree_depth"):
             return super().ancestors(of, include_self=include_self)
+
         # In the other case, traverse the `parent` foreign key until the root.
         ancestor_pks = []
         if include_self:

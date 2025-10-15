@@ -1,1 +1,2 @@
-Fixed clean() method on DCIM Location model to improve performance by restricting TreeModel clean() checks to nestable Locations only.
+Fixed custom ancesors method in tree queries to forgoe tree fields, yielding performance improvements in checking for loops in the tree structure.
+Fixed invalidate_max_depth_cache signal to foroe cache invalidation when a TreeModel has siblings. 
