@@ -13,7 +13,8 @@ class TestInvalidateMaxTreeDepthSignal(TestCase):
         # Ensure that the max_depth hasn't already been cached
         Location.objects.__dict__.pop("max_depth", None)
         location = Location.objects.first()
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(3):
+            # 3 Queries: Update, Select for parent, Count for siblings
             location.save()
 
 
