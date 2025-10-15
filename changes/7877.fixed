@@ -1,2 +1,0 @@
-Fixed an error in rendering the Device detail view when the device has a controller-managed device group with null `capabilities`.
-Fixed inability to specify null `capabilities` when editing a Controller or Controller Managed Device Group via the REST API.
