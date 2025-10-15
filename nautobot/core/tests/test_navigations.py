@@ -64,7 +64,7 @@ class NavMenuTestCase(TestCase):
                             )
                             self.assertEqual(
                                 resolve(button_details["link"].split("?")[0]).view_name,
-                                get_route_for_model(view_model, "add")
+                                get_route_for_model(view_model, "add"),
                             )
                             self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
                             self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
