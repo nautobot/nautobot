@@ -41,7 +41,7 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 --- 2.4.0 "Python 3.8"
     Python 3.8 support was removed.
 
---- 3.0.0 "Python 3.9"
+--- 2.4.20 "Python 3.9"
     Python 3.9 support was removed.
 
 +++ 3.0.0 "Python 3.13"
