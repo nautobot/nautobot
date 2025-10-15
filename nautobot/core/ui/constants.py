@@ -11,6 +11,18 @@ UI_COLORS = {
         "light": "#8cc5ff",
         "dark": "#a3d3ff",
     },
+    "gray": {
+        "light": "#b0b0b0",
+        "dark": "#828282",
+    },
+    "gray-darker": {
+        "light": "#5e5e5e",
+        "dark": "#494949",
+    },
+    "gray-lighter": {
+        "light": "#dbdbdb",
+        "dark": "#c7c7c7",
+    },
     "green": {
         "light": "#1ca92a",
         "dark": "#2ecc40",
@@ -22,18 +34,6 @@ UI_COLORS = {
     "green-lighter": {
         "light": "#99d89f",
         "dark": "#a1e8a9",
-    },
-    "indigo": {
-        "light": "#4e00b1",
-        "dark": "#4e00b1",
-    },
-    "indigo-darker": {
-        "light": "#310e5e",
-        "dark": "#310e5e",
-    },
-    "indigo-lighter": {
-        "light": "#af8cdc",
-        "dark": "#af8cdc",
     },
     "orange": {
         "light": "#e07807",
