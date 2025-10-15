@@ -4,8 +4,7 @@ from django.test import tag
 
 from nautobot.core.testing import views
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, DynamicGroupOperatorChoices
-from nautobot.extras.models import CustomField, DynamicGroupMembership
-from nautobot.extras.models import DynamicGroup
+from nautobot.extras.models import CustomField, DynamicGroup, DynamicGroupMembership
 
 
 @tag("unit")
