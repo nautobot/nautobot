@@ -25,7 +25,6 @@
                 "ms-python.vscode-pylance",
                 "samuelcolvin.jinjahtml",
                 "tamasfe.even-better-toml",
-                "rioj7.command-variable", // Used for dynamic port finding in tests
                 "github.vscode-github-actions",
                 "eamodio.gitlens"
             ],
