@@ -1,2 +1,2 @@
-Fixed custom ancesors method in tree queries to forgo tree fields, yielding performance improvements in checking for loops in the tree structure.
-Fixed invalidate_max_depth_cache signal to forgo cache invalidation when a TreeModel has siblings. 
+Fixed custom `ancestors` method in tree queries to forgo tree fields, yielding performance improvements in checking for loops in the tree structure.
+Fixed `invalidate_max_depth_cache` signal to forgo cache invalidation when a TreeModel has siblings. 
