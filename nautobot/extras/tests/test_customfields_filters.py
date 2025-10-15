@@ -3,8 +3,9 @@ from django.db.models import Model
 from django.test import tag
 
 from nautobot.core.testing import views
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.extras.models import CustomField
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, DynamicGroupOperatorChoices
+from nautobot.extras.models import CustomField, DynamicGroupMembership
+from nautobot.extras.models import DynamicGroup
 
 
 @tag("unit")
@@ -368,6 +369,82 @@ class CustomFieldsFilters:
                             instances, filtered, test_case["expected"], assert_in_msg, assert_not_in_msg
                         )
 
+        def test_str_custom_field_with_dynamic_groups(self):
+            cf_label = "test_dgs_label_str"
+            cf_label_ic = "test_dgs_label_str_ic"
+            test_data = self.filter_matrix[CustomFieldTypeChoices.TYPE_TEXT]
+            model = self.filterset.Meta.model
+            self.create_custom_field(model, cf_label)
+            self.create_custom_field(model, cf_label_ic, filter_logic=CustomFieldFilterLogicChoices.FILTER_LOOSE)
+
+            instances = self.queryset.all()[:5]
+            self.prepare_custom_fields_values(cf_label, instances, test_data["value"], "not-matched")
+            self.prepare_custom_fields_values(cf_label_ic, instances, test_data["value"], "not-matched")
+
+            ct = ContentType.objects.get_for_model(model)
+
+            filter_group = DynamicGroup.objects.create(
+                name="CustomField DynamicGroup",
+                content_type=ct,
+                filter={},
+            )
+            parent_group = DynamicGroup.objects.create(
+                name="Parent CustomField DynamicGroup",
+                content_type=ct,
+                filter={},
+            )
+            group_membership = DynamicGroupMembership.objects.create(
+                parent_group=parent_group,
+                group=filter_group,
+                operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+                weight=10,
+            )
+
+            # Prepare test cases
+            # For dynamic group we're supporting only exact or icontains for now
+            # Depending on the custom field filter logic
+            for lookup_data in test_data["lookups"]:
+                if lookup_data["lookup"] not in ["", "ic"]:
+                    continue
+
+                test_cases = [(lookup_data["lookup"], test_case) for test_case in lookup_data["test_cases"]]
+                group_membership.operator = DynamicGroupOperatorChoices.OPERATOR_INTERSECTION
+                group_membership.save()
+
+                for lookup, test_case in test_cases:
+                    assert_in_msg = f'object expected to be found for searching `{lookup}` ({lookup_data["name"]}) = "{test_case["search"]}"'
+                    assert_not_in_msg = f'object expected to be filtered out for searching `{lookup}` ({lookup_data["name"]}) = "{test_case["search"]}"'
+                    group_filter = {f"cf_{cf_label}": test_case["search"]}
+                    if lookup == "ic":
+                        group_filter = {f"cf_{cf_label_ic}": test_case["search"]}
+
+                    with self.subTest(f"Test filtering {group_filter}"):
+                        filter_group.set_filter(group_filter)
+                        filter_group.save()
+                        members = parent_group.update_cached_members()
+                        self.assertProperInstancesReturned(
+                            instances, members, test_case["expected"], assert_in_msg, assert_not_in_msg
+                        )
+
+                negated_test_cases = self.get_negated_test_cases(lookup_data["lookup"], lookup_data["test_cases"])
+                group_membership.operator = DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE
+                group_membership.save()
+
+                for lookup, test_case in negated_test_cases:
+                    assert_in_msg = f'object expected to be found for searching `{lookup}` ({lookup_data["name"]}) = "{test_case["search"]}"'
+                    assert_not_in_msg = f'object expected to be filtered out for searching `{lookup}` ({lookup_data["name"]}) = "{test_case["search"]}"'
+                    group_filter = {f"cf_{cf_label}": test_case["search"]}
+                    if lookup == "ic":
+                        group_filter = {f"cf_{cf_label_ic}": test_case["search"]}
+
+                    with self.subTest(f"Test negated filtering {group_filter}"):
+                        filter_group.set_filter(group_filter)
+                        filter_group.save()
+                        members = parent_group.update_cached_members()
+                        self.assertProperInstancesReturned(
+                            instances, members, test_case["expected"], assert_in_msg, assert_not_in_msg
+                        )
+
         def test_str_custom_field_filters(self):
             cf_label = "test_fs_label_str"
             test_data = self.filter_matrix[CustomFieldTypeChoices.TYPE_TEXT]
@@ -411,11 +488,15 @@ class CustomFieldsFilters:
                         )
 
         @staticmethod
-        def create_custom_field(model: Model, label: str) -> CustomField:
+        def create_custom_field(
+            model: Model,
+            label: str,
+            filter_logic: CustomFieldFilterLogicChoices = CustomFieldFilterLogicChoices.FILTER_EXACT,
+        ) -> CustomField:
             cf = CustomField.objects.create(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 label=label,
-                filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
+                filter_logic=filter_logic,
             )
             cf.content_types.set([ContentType.objects.get_for_model(model)])
             return cf
