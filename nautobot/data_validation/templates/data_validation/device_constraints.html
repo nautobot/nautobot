@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load form_helpers %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
+{% block content %}
+    <form action="." method="post" class="h-100 vstack">
+        {% csrf_token %}
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <span aria-hidden="true" class="mdi mdi-alert me-2"></span>
+            <div>
+                <strong>Warning:</strong> Changes made here affect how device uniqueness and naming rules are enforced.
+                These changes will update the Constance configuration for <code>DEVICE_UNIQUENESS</code> and will create
+                a <code>RequiredValidationRule</code> for the <code>Device</code> model if
+                <i>Device name required</i> is selected.
+                Modify these settings <strong>at your own risk</strong>.
+            </div>
+        </div>
+        <div class="row align-content-start flex-fill">
+            <div class="col-md-8 offset-md-2">
+
+                {% if form.non_field_errors %}
+                    <div class="card border-danger mb-16">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="card mb-16">
+                    <div class="card-header"><strong>Device Constraints</strong></div>
+                    <div class="card-body">
+                        {% render_field form.DEVICE_UNIQUENESS %}
+                        {% render_field form.DEVICE_NAME_REQUIRED %}
+                        {% if not request.user.is_staff %}
+                            <p class="text-secondary mt-2 text-center">
+                                <em>You do not have permission to modify these settings.</em>
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="nb-form-sticky-footer">
+            {% if request.user.is_staff %}
+                <button type="submit" name="_update" class="btn btn-primary">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Update
+                </button>
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Cancel
+                </a>
+            {% endif %}
+        </div>
+    </form>
+{% endblock %}

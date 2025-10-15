@@ -159,6 +159,20 @@ class DeviceStatusChoices(ChoiceSet):
     )
 
 
+class DeviceUniquenessChoices(ChoiceSet):
+    LOCATION_TENANT_NAME = "location_tenant_name"
+    NAME = "name"
+    NONE = "none"
+
+    DEFAULT = LOCATION_TENANT_NAME
+
+    CHOICES = [
+        (LOCATION_TENANT_NAME, "Location + Tenant + Name"),
+        (NAME, "Device name must be globally unique"),
+        (NONE, "No enforced uniqueness"),
+    ]
+
+
 #
 # ConsolePorts
 #

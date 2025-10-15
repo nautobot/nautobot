@@ -45,7 +45,8 @@ class NavMenuTestCase(TestCase):
                         except AttributeError:
                             # Not a model view?
                             self.assertIn(
-                                item_details["name"], {"Apps Marketplace", "Installed Apps", "Interface Connections"}
+                                item_details["name"],
+                                {"Apps Marketplace", "Installed Apps", "Interface Connections", "Device Constraints"},
                             )
 
                     for button, button_details in item_details["buttons"].items():
