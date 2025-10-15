@@ -1,6 +1,8 @@
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.apps.models import CustomValidator
+from nautobot.data_validation.models import RequiredValidationRule
 from nautobot.dcim.choices import DeviceUniquenessChoices
 from nautobot.dcim.models import Device
 
@@ -13,25 +15,52 @@ class DeviceUniquenessValidator(CustomValidator):
     def clean(self):
         obj = self.context["object"]
         uniqueness_mode = getattr(settings, "DEVICE_UNIQUENESS", DeviceUniquenessChoices.DEFAULT)
+        device_name_required = RequiredValidationRule.objects.filter(
+            content_type=ContentType.objects.get_for_model(Device), field="name"
+        ).exists()
 
-        if not obj.name:
+        # Rule 1: If we don't set DEVICE_NAME_REQUIRED then it's acceptable for any number of devices to be "unnamed",
+        # regardless of the DEVICE_UNIQUENESS setting
+        if not obj.name and not device_name_required:
             return
 
+        # If name is None but is required validation error will be returned
+        if not obj.name:
+            self.validation_error({"name": "Device name is required."})
+
         if uniqueness_mode == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
-            duplicates = Device.objects.filter(
-                name=obj.name,
-                tenant=obj.tenant,
-                location=obj.location,
-            ).exclude(pk=obj.pk)
-            if duplicates.exists():
-                self.validation_error(
-                    {
-                        "__all__": (
-                            f"A device named '{obj.name}' already exists in this location: {obj.location} and tenant: {obj.tenant}. "
-                            "Device names must be unique per (Location, Tenant) when DEVICE_UNIQUENESS='location_tenant_name'."
-                        )
-                    }
-                )
+            # Rule 2: name is not None, tenant is None, given location --> no duplicates
+            # Rule 3: tenant is None, name is duplicated --> error
+            if obj.tenant is None:
+                duplicates = Device.objects.filter(
+                    name=obj.name,
+                    tenant__isnull=True,
+                ).exclude(pk=obj.pk)
+                if duplicates.exists():
+                    self.validation_error(
+                        {
+                            "__all__": (
+                                f"A device named '{obj.name}' with no tenant already exists. "
+                                "Device names must be unique when tenant is None and DEVICE_UNIQUENESS='location_tenant_name'."
+                            )
+                        }
+                    )
+            else:
+                # When tenant is set, enforce uniqueness per (location, tenant, name)
+                duplicates = Device.objects.filter(
+                    name=obj.name,
+                    tenant=obj.tenant,
+                    location=obj.location,
+                ).exclude(pk=obj.pk)
+                if duplicates.exists():
+                    self.validation_error(
+                        {
+                            "__all__": (
+                                f"A device named '{obj.name}' already exists in this location: {obj.location} and tenant: {obj.tenant}. "
+                                "Device names must be unique per (Location, Tenant) when DEVICE_UNIQUENESS='location_tenant_name'."
+                            )
+                        }
+                    )
 
         elif uniqueness_mode == DeviceUniquenessChoices.NAME:
             duplicates = Device.objects.filter(name=obj.name).exclude(pk=obj.pk)
@@ -48,16 +77,6 @@ class DeviceUniquenessValidator(CustomValidator):
         elif uniqueness_mode == "none":
             # Explicitly no uniqueness enforcement
             return
-
-        else:
-            self.validation_error(
-                {
-                    "__all__": (
-                        f"Invalid DEVICE_UNIQUENESS setting '{uniqueness_mode}'. "
-                        f"Expected one of: {', '.join(DeviceUniquenessChoices.values())}."
-                    )
-                }
-            )
 
 
 custom_validators = [DeviceUniquenessValidator]

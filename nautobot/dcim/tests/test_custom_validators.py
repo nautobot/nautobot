@@ -1,7 +1,9 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import override_settings, TestCase
 
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
+from nautobot.data_validation.models import RequiredValidationRule
 from nautobot.dcim.choices import DeviceUniquenessChoices
 from nautobot.dcim.models import Device, DeviceType, Location
 from nautobot.extras.models import Role, Status
@@ -29,8 +31,8 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
         )
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
-    def test_location_tenant_name_uniqueness(self):
-        """Devices must be unique by (Location, Tenant, Name)."""
+    def test_duplicate_same_location_tenant_name_fails(self):
+        """Same name, tenant, and location should raise ValidationError."""
         dup_device = Device(
             name=self.device_name,
             device_type=self.device_type,
@@ -39,38 +41,128 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
             status=self.device_status,
             tenant=self.tenant,
         )
-        # Should fail because same (location, tenant, name)
         with self.assertRaises(ValidationError):
             dup_device.full_clean()
 
-        # Different tenant should be fine
-        dup_device.tenant = None
-        dup_device.full_clean()  # should not raise
-
-        # Different location should be fine
-        dup_device.tenant = self.tenant
-        dup_device.location = Location.objects.exclude(pk=self.location.pk).first()
-        dup_device.full_clean()  # should not raise
-
-    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
-    def test_global_name_uniqueness(self):
-        """Devices must have globally unique names when DEVICE_UNIQUENESS='name'."""
-        dup_device = Device(
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
+    def test_different_tenant_allows_duplicate_name(self):
+        """Same name and location, different tenant should be allowed."""
+        tenant = Tenant.objects.create(name="Tenant2")
+        non_dup_device = Device(
             name=self.device_name,
             device_type=self.device_type,
             role=self.device_role,
             location=self.location,
             status=self.device_status,
-            tenant=None,
+            tenant=tenant,
         )
+        non_dup_device.full_clean()  # should not raise
 
-        # Should fail because same name globally
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
+    def test_different_location_allows_duplicate_name(self):
+        """Same name and tenant, different location should be allowed."""
+        location = Location.objects.last()
+        non_dup_device = Device(
+            name=self.device_name,
+            device_type=self.device_type,
+            role=self.device_role,
+            location=location,
+            status=self.device_status,
+            tenant=self.tenant,
+        )
+        non_dup_device.full_clean()  # should not raise
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
+    def test_duplicate_name_with_null_tenant_fails(self):
+        """Duplicate name with tenant=None should raise ValidationError."""
+        Device.objects.create(
+            name="Device-2",
+            location=self.location,
+            tenant=None,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        dup = Device(
+            name="Device-2",
+            location=self.location,
+            tenant=None,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        with self.assertRaises(ValidationError):
+            dup.full_clean()
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
+    def test_duplicate_name_globally_fails(self):
+        """Duplicate name should raise ValidationError."""
+        tenant = Tenant.objects.create(name="Tenant2")
+        location = Location.objects.last()
+        dup_device = Device(
+            name=self.device_name,
+            device_type=self.device_type,
+            role=self.device_role,
+            location=location,
+            status=self.device_status,
+            tenant=tenant,
+        )
         with self.assertRaises(ValidationError):
             dup_device.full_clean()
 
-        # Different name should succeed
-        dup_device.name = "device-2"
-        dup_device.full_clean()  # should not raise
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
+    def test_different_name_succeeds(self):
+        """Different name should be allowed globally."""
+        non_dup_device = Device(
+            name="Device-2",
+            device_type=self.device_type,
+            role=self.device_role,
+            location=self.location,
+            status=self.device_status,
+            tenant=self.tenant,
+        )
+        non_dup_device.full_clean()  # should not raise
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
+    def test_unnamed_device_allowed_if_name_not_required(self):
+        """Unnamed device allowed if DEVICE_NAME_REQUIRED is False."""
+        Device.objects.create(
+            name=None,
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        unnamed2 = Device(
+            name=None,
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        self.assertFalse(
+            RequiredValidationRule.objects.filter(
+                content_type=ContentType.objects.get_for_model(Device), field="name"
+            ).exists()
+        )
+        unnamed2.full_clean()  # should not raise
+
+    @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
+    def test_unnamed_device_fails_if_name_is_required(self):
+        """Unnamed device should raise a ValidationError if DEVICE_NAME_REQUIRED is True."""
+        unnamed = Device(
+            name=None,
+            location=self.location,
+            tenant=self.tenant,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        RequiredValidationRule.objects.create(content_type=ContentType.objects.get_for_model(Device), field="name")
+        with self.assertRaises(ValidationError):
+            unnamed.full_clean()
 
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE)
     def test_no_uniqueness_enforced(self):
@@ -85,4 +177,4 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
         )
 
         # Should NOT raise any error since uniqueness enforcement is off
-        dup_device.full_clean()  # should not raise
+        dup_device.full_clean()
