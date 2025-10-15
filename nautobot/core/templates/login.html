@@ -3,8 +3,8 @@
 {% load form_helpers %}
 
 {% block content %}
-    <div class="row" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-        <div class="col-md-4 offset-md-4">
+    <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
+        <div class="col-sm-12 col-md-9 col-lg-7 col-xl-5 col-xxl-3">
             {% if "BANNER_LOGIN"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
                     {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
