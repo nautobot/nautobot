@@ -1,6 +1,5 @@
 from nautobot.apps.ui import (
     NavMenuAddButton,
-    NavMenuButton,
     NavMenuGroup,
     NavMenuItem,
     NavMenuTab,
