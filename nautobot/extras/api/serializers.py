@@ -89,6 +89,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.tags import TaggedItem
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -1087,7 +1088,7 @@ class StatusSerializer(NautobotModelSerializer):
 
 
 class TagSerializer(NautobotModelSerializer):
-    tagged_items = serializers.IntegerField(read_only=True)
+    tagged_items = serializers.SerializerMethodField()
     content_types = ContentTypeField(
         queryset=TaggableClassesQuery().as_queryset(),
         many=True,
@@ -1114,6 +1115,9 @@ class TagSerializer(NautobotModelSerializer):
 
         return attrs
 
+    @extend_schema_field(serializers.IntegerField(read_only=True))
+    def get_tagged_items(self, obj):
+        return TaggedItem.objects.filter(tag=obj).count()
 
 #
 # Teams
