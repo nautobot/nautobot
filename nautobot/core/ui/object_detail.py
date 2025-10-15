@@ -1628,9 +1628,7 @@ class StatsPanel(Panel):
                 qs = related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict)
                 if len(self.filter_pks) > 1:
                     qs = qs.distinct()
-                related_object_count = (
-                    qs.count()
-                )
+                related_object_count = qs.count()
                 related_object_model_class_meta = related_object_model_class._meta
                 related_object_list_url = validated_viewname(related_object_model_class, "list")
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
