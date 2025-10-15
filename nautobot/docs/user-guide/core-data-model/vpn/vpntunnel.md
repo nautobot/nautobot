@@ -14,5 +14,3 @@ The following encapsulation types are currently supported:
 - OpenVPN
 - PPTP
 - WireGuard
-
-A VPN Tunnel may also be associated with a VPN Profile, either directly by explicitly selecting one, or indirectly by inheriting the profile from its parent VPN.
