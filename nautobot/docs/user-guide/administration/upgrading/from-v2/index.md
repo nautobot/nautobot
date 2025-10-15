@@ -1,6 +1,6 @@
 # Impact Analysis
 
-Upgrading to Nautobot v3.0 introduces many changes to the UI, but the upgrade process is designed to minimize disruption. For administrators, most day-to-day workflows remain in tact without changes. Developers will find that the primary changes are in bootstrap migrations, which will largely be handled by the upgrade tooling.
+Upgrading to Nautobot v3.0 introduces many changes to the UI, but the upgrade process is designed to minimize disruption. For administrators, most day-to-day workflows remain intact without changes. Developers will find that the primary changes are in bootstrap migrations, which will largely be handled by the upgrade tooling.
 
 At a high-level overview, consider the following impacting changes:
 
