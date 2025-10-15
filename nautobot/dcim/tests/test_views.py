@@ -209,7 +209,9 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    # One query for the natural slug, one for `LocationViewSet.get_extra_context`, one for the descendant
+    # One query for the natural slug, one for `LocationViewSet.get_extra_context`, and additional for distinct (which may be fixable?)
+    # See: https://github.com/nautobot/nautobot/pull/7530#discussion_r2432836062
+    # and https://github.com/nautobot/nautobot/pull/7530#discussion_r2432620239 for additional context
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 3}
 
     @classmethod

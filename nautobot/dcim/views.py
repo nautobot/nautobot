@@ -393,6 +393,7 @@ class LocationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
     breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    view_titles = Titles(titles={"detail": "{{ object.name }}"})
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

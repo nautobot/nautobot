@@ -1609,7 +1609,7 @@ class StatsPanel(Panel):
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
-            self.filter_pks = (
+            self.filter_pks = list(
                 instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
             )
         else:
@@ -1624,7 +1624,7 @@ class StatsPanel(Panel):
                     related_object_model_class, query = related_field
                 else:
                     related_object_model_class, query = related_field, f"{self.filter_name}__in"
-                filter_dict = {query: list(self.filter_pks)}
+                filter_dict = {query: self.filter_pks}
                 qs = related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict)
                 if len(self.filter_pks) > 1:
                     qs = qs.distinct()
