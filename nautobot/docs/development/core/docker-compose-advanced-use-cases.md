@@ -145,7 +145,6 @@ Keycloak admin console is reachable via `http://localhost:8087/admin/` with user
 | `nautobot_admin`   | `admin123`  |
 | `nautobot_auditor` | `audit123`  |
 
-
 ### Dev Containers Setup
 
 +/- 2.1.2
@@ -158,14 +157,13 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 - `nautobot.code-workspace` - VS Code workspace configuration for Nautobot
 - `development/docker-compose.nohealthcheck.yml` - Docker compose override file used to remove healh checks set in `docker-compose.yml`. Useful for VS Code Dev Containers where no process is spawned and the container would never be healthy.
 
-
 To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers.
 
 ### Debugging inside a Dev Container
 
 You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
 - **Local: Nautobot** - Targets the Django server process
-- **Local: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs. Remember to stop the "celery-beat" and "celery-worker" containers to make sure new jobs hit this worker instance
+- **Local: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs. Remember to stop the "Celery-beat" and "Celery-worker" containers to make sure new jobs hit this worker instance
 
 !!! note
     You can run tests with the VS Code [Test Explorer panel](https://code.visualstudio.com/docs/debugtest/testing#_run-and-debug-tests), or with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
@@ -173,7 +171,6 @@ You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debuggi
 ### Containers on Remote Servers
 
 VS Code allows to launch Dev Containers on remote hosts. Use the Remote Development to connect via SSH to another host, then select Reopen in Container from there.
-
 
 ### Remote Debugging Configuration
 
