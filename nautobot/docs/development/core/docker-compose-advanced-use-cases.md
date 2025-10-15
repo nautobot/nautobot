@@ -173,21 +173,10 @@ You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debuggi
 !!! note
     You can run tests with the VS Code [Test Explorer panel](https://code.visualstudio.com/docs/debugtest/testing#_run-and-debug-tests), or with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.
 
-### Special Workflow for Containers on Remote Servers
+### Containers on Remote Servers
 
-A slightly different workflow is needed when your development container is running on a remotely-connected server (such as with SSH). VS Code will not offer the **Reopen in Container** option on a remote server.
+VS Code allows to launch Dev Containers on remote hosts. Use the Remote Development to connect via SSH to another host, then select Reopen in Container from there.
 
-To work with remote containers, after `invoke build` use `docker-compose` as follows to start the containers. This prevents the HTTP service from automatically starting inside the container:
-
-```no-highlight
-cd development
-docker compose -f docker-compose.yml -f docker-compose.debug.yml up
-```
-
-- Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.
-- The **Select the container to attach VS Code** input field provides a list of running containers.
-- Click on `development_nautobot_1` to use VS Code inside the container. The `devcontainer` will startup now.
-- As a last step open the folder `/opt/nautobot` in VS Code.
 
 ### Remote Debugging Configuration
 
