@@ -1,0 +1,5 @@
+Updated dependency `django-cors-headers` to `~4.9.0`.
+Updated dependency `django-tree-queries` to `~0.21.2`.
+Updated dependency `emoji` to `~2.15.0`.
+Updated dependency `prometheus-client` to `~0.23.1`.
+Updated dependency `social-auth-core` to `~4.8.1`.
