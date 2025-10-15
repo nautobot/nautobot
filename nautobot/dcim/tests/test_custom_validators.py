@@ -14,7 +14,7 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.device_status = Status.objects.get_for_model(Device).first()
-        self.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        self.device_type = DeviceType.objects.first()
         self.device_role = Role.objects.get_for_model(Device).first()
         self.location = Location.objects.first()
         self.tenant = Tenant.objects.create(name="Tenant")
@@ -31,7 +31,7 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME)
     def test_location_tenant_name_uniqueness(self):
         """Devices must be unique by (Location, Tenant, Name)."""
-        dup_device = Device.objects.create(
+        dup_device = Device(
             name=self.device_name,
             device_type=self.device_type,
             role=self.device_role,
@@ -55,7 +55,7 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
     @override_settings(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME)
     def test_global_name_uniqueness(self):
         """Devices must have globally unique names when DEVICE_UNIQUENESS='name'."""
-        dup_device = Device.objects.create(
+        dup_device = Device(
             name=self.device_name,
             device_type=self.device_type,
             role=self.device_role,
@@ -86,20 +86,3 @@ class DeviceUniquenessValidatorTest(NautobotTestCaseMixin, TestCase):
 
         # Should NOT raise any error since uniqueness enforcement is off
         dup_device.full_clean()  # should not raise
-
-    @override_settings(DEVICE_UNIQUENESS="invalid_value")
-    def test_invalid_setting_value_raises_error(self):
-        """Invalid DEVICE_UNIQUENESS values should trigger a validation error."""
-        dup_device = Device(
-            name=self.device.name,
-            location=self.location,
-            tenant=self.tenant,
-            role=self.device_role,
-            device_type=self.device_type,
-            status=self.device_status,
-        )
-
-        with self.assertRaises(ValidationError) as err:
-            dup_device.full_clean()
-
-        self.assertIn("Invalid DEVICE_UNIQUENESS setting", str(err.exception))

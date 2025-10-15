@@ -4,6 +4,7 @@ from constance import config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.core import settings
@@ -276,24 +277,78 @@ class DeviceConstraintsViewTest(TestCase):
     """Tests for the DeviceConstraintsView."""
 
     def setUp(self):
+        self.initial_setting = config.DEVICE_UNIQUENESS
         self.url = reverse("data_validation:device-constraints")
         self.device_ct = ContentType.objects.get_for_model(Device)
 
     def tearDown(self):
         """Reset Constance config and clear cache."""
-        config.DEVICE_UNIQUENESS = DeviceUniquenessChoices.DEFAULT
+        config.DEVICE_UNIQUENESS = self.initial_setting
         cache = caches[settings.CONSTANCE_DATABASE_CACHE_BACKEND]
         cache.clear()
 
-    def test_get_view_renders_successfully(self):
-        """GET by non-admin should render the form correctly."""
+    @override_settings(
+        DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE,
+    )
+    def test_page_reflects_correct_settings_for_non_staff(self):
+        """Non-staff view still shows the actual configuration, but in disabled form."""
         user = get_user_model().objects.create_user(username="testuser")
         self.client.force_login(user)
         response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Ensure fields are disabled but reflect correct config values
+        self.assertContains(response, f'value="{DeviceUniquenessChoices.NONE}" selected')
+        self.assertContains(response, "disabled")
+        self.assertContains(response, "You do not have permission to modify these settings.")
+
+        # DEVICE_NAME_REQUIRED should NOT be checked, because RequiredValidationRule not exist
+        device_ct = ContentType.objects.get_for_model(Device)
+        self.assertFalse(RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists())
+        self.assertNotContains(response, 'name="DEVICE_NAME_REQUIRED" checked')
+
+        # Footer buttons should NOT be rendered
+        self.assertNotContains(response, '<button type="submit"')
+        self.assertNotContains(response, "-->Update")
+        self.assertNotContains(response, "-->Cancel")
+
+    @override_settings(
+        DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME,
+    )
+    def test_page_reflects_correct_settings_for_staff(self):
+        """Page should reflect the true values of DEVICE_UNIQUENESS and DEVICE_NAME_REQUIRED."""
+        # Create RequiredValidationRule to check proper value of DEVICE_NAME_REQUIRED
+        device_ct = ContentType.objects.get_for_model(Device)
+        RequiredValidationRule.objects.create(
+            name="Required Name rule",
+            content_type=device_ct,
+            field="name",
+        )
+        user = get_user_model().objects.create_user(username="testuser", is_staff=True)
+        self.client.force_login(user)
+        response = self.client.get(self.url)
+
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "data_validation/device_constraints.html")
+
         self.assertIn("form", response.context)
         self.assertContains(response, "Device Constraints")
+
+        # Check that the correct DEVICE_UNIQUENESS option is selected
+        self.assertContains(response, f'value="{DeviceUniquenessChoices.NAME}" selected')
+
+        self.assertNotContains(response, "disabled")
+        self.assertNotContains(response, "You do not have permission to modify these settings.")
+
+        # Check that DEVICE_NAME_REQUIRED checkbox is checked when RequiredValidationRule exist
+        self.assertTrue(RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists())
+        self.assertContains(response, 'id="id_DEVICE_NAME_REQUIRED" checked')
+
+        # Footer buttons should be rendered
+        self.assertContains(response, '<button type="submit"')
+        self.assertContains(response, "-->Update")
+        self.assertContains(response, "-->Cancel")
 
     def test_post_as_non_admin_denied(self):
         """POST by non-admin should be denied."""
@@ -360,11 +415,19 @@ class DeviceConstraintsViewTest(TestCase):
         self.assertFalse(RequiredValidationRule.objects.filter(content_type=self.device_ct, field="name").exists())
 
     def test_invalid_post_rerenders_form(self):
-        """If form is invalid, the view should re-render without redirect."""
+        """If form is invalid, the view should re-render without redirect for multiple invalid inputs."""
         user = get_user_model().objects.create_user(username="testuser", is_staff=True)
         self.client.force_login(user)
-        response = self.client.post(self.url, {"DEVICE_UNIQUENESS": ""})
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "data_validation/device_constraints.html")
-        self.assertIn("form", response.context)
-        self.assertTrue(response.context["form"].errors)
+
+        invalid_inputs = [
+            {"DEVICE_UNIQUENESS": ""},
+            {"DEVICE_UNIQUENESS": "invalid_value"},
+        ]
+
+        for post_data in invalid_inputs:
+            with self.subTest(post_data=post_data):
+                response = self.client.post(self.url, post_data)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "data_validation/device_constraints.html")
+                self.assertIn("form", response.context)
+                self.assertTrue(response.context["form"].errors)

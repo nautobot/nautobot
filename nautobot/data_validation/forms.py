@@ -315,6 +315,9 @@ class DeviceConstraintsForm(BootstrapMixin, forms.Form):
         choices=DeviceUniquenessChoices.CHOICES,
         label="Device Uniqueness",
         required=True,
+        error_messages={
+            "invalid_choice": f"Invalid value. Available options are: {', '.join(DeviceUniquenessChoices.values())}"
+        },
     )
     DEVICE_NAME_REQUIRED = forms.BooleanField(
         label="Device name required (cannot be blank or null)",
@@ -322,7 +325,7 @@ class DeviceConstraintsForm(BootstrapMixin, forms.Form):
         required=False,
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.fields["DEVICE_UNIQUENESS"].initial = get_settings_or_config(
@@ -333,3 +336,7 @@ class DeviceConstraintsForm(BootstrapMixin, forms.Form):
         name_rule_exists = RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists()
 
         self.fields["DEVICE_NAME_REQUIRED"].initial = name_rule_exists
+
+        if user is not None and not user.is_staff:
+            for field in self.fields.values():
+                field.disabled = True

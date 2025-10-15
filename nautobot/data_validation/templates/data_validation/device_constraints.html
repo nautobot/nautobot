@@ -36,19 +36,26 @@
                     <div class="card-body">
                         {% render_field form.DEVICE_UNIQUENESS %}
                         {% render_field form.DEVICE_NAME_REQUIRED %}
+                        {% if not request.user.is_staff %}
+                            <p class="text-muted mt-2 text-center">
+                                <em>You do not have permission to modify these settings.</em>
+                            </p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
         <div class="nb-form-sticky-footer">
-            <button type="submit" name="_update" class="btn btn-primary">
-                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                    -->Update
-            </button>
-            <a href="{% url 'home' %}" class="btn btn-secondary">
-                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                    -->Cancel
-            </a>
-        </div>
+            {% if request.user.is_staff %}
+                <button type="submit" name="_update" class="btn btn-primary">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Update
+                </button>
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Cancel
+                </a>
+            {% endif %}
+            </div>
     </form>
 {% endblock %}

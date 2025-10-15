@@ -183,7 +183,7 @@ class DeviceConstraintsView(GenericView):
     )
 
     def get(self, request):
-        form = forms.DeviceConstraintsForm()
+        form = forms.DeviceConstraintsForm(user=request.user)
         return render(
             request,
             self.template_name,
@@ -195,7 +195,7 @@ class DeviceConstraintsView(GenericView):
         )
 
     def post(self, request):
-        if not (request.user.is_staff or request.user.is_superuser):
+        if not request.user.is_staff:
             return self.handle_no_permission()
         form = forms.DeviceConstraintsForm(request.POST)
         if form.is_valid():
@@ -203,9 +203,9 @@ class DeviceConstraintsView(GenericView):
             device_ct = ContentType.objects.get_for_model(Device)
             if form.cleaned_data["DEVICE_NAME_REQUIRED"]:
                 models.RequiredValidationRule.objects.get_or_create(
-                    name="Required Name rule",
                     content_type=device_ct,
                     field="name",
+                    defaults={"name": "Require Device Name"},
                 )
             else:
                 models.RequiredValidationRule.objects.filter(
