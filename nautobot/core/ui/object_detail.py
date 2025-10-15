@@ -1621,9 +1621,12 @@ class StatsPanel(Panel):
                     related_object_model_class, query = related_field
                 else:
                     related_object_model_class, query = related_field, f"{self.filter_name}__in"
-                filter_dict = {query: self.filter_pks}
+                filter_dict = {query: list(self.filter_pks)}
+                qs = related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict)
+                if len(self.filter_pks) > 1:
+                    qs = qs.distinct()
                 related_object_count = (
-                    related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()
+                    qs.count()
                 )
                 related_object_model_class_meta = related_object_model_class._meta
                 related_object_list_url = validated_viewname(related_object_model_class, "list")
