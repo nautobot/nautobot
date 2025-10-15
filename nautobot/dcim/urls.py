@@ -148,7 +148,6 @@ urlpatterns = [
         ),
         name="devicetype_modulebaytemplate_add",
     ),
-
     # Console server port templates
     path(
         "console-server-port-templates/add/",
