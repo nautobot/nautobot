@@ -13,10 +13,21 @@ class TestInvalidateMaxTreeDepthSignal(TestCase):
         # Ensure that the max_depth hasn't already been cached
         Location.objects.__dict__.pop("max_depth", None)
         location = Location.objects.first()
-        with self.assertNumQueries(3):
-            # 3 Queries: Update, Select for parent, Count for siblings
-            location.save()
 
+        with CaptureQueriesContext(connection) as ctx:
+            location.save()
+            captured_tree_cte_queries = [
+                query["sql"] for query in ctx.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+        allowed_number_of_tree_queries = 0 # We don't expect any tree queries to be run
+        _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+        self.assertEqual(
+                len(captured_tree_cte_queries),
+                allowed_number_of_tree_queries,
+                f"The CTE tree was calculated a different number of times ({len(captured_tree_cte_queries)})"
+                f" than allowed ({allowed_number_of_tree_queries})."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
 class QuerySetAncestorTests(TestCase):
     """Tests for custom `TreeQuerySet.ancestors` method."""
