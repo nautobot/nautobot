@@ -291,6 +291,7 @@ class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
+    id = tables.Column(linkify=True, verbose_name="ID")
     module_type = tables.Column(
         linkify=lambda record: record.module_type.get_absolute_url(),
         verbose_name="Type",
@@ -311,6 +312,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         model = Module
         fields = (
             "pk",
+            "id",
             "module_type",
             "module_family",
             "parent_module_bay",
@@ -325,6 +327,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
         default_columns = (
             "pk",
+            "id",
             "module_type",
             "module_family",
             "parent_module_bay",

@@ -1,1 +1,0 @@
-Fixed issue with `FilterTestCases.test_tenant_group` where the filter query could return the same `TenantGroup` object multiple times.
