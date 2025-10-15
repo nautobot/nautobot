@@ -646,6 +646,26 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(logs.filter(message="I should NOT be logged to the database").exists())
         self.assertTrue(logs.filter(message="I should be logged to the database").exists())
 
+    def test_log_counts_by_level(self):
+        """
+        Test that related JobLogEntry counts are stored for JobResult list summary.
+        """
+        module = "log_counts_by_level"
+        name = "TestLogCountsByLevel"
+        job_result = create_job_result_and_run_job(module, name)
+
+        self.assertGreater(job_result.job_log_entries.count(), 0)
+        self.assertIsNotNone(job_result.debug_log_count)
+        self.assertEqual(job_result.debug_log_count, 0)
+        self.assertIsNotNone(job_result.success_log_count)
+        self.assertEqual(job_result.success_log_count, 1)
+        self.assertIsNotNone(job_result.info_log_count)
+        self.assertEqual(job_result.info_log_count, 3)
+        self.assertIsNotNone(job_result.warning_log_count)
+        self.assertEqual(job_result.warning_log_count, 2)
+        self.assertIsNotNone(job_result.error_log_count)
+        self.assertEqual(job_result.error_log_count, 3)
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.
