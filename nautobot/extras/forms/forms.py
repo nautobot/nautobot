@@ -338,7 +338,7 @@ ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
     extra=5,
     widgets={
         "name": forms.TextInput(attrs={"class": "form-control"}),
-        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+        "sequence": forms.NumberInput(attrs={"class": "form-control"}),
         "min_approvers": forms.NumberInput(attrs={"class": "form-control"}),
         "denial_message": forms.TextInput(attrs={"class": "form-control"}),
         "approver_group": forms.Select(attrs={"class": "form-control"}),
@@ -352,8 +352,8 @@ class ApprovalWorkflowStageDefinitionBulkEditForm(TagsBulkEditFormMixin, Nautobo
     pk = forms.ModelMultipleChoiceField(
         queryset=ApprovalWorkflowStageDefinition.objects.all(), widget=forms.MultipleHiddenInput
     )
-    weight = forms.IntegerField(required=False, label="Weight")
-    min_approvers = forms.IntegerField(required=False, label="Min Approvers")
+    sequence = forms.IntegerField(required=False, label="Sequence")
+    min_approvers = forms.IntegerField(required=False, label="Minimum Approvers")
     denial_message = forms.CharField(required=False, label="Denial Message")
 
     class Meta:
@@ -374,8 +374,8 @@ class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
         required=False,
         label="Approval Workflow Definition",
     )
-    weight = forms.IntegerField(required=False, label="Weight")
-    min_approvers = forms.IntegerField(required=False, label="Min Approvers")
+    sequence = forms.IntegerField(required=False, label="Sequence")
+    min_approvers = forms.IntegerField(required=False, label="Minimum Approvers")
     approver_group = DynamicModelChoiceField(
         queryset=Group.objects.all(),
         required=False,
