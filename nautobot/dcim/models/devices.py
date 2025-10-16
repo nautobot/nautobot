@@ -25,6 +25,7 @@ from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    DeviceUniquenessChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
@@ -682,19 +683,20 @@ class Device(PrimaryModel, ConfigContextModel):
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_names(cls):  # pylint: disable=no-self-argument
         """
-        When DEVICE_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity.
+        Check DEVICE_UNIQUENESS from settings or Constance and return proper field.
         """
-        if get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY"):
-            # opt-in simplified "pseudo-natural-key"
+        if get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.NAME:
+            # Simplified pseudo-natural key (opt-in for name-only uniqueness)
             return ["name"]
+        elif get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
+            # Full natural key based on tenant, location, and name
+            return ["name", "tenant", "location"]
         else:
-            # true natural-key given current uniqueness constraints
-            return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
+            return ["pk"]
 
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
-            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -715,16 +717,6 @@ class Device(PrimaryModel, ConfigContextModel):
             self.clusters.clear()
         else:
             self.clusters.set([cluster])
-
-    def validate_unique(self, exclude=None):
-        # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
-        # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
-        # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, "location") and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(name=self.name, location=self.location, tenant__isnull=True):
-                raise ValidationError({"name": "A device with this name already exists."})
-
-        super().validate_unique(exclude)
 
     def clean(self):
         from nautobot.ipam import models as ipam_models  # circular import workaround
@@ -908,6 +900,11 @@ class Device(PrimaryModel, ConfigContextModel):
 
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
+
+        # to avoid circular import
+        from nautobot.dcim.custom_validators import DeviceUniquenessValidator
+
+        DeviceUniquenessValidator(self).clean()
 
         super().save(*args, **kwargs)
 
