@@ -18,7 +18,6 @@ from nautobot.core.apps import (
     register_menu_items,
 )
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.utils.module_loading import import_string_optional
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
@@ -282,11 +281,6 @@ class NautobotAppConfig(NautobotConfig):
             self.features["table_extensions"] = get_table_extension_features(table_extensions)
 
 
-@class_deprecated_in_favor_of(NautobotAppConfig)
-class PluginConfig(NautobotAppConfig):
-    pass
-
-
 #
 # Template content injection
 #
@@ -417,11 +411,6 @@ class TemplateExtension:
         raise NotImplementedError
 
 
-@class_deprecated_in_favor_of(TemplateExtension)
-class PluginTemplateExtension(TemplateExtension):
-    pass
-
-
 def register_template_extensions(class_list):
     """
     Register a list of TemplateExtension classes
@@ -446,11 +435,6 @@ class Banner:
         if banner_class not in BannerClassChoices.values():
             raise ValueError("Banner class must be a choice within BannerClassChoices.")
         self.banner_class = banner_class
-
-
-@class_deprecated_in_favor_of(Banner)
-class PluginBanner(Banner):
-    pass
 
 
 def register_banner_function(function):
@@ -496,11 +480,6 @@ class FilterExtension:
     filterset_fields = {}
 
     filterform_fields = {}
-
-
-@class_deprecated_in_favor_of(FilterExtension)
-class PluginFilterExtension(FilterExtension):
-    pass
 
 
 def register_filter_extensions(filter_extensions, plugin_name):
@@ -791,11 +770,6 @@ class CustomValidator:
         `self.validation_error(<message>)` may be called to raise a ValidationError.
         """
         raise NotImplementedError
-
-
-@class_deprecated_in_favor_of(CustomValidator)
-class PluginCustomValidator(CustomValidator):
-    pass
 
 
 def register_custom_validators(class_list):

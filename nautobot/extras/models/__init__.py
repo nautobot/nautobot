@@ -43,7 +43,7 @@ from .models import (
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .roles import Role, RoleField
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
-from .statuses import Status, StatusField, StatusModel
+from .statuses import Status, StatusField
 from .tags import Tag, TaggedItem
 
 __all__ = (
@@ -103,7 +103,6 @@ __all__ = (
     "StaticGroupAssociation",
     "Status",
     "StatusField",
-    "StatusModel",
     "Tag",
     "TaggedItem",
     "Team",

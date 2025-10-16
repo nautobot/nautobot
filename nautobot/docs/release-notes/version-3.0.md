@@ -116,7 +116,7 @@ The Job Approval process was removed and replaced by Workflow Approvals.
 
 #### Removed Python Code
 
-Many previously deprecated classes have been fully removed now (see full table below).
+Many previously deprecated classes have been fully removed now (see full table below). The most notable removal is the original `PluginConfig` class, which was replaced by `NautobotAppConfig` in v1.5.2. If your app still imports and inherits from `PluginConfig`, you should migrate to using `NautobotAppConfig` before upgrading to Nautobot 3.0.
 
 ??? info "Full table of code removals"
     {data-table user-guide/administration/upgrading/from-v2/tables/v3-code-removals.yaml}

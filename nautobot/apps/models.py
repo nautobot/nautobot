@@ -43,7 +43,6 @@ from nautobot.extras.models import (
     CustomFieldModel,
     RelationshipModel,
     StatusField,
-    StatusModel,
 )
 from nautobot.extras.models.mixins import (
     ApprovableModelMixin,
@@ -99,7 +98,6 @@ __all__ = (
     "RestrictedQuerySet",
     "SavedViewMixin",
     "StatusField",
-    "StatusModel",
     "TagsField",
     "TagsManager",
     "TreeManager",
