@@ -25,6 +25,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -1188,18 +1189,18 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         job_result = instance.get_latest_sync()
 
         context = {
+            **super().get_extra_context(request, instance),
             "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
             "active_tab": "result",
             "verbose_name": instance._meta.verbose_name,
-            "view_titles": self.get_view_titles(),
-            "breadcrumbs": self.get_breadcrumbs(),
-            "detail": True,
-            "view_action": "result",
         }
 
-        return render(request, "extras/gitrepository_result.html", context)
+        return Response(
+            context,
+            template_name="extras/gitrepository_result.html",
+        )
 
     @action(
         detail=True,
