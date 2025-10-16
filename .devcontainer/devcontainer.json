@@ -18,14 +18,15 @@
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
+                "eamodio.gitlens",
                 "EditorConfig.EditorConfig",
+                "github.vscode-github-actions",
                 "GitHub.vscode-pull-request-github",
+                "mhutchie.git-graph",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
                 "samuelcolvin.jinjahtml",
-                "tamasfe.even-better-toml",
-                "github.vscode-github-actions",
-                "eamodio.gitlens"
+                "tamasfe.even-better-toml"
             ],
             "settings": {
                 // Global editor settings
