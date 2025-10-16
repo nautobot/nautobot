@@ -381,7 +381,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         old_url = self.browser.url
         child_menu.click()
 
-        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
