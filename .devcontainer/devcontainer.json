@@ -18,7 +18,6 @@
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
-                "DavidAnson.vscode-markdownlint",
                 "EditorConfig.EditorConfig",
                 "GitHub.vscode-pull-request-github",
                 "ms-python.python",
@@ -40,7 +39,7 @@
                 "workbench.settings.useSplitJSON": false,
                 // Markdown settings
                 "[markdown]": {
-                    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+                    "editor.defaultFormatter": "charliermarsh.ruff"
                 },
                 // Python settings
                 "[python]": {
