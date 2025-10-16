@@ -1,36 +1,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
-{% load custom_links %}
-{% load form_helpers %}
-{% load log_levels %}
-{% load plugins %}
 {% load static %}
-{% load buttons %}
-
-{% block breadcrumbs %}
-    <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-    {% if result.job_model is not None %}
-        <li>{{ result.job_model.grouping }}</li>
-        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.name }}">
-            {{ result.job_model }}
-        </a></li>
-    {% elif associated_record %}
-        {% if associated_record.name %}
-            <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
-                {{ associated_record.name }}
-            </a></li>
-        {% else %}
-            <li>{{ associated_record }}</li>
-        {% endif %}
-    {% elif job %}
-        <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
-            {{ job.class_path }}
-        </a></li>
-    {% else %}
-        <li>{{ result.name }}</li>
-    {% endif %}
-    <li>{{ result.created }}</li>
-{% endblock breadcrumbs %}
 
 {% block title %}
     Job Result:

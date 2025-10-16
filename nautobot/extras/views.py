@@ -2326,6 +2326,14 @@ class JobResultUIViewSet(
 
         return context
 
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("job_model", "user")
+
+        if not self.detail:
+            queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
+
+        return queryset
+
     @action(
         detail=True,
         url_path="log-table",
