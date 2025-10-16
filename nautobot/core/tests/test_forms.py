@@ -12,6 +12,7 @@ from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
+from nautobot.core.forms.forms import RenderJinjaForm
 from nautobot.core.utils import requests
 from nautobot.core.utils.filtering import get_filterset_parameter_form_field
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
@@ -905,3 +906,38 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
+
+
+class RenderJinjaFormTest(TestCase):
+    def test_defaults_and_content_type_choices(self):
+        """Test the default values and content type choices of the RenderJinjaForm."""
+        form = RenderJinjaForm()
+        # Fields present
+        for field_name in ["template_code", "context_mode", "context", "content_type", "object_uuid"]:
+            self.assertIn(field_name, form.fields)
+
+        # Default field-level initial values
+        self.assertEqual(form.fields["context_mode"].initial, "json")
+        self.assertEqual(form.fields["context"].initial, {})
+
+        # Content type choices should include a BaseModel subclass such as Status
+        ct = ContentType.objects.get_for_model(extras_models.Status)
+        content_type_str = f"{ct.app_label}.{ct.model}"
+        choice_values = [value for value, _ in form.fields["content_type"].choices]
+        self.assertIn(content_type_str, choice_values)
+
+    def test_initial_values_applied(self):
+        """Test that the initial values are applied to the RenderJinjaForm."""
+        ct = ContentType.objects.get_for_model(extras_models.Status)
+        content_type_str = f"{ct.app_label}.{ct.model}"
+        obj = extras_models.Status.objects.first()
+        init = {
+            "content_type": content_type_str,
+            "object_uuid": str(obj.pk),
+            "context_mode": "object",
+        }
+        form = RenderJinjaForm(initial=init)
+
+        self.assertEqual(form.initial.get("content_type"), content_type_str)
+        self.assertEqual(form.initial.get("object_uuid"), str(obj.pk))
+        self.assertEqual(form.initial.get("context_mode"), "object")

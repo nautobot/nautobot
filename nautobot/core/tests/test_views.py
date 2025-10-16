@@ -17,6 +17,7 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.core.forms.forms import RenderJinjaForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -860,3 +861,46 @@ class SearchRobotsTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
         self.assertNotContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
+
+
+class RenderJinjaViewTest(TestCase):
+    def test_render_jinja_view_defaults(self):
+        url = reverse("render_jinja_template")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+        # Validate form is present and has expected default configuration
+        form = response.context["form"]
+        self.assertIsInstance(form, RenderJinjaForm)
+        for field_name in ["template_code", "context_mode", "context", "content_type", "object_uuid"]:
+            self.assertIn(field_name, form.fields)
+
+        # Defaults from the form class should be present
+        self.assertEqual(form.fields["context_mode"].initial, "json")
+        self.assertEqual(form.fields["context"].initial, {})
+
+        # No URL-driven preselection by default
+        self.assertIsNone(form.initial.get("content_type"))
+        self.assertIsNone(form.initial.get("object_uuid"))
+
+    def test_render_jinja_view_preselects_from_query_params(self):
+        # Use a known BaseModel subclass (Status) for content_type/object UUID
+        ct = ContentType.objects.get_for_model(Status)
+        content_type_str = f"{ct.app_label}.{ct.model}"
+        obj = Status.objects.first()
+        url = reverse("render_jinja_template") + f"?content_type={content_type_str}&object_uuid={obj.pk}"
+
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+        form = response.context["form"]
+        self.assertIsInstance(form, RenderJinjaForm)
+
+        # URL params should drive initial values and set context_mode to object
+        self.assertEqual(form.initial.get("content_type"), content_type_str)
+        self.assertEqual(str(form.initial.get("object_uuid")), str(obj.pk))
+        self.assertEqual(form.initial.get("context_mode"), "object")
+
+        # The provided content_type value should be one of the available choices
+        choice_values = [value for value, _ in form.fields["content_type"].choices]
+        self.assertIn(content_type_str, choice_values)
