@@ -140,11 +140,30 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], vm_interface=vm_interface).count(), 1)
 
+        # add a single instance which is already there
+        count = vm_interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], vm_interface=vm_interface).count(), 1)
+
         # add multiple instances
         count = vm_interface.add_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 6)
         for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, vm_interface=vm_interface).count(), 1)
+
+        # add multiple instances all of which are already there
+        count = vm_interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, vm_interface=vm_interface).count(), 1)
+
+        # add multiple IPs some of which are there
+        count = vm_interface.add_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 8)
+        for ip in ips[3:7]:
             self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, vm_interface=vm_interface).count(), 1)
 
     def test_remove_ip_addresses(self):
@@ -165,13 +184,28 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 9)
 
+        # remove a single instance which has already been removed
+        count = vm_interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 9)
+
         # remove multiple instances
         count = vm_interface.remove_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 4)
 
+        # remove multiple instances all which have already been removed
+        count = vm_interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 4)
+
+        # remove multiple instances some of which have already been removed
+        count = vm_interface.remove_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 2)
+
         count = vm_interface.remove_ip_addresses(ips)
-        self.assertEqual(count, 4)
+        self.assertEqual(count, 2)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 0)
 
         # Test the pre_delete signal for IPAddressToInterface instances
@@ -180,9 +214,14 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.virtualmachine.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
         self.virtualmachine.save()
 
-        vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
+        count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
+        self.assertEqual(count, 1)
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip4, None)
-        vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
+        # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
+        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: class.
+        count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
+        self.assertEqual(count, 0)
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip6, None)
