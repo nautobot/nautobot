@@ -253,7 +253,7 @@ class ConfigContextFilterSet(BaseFilterSet):
         field_name="device_families",
         queryset=DeviceFamily.objects.all(),
         to_field_name="name",
-        label="Device Family (ID or name)",
+        label="Device Family (name or ID)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         field_name="platforms",
