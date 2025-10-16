@@ -1629,140 +1629,6 @@ class JobBulkDeleteView(generic.BulkDeleteView):
     table = tables.JobTable
 
 
-class JobApprovalRequestView(generic.ObjectView):
-    """
-    This view handles requests to view and approve a Job execution request.
-    It renders the Job's form in much the same way as `JobView` except all
-    form fields are disabled and actions on the form relate to approval of the
-    job's execution, rather than initial job form input.
-    """
-
-    queryset = ScheduledJob.objects.needs_approved()
-    template_name = "extras/job_approval_request.html"
-    additional_permissions = ("extras.view_job",)
-
-    def get_extra_context(self, request, instance):
-        """
-        Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
-        We don't care to actually get any data back from the form as we will not ever change it.
-        Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
-        """
-        job_model = instance.job_model
-        if job_model is not None:
-            job_class = get_job(job_model.class_path, reload=True)
-        else:
-            # 2.0 TODO: remove this fallback?
-            job_class = get_job(instance.job_class)
-
-        if job_class is not None:
-            # Render the form with all fields disabled
-            initial = instance.kwargs
-            initial["_job_queue"] = instance.job_queue
-            initial["_profile"] = instance.celery_kwargs.get("profile", False)
-            job_form = job_class().as_form(initial=initial, approval_view=True)
-        else:
-            job_form = None
-
-        return {"job_form": job_form, **super().get_extra_context(request, instance)}
-
-    def post(self, request, pk):
-        """
-        Act upon one of the 3 submit button actions from the user.
-
-        dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
-        deny will delete the scheduled_job instance
-        approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
-        """
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-
-        post_data = request.POST
-
-        deny = "_deny" in post_data
-        approve = "_approve" in post_data
-        force_approve = "_force_approve" in post_data
-        dry_run = "_dry_run" in post_data
-
-        job_model = scheduled_job.job_model
-        job_class = get_job(job_model.class_path, reload=True)
-
-        if dry_run:
-            # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
-            if job_model is None:
-                messages.error(request, "There is no job associated with this request? Cannot run it!")
-            elif not job_model.runnable:
-                messages.error(request, "This job cannot be run at this time")
-            elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
-                messages.error(request, "You do not have permission to run this job")
-            elif not job_model.supports_dryrun:
-                messages.error(request, "This job does not support dryrun")
-            else:
-                # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
-                job_kwargs["dryrun"] = True
-                job_result = JobResult.enqueue_job(
-                    job_model,
-                    request.user,
-                    celery_kwargs=scheduled_job.celery_kwargs,
-                    **job_class.serialize_data(job_kwargs),
-                )
-
-                return redirect("extras:jobresult", pk=job_result.pk)
-        elif deny:
-            if not (
-                self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
-                and job_model is not None
-                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
-            ):
-                messages.error(request, "You do not have permission to deny this request.")
-            else:
-                # Delete the scheduled_job instance
-                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-                scheduled_job.delete()
-                if request.user == scheduled_job.user:
-                    messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
-                else:
-                    messages.error(request, f"Approval of {scheduled_job.name} was denied")
-
-                publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
-
-                return redirect("extras:scheduledjob_approval_queue_list")
-
-        elif approve or force_approve:
-            if job_model is None:
-                messages.error(request, "There is no job associated with this request? Cannot run it!")
-            elif not (
-                self.queryset.check_perms(request.user, instance=scheduled_job, action="change")
-                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
-            ):
-                messages.error(request, "You do not have permission to approve this request.")
-            elif request.user == scheduled_job.user:
-                # The requestor *cannot* approve their own job
-                messages.error(request, "You cannot approve your own job request!")
-            else:
-                # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
-                if scheduled_job.one_off and scheduled_job.start_time < timezone.now() and not force_approve:
-                    return render(request, "extras/job_approval_confirmation.html", {"scheduled_job": scheduled_job})
-                scheduled_job.approved_by_user = request.user
-                scheduled_job.approved_at = timezone.now()
-                scheduled_job.save()
-
-                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-                publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
-
-                messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
-
-                return redirect("extras:scheduledjob_approval_queue_list")
-
-        return render(
-            request,
-            self.get_template_name(),
-            {
-                "object": scheduled_job,
-                **self.get_extra_context(request, scheduled_job),
-            },
-        )
-
-
 class JobQueueUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.JobQueueBulkEditForm
     filterset_form_class = forms.JobQueueFilterForm
@@ -2070,20 +1936,162 @@ class ScheduledJobUIViewSet(
     action_buttons = ()
 
     def get_extra_context(self, request, instance):
+        """
+        Build and return all context data needed for ScheduledJob detail/approval views.
+        """
+        django_request = getattr(request, "_request", request)
+
         if instance is None:
-            return super().get_extra_context(request, instance)
-        job_class = get_job(instance.task)
+            return super().get_extra_context(django_request, instance)
+
+        job_model = getattr(instance, "job_model", None)
+        if job_model is not None:
+            job_class = get_job(job_model.class_path, reload=True)
+        else:
+            job_class = get_job(getattr(instance, "job_class", getattr(instance, "task", None)))
+
         labels = {}
+        job_form = None
+
         if job_class is not None:
+            # Build labels from job variables
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 labels[name] = field.label or pretty_name(name)
-        return {
-            "labels": labels,
-            "job_class_found": (job_class is not None),
-            "default_time_zone": get_current_timezone(),
-            **super().get_extra_context(request, instance),
-        }
+
+            # Build job form with prefilled/disabled fields
+            if hasattr(instance, "kwargs"):
+                initial = dict(instance.kwargs or {})
+                initial["_job_queue"] = getattr(instance, "job_queue", None)
+                if hasattr(instance, "celery_kwargs"):
+                    initial["_profile"] = instance.celery_kwargs.get("profile", False)
+                else:
+                    initial["_profile"] = False
+                job_form = job_class().as_form(initial=initial, approval_view=True)
+
+        try:
+            meta_qs = instance.associated_object_metadata.all()
+        except AttributeError:
+            meta_qs = ObjectChange.objects.none()
+
+        metadata_table = tables.ObjectMetadataTable(meta_qs)
+        RequestConfig(django_request).configure(metadata_table)
+
+        context = super().get_extra_context(django_request, instance)
+        context.update(
+            {
+                "labels": labels,
+                "job_class_found": job_class is not None,
+                "job_form": job_form,
+                "default_time_zone": get_current_timezone(),
+                "associated_object_metadata_table": metadata_table,
+                "object": instance,
+                "job_model": job_model,
+            }
+        )
+
+        return context
+
+    @action(detail=True, methods=["get", "post"])
+    def approval_request(self, request, pk=None, *args, **kwargs):
+        """
+        Act upon one of the 3 submit button actions from the user.
+        dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
+        deny will delete the scheduled_job instance
+        approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+        """
+        scheduled_job = get_object_or_404(ScheduledJob.objects.needs_approved(), pk=pk)
+        django_request = getattr(request, "_request", request)
+
+        context = self.get_extra_context(request, scheduled_job)
+
+        job_model = scheduled_job.job_model
+        job_class = get_job(job_model.class_path, reload=True) if job_model else None
+
+        if request.method == "POST":
+            post_data = request.POST
+            deny = "_deny" in post_data
+            approve = "_approve" in post_data
+            force_approve = "_force_approve" in post_data
+            dry_run = "_dry_run" in post_data
+
+            if dry_run:
+                # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
+                if job_model is None:
+                    messages.error(django_request, "There is no job associated with this request? Cannot run it!")
+                elif not job_model.runnable:
+                    messages.error(django_request, "This job cannot be run at this time")
+                elif not JobModel.objects.check_perms(request.user, instance=job_model, action="run"):
+                    messages.error(django_request, "You do not have permission to run this job")
+                elif not job_model.supports_dryrun:
+                    messages.error(django_request, "This job does not support dryrun")
+                else:
+                    # Immediately enqueue the job and send the user to the normal JobResult view
+                    job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
+                    job_kwargs["dryrun"] = True
+                    job_result = JobResult.enqueue_job(
+                        job_model,
+                        request.user,
+                        celery_kwargs=scheduled_job.celery_kwargs,
+                        **job_class.serialize_data(job_kwargs),
+                    )
+                    return redirect("extras:jobresult", pk=job_result.pk)
+
+            elif deny:
+                if not (
+                    ScheduledJob.objects.needs_approved().check_perms(
+                        request.user, instance=scheduled_job, action="delete"
+                    )
+                    and job_model is not None
+                    and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+                ):
+                    messages.error(django_request, "You do not have permission to deny this request.")
+                else:
+                    publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+                    scheduled_job.delete()
+                    if request.user == scheduled_job.user:
+                        messages.error(django_request, f"Approval request for {scheduled_job.name} was revoked")
+                    else:
+                        messages.error(django_request, f"Approval of {scheduled_job.name} was denied")
+                    publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
+                    return redirect("extras:scheduledjob_approval_queue_list")
+
+            elif approve or force_approve:
+                if job_model is None:
+                    messages.error(django_request, "There is no job associated with this request? Cannot run it!")
+                elif not (
+                    ScheduledJob.objects.needs_approved().check_perms(
+                        request.user, instance=scheduled_job, action="change"
+                    )
+                    and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+                ):
+                    messages.error(django_request, "You do not have permission to approve this request.")
+                elif request.user == scheduled_job.user:
+                    # The requestor *cannot* approve their own job
+                    messages.error(django_request, "You cannot approve your own job request!")
+                else:
+                    # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+                    if scheduled_job.one_off and scheduled_job.start_time < timezone.now() and not force_approve:
+                        return render(
+                            django_request,
+                            "extras/job_approval_confirmation.html",
+                            {
+                                "scheduled_job": scheduled_job,
+                                "return_url": reverse("extras:scheduledjob_approval_queue_list"),
+                            },
+                        )
+                    scheduled_job.approved_by_user = request.user
+                    scheduled_job.approved_at = timezone.now()
+                    scheduled_job.save()
+                    # Delete the scheduled_job instance
+                    publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+                    publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+                    messages.success(django_request, f"{scheduled_job.name} was approved and will now begin execution")
+                    return redirect("extras:scheduledjob_approval_queue_list")
+
+            return render(django_request, "extras/job_approval_request.html", context)
+
+        return render(django_request, "extras/job_approval_request.html", context)
 
 
 class ScheduledJobApprovalQueueListView(ObjectListViewMixin):

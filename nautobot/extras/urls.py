@@ -78,7 +78,7 @@ urlpatterns = [
     ),
     path(
         "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
-        views.JobApprovalRequestView.as_view(),
+        views.ScheduledJobUIViewSet.as_view({"get": "approval_request", "post": "approval_request"}),
         name="scheduledjob_approval_request_view",
     ),
     path(
