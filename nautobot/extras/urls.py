@@ -96,6 +96,17 @@ urlpatterns = [
         "jobs/scheduled-jobs/delete/",
         RedirectView.as_view(url="/extras/scheduled-jobs/delete/"),
         name="scheduledjob_bulk_delete_legacy",
+    
+    ),
+    path(
+        "jobs/scheduled-jobs/approval-queue/",
+        views.ScheduledJobApprovalQueueListView.as_view({"get": "list"}),
+        name="scheduledjob_approval_queue_list",
+    ),
+    path(
+        "jobs/scheduled-jobs/approval-queue/<uuid:pk>/",
+        views.ScheduledJobUIViewSet.as_view({"get": "approval_request", "post": "approval_request"}),
+        name="scheduledjob_approval_request_view",
     ),
     path(
         "jobs/<uuid:pk>/",
