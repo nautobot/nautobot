@@ -1,0 +1,1 @@
+Fixed device detail object view failing when powerfeed connected to a non-powerfeed object.
