@@ -203,7 +203,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
-        render_on_tab_id="main",
+        render_on_tab_id="__all__",
         **kwargs,
     ):
         """
@@ -264,8 +264,11 @@ class Button(Component):
         }
 
     def should_render(self, context: Context):
+        # Only show if the user has the permission, which is enforce in super.
         if not super().should_render(context):
             return False
+        if self.render_on_tab_id == "__all__":
+            return True
         return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
@@ -1302,8 +1305,11 @@ class EChartsPanel(Panel, EChartsBase):
         self.width = width
         self.height = height
         self.chart_container_id = chart_container_id
+        self.body_id = (
+            self.chart_container_id or f"{slugify('echart-' + chart_kwargs.get('header', ''))}-{uuid.uuid4().hex[:8]}"
+        )
 
-        super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
+        super().__init__(body_wrapper_template_path=body_wrapper_template_path, body_id=self.body_id, **kwargs)
         EChartsBase.__init__(self, **chart_kwargs)
 
     def get_data(self, context: Context) -> dict[str, Any] | None:
@@ -1347,8 +1353,7 @@ class EChartsPanel(Panel, EChartsBase):
             "chart_config": chart_config,
             "chart_width": self.width,
             "chart_height": self.height,
-            "chart_container_id": self.chart_container_id
-            or f"{slugify(f'echart-{self.header}')}-{uuid.uuid4().hex[:8]}",
+            "chart_container_id": self.body_id,
         }
 
 
