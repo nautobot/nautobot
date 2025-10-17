@@ -8,7 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Circuits",
-        icon="rotate-cw",
+        icon="cable-data",
         weight=500,
         groups=(
             NavMenuGroup(
