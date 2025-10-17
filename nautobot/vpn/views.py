@@ -280,9 +280,9 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=100,
-                label="A-EndPoint",
                 table_class=tables.VPNTunnelTable,
                 table_filter="endpoint_a",
+                table_title="A VPN Tunnel Endpoints",
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[
                     "endpoint_a",
@@ -293,9 +293,9 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=100,
-                label="Z-EndPoint",
                 table_class=tables.VPNTunnelTable,
                 table_filter="endpoint_z",
+                table_title="Z VPN Tunnel Endpoints",
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[
                     "endpoint_a",
