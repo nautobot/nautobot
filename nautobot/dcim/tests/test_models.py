@@ -3021,6 +3021,17 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         iface.speed = 0
         iface.full_clean()
 
+    def test_lag_allows_no_speed_or_duplex(self):
+        """Test that LAG interfaces pass validation when speed and duplex are not set."""
+        iface = Interface(
+            device=self.device,
+            name="Port-Channel1",
+            type=InterfaceTypeChoices.TYPE_LAG,
+            status=self.intf_status,
+        )
+        # Should not raise when speed and duplex are not set
+        iface.full_clean()
+
     def test_optical_disallows_duplex_allows_speed(self):
         """Test that optical interfaces do not allow duplex and allow positive speed."""
         # Duplex set should error
