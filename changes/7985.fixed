@@ -1,1 +1,1 @@
-Added collapse show to initialize the chart div as an open Bootstrap collapsible section.
+Fixed chart card collapse to no longer require two clicks.
