@@ -18,7 +18,6 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -111,7 +110,6 @@ from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
-    "CableTerminationFilterSet",
     "CableTerminationModelFilterSetMixin",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
@@ -145,7 +143,6 @@ __all__ = (
     "ModuleFamilyFilterSet",
     "ModuleFilterSet",
     "ModuleTypeFilterSet",
-    "PathEndpointFilterSet",
     "PathEndpointModelFilterSetMixin",
     "PlatformFilterSet",
     "PowerConnectionFilterSet",
@@ -667,12 +664,6 @@ class DeviceTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
         return queryset.exclude(device_bay_templates__isnull=value)
 
 
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(DeviceComponentTemplateModelFilterSetMixin)
-class DeviceTypeComponentFilterSet(DeviceComponentTemplateModelFilterSetMixin):
-    pass
-
-
 class ConsolePortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = ConsolePortTemplate
@@ -976,24 +967,6 @@ class DeviceFilterSet(
     def _has_primary_ip(self, queryset, name, value):
         params = self.generate_query__has_primary_ip(value)
         return queryset.filter(params)
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(DeviceComponentModelFilterSetMixin)
-class DeviceComponentFilterSet(DeviceComponentModelFilterSetMixin):
-    pass
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CableTerminationModelFilterSetMixin)
-class CableTerminationFilterSet(CableTerminationModelFilterSetMixin):
-    pass
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(PathEndpointModelFilterSetMixin)
-class PathEndpointFilterSet(PathEndpointModelFilterSetMixin):
-    pass
 
 
 class ConsolePortFilterSet(
@@ -1522,12 +1495,6 @@ class ConnectionFilterSetMixin:
         if not value:
             return queryset
         return queryset.filter(**{f"{name}__in": value})
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(ConnectionFilterSetMixin)
-class ConnectionFilterSet(ConnectionFilterSetMixin):
-    pass
 
 
 class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):

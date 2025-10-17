@@ -1,7 +1,6 @@
 from celery import states
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 #
 # Approval Workflows
@@ -176,16 +175,6 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),
     )
-
-
-#
-# CustomLinks
-#
-
-
-@class_deprecated_in_favor_of(ButtonClassChoices)
-class CustomLinkButtonClassChoices(ButtonClassChoices):
-    pass
 
 
 #
