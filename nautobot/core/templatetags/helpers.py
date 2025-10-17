@@ -894,7 +894,7 @@ def render_job_files(files_manager):
 
     return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
 
- 
+
 @library.filter()
 @register.filter()
 def format_timezone(time_zone):
