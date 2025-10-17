@@ -723,8 +723,8 @@ def loaddata(context, filepath="db_output.json"):
 
 @task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
 def npm(context, command):
-    """Execute any given npm command inside `project-static` directory."""
-    run_command(context, f"npm --prefix nautobot/project-static {command}")
+    """Execute any given npm command inside `ui` directory."""
+    run_command(context, f"npm --prefix nautobot/ui {command}")
 
 
 @task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
@@ -928,6 +928,22 @@ def prettier(context, fix=False):
 
 
 @task
+def djhtml(context, fix=False):
+    """Indent Django template files."""
+    command = "djhtml nautobot/*/templates --tabwidth 4"
+    if not fix:
+        command += " --check"
+    run_command(context, f'bash -c "{command}"')  # needed for glob expansion
+
+
+@task
+def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
+    """Lint and check Django template files formatting."""
+    command = "djlint . --lint"
+    run_command(context, command)
+
+
+@task
 def check_migrations(context):
     """Check for missing migrations."""
     command = "nautobot-server --config=nautobot/core/tests/nautobot_config.py makemigrations --dry-run --check"
@@ -964,6 +980,7 @@ def check_schema(context, api_version=None):
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -984,6 +1001,7 @@ def tests(
     append_coverage=False,
     buffer=True,
     cache_test_fixtures=True,
+    config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
     exclude_tag=None,
     failfast=False,
@@ -1018,7 +1036,7 @@ def tests(
         command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     else:
         command = f"nautobot-server test {label}"
-    command += " --config=nautobot/core/tests/nautobot_config.py"
+    command += f" --config={config_file}"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
         command += " --cache-test-fixtures"
@@ -1105,6 +1123,8 @@ def lint(context):
     pylint(context)
     eslint(context)
     prettier(context)
+    djhtml(context)
+    djlint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

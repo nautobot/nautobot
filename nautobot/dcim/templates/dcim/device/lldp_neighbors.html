@@ -5,11 +5,11 @@
 
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>LLDP Neighbors</strong>
         </div>
-        <table class="table table-hover panel-body">
+        <table class="table table-hover card-body">
             <thead>
                 <tr>
                     <th>Interface</th>
@@ -37,7 +37,7 @@
                         {% elif iface.connected_endpoint.circuit %}
                             {% with circuit=iface.connected_endpoint.circuit %}
                                 <td colspan="3">
-                                    <i class="mdi mdi-lightning-bolt" title="Circuit"></i>
+                                    <span class="mdi mdi-lightning-bolt" title="Circuit"></span>
                                     <a href="{{ circuit.get_absolute_url }}">{{ circuit.provider }} {{ circuit }}</a>
                                 </td>
                             {% endwith %}
@@ -54,81 +54,81 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-var ready = (callback) => {
-    if (document.readyState != "loading") {
-        callback();
-    } else {
-        document.addEventListener("DOMContentLoaded", callback);
-    }
-};
+    {{ block.super }}
+    <script type="text/javascript">
+        var ready = (callback) => {
+            if (document.readyState != "loading") {
+                callback();
+            } else {
+                document.addEventListener("DOMContentLoaded", callback);
+            }
+        };
 
-function getAttribute(node, querySelector, attribute) {
-    if (node === null || node.querySelector(querySelector) === null) {
-        return "";
-    }
-    return node.querySelector(querySelector).getAttribute(attribute) || "";
-}
-
-ready(() => {
-    fetch("{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_lldp_neighbors_detail")
-    .then((response) => {
-        if (!response.ok) {
-            throw Error(response.statusText);
+        function getAttribute(node, querySelector, attribute) {
+            if (node === null || node.querySelector(querySelector) === null) {
+                return "";
+            }
+            return node.querySelector(querySelector).getAttribute(attribute) || "";
         }
-        return response.json();
-    })
-    .then((data) => {
-        const interfaces = data["get_lldp_neighbors_detail"];
-        for (var iface of Object.keys(interfaces)) {
-            const neighbor = interfaces[iface][0];
-            const row = document.querySelector('*[data-interface-name="'+ iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
+
+        ready(() => {
+            fetch("{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_lldp_neighbors_detail")
+                .then((response) => {
+                    if (!response.ok) {
+                        throw Error(response.statusText);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    const interfaces = data["get_lldp_neighbors_detail"];
+                    for (var iface of Object.keys(interfaces)) {
+                        const neighbor = interfaces[iface][0];
+                        const row = document.querySelector('*[data-interface-name="'+ iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
             // var row = $('*[data-interface-name="' + iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
 
             // Glean configured hostnames/interfaces from the DOM
-            const configured_device = getAttribute(row, 'td.configured_device', 'data');
-            const configured_chassis = getAttribute(row, 'td.configured_device', 'data-chassis');
-            const configured_interface = getAttribute(row, 'td.configured_interface', 'data-interface-name').toLowerCase();
-            const configured_mac_address = getAttribute(row, 'td.configured_mac', 'data-mac-address').toLowerCase();
-            let configured_interface_short = null;
-            if (configured_interface) {
+                        const configured_device = getAttribute(row, 'td.configured_device', 'data');
+                        const configured_chassis = getAttribute(row, 'td.configured_device', 'data-chassis');
+                        const configured_interface = getAttribute(row, 'td.configured_interface', 'data-interface-name').toLowerCase();
+                        const configured_mac_address = getAttribute(row, 'td.configured_mac', 'data-mac-address').toLowerCase();
+                        let configured_interface_short = null;
+                        if (configured_interface) {
                 // Match long-form IOS names against short ones (e.g. Gi0/1 == GigabitEthernet0/1).
-                configured_interface_short = configured_interface.replace(/^([A-Z][a-z])[^0-9]*([0-9\/]+)$/, "$1$2");
-            }
+                            configured_interface_short = configured_interface.replace(/^([A-Z][a-z])[^0-9]*([0-9\/]+)$/, "$1$2");
+                        }
 
             // Clean up hostnames/interfaces learned via LLDP
-            const neighbor_host = neighbor['remote_system_name'] || ""; // sanitize hostname if it's null to avoid breaking the split func
-            const neighbor_port = neighbor['remote_port'] || ""; // sanitize port if it's null to avoid breaking the split func
-            const lldp_device = neighbor_host.split(".")[0];  // Strip off any trailing domain name
-            const lldp_interface = neighbor_port.split(".")[0].toLowerCase();   // Strip off any trailing subinterface ID
+                        const neighbor_host = neighbor['remote_system_name'] || ""; // sanitize hostname if it's null to avoid breaking the split func
+                        const neighbor_port = neighbor['remote_port'] || ""; // sanitize port if it's null to avoid breaking the split func
+                        const lldp_device = neighbor_host.split(".")[0];  // Strip off any trailing domain name
+                        const lldp_interface = neighbor_port.split(".")[0].toLowerCase();   // Strip off any trailing subinterface ID
 
             // Add LLDP neighbors to table
-            row.querySelector('td.device').textContent = lldp_device;
-            row.querySelector('td.interface').textContent = lldp_interface;
+                        row.querySelector('td.device').textContent = lldp_device;
+                        row.querySelector('td.interface').textContent = lldp_interface;
 
             // Apply colors to rows
-            if (!configured_device && lldp_device) {
-                row.classList.add('info');
-            } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_interface == lldp_interface) {
-                row.classList.add('success');
-            } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_interface_short == lldp_interface) {
-                row.classList.add('success');
-            } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_mac_address == lldp_interface) {
-                row.classList.add('success');
-            } else {
-                row.classList.add('danger');
-            }
-        }
-    })
-    .catch((error) => {
-        if (error.responseText) {
-            alert(error.responseText);
-        } else {
-            throw error;
-        }
-    });
-});
+                        if (!configured_device && lldp_device) {
+                            row.classList.add('info');
+                        } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_interface == lldp_interface) {
+                            row.classList.add('success');
+                        } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_interface_short == lldp_interface) {
+                            row.classList.add('success');
+                        } else if ((configured_device == lldp_device || configured_chassis == lldp_device) && configured_mac_address == lldp_interface) {
+                            row.classList.add('success');
+                        } else {
+                            row.classList.add('danger');
+                        }
+                    }
+                })
+                .catch((error) => {
+                    if (error.responseText) {
+                        alert(error.responseText);
+                    } else {
+                        throw error;
+                    }
+                });
+        });
 
-</script>
+    </script>
 {% endblock %}

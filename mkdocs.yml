@@ -361,6 +361,7 @@ nav:
                       - "user-guide/administration/upgrading/from-v1/ipam/before-you-upgrade.md"
                       - "user-guide/administration/upgrading/from-v1/ipam/after-you-upgrade.md"
                       - "user-guide/administration/upgrading/from-v1/ipam/for-developers.md"
+              - Upgrading Nautobot from v2.X to v3.0: "user-guide/administration/upgrading/from-v2/index.md"
           - Migration:
               - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
               - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
@@ -662,7 +663,7 @@ nav:
           - Migration Guides:
               - From Nautobot v1: "development/apps/migration/from-v1.md"
               - From Nautobot v2:
-                  - Migrating UI v2 to v3: "development/apps/migration/from-v2/migrating-ui-v2-to-v3.md"
+                  - Migrating v2 to v3: "development/apps/migration/from-v2/migrating-v2-to-v3.md"
                   - New Nautobot Custom UI APIs: "development/apps/migration/from-v2/new-nautobot-custom-ui-apis.md"
                   - Upgrading from Bootstrap v3 to v5: "development/apps/migration/from-v2/upgrading-from-bootstrap-v3-to-v5.md"
               - Dependency Updates: "development/apps/migration/dependency-updates.md"

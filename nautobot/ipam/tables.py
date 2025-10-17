@@ -36,7 +36,7 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="badge bg-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -856,6 +856,7 @@ class ServiceTable(BaseTable):
     parent = tables.LinkColumn(order_by=("device", "virtual_machine"))
     ports = tables.TemplateColumn(template_code="{{ record.port_list }}", verbose_name="Ports")
     tags = TagColumn(url_name="ipam:service_list")
+    actions = ButtonsColumn(Service, buttons=["changelog", "edit", "delete"])
 
     class Meta(BaseTable.Meta):
         model = Service
@@ -868,5 +869,6 @@ class ServiceTable(BaseTable):
             "ip_addresses",
             "description",
             "tags",
+            "actions",
         )
-        default_columns = ("pk", "name", "parent", "protocol", "ports", "description")
+        default_columns = ("pk", "name", "parent", "protocol", "ports", "description", "actions")

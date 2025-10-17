@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.html import escape
 from rest_framework import status
@@ -21,8 +21,6 @@ from nautobot.extras.choices import (
 from nautobot.extras.models import CustomField, CustomFieldChoice, DynamicGroup, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
-
-from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
 
 
 class ChangeLogViewTest(ModelViewTestCase):
@@ -260,7 +258,10 @@ class ChangeLogAPITest(APITestCase):
         self.tags = Tag.objects.get_for_model(Location)
         self.statuses = Status.objects.get_for_model(Location)
 
+    @tag("example_app")
     def test_create_object(self):
+        from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
+
         location_type = LocationType.objects.get(name="Campus")
         data = {
             "name": "Test Location 1",
@@ -290,8 +291,11 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], sorted([self.tags[0].name, self.tags[1].name]))
         self.assertEqual(oc.user_id, self.user.pk)
 
+    @tag("example_app")
     def test_update_object(self):
         """Test PUT with changelogs."""
+        from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
+
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(
             name="Test Location 1",

@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotFound
 from django.urls import include, path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 
 from nautobot.core.views import (
     AboutView,
+    AppDocsView,
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
@@ -60,6 +61,15 @@ urlpatterns = [
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
     # Apps
     path("apps/", include((apps_patterns, "apps"))),
+    # Redirect /docs/<app_base_url>/ -> /docs/<app_base_url>/index.html
+    path(
+        "docs/<str:app_base_url>/",
+        RedirectView.as_view(pattern_name="docs_file", permanent=False),
+        kwargs={"path": "index.html"},
+        name="docs_index_redirect",
+    ),
+    # Apps docs - Serve docs file
+    path("docs/<str:app_base_url>/<path:path>", AppDocsView.as_view(), name="docs_file"),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO

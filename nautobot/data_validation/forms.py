@@ -15,6 +15,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -22,6 +23,8 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.dcim.choices import DeviceUniquenessChoices
+from nautobot.dcim.models import Device
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -300,3 +303,40 @@ class DataComplianceFilterForm(BootstrapMixin, forms.Form):
         required=False,
     )
     q = forms.CharField(required=False, label="Search")
+
+
+#
+# Device Constraints
+#
+
+
+class DeviceConstraintsForm(BootstrapMixin, forms.Form):
+    DEVICE_UNIQUENESS = forms.ChoiceField(
+        choices=DeviceUniquenessChoices.CHOICES,
+        label="Device Uniqueness",
+        required=True,
+        error_messages={
+            "invalid_choice": f"Invalid value. Available options are: {', '.join(DeviceUniquenessChoices.values())}"
+        },
+    )
+    DEVICE_NAME_REQUIRED = forms.BooleanField(
+        label="Device name required (cannot be blank or null)",
+        initial=False,
+        required=False,
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["DEVICE_UNIQUENESS"].initial = get_settings_or_config(
+            "DEVICE_UNIQUENESS", fallback=DeviceUniquenessChoices.DEFAULT
+        )
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        name_rule_exists = RequiredValidationRule.objects.filter(content_type=device_ct, field="name").exists()
+
+        self.fields["DEVICE_NAME_REQUIRED"].initial = name_rule_exists
+
+        if user is not None and not user.is_staff:
+            for field in self.fields.values():
+                field.disabled = True

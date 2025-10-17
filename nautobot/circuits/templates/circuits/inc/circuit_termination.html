@@ -4,47 +4,47 @@ In a future release, we should delete this file.
 -->
 {% load helpers %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         {% include 'circuits/inc/circuit_termination_header_extra_content.html' with termination=termination side=side %}
         <strong>Termination - {{ side }} Side</strong>
     </div>
     {% if termination %}
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             {% if termination.location %}
-            <tr>
-                <td>Location</td>
-                <td>
-                    {% include 'dcim/inc/location_hierarchy.html' with location=termination.location %}
-                </td>
-            </tr>
-            <tr>
-                <td>Cable</td>
-                <td>
-                    {% include 'circuits/inc/circuit_termination_cable_fragment.html' %}
-                </td>
-            </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>
+                        {% include 'dcim/inc/location_hierarchy.html' with location=termination.location %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cable</td>
+                    <td>
+                        {% include 'circuits/inc/circuit_termination_cable_fragment.html' %}
+                    </td>
+                </tr>
             {% elif termination.provider_network %}
-            <tr>
-                <td>Provider Network</td>
-                <td>{{ termination.provider_network|hyperlinked_object }}</td>
-            </tr>
+                <tr>
+                    <td>Provider Network</td>
+                    <td>{{ termination.provider_network|hyperlinked_object }}</td>
+                </tr>
             {% else %}
-            <tr>
-                <td>Cloud Network</td>
-                <td>{{ termination.cloud_network|hyperlinked_object }}</td>
-            </tr>
+                <tr>
+                    <td>Cloud Network</td>
+                    <td>{{ termination.cloud_network|hyperlinked_object }}</td>
+                </tr>
             {% endif %}
             <tr>
                 <td>Speed</td>
                 <td>
                     {% if termination.port_speed and termination.upstream_speed %}
-                        <i class="mdi mdi-arrow-down-bold" title="Downstream"></i> {{ termination.port_speed|humanize_speed }} &nbsp;
-                        <i class="mdi mdi-arrow-up-bold" title="Upstream"></i> {{ termination.upstream_speed|humanize_speed }}
+                        <span class="mdi mdi-arrow-down-bold" title="Downstream"></span> {{ termination.port_speed|humanize_speed }} &nbsp;
+                        <span class="mdi mdi-arrow-up-bold" title="Upstream"></span> {{ termination.upstream_speed|humanize_speed }}
                     {% elif termination.port_speed %}
                         {{ termination.port_speed|humanize_speed }}
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -56,10 +56,10 @@ In a future release, we should delete this file.
                             {% if not forloop.first %}<br />{% endif %}
                             {{ ip|hyperlinked_object }} ({{ ip.vrf|default:"Global" }})
                         {% empty %}
-                            <span class="text-muted">None</span>
+                            <span class="text-secondary">None</span>
                         {% endfor %}
                     {% else %}
-                        <span class="text-muted">&mdash;</span>
+                        <span class="text-secondary">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>
@@ -78,8 +78,8 @@ In a future release, we should delete this file.
             {% include 'inc/relationships_table_rows.html' with relationships_data=termination.get_relationships_data %}
         </table>
     {% else %}
-        <div class="panel-body">
-            <span class="text-muted">None</span>
+        <div class="card-body">
+            <span class="text-secondary">None</span>
         </div>
     {% endif %}
 </div>

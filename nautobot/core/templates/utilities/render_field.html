@@ -1,6 +1,6 @@
 {% load form_helpers %}
 
-<div class="mb-10 d-flex justify-content-center{% if field.errors %} has-error{% endif %}">
+<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
@@ -55,5 +55,5 @@
             {% endfor %}
         </ul>
     {% endif %}
-    </div>
+</div>
 </div>

@@ -7,7 +7,9 @@ from django.db.models import Model
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.expected_conditions import element_to_be_clickable
 from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 from splinter.exceptions import ElementDoesNotExist
@@ -65,12 +67,12 @@ class ObjectsListMixin:
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
         self.browser.execute_script(
-            "document.querySelector('#object_list_form button[type=\"submit\"]').scrollIntoView()"
+            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
         )
         self.browser.find_by_xpath(
-            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
+            '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#object_list_form button[name="_delete"]').click()
+        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
 
     def click_bulk_delete_all(self):
         """
@@ -82,7 +84,7 @@ class ObjectsListMixin:
         """
         Click bulk edit button on bottom of the items table list.
         """
-        self.click_button('#object_list_form button[type="submit"]')
+        self.click_button('#bulk-action-buttons button[type="submit"]')
 
     def click_bulk_edit_all(self):
         """
@@ -376,8 +378,10 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             sidenav_button.click()
         child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
+        old_url = self.browser.url
         child_menu.click()
 
+        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
@@ -389,7 +393,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_name("_create", wait_time=5), "Page failed to load")
 
     def click_edit_form_create_button(self):
         """
@@ -399,7 +403,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_css(".alert-success", wait_time=5), "Page failed to load")
 
     def _fill_select2_field(self, field_name, value, search_box_class=None):
         """
@@ -409,6 +413,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
+        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
@@ -455,6 +460,8 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         btn = self.browser.find_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
         self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
+        # Scrolling may be asynchronous, wait until it's actually clickable.
+        WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
         btn.click()
 
     def fill_input(self, input_name, input_value):
@@ -736,6 +743,8 @@ class BulkOperationsTestCases:
             self.assertJobStatusIsCompleted()
 
             self.go_to_model_list_page()
+            # We set page size to large number to avoid pagination issues
+            self.set_per_page(1000)
             rest_items_count = self.model_expected_counts["all"] - self.model_expected_counts["filtered"]
             self.assertEqual(self.objects_list_visible_items, rest_items_count)
 

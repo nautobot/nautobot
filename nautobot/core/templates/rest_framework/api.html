@@ -2,6 +2,7 @@
 {% load helpers %}
 {% load plugins %}
 {% load static %}
+{% load ui_framework %}
 
 {% block bootstrap_theme %}
     {% include 'inc/media.html' %}
@@ -14,40 +15,47 @@
             {% include 'inc/header_banners.html' %}
         </div>
         <div class="container-fluid mb-12 mt-16">
-            <div class="row row-cols-3">
-                <div class="col">
-                    <div>
-                        {% include 'inc/page_title.html' with title=name|add:' – REST API' %}
-                        {% include 'inc/breadcrumbs.html' %}
-                    </div>
+            <div class="row">
+                <div class="col-4">
+                    {% include 'inc/page_title.html' with title=name|add:' – REST API' %}
                 </div>
                 {% include 'inc/header.html' %}
+                <div class="col-12">
+                    {% block breadcrumbs %}
+                        <nav aria-label="Breadcrumbs" class="mt-1">
+                            <ol class="breadcrumb">
+                                {% for breadcrumb_name, breadcrumb_url in breadcrumblist %}
+                                    <li class="breadcrumb-item"><a href="{{ breadcrumb_url }}">{{ breadcrumb_name }}</a></li>
+                                {% endfor %}
+                            </ol>
+                        </nav>
+                    {% endblock %}
+                </div>
             </div>
         </div>
         {% block header %}{% endblock header %}
     </header>
     <main class="container-fluid wrapper" id="main-content" tabindex="-1">
-        {{ block.super }}
+        {% block content %}
+            {{ block.super }}
+        {% endblock %}
     </main>
     {% include 'inc/footer.html' %}
     <style>
-        .navbar-static-top {
-            display: none;
-        }
         .request-info {
             clear: both;  /* Fix description floating issue */
         }
     </style>
-{% endblock body %}
 
-{% block script %}
-    {% include 'inc/javascript.html' %}
-    <script src="{% static "rest_framework/js/prettify-min.js" %}"></script>
-    <script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
-    <script src="{% static "rest_framework/js/default.js" %}"></script>
-    <script>
-    $(document).ready(function() {
-        $('form').ajaxForm();
-    });
-    </script>
-{% endblock script %}
+    {% block script %}
+        {% include 'inc/javascript.html' %}
+        <script src="{% static "rest_framework/js/prettify-min.js" %}"></script>
+        <script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
+        <script src="{% static "rest_framework/js/default.js" %}"></script>
+        <script>
+            $(document).ready(function() {
+                $('form').ajaxForm();
+            });
+        </script>
+    {% endblock script %}
+{% endblock body %}

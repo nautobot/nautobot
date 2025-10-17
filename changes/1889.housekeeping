@@ -1,1 +1,0 @@
-Removed explicit `label` declarations from many filterset filters where the enhanced automatic labeling should suffice.

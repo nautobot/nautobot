@@ -3,51 +3,51 @@
 {% load form_helpers %}
 
 {% block content %}
-{% block tabs %}{% endblock %}
-<form action="" method="post" class="object-import-form h-100 vstack">
-    {% csrf_token %}
-    <div class="row align-content-start flex-fill">
-    	<div class="col-md-8 offset-md-2">
-            <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
-            {% if form.non_field_errors %}
-                <div class="card border-danger mb-16">
-                    <div class="card-header bg-danger-subtle border-danger text-body">
-                        <strong>Errors</strong>
+    {% block tabs %}{% endblock %}
+    <form action="" method="post" class="object-import-form h-100 vstack">
+        {% csrf_token %}
+        <div class="row align-content-start flex-fill">
+            <div class="col-md-8 offset-md-2">
+                <h1>{% block title %}{{ obj_type|bettertitle }} Import{% endblock %}</h1>
+                {% if form.non_field_errors %}
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
+                            {{ form.non_field_errors }}
+                        </div>
                     </div>
-                    <div class="card-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
-            <div class="card">
-                <div class="card-header">Data</div>
-                <div class="card-body">
-                    {% render_field form.data %}
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">Format</div>
-                <div class="card-body">
-                    {% render_field form.format %}
-                </div>
-            </div>
-            <div class="nb-form-sticky-footer">
-                <button type="submit" name="_create" class="btn btn-primary">
-                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                    -->Submit
-                </button>
-                <button type="submit" name="_addanother" class="btn btn-primary">
-                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                    -->Submit and Import Another
-                </button>
-                {% if return_url %}
-                    <a href="{{ return_url }}" class="btn btn-secondary">
-                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                        -->Cancel
-                    </a>
                 {% endif %}
+                <div class="card">
+                    <div class="card-header">Data</div>
+                    <div class="card-body">
+                        {% render_field form.data %}
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Format</div>
+                    <div class="card-body">
+                        {% render_field form.format %}
+                    </div>
+                </div>
+                <div class="nb-form-sticky-footer">
+                    <button type="submit" name="_create" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Submit
+                    </button>
+                    <button type="submit" name="_addanother" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Submit and Import Another
+                    </button>
+                    {% if return_url %}
+                        <a href="{{ return_url }}" class="btn btn-secondary">
+                            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                            -->Cancel
+                        </a>
+                    {% endif %}
+                </div>
             </div>
-    	</div>
-    </div>
-</form>
+        </div>
+    </form>
 {% endblock %}

@@ -3,46 +3,46 @@
 {% load form_helpers %}
 
 {% block content %}
-<div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-    <div class="col-sm-4 col-sm-offset-4">
-        {% if "BANNER_LOGIN"|settings_or_config %}
-            <div class="alert alert-info text-center" role="alert">
-                {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
-            </div>
-        {% endif %}
-        {% if form.non_field_errors %}
-            <div class="card border-danger mb-20">
-                <div class="card-header bg-danger-subtle border-danger text-body">
-                    <strong>Errors</strong>
+    <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
+        <div class="col-sm-12 col-md-9 col-lg-7 col-xl-5 col-xxl-3">
+            {% if "BANNER_LOGIN"|settings_or_config %}
+                <div class="alert alert-info text-center" role="alert">
+                    {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
                 </div>
-                <div class="card-body">
-                    {{ form.non_field_errors }}
+            {% endif %}
+            {% if form.non_field_errors %}
+                <div class="card border-danger mb-20">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Errors</strong>
+                    </div>
+                    <div class="card-body">
+                        {{ form.non_field_errors }}
+                    </div>
                 </div>
-            </div>
-        {% endif %}
-        <form action="{% url 'login' %}" method="post">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Log In</strong>
+            {% endif %}
+            <form action="{% url 'login' %}" method="post">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Log In</strong>
+                    </div>
+                    <div class="card-body">
+                        {% csrf_token %}
+                        {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
+                        {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
+                        {% render_form form %}
+                    </div>
+                    <div class="card-footer bg-body text-center">
+                        <button type="submit" class="btn btn-primary">Log In</button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    {% csrf_token %}
-                    {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
-                    {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
-                    {% render_form form %}
+            </form>
+            {% if SSO_AUTH_ENABLED %}
+                <div class="position-relative text-center">
+                    <hr class="border-top m-20">
+                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle">Or</span>
+                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary">Continue with SSO</a>
                 </div>
-                <div class="card-footer bg-body text-center">
-                    <button type="submit" class="btn btn-primary">Log In</button>
-                </div>
-            </div>
-        </form>
-        {% if SSO_AUTH_ENABLED %}
-            <div class="position-relative text-center">
-                <hr class="border-top m-20">
-                <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle">Or</span>
-                <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary">Continue with SSO</a>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

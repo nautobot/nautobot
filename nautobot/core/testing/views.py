@@ -10,9 +10,12 @@ from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
-from django.template.defaultfilters import date, timesince
+from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.testcases import assert_and_parse_html
+from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
@@ -146,6 +149,10 @@ class ViewTestCases:
         """
 
         custom_action_required_permissions = {}
+        # TODO: Expand to other relevant view types, e.g. 'list'.
+        allowed_number_of_tree_queries_per_view_type = {
+            "retrieve": 0,
+        }
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_anonymous(self):
@@ -182,8 +189,13 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
-            response = self.client.get(instance.get_absolute_url())
+            with CaptureQueriesContext(connection) as capture_queries_context:
+                response = self.client.get(instance.get_absolute_url())
             # The object's display name or string representation should appear in the response body
+            # TODO: some models (e.g. JobResult) intentionally do NOT display the full `.display` in the detail view,
+            # but only use the `.name` or `str()`.
+            # This check will always pass in the case where the Example App is installed, because of the banner
+            # it adds, but can/should/may? fail otherwise.
             self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
             # If any Relationships are defined, they should appear in the response
@@ -210,6 +222,22 @@ class ViewTestCases:
                             self.assertBodyContains(response, escape(str(value)))
                     else:
                         self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
+
+            # Check that no more than the appropriate number of tree CTE queries have been run.
+            captured_tree_cte_queries = [
+                query["sql"] for query in capture_queries_context.captured_queries if "WITH RECURSIVE" in query["sql"]
+            ]
+            _query_separator = "\n" + ("-" * 10) + "\n" + "NEXT QUERY" + "\n" + ("-" * 10)
+            self.assertEqual(
+                len(captured_tree_cte_queries),
+                self.allowed_number_of_tree_queries_per_view_type["retrieve"],
+                f"This view was expected to execute {self.allowed_number_of_tree_queries_per_view_type['retrieve']}"
+                f" recursive database queries but {len(captured_tree_cte_queries)} were executed."
+                f" If this is expected, please update the {self.__class__.__name__}.allowed_number_of_tree_queries_per_view_type['retrieve']"
+                " property. Care should be taken to only increase these numbers where necessary - recursive queries can become really"
+                " slow with bigger datasets."
+                f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
+            )
 
             return response  # for consumption by child test cases if desired
 
@@ -253,16 +281,9 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                timestamps = f"""
-                    <p class="flex-grow-1 m-0">
-                        <small class="align-items-center d-inline-flex gap-4 text-secondary">
-                            <i class="mdi mdi-bookmark-plus"></i> {date(instance.created, global_settings.DATETIME_FORMAT)}
-                            <span class="vr mx-4"></span>
-                            <i class="mdi mdi-clock"></i> {timesince(instance.last_updated)} ago
-                        </small>
-                    </p>
-                """
-                self.assertBodyContains(response, timestamps, html=True)
+                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
+                # therefore is subject to off-by-one timing failures.
 
             object_edit_url = buttons.edit_button(instance)["url"]
             object_delete_url = buttons.delete_button(instance)["url"]
@@ -275,7 +296,7 @@ class ViewTestCases:
                 action_buttons.append(
                     format_html(
                         """
-                            <a id="edit-button" class="btn btn-warning border-end-0" href="{}">
+                            <a id="edit-button" class="btn btn-warning" href="{}">
                                 <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
                             </a>
                         """,
@@ -300,15 +321,34 @@ class ViewTestCases:
                     format_html(
                         """
                             <a id="clone-button" class="dropdown-item" href="{}">
-                                <span class="mdi mdi-plus-thick text-muted" aria-hidden="true"></span> Clone {}
+                                <span class="mdi mdi-plus-thick text-secondary" aria-hidden="true"></span> Clone {}
                             </a>
                         """,
                         object_clone_url,
                         helpers.bettertitle(self.model._meta.verbose_name),
                     )
                 )
+
+            # Because we are looking for a hypothetical use of legacy button templates on the page here, we need some
+            # additional logic to know if this assertion should be made in the first place, and be handled in the `if`
+            # below, or fall back to standard button presence check in the `else` case otherwise.
+            content = assert_and_parse_html(
+                self,
+                utils.extract_page_body(response.content.decode(response.charset)),
+                None,
+                "Response's content is not valid HTML:",
+            )
             for button in action_buttons:
-                self.assertBodyContains(response, button, html=True)
+                button_parsed = assert_and_parse_html(self, button, None, "Button is not valid HTML:")
+                button_id_attribute = re.search(r"id=\"([A-Za-z]+[\w\-\:\.]*)\"", button).group(0)
+                real_count = content.count(button_parsed)
+                if (real_count is None or real_count == 0) and button_id_attribute in str(content):
+                    self.fail(
+                        f"Couldn't find {button} in response, but an element with `{button_id_attribute}` has been found. Is the page using legacy button template?\n{content}",
+                    )
+                else:
+                    # If it wasn't for the legacy button template check above, this would be the only thing needed here.
+                    self.assertBodyContains(response, button, html=True)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
@@ -988,8 +1028,8 @@ class ViewTestCases:
             # Check if title is rendered correctly
             title = self.get_title()
             expected_title = (
-                '<h1 class="align-items-center d-flex fs-2 gap-8 lh-sm py-6">'
-                '<img alt="Nautobot chevron" class="flex-grow-0 flex-shrink-0 my-n6" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;">'
+                '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
                 f"{title}</h1>"
             )
             self.assertBodyContains(response, expected_title, html=True)
@@ -1241,6 +1281,7 @@ class ViewTestCases:
                                 sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
                             )
                         else:
+                            self.assertIn(key, bulk_edit_form.fields)
                             self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1484,10 +1525,6 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all pks is not part of the html.
-            self.assertNotIn(str(first_pk), response_body)
-            self.assertNotIn(str(second_pk), response_body)
-            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 

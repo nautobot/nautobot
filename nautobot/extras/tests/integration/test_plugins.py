@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -18,9 +18,8 @@ from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
 
-from example_app.models import ExampleModel
 
-
+@tag("example_app")
 class AppWebhookTest(SeleniumTestCase):
     """
     This test case proves that Apps can use the webhook functions when making changes on a model.
@@ -28,6 +27,9 @@ class AppWebhookTest(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
+
+        from example_app.models import ExampleModel
+
         tempdir = tempfile.gettempdir()
         for f in os.listdir(tempdir):
             if f.startswith("test_app_webhook_"):
@@ -61,6 +63,8 @@ class AppWebhookTest(SeleniumTestCase):
         """
         Test that webhooks are correctly triggered by an App model create.
         """
+        from example_app.models import ExampleModel
+
         self.update_headers("test_app_webhook_create")
         # Make change to model
         with web_request_context(self.user):
@@ -73,6 +77,8 @@ class AppWebhookTest(SeleniumTestCase):
         """
         Test that webhooks are correctly triggered by an App model update.
         """
+        from example_app.models import ExampleModel
+
         self.update_headers("test_app_webhook_update")
         obj = ExampleModel.objects.create(name="foo", number=100)
 
@@ -88,6 +94,8 @@ class AppWebhookTest(SeleniumTestCase):
         """
         Test that webhooks are correctly triggered by an App model delete.
         """
+        from example_app.models import ExampleModel
+
         self.update_headers(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete"))
         obj = ExampleModel.objects.create(name="foo", number=100)
 
@@ -102,6 +110,8 @@ class AppWebhookTest(SeleniumTestCase):
         """
         Verify that webhook body_template is correctly used.
         """
+        from example_app.models import ExampleModel
+
         self.update_headers("test_app_webhook_with_body")
 
         self.webhook.body_template = '{"message": "{{ event }}"}'
@@ -117,6 +127,7 @@ class AppWebhookTest(SeleniumTestCase):
         os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body"))
 
 
+@tag("example_app")
 class AppDocumentationTest(SeleniumTestCase):
     """
     Integration tests for ensuring App provided docs are supported.
@@ -129,16 +140,16 @@ class AppDocumentationTest(SeleniumTestCase):
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
         self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_add')}")
-
-        self.assertTrue(self.browser.links.find_by_partial_href("example_app/docs/models/examplemodel.html"))
+        self.assertTrue(self.browser.links.find_by_partial_href("docs/example-app/models/examplemodel.html"))
 
     def test_object_edit_help_not_provided(self):
         """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
         self.browser.visit(f"{self.live_server_url}{reverse('plugins:example_app:anotherexamplemodel_add')}")
 
-        self.assertFalse(self.browser.links.find_by_partial_href("example_app/docs/models/anotherexamplemodel.html"))
+        self.assertFalse(self.browser.links.find_by_partial_href("/docs/example-app/models/anotherexamplemodel.html"))
 
 
+@tag("example_app")
 class AppReturnUrlTestCase(SeleniumTestCase):
     """
     Integration tests for reversing App return urls.
@@ -159,6 +170,7 @@ class AppReturnUrlTestCase(SeleniumTestCase):
         self.assertEqual(element["href"], f"{self.live_server_url}{reverse('plugins:example_app:examplemodel_list')}")
 
 
+@tag("example_app")
 class AppTabsTestCase(SeleniumTestCase, ObjectDetailsMixin):
     """
     Integration tests for extra object detail UI tabs.

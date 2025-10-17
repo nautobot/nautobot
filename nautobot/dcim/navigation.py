@@ -8,7 +8,7 @@ from nautobot.core.apps import (
 menu_items = (
     NavMenuTab(
         name="Organization",
-        icon="briefcase-2",
+        icon="organization",
         weight=100,
         groups=(
             NavMenuGroup(
@@ -116,7 +116,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        icon="laptop",
+        icon="server",
         weight=200,
         groups=(
             NavMenuGroup(
@@ -549,7 +549,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Power",
-        icon="lightning",
+        icon="battery-3",
         weight=600,
         groups=(
             NavMenuGroup(

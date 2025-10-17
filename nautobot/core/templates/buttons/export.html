@@ -12,7 +12,7 @@
                     <input type="hidden" name="_schedule_type" value="immediately">
                     <input type="hidden" name="export_format" value="yaml">
                     <button class="dropdown-item" type="submit">
-                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML
+                        <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML
                     </button>
                 </form>
             </li>
@@ -25,7 +25,7 @@
                 <input type="hidden" name="_schedule_type" value="immediately">
                 <input type="hidden" name="export_format" value="csv">
                 <button class="dropdown-item" type="submit">
-                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV
+                    <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV
                 </button>
             </form>
         </li>
@@ -39,8 +39,8 @@
                         <input type="hidden" name="query_string" value="{{ query_string }}">
                         <input type="hidden" name="_schedule_type" value="immediately">
                         <button class="dropdown-item" type="submit"
-                            {% if et.description %}title="{{ et.description }}"{% endif %}
-                        ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
+                                {% if et.description %}title="{{ et.description }}"{% endif %}
+                        ><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>
                 </li>
             {% endfor %}
@@ -57,7 +57,7 @@
                     <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                     <input type="hidden" name="query_string" value="{{ query_string }}">
                     <input type="hidden" name="export_format"
-                        value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
+                           value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
                     <input type="hidden" name="_schedule_type" value="immediately">
                 </form>
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -93,7 +93,7 @@
                                     <input type="hidden" name="query_string" value="{{ query_string }}">
                                     <input type="hidden" name="_schedule_type" value="immediately">
                                     <button type="submit" class="dropdown-item"
-                                        {% if et.description %}title="{{ et.description }}"{% endif %}
+                                            {% if et.description %}title="{{ et.description }}"{% endif %}
                                     >{{ et.name }}</button>
                                 </form>
                             </li>

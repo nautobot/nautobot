@@ -3,9 +3,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Wireless Network</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Wireless Network</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.ssid %}
             {% render_field form.description %}
@@ -16,9 +16,9 @@
             {% render_field form.enabled %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Controller Managed Device Group Assignment</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Controller Managed Device Group Assignment</strong></div>
+        <div class="card-body">
             {% if controller_managed_device_groups.errors %}
                 <div class="text-danger">
                     Please correct the error(s) below:
@@ -72,17 +72,17 @@
 {% endblock form %}
 
 {% block javascript %}
-{{ block.super }}
-<script src="{% static 'jquery/jquery.formset.js' %}"></script>
-<script type="text/javascript">
-    $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: '{{ controller_managed_device_groups.prefix }}',
-        formCssClass: 'dynamic-formset-{{ controller_managed_device_groups.prefix }}',
-        added: jsify_form
-    });
-</script>
+    {{ block.super }}
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ controller_managed_device_groups.prefix }}',
+            formCssClass: 'dynamic-formset-{{ controller_managed_device_groups.prefix }}',
+            added: jsify_form
+        });
+    </script>
 {% endblock javascript %}

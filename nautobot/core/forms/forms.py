@@ -5,7 +5,7 @@ import re
 
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
@@ -160,7 +160,7 @@ class BulkEditForm(forms.Form):
                     continue
                 with contextlib.suppress(FieldDoesNotExist):
                     field = obj._meta.get_field(field_name)
-                    is_m2m_field = isinstance(field, (ManyToManyField, TagsField))
+                    is_m2m_field = isinstance(field, (ManyToManyField, ManyToManyRel, TagsField))
                     if is_m2m_field:
                         m2m_field_names.append(field_name)
 
@@ -377,7 +377,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def _get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
-        from nautobot.extras.filters.mixins import RelationshipFilter  # Avoid circular import
+        from nautobot.extras.filter_mixins import RelationshipFilter  # Avoid circular import
 
         filterset_without_lookup = (
             (

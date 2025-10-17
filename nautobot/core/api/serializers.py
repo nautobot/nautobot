@@ -64,6 +64,7 @@ class OptInFieldsMixin:
         - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
           `include` query parameter. (applies to GET requests only)
         - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
+          If `exclude_m2m` is not provided, only `tags`, `content_types`, and `object_types` are included by default.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -102,9 +103,13 @@ class OptInFieldsMixin:
 
             # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
             # don't get included in the response.
-            if is_truthy(params.get("exclude_m2m", "false")):
+            # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
+            exclude_m2m = params.get("exclude_m2m")
+            if exclude_m2m is None or is_truthy(exclude_m2m):
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                        if exclude_m2m is None and field_instance.source in constants.DEFAULT_M2M_FIELDS:
+                            continue
                         field_instance.write_only = True
 
             self.__pruned_fields = fields

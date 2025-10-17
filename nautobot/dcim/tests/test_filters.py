@@ -36,6 +36,7 @@ from nautobot.dcim.filters import (
     ControllerManagedDeviceGroupFilterSet,
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
+    DeviceClusterAssignmentFilterSet,
     DeviceFamilyFilterSet,
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
@@ -85,6 +86,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -122,8 +124,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.extras.filters.mixins import RoleFilter, StatusFilter
+from nautobot.extras.filter_mixins import RoleFilter, StatusFilter
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
+from nautobot.extras.tests.test_customfields_filters import CustomFieldsFilters
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
@@ -1037,7 +1040,9 @@ class PathEndpointModelTestMixin:
             )
 
 
-class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
+class LocationTypeFilterSetTestCase(
+    FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin
+):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
     generic_filter_tests = [
@@ -1074,7 +1079,10 @@ class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             )
 
 
-class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class LocationFilterSetTestCase(
+    FilterTestCases.FilterTestCase,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     tenancy_related_name = "locations"
@@ -1147,7 +1155,7 @@ class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         )
 
 
-class RackGroupTestCase(FilterTestCases.FilterTestCase):
+class RackGroupTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
     generic_filter_tests = [
@@ -1355,7 +1363,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
         common_test_data(cls)
 
 
-class ManufacturerTestCase(FilterTestCases.FilterTestCase):
+class ManufacturerTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
     generic_filter_tests = [
@@ -1391,7 +1399,7 @@ class DeviceFamilyTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
-class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
+class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = DeviceType.objects.all()
     filterset = DeviceTypeFilterSet
     generic_filter_tests = [
@@ -1769,8 +1777,10 @@ class DeviceTestCase(
     tenancy_related_name = "devices"
     generic_filter_tests = [
         ("asset_tag",),
-        ("cluster", "cluster__id"),
-        ("cluster", "cluster__name"),
+        ("cluster", "clusters__id"),
+        ("cluster", "clusters__name"),
+        ("clusters", "clusters__id"),
+        ("clusters", "clusters__name"),
         ("console_ports", "console_ports__id"),
         ("console_server_ports", "console_server_ports__id"),
         ("device_bays", "device_bays__id"),
@@ -4431,4 +4441,62 @@ class ModuleFamilyTestCase(FilterTestCases.FilterTestCase):
             ModuleType.objects.create(
                 manufacturer=manufacturers[1], model="Model 2", module_family=cls.module_families[1]
             ),
+        )
+
+
+class DeviceClusterAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceClusterAssignment.objects.all()
+    filterset = DeviceClusterAssignmentFilterSet
+    generic_filter_tests = [
+        ("device", "device__id"),
+        ("device", "device__name"),
+        ("cluster", "cluster__id"),
+        ("cluster", "cluster__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type Filter 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device Filter 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type Filter")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster Filter 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster Filter 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster Filter 3", cluster_type=cluster_type),
+        )
+        cls.device_cluster_assignments = (
+            DeviceClusterAssignment.objects.create(device=devices[0], cluster=clusters[0]),
+            DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[1]),
+            DeviceClusterAssignment.objects.create(device=devices[0], cluster=clusters[1]),
+            DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[2]),
+            DeviceClusterAssignment.objects.create(device=devices[2], cluster=clusters[0]),
         )

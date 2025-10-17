@@ -15,7 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import ProtectedError, signals
+from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
@@ -252,6 +252,7 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -439,6 +440,8 @@ class JobHook(OrganizationalModel):
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
 
+    is_data_compliance_model = False
+
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
 
     class Meta:
@@ -529,6 +532,7 @@ class JobLogEntry(BaseModel):
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
@@ -580,6 +584,7 @@ class JobQueue(PrimaryModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["name"]
@@ -610,6 +615,7 @@ class JobQueueAssignment(BaseModel):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = ["job", "job_queue"]
@@ -678,11 +684,17 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # django-nullable-model-string-field -- TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+    debug_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    success_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    info_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
+    is_data_compliance_model = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -761,6 +773,30 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                 )
 
     set_status.alters_data = True
+
+    def count_logs_by_level(self):
+        """Helper method to count JobLogEntries after a Job is run, or update these values when missing or changed."""
+        db_log_counts = self.job_log_entries.aggregate(
+            debug_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_DEBUG)),
+            success_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_SUCCESS)),
+            info_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_INFO)),
+            warning_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_WARNING)),
+            error_log_count=Count(
+                "pk",
+                filter=Q(
+                    log_level__in=[
+                        LogLevelChoices.LOG_FAILURE,
+                        LogLevelChoices.LOG_ERROR,
+                        LogLevelChoices.LOG_CRITICAL,
+                    ]
+                ),
+            ),
+        )
+        self.debug_log_count = db_log_counts["debug_log_count"]
+        self.success_log_count = db_log_counts["success_log_count"]
+        self.info_log_count = db_log_counts["info_log_count"]
+        self.warning_log_count = db_log_counts["warning_log_count"]
+        self.error_log_count = db_log_counts["error_log_count"]
 
     @classmethod
     def execute_job(cls, *args, **kwargs):
@@ -1006,6 +1042,18 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     log.alters_data = True
 
+    def save(self, *args, **kwargs):
+        """When a JobResult is saved and in a terminal state, store missing log counts for summary."""
+        if self.status in JobResultStatusChoices.READY_STATES and None in [
+            self.debug_log_count,
+            self.info_log_count,
+            self.success_log_count,
+            self.warning_log_count,
+            self.error_log_count,
+        ]:
+            self.count_logs_by_level()
+        super().save(*args, **kwargs)
+
 
 #
 # Job Button
@@ -1055,6 +1103,7 @@ class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesM
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
@@ -1081,6 +1130,7 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+    is_data_compliance_model = False
 
     def __str__(self):
         return str(self.ident)
@@ -1218,6 +1268,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     no_changes = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
+    is_data_compliance_model = False
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
@@ -1310,11 +1361,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.job_queue = JobQueue.objects.get(name=value)
             except JobQueue.DoesNotExist:
                 raise ValidationError(f"Job Queue {value} does not exist in the database.")
-
-    def has_approval_workflow_definition(self) -> bool:
-        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
-
-        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
     @staticmethod
     def earliest_possible_time():

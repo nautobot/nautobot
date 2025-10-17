@@ -5,7 +5,7 @@ from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMen
 menu_items = (
     NavMenuTab(
         name="Extensibility",
-        icon="cast",
+        icon="extensibility",
         groups=(
             NavMenuGroup(
                 name="Data Validation",
@@ -59,6 +59,11 @@ menu_items = (
                         link="data_validation:datacompliance_list",
                         name="Data Compliance",
                         permissions=["data_validation.view_datacompliance"],
+                    ),
+                    NavMenuItem(
+                        link="data_validation:device-constraints",
+                        name="Device Constraints",
+                        permissions=["dcim.view_device"],
                     ),
                 ),
             ),

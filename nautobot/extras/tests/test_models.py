@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
@@ -102,8 +102,6 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
-
-from example_app.jobs import ExampleJob
 
 User = get_user_model()
 
@@ -791,6 +789,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             name="dynamic group", weight=100, data={"dynamic_group": 1}
         )
         dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_group_context = ConfigContext.objects.create(
+            name="cluster group", weight=100, data={"cluster_group": 1}
+        )
+        cluster_group_context.cluster_groups.add(cluster_group)
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
+            location=self.location,
+            tenant=self.tenant,
+        )
+        cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
+        cluster_context.clusters.add(cluster)
 
         device = Device.objects.create(
             name="Device 2",
@@ -802,11 +815,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
+        device.clusters.add(cluster)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
+        for key in [
+            "location",
+            "platform",
+            "tenant_group",
+            "tenant",
+            "tag",
+            "dynamic_group",
+            "cluster_group",
+            "cluster",
+        ]:
             self.assertIn(key, device_context)
         # Add a device type constraint that does not match the device in question to the location config context
         # And make sure that location_context is not applied to it anymore.
@@ -1035,9 +1058,9 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
         """
         Tagged items use a generic relationship, which results in duplicate rows being returned when queried.
-        This is combatted by by appending distinct() to the config context querysets. This test creates a config
-        context assigned to two tags and ensures objects related by those same two tags result in only a single
-        config context record being returned.
+        This is combatted by by appending distinct() to the config context querysets. This test creates two config
+        contexts assigned to two different tags and ensures objects related by those same two tags result in both
+        config context records being returned.
 
         This test case is seperate from the above in that it deals with multiple config context objects in play.
 
@@ -1098,6 +1121,104 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
         self.assertIn("dynamic context 2", device2.get_config_context().values())
         self.assertNotIn("dynamic context 1", device2.get_config_context().values())
+
+    def test_multiple_clusters_and_cluster_groups(self):
+        """
+        Device-to-cluster is a many-to-many relationship since Nautobot 3.0. Make sure things work as expected here.
+        """
+        cluster_group_1 = ClusterGroup.objects.create(name="Cluster Group 1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_1 = Cluster.objects.create(
+            name="Cluster 1",
+            cluster_group=cluster_group_1,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_group_2 = ClusterGroup.objects.create(name="Cluster Group 2")
+        cluster_2 = Cluster.objects.create(
+            name="Cluster 2",
+            cluster_group=cluster_group_2,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_context_1 = ConfigContext.objects.create(name="cluster_1", weight=100, data={"cluster_1": 1})
+        cluster_context_1.clusters.add(cluster_1)
+        cluster_context_2 = ConfigContext.objects.create(name="cluster_2", weight=200, data={"cluster_2": 2})
+        cluster_context_2.clusters.add(cluster_2)
+        cluster_context_12 = ConfigContext.objects.create(name="cluster_12", weight=300, data={"cluster_12": [1, 2]})
+        cluster_context_12.clusters.add(cluster_1)
+        cluster_context_12.clusters.add(cluster_2)
+        cluster_group_context_1 = ConfigContext.objects.create(
+            name="cluster_group_1", weight=1100, data={"cluster_group_1": 1}
+        )
+        cluster_group_context_1.cluster_groups.add(cluster_group_1)
+        cluster_group_context_2 = ConfigContext.objects.create(
+            name="cluster_group_2", weight=1200, data={"cluster_group_2": 2}
+        )
+        cluster_group_context_2.cluster_groups.add(cluster_group_2)
+        cluster_group_context_12 = ConfigContext.objects.create(
+            name="cluster_group_12", weight=1300, data={"cluster_group_12": [1, 2]}
+        )
+        cluster_group_context_12.cluster_groups.add(cluster_group_1)
+        cluster_group_context_12.cluster_groups.add(cluster_group_2)
+
+        device = Device.objects.create(
+            name="Device Clusters",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=self.devicetype,
+        )
+
+        with self.subTest("Device in single cluster"):
+            device.clusters.add(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in multiple clusters"):
+            device.clusters.add(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 7)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in single cluster again"):
+            device.clusters.remove(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in no clusters"):
+            device.clusters.remove(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertNotIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertNotIn("cluster_group_12", context.keys())
 
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
@@ -1838,6 +1959,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
 
 
+@tag("example_app")
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
@@ -1853,6 +1975,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        from example_app.jobs import ExampleJob
+
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
@@ -3393,10 +3517,10 @@ class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
 
     def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+        instance = Tag(name="Testing Unicode: 台灣")
+        instance.save()
 
-        self.assertEqual(tag.name, "Testing Unicode: 台灣")
+        self.assertEqual(instance.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase

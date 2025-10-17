@@ -1,27 +1,17 @@
 {% extends 'users/base.html' %}
 {% load helpers %}
 
-{% block title %}User Profile{% endblock %}
-
-{% block page_title %}
-    {% include 'inc/page_title.html' with title='User Profile' %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    {% include 'inc/breadcrumbs.html' %}
-{% endblock %}
-
 {% block usercontent %}
-    <small class="text-muted">User login</small>
+    <small class="text-secondary">User login</small>
     <h5>{{ request.user.username }}</h5>
-    <small class="text-muted">Full name</small>
+    <small class="text-secondary">Full name</small>
     <h5>{{ request.user.first_name }} {{ request.user.last_name }}</h5>
-    <small class="text-muted">Email</small>
+    <small class="text-secondary">Email</small>
     <h5>{{ request.user.email }}</h5>
-    <small class="text-muted">Registered</small>
+    <small class="text-secondary">Registered</small>
     <h5>{{ request.user.date_joined }}</h5>
-    <small class="text-muted">Groups</small>
+    <small class="text-secondary">Groups</small>
     <h5>{{ request.user.groups.all|join:', ' }}</h5>
-    <small class="text-muted">Admin access</small>
+    <small class="text-secondary">Admin access</small>
     <h5>{{ request.user.is_staff|yesno|capfirst }}</h5>
 {% endblock %}

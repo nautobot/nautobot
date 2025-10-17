@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 
@@ -123,7 +125,8 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         # Bypass restriction for superusers and exempt views
         if user.is_superuser or permissions.permission_is_exempt(permission_required):
-            qs = self
+            # This is a cache buster to ensure that we always return a new QuerySet
+            qs = self.all()
 
         # User is anonymous or has not been granted the requisite permission
         elif not user.is_authenticated or permission_required not in user.get_all_permissions():
@@ -185,3 +188,75 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+
+class BaseManyToManyQuerySetMixin:
+    """
+    Base mixin to provide backward compatibility for fields that have been changed from ForeignKey to ManyToManyField.
+
+    Subclasses should define FIELD_MAP as a dictionary of field mappings, where the key is the old field name
+    and the value is the new field name.
+    """
+
+    FIELD_MAP: ClassVar[dict[str, str]] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        """Combine FIELD_MAP from all parent classes into a single dictionary."""
+        super().__init_subclass__(**kwargs)
+        combined_field_map = {}
+        for base in reversed(cls.__mro__):
+            if hasattr(base, "FIELD_MAP") and isinstance(getattr(base, "FIELD_MAP"), dict):
+                combined_field_map.update(base.FIELD_MAP)
+        cls.FIELD_MAP = combined_field_map
+
+    def _convert_to_m2m_field(self, kwargs):
+        field_mappings = self.FIELD_MAP
+        if not field_mappings:
+            return kwargs
+
+        updated_kwargs = {}
+
+        for field, value in kwargs.items():
+            converted = False
+
+            # Check each field mapping
+            for old_field, new_field in field_mappings.items():
+                if field == old_field:
+                    # Direct field query becomes __in for ManyToMany
+                    updated_kwargs[f"{new_field}__in"] = [value]
+                    converted = True
+                    break
+                elif field.startswith(f"{old_field}__"):
+                    # Replace old field prefix with new field prefix
+                    updated_kwargs[field.replace(old_field, new_field, 1)] = value
+                    converted = True
+                    break
+
+            if not converted:
+                updated_kwargs[field] = value
+
+        return updated_kwargs
+
+    def filter(self, *args, **kwargs):
+        kwargs = self._convert_to_m2m_field(kwargs)
+        return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        kwargs = self._convert_to_m2m_field(kwargs)
+        return super().exclude(*args, **kwargs)
+
+
+class LocationToLocationsQuerySetMixin(BaseManyToManyQuerySetMixin):
+    """
+    Mixin to convert 'location' to 'locations' in queryset parameters.
+    """
+
+    FIELD_MAP = {"location": "locations"}
+
+
+class ClusterToClustersQuerySetMixin(BaseManyToManyQuerySetMixin):
+    """
+    Mixin to convert 'cluster' to 'clusters' in queryset parameters.
+    """
+
+    FIELD_MAP = {"cluster": "clusters"}

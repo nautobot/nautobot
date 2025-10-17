@@ -1,12 +1,12 @@
 import json
 import os
+from pathlib import Path
 import re
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import urllib.parse
 
 from django.apps import apps
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -188,6 +188,132 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class AppDocsViewTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.test_app_label = "test_app"
+        self.test_base_url = "test-app"
+
+        # Create temp docs dir
+        # I use tearDown to clean up, so this is save
+        self.temp_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        self.docs_path = Path(self.temp_dir.name) / "docs"
+        self.docs_path.mkdir(parents=True)
+        (self.docs_path / "index.html").write_text("<html>Test Index</html>")
+        (self.docs_path / "css/style.css").parent.mkdir(parents=True, exist_ok=True)
+        (self.docs_path / "css/style.css").write_text("body { background: #fff; }")
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        super().tearDown()
+
+    def test_docs_index_redirect(self):
+        """Ensure /docs/<base_url>/ redirects to /docs/<base_url>/index.html."""
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/docs/{self.test_base_url}/index.html")
+
+    def test_docs_index_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+
+        # First, the redirect to /docs/<base_url>/index.html
+        self.assertEqual(response.status_code, 302)
+        redirect_url = f"/docs/{self.test_base_url}/index.html"
+        self.assertEqual(response["Location"], redirect_url)
+
+        # Follow the redirect to AppDocsView, which should require login
+        response = self.client.get(redirect_url)
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={redirect_url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    def test_docs_file_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        # LoginRequiredMixin redirects to /accounts/login/
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_access_denied_path_traversal_attempts(self, mock_resources_files):
+        """Ensure ../ or similar traversal patterns are rejected."""
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+
+        malicious_paths = [
+            "../settings.py",
+            "../../etc/passwd",
+            "docs/../../secret.txt",
+        ]
+
+        for path in malicious_paths:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_index_html_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url, "path": "index.html"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Index")
+        self.assertEqual(response["Content-Type"], "text/html")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_css_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "background: #fff;")
+        self.assertEqual(response["Content-Type"], "text/css")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_index_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": "nonexistent-app"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_file_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": "nonexistent-app", "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_nonexistent_file(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        test_cases = ["/../missing.html", "//../missing.html", "missing.html", "missing_dir/missing.html"]
+        for path in test_cases:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 404)
+                self.assertIn("File", response.json()["detail"])
 
 
 class MediaViewTestCase(TestCase):
@@ -560,6 +686,7 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
+    @tag("example_app")
     def test_metrics_extensibility(self):
         """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
@@ -582,6 +709,7 @@ class MetricsViewTestCase(TestCase):
             self.query_and_parse_metrics()
             self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
 
+    @tag("example_app")
     @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
     def test_enabled_metrics_cache_enabled(self):
         """Assert that multiple calls to metrics with caching returns expected response."""
@@ -762,10 +890,7 @@ class SilkUIAccessTestCase(TestCase):
 
 
 class ExampleViewWithCustomPermissionsTest(TestCase):
-    @skipIf(
-        "example_app" not in settings.PLUGINS,
-        "example_app not in settings.PLUGINS",
-    )
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_permission_classes_attribute_is_enforced(self):
         """

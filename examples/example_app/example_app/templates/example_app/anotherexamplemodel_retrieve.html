@@ -2,13 +2,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
-{% block extra_breadcrumbs %}
-<li class="breadcrumb-item">
-    <a href="{% url 'plugins:example_app:anotherexamplemodel_list' %}?number={{ object.number }}">{{ object.number }}
-        (Breadcrumbs)</a>
-</li>
-{% endblock extra_breadcrumbs %}
-
 {% block extra_buttons %}
 <a onClick="alert('I am from the detail view template.')" class="btn btn-success">
     <span class="mdi mdi-exclamation-thick" aria-hidden="true"></span> Extra Buttons go here
@@ -25,12 +18,12 @@
 {% endblock panel_buttons %}
 
 {% block content_left_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>AnotherExampleModel (Left Page Content)</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <td>Name</td>
             <td><span>{{ object.name }}</span></td>
@@ -52,12 +45,12 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>View Template Right Page Content</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <th>Things</th>
             <th>Stuff</th>
@@ -71,12 +64,12 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>View Template Full Width Page Content</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <th>ID</th>
             <th>Name</th>

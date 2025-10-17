@@ -3,28 +3,28 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Approval Workflow Definition</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Approval Workflow Definition</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.model_content_type %}
             {% render_field form.model_constraints %}
             {% render_field form.priority %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Approval Workflow Stage Definitions</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Approval Workflow Stage Definitions</strong></div>
+        <div class="card-body">
             <table class="table" id="approval-workflow-stages">
-              {{ stages.management_form }}
-              {% for stage in stages.forms %}
+                {{ stages.management_form }}
+                {% for stage in stages.forms %}
                     {% if forloop.first %}
                         <thead>
-                        <tr>
-                            {% for field in stage.visible_fields %}
-                                <th>{{ field.label|capfirst }}</th>
-                            {% endfor %}
-                        </tr>
+                            <tr>
+                                {% for field in stage.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
                         </thead>
                     {% endif %}
                     <tr class="formset_row-{{ stages.prefix }}">
@@ -49,7 +49,7 @@
                             </td>
                         {% endfor %}
                     </tr>
-               {% endfor %}
+                {% endfor %}
             </table>
         </div>
     </div>
@@ -57,19 +57,19 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script src="{% static 'jquery/jquery.formset.js' %}"></script>
-<script type="text/javascript">
-    const slugify_prefer_underscores = true;
-    $('.formset_row-{{ stages.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Approval Workflow Stage',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: '{{ stages.prefix }}',
-        formCssClass: 'dynamic-formset-{{ stages.prefix }}',
-        keepFieldValues: 'input[type="number"]',
-        added: jsify_form
-    });
-</script>
+    {{ block.super }}
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        const slugify_prefer_underscores = true;
+        $('.formset_row-{{ stages.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Approval Workflow Stage',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ stages.prefix }}',
+            formCssClass: 'dynamic-formset-{{ stages.prefix }}',
+            keepFieldValues: 'input[type="number"]',
+            added: jsify_form
+        });
+    </script>
 {% endblock javascript %}

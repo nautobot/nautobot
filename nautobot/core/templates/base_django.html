@@ -9,52 +9,51 @@
 
 <!DOCTYPE html>
 <html lang="en"{% with cookie_theme=request.COOKIES|get_item:'theme' %}{% if cookie_theme == 'dark' or cookie_theme == 'light' %} data-theme="{{cookie_theme}}" data-bs-theme="{{cookie_theme}}"{% endif %}{% endwith %}>
-<head>
-    <title>{{ title_block_content }}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
-    {% include 'inc/media.html' %}
-    {% block extra_styles %}{% endblock %}
-</head>
-<body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
-    {% include 'inc/nav_menu.html' %}
-    <div id="drawer">
-        {% block drawer %}{% endblock drawer %}
-    </div>
-    <header id="header">
-        <div class="banner-alert-area">
-            {% include 'inc/header_banners.html' %}
-            {% include 'inc/header_messages.html' %}
+    <head>
+        <title>{{ title_block_content }}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+        {% include 'inc/media.html' %}
+        {% block extra_styles %}{% endblock %}
+    </head>
+    <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+        {% include 'inc/nav_menu.html' %}
+        <div id="drawer">
+            {% block drawer %}{% endblock drawer %}
         </div>
-        <div class="container-fluid mb-12 mt-16">
-            <div class="row row-cols-3">
-                <div class="col">
-                    <div>
-                    {# TODO: I'm wrapping this part with page_title block just temporarily. It's mostly being used in new system-views with added header so I hope to remove those in NAUTOBOT-1009 #}
-                    {% with copy_title=False %}
-                        {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
-                    {% endwith %}
-                    {% block breadcrumbs_wrapper %}
-                        {% block breadcrumbs %}{% endblock breadcrumbs %}
-                    {% endblock breadcrumbs_wrapper %}
+        <header id="header">
+            <div class="banner-alert-area">
+                {% include 'inc/header_banners.html' %}
+                {% include 'inc/header_messages.html' %}
+            </div>
+            <div class="container-fluid mb-12 mt-16">
+                <div class="row">
+                    <div class="col-4">
+                        {% with copy_title=False %}
+                            {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
+                        {% endwith %}
+                    </div>
+                    {% include 'inc/header.html' %}
+                    <div class="col-12">
+                        {% block breadcrumbs_wrapper %}
+                            {% block breadcrumbs %}{% endblock breadcrumbs %}
+                        {% endblock breadcrumbs_wrapper %}
                     </div>
                 </div>
-                {% include 'inc/header.html' %}
             </div>
-        </div>
-        {% block header %}{% endblock header %}
-    </header>
-    <main class="container-fluid wrapper" id="main-content" tabindex="-1">
-        {% block content %}{% endblock content %}
-    </main>
-    {% if request.user.is_authenticated %}
-        {% if "BANNER_BOTTOM"|settings_or_config %}
-            <div class="alert alert-info text-center nb-banner-bottom" role="alert">
-                {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
-            </div>
+            {% block header %}{% endblock header %}
+        </header>
+        <main class="container-fluid wrapper" id="main-content" tabindex="-1">
+            {% block content %}{% endblock content %}
+        </main>
+        {% if request.user.is_authenticated %}
+            {% if "BANNER_BOTTOM"|settings_or_config %}
+                <div class="alert alert-info text-center nb-banner-bottom" role="alert">
+                    {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
+                </div>
+            {% endif %}
         {% endif %}
-    {% endif %}
-    {% include 'modals/modal_theme.html' with name='theme'%}
-    {% include 'inc/footer.html' %}
-    {% include 'inc/javascript.html' %}
-{% block javascript %}{% endblock %}
-</body>
+        {% include 'modals/modal_theme.html' with name='theme'%}
+        {% include 'inc/footer.html' %}
+        {% include 'inc/javascript.html' %}
+        {% block javascript %}{% endblock %}
+    </body>
 </html>

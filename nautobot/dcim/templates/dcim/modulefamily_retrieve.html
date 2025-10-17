@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Module Family</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Description</td>
                 <td>{{ object.description|placeholder }}</td>
@@ -16,16 +16,16 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Module Types</strong>
         </div>
         {% include 'inc/table.html' with table=module_type_table %}
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Module Bays</strong>
         </div>
         {% include 'inc/table.html' with table=module_bay_table %}
     </div>
-{% endblock content_right_page %} 
+{% endblock content_right_page %}

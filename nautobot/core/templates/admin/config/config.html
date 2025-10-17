@@ -3,55 +3,85 @@
 {% load helpers %}
 
 {% block breadcrumbs %}
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_settings.verbose_name }}</a>
-    <li class="breadcrumb-item active">{{ opts.verbose_name_plural|capfirst }}</li>
-  </ol>
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_settings.verbose_name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ opts.verbose_name_plural|capfirst }}</li>
+    </ol>
 {% endblock %}
 
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-lg-6 offset-lg-3">
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body"><strong>Errors</strong></div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
                 {% if form.errors %}
-                <ul class="errorlist">
+                    <ul class="errorlist">
                 {% endif %}
                 {% for field in form.hidden_fields %}
                     {% for error in field.errors %}
-                      <li>{{ error }}</li>
+                        <li>{{ error }}</li>
                     {% endfor %}
                     {{ field }}
                 {% endfor %}
                 {% if form.errors %}
-                </ul>
+                    </ul>
                 {% endif %}
 
                 <div class="row">
                     {% for fieldset in fieldsets %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading"><strong>{{ fieldset.title }}</strong></div>
-                            <div class="panel-body">
+                        <div class="card">
+                            <div class="card-header"><strong>{{ fieldset.title }}</strong></div>
+                            <div class="card-body">
                                 {% for item in fieldset.config_values %}
                                 {# Handle App Configuration #}
-                                {% if "__" in item.name %}
-                                    {% with app_name=item.name|split:"__"|first name=item.name|split:"__"|last %}
-                                        {% get_attr settings "PLUGINS_CONFIG" as app_settings %}
-                                        {% if app_settings|get_item:app_name|get_item:name is not None %}
+                                    {% if "__" in item.name %}
+                                        {% with app_name=item.name|split:"__"|first name=item.name|split:"__"|last %}
+                                            {% get_attr settings "PLUGINS_CONFIG" as app_settings %}
+                                            {% if app_settings|get_item:app_name|get_item:name is not None %}
+                                                <div class="alert alert-warning" role="alert">
+                                                    <code>{{ name }} = {{ app_settings|get_item:app_name|get_item:name | quote_string }}</code>
+                                                    is set via an environment variable or otherwise explicitly
+                                                    set in <code>{{ settings.SETTINGS_PATH }}</code>
+                                                    under PLUGINS_CONFIG[{{app_name}}],
+                                                    therefore it is not currently editable here.
+                                                    <br>Remove that environment variable and/or the declaration in
+                                                    <code>{{ settings.SETTINGS_PATH }}</code>
+                                                    if you want to manage it via this interface instead.
+                                                </div>
+                                                {{ item.form_field.as_hidden }}
+                                            {% else %}
+                                                <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
+                                                    <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
+                                                        {{ name | split:"_" | join:" " }}
+                                                        <span class="form-text">
+                                                            (default: <code>{{ item.default }}</code>)
+                                                        </span>
+                                                    </label>
+                                                    <div class="col-lg-9">
+                                                        {{ item.form_field.errors }}
+                                                        {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                        {{ item.form_field }}
+                                                        <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        {% get_attr settings item.name as settings_value %}
+                                        {% if settings_value is not None %}
                                             <div class="alert alert-warning" role="alert">
-                                                <code>{{ name }} = {{ app_settings|get_item:app_name|get_item:name | quote_string }}</code>
+                                                <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
                                                 is set via an environment variable or otherwise explicitly
-                                                set in <code>{{ settings.SETTINGS_PATH }}</code>
-                                                under PLUGINS_CONFIG[{{app_name}}],
+                                                set in <code>{{ settings.SETTINGS_PATH }}</code>,
                                                 therefore it is not currently editable here.
                                                 <br>Remove that environment variable and/or the declaration in
                                                 <code>{{ settings.SETTINGS_PATH }}</code>
@@ -59,52 +89,22 @@
                                             </div>
                                             {{ item.form_field.as_hidden }}
                                         {% else %}
-                                            <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                                <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
-                                                    {{ name | split:"_" | join:" " }}
+                                            <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
+                                                <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
+                                                    {{ item.name | split:"_" | join:" " }}
                                                     <span class="form-text">
                                                         (default: <code>{{ item.default }}</code>)
                                                     </span>
                                                 </label>
-                                                <div class="col-md-9">
+                                                <div class="col-lg-9">
                                                     {{ item.form_field.errors }}
                                                     {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
-                                                        {{ item.form_field }}
+                                                    {{ item.form_field }}
                                                     <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                                 </div>
                                             </div>
                                         {% endif %}
-                                    {% endwith %}
-                                {% else %}
-                                    {% get_attr settings item.name as settings_value %}
-                                    {% if settings_value is not None %}
-                                        <div class="alert alert-warning" role="alert">
-                                            <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
-                                            is set via an environment variable or otherwise explicitly
-                                            set in <code>{{ settings.SETTINGS_PATH }}</code>,
-                                            therefore it is not currently editable here.
-                                            <br>Remove that environment variable and/or the declaration in
-                                            <code>{{ settings.SETTINGS_PATH }}</code>
-                                            if you want to manage it via this interface instead.
-                                        </div>
-                                        {{ item.form_field.as_hidden }}
-                                    {% else %}
-                                        <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                            <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
-                                                {{ item.name | split:"_" | join:" " }}
-                                                <span class="form-text">
-                                                    (default: <code>{{ item.default }}</code>)
-                                                </span>
-                                            </label>
-                                            <div class="col-md-9">
-                                                {{ item.form_field.errors }}
-                                                {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
-                                                    {{ item.form_field }}
-                                                <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
-                                            </div>
-                                        </div>
                                     {% endif %}
-                                {% endif %}
                                 {% endfor %}
                             </div>
                         </div>
@@ -113,7 +113,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
+            <div class="col-lg-6 offset-lg-3 text-end">
                 <input type="submit" name="_save" class="btn btn-primary" value="{% trans 'Save' %}"/>
             </div>
         </div>

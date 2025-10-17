@@ -3,26 +3,26 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job Source</strong></div>
-        <div class="panel-body">
-            <div class="form-group">
-                <label class="col-md-3 control-label">Module</label>
-                <div class="col-md-9" style="padding-top: 7px">
+    <div class="card">
+        <div class="card-header"><strong>Job Source</strong></div>
+        <div class="card-body">
+            <div class="mb-10 d-flex justify-content-center">
+                <label class="col-lg-3 col-form-label">Module</label>
+                <div class="col-lg-9" style="padding-top: 7px">
                     <code>{{ obj.module_name }}</code>
                     <span class="form-text">Dotted name of the Python module providing this job</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label class="col-md-3 control-label">Job Class</label>
-                <div class="col-md-9" style="padding-top: 7px">
+            <div class="mb-10 d-flex justify-content-center">
+                <label class="col-lg-3 col-form-label">Job Class</label>
+                <div class="col-lg-9" style="padding-top: 7px">
                     <code>{{ obj.job_class_name }}</code>
                     <span class="form-text">Name of the Python class providing this job</span>
                 </div>
             </div>
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    <div class="checkbox">
+            <div class="mb-10 d-flex justify-content-center">
+                <div class="col-lg-9 offset-lg-3">
+                    <div class="form-check">
                         <label>
                             <input type="checkbox" disabled="true" {% if obj.installed %}checked="checked"{% endif %}>
                             Installed
@@ -33,9 +33,9 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    <div class="checkbox">
+            <div class="mb-10 d-flex justify-content-center">
+                <div class="col-lg-9 offset-lg-3">
+                    <div class="form-check">
                         <label>
                             <input type="checkbox" disabled="true" {% if obj.supports_dryrun %}checked="checked"{% endif %}>
                             Supports dryrun
@@ -46,9 +46,9 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    <div class="checkbox">
+            <div class="mb-10 d-flex justify-content-center">
+                <div class="col-lg-9 offset-lg-3">
+                    <div class="form-check">
                         <label>
                             <input type="checkbox" disabled="true" {% if obj.is_job_hook_receiver %}checked="checked"{% endif %}>
                             Is job hook receiver
@@ -59,9 +59,9 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    <div class="checkbox">
+            <div class="mb-10 d-flex justify-content-center">
+                <div class="col-lg-9 offset-lg-3">
+                    <div class="form-check">
                         <label>
                             <input type="checkbox" disabled="true" {% if obj.is_job_button_receiver %}checked="checked"{% endif %}>
                             Is job button receiver
@@ -74,18 +74,18 @@
             </div>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Job</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Job</strong></div>
+        <div class="card-body">
             {% render_field form.enabled %}
             {% include "extras/inc/overridable_field.html" with field=form.name override_field=form.name_override %}
             {% include "extras/inc/overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
             {% include "extras/inc/overridable_field.html" with field=form.description override_field=form.description_override %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Properties</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Properties</strong></div>
+        <div class="card-body">
             {% include "extras/inc/overridable_field.html" with field=form.dryrun_default override_field=form.dryrun_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
             {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
@@ -100,67 +100,67 @@
 {% endblock form %}
 
 {% block javascript %}
-{{ block.super }}
-{{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
-<script>
-    const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
-    const description_default = $("#id_description").val();
+    {{ block.super }}
+    {{ obj.job_class.properties_dict | json_script:"job_class_properties" }}
+    <script>
+        const job_class_properties = JSON.parse(document.getElementById("job_class_properties").textContent);
+        const description_default = $("#id_description").val();
     /* All id_*_override fields */
-    $("[id^=id_][id$=_override]").change(function() {
-        const override_id = $(this).attr("id");
+        $("[id^=id_][id$=_override]").change(function() {
+            const override_id = $(this).attr("id");
         /* What's the form field this is an override for? */
-        const field_id = override_id.slice(0, -9);
-        const field = $("#" + field_id);
-        const field_name = field_id.slice(3);
-        if ($(this).prop("checked")) {
-            field.attr("readonly", null);
-            field.prop("disabled", false);
-        } else {
+            const field_id = override_id.slice(0, -9);
+            const field = $("#" + field_id);
+            const field_name = field_id.slice(3);
+            if ($(this).prop("checked")) {
+                field.attr("readonly", null);
+                field.prop("disabled", false);
+            } else {
             /* Revert the field to its default value */
-            if (field.attr("type") == "checkbox") {
+                if (field.attr("type") == "checkbox") {
                 /* Do we have a job class object to derive properties from? */
-                if (job_class_properties != "") {
-                    field.prop("checked", job_class_properties[field_name]);
-                } else {
+                    if (job_class_properties != "") {
+                        field.prop("checked", job_class_properties[field_name]);
+                    } else {
                     /* No, we don't - it's probably not installed */
-                    field.prop("checked", field.attr("checked"));
-                }
+                        field.prop("checked", field.attr("checked"));
+                    }
                 /*
                  * Checkboxes can't be "readonly" in HTML :-(
                  * Note that "disabled" fields aren't included in form submission, so we have to be sure to
                  * re-enable them at form submission time.
                  */
-                field.prop("disabled", true);
-            } else {
-                /* Do we have a job class object to derive properties from? */
-                if (job_class_properties != "") {
-                    if (field_name != "job_queues" && field_name != "default_job_queue") {
-                        field.val(job_class_properties[field_name]);
-                    }
-                } else if (field_name != "description") {
-                    /* No, we don't - it's probably not installed */
-                    field.val(field.attr("value"));
-                } else {
-                    /* Textarea fields don't have a "value" attribute */
-                    field.val(description_default);
-                }
-                if (field_name == "job_queues" || field_name == "default_job_queue") {
                     field.prop("disabled", true);
                 } else {
-                    field.attr("readonly", "readonly");
+                /* Do we have a job class object to derive properties from? */
+                    if (job_class_properties != "") {
+                        if (field_name != "job_queues" && field_name != "default_job_queue") {
+                            field.val(job_class_properties[field_name]);
+                        }
+                    } else if (field_name != "description") {
+                    /* No, we don't - it's probably not installed */
+                        field.val(field.attr("value"));
+                    } else {
+                    /* Textarea fields don't have a "value" attribute */
+                        field.val(description_default);
+                    }
+                    if (field_name == "job_queues" || field_name == "default_job_queue") {
+                        field.prop("disabled", true);
+                    } else {
+                        field.attr("readonly", "readonly");
+                    }
                 }
             }
-        }
-    });
-    $("[id^=id_][id$=_override]").change();
+        });
+        $("[id^=id_][id$=_override]").change();
 
     /* As mentioned above, we need to re-enable all checkboxes, job_queues and default_job_queue fields on form submission so they get included */
-    $("form").submit(function() {
-        $('input[type="checkbox"]:disabled').each(function() {
-            $(this).prop("disabled", false);
+        $("form").submit(function() {
+            $('input[type="checkbox"]:disabled').each(function() {
+                $(this).prop("disabled", false);
+            });
+            $('#id_job_queues').prop("disabled", false);
+            $('#id_default_job_queues').prop("disabled", false);
         });
-        $('#id_job_queues').prop("disabled", false);
-        $('#id_default_job_queues').prop("disabled", false);
-    });
-</script>
+    </script>
 {% endblock javascript %}

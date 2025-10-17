@@ -13,8 +13,9 @@ from nautobot.dcim.filters import (
     PathEndpointModelFilterSetMixin,
 )
 from nautobot.dcim.models import Location
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
+from nautobot.extras.filter_mixins import StatusModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 

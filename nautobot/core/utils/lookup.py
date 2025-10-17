@@ -9,10 +9,11 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Model
+from django.db.models import ForeignKey, Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
-from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
+
+from nautobot.core.utils.module_loading import import_string_optional
 
 
 def resolve_attr(obj, dotted_field):
@@ -181,13 +182,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
-    try:
-        return import_string(object_path)
-    # The name of the module is not correct or unable to find the desired object for this model
-    except (AttributeError, ImportError, ModuleNotFoundError):
-        pass
-
-    return None
+    return import_string_optional(object_path)
 
 
 def get_filterset_for_model(model):
@@ -376,6 +371,34 @@ def get_created_and_last_updated_usernames_for_model(instance):
         last_updated_by = last_updated_by_record.user_name
 
     return created_by, last_updated_by
+
+
+def get_user_from_instance(instance):
+    """
+    Retrieve the user object from a model instance, regardless of the field name.
+
+    This function inspects the given model instance to find a ForeignKey that points
+    to the current AUTH_USER_MODEL (as defined in Django settings). It does not require
+    the user-related field to have a fixed name (e.g., "user", "creator", "owner").
+
+    Args:
+        instance (models.Model): A Django model instance that may contain a ForeignKey
+            to the configured user model.
+
+    Returns:
+        User instance if a user-related ForeignKey exists and is populated,
+        otherwise None.
+
+    Example:
+        >>> schedule = ScheduledJob.objects.first()
+        >>> user = get_user_from_instance(schedule)
+        >>> print(user.username)
+    """
+    UserModel = settings.AUTH_USER_MODEL
+    for field in instance._meta.get_fields():
+        if isinstance(field, ForeignKey) and field.related_model._meta.label == UserModel:
+            return getattr(instance, field.name, None)
+    return None
 
 
 def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):

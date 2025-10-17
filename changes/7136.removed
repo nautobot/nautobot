@@ -1,3 +1,0 @@
-Removed `ApprovableModelMixin` inheritance from Job.
-Removed job from `APPROVAL_WORKFLOW_MODELS`.
-Removed ApprovalWorkflow table from `JobView`.

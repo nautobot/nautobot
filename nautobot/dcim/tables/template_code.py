@@ -48,7 +48,7 @@ CABLE_TERMINATION_PARENT = """
 
 DEVICE_LINK = """
 <a href="{% url 'dcim:device' pk=record.pk %}">
-    {{ record.name|default:'<span class="label label-info">Unnamed device</span>' }}
+    {{ record.name|default:'<span class="badge bg-info">Unnamed device</span>' }}
 </a>
 """
 

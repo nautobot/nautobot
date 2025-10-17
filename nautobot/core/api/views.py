@@ -619,6 +619,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         # Add additional data so drf-spectacular will use the Token keyword in authorization header.
         response.data["schema_auth_names"] = ["tokenAuth"]
+
         return response
 
 

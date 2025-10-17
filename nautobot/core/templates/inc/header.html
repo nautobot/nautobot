@@ -2,11 +2,11 @@
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
-        <form action="{% url 'search' %}" class="col text-center" id="header_search" method="get" role="search">
+        <form action="{% url 'search' %}" class="col-4 text-center" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
                 <input
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
-                    class="form-control nb-color-transparent"
+                    class="form-control nb-text-transparent"
                     name="q"
                     type="search"
                     value="{{ request.GET.q }}"
@@ -21,9 +21,9 @@
                                         <span class="badge border" data-nb-link="{{ item_link }}"><!--
                                             -->in: {{ item_details.name }}<!--
                                             --><button tabindex="-1" type="button">
-                                                <span aria-hidden="true" class="mdi mdi-close"></span>
-                                                <span class="visually-hidden">Remove</span>
-                                            </button>
+                                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                                            <span class="visually-hidden">Remove</span>
+                                        </button>
                                         </span>
                                     {% endif %}
                                 {% endfor %}
@@ -45,10 +45,10 @@
         </form>
     {% endwith %}
 
-    <div class="col text-end">
+    <div class="col-4 text-end">
         <div class="dropdown">
             <button class="btn dropdown-toggle align-items-center d-inline-flex gap-6" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="align-items-center bg-primary d-inline-flex justify-content-center rounded text-white" style="height: 1.5rem; width: 1.5rem;">
+                <span class="align-items-center bg-primary d-inline-flex justify-content-center rounded nb-text-body-bg" style="height: 1.5rem; width: 1.5rem;">
                     {% if request.user.get_full_name %}
                         {% for name in request.user.get_full_name|split:" " %}<!--
                             -->{{ name|first|upper }}<!--
@@ -60,15 +60,15 @@
                 {% firstof request.user.get_full_name request.user.username %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{% url 'about' %}"><i class="mdi mdi-information"></i>About</a></li>
-                <li><a class="dropdown-item" href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i>Profile</a></li>
-                <li><a class="dropdown-item" href="{% url 'extras:approver_dashboard' %}"><i class="mdi mdi-check-bold"></i>Approval Dashboard</a></li>
+                <li><a class="dropdown-item" href="{% url 'about' %}"><span class="mdi mdi-information"></span>About</a></li>
+                <li><a class="dropdown-item" href="{% url 'user:profile' %}"><span class="mdi mdi-account-box"></span>Profile</a></li>
+                <li><a class="dropdown-item" href="{% url 'extras:approver_dashboard' %}"><span class="mdi mdi-check-bold"></span>Approval Dashboard</a></li>
                 {% if request.user.is_staff %}
-                    <li><a class="dropdown-item" href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i>Worker Status</a></li>
-                    <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i>Admin</a></li>
+                    <li><a class="dropdown-item" href="{% url 'worker_status' %}"><span class="mdi mdi-server-network"></span>Worker Status</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin:index' %}"><span class="mdi mdi-cogs"></span>Admin</a></li>
                 {% endif %}
                 <li class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="mdi mdi-logout"></i>Log out</a></li>
+                <li><a class="dropdown-item" href="{% url 'logout' %}"><span class="mdi mdi-logout"></span>Log out</a></li>
             </ul>
         </div>
     </div>

@@ -9,40 +9,40 @@
 {% block content %}
     <form method="post">
         {% csrf_token %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Interfaces</strong>
-                <div class="pull-right col-md-2 d-print-none">
+                <div class="float-end col-lg-2 d-print-none">
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>
             {% include 'responsive_table.html' with table=interface_table %}
-            <div class="panel-footer d-print-none">
+            <div class="card-footer d-print-none">
                 {% if perms.dcim.change_interface %}
-                    <button type="submit" name="_rename" formaction="{% url 'dcim:interface_bulk_rename' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
+                    <button type="submit" name="_rename" formaction="{% url 'dcim:interface_bulk_rename' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-sm">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
                     </button>
-                    <button type="submit" name="_edit" formaction="{% url 'dcim:interface_bulk_edit' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
+                    <button type="submit" name="_edit" formaction="{% url 'dcim:interface_bulk_edit' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-sm">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
                     </button>
-                    <button type="submit" name="_disconnect" formaction="{% url 'dcim:interface_bulk_disconnect' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-danger btn-xs">
+                    <button type="submit" name="_disconnect" formaction="{% url 'dcim:interface_bulk_disconnect' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-danger btn-sm">
                         <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span> Disconnect
                     </button>
                 {% endif %}
                 {% if perms.dcim.delete_interface %}
-                    <button type="submit" name="_delete" formaction="{% url 'dcim:interface_bulk_delete' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-danger btn-xs">
+                    <button type="submit" name="_delete" formaction="{% url 'dcim:interface_bulk_delete' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-danger btn-sm">
                         <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
                     </button>
                 {% endif %}
                 {% if perms.dcim.add_interface %}
-                    <div class="pull-right">
-                        <a href="{% url 'dcim:interface_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-primary btn-xs">
+                    <div class="float-end">
+                        <a href="{% url 'dcim:interface_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-primary btn-sm">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add interfaces
                         </a>
                     </div>
                 {% endif %}
                 <div class="clearfix"></div>
-             </div>
+            </div>
         </div>
     </form>
 {% endblock content %}

@@ -22,7 +22,7 @@
                 <h3 class="mb-16">Assign an IP Address</h3>
                 {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='assign' %}
                 {% if form.non_field_errors %}
-                    <div class="card border-danger mb-16">
+                    <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body">
                             <strong>Errors</strong>
                         </div>
@@ -31,7 +31,7 @@
                         </div>
                     </div>
                 {% endif %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header"><strong>Select IP Address</strong></div>
                     <div class="card-body">
                         {% render_field form.q %}
@@ -73,11 +73,11 @@
 {% endblock %}
 
 {% block javascript %}
-<script>
-    var clipboard = new ClipboardJS('.btn');
+    <script>
+        var clipboard = new ClipboardJS('.btn');
 
-    clipboard.on('success', function (e) {console.log("success")});
+        clipboard.on('success', function (e) {console.log("success")});
 
-    clipboard.on('error', function (e) {console.log("failed")});
-</script>
+        clipboard.on('error', function (e) {console.log("failed")});
+    </script>
 {% endblock %}

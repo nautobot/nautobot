@@ -2,7 +2,6 @@ from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
-from nautobot.ipam.views import ServiceEditView
 
 from . import views
 from .models import VMInterface
@@ -16,28 +15,6 @@ router.register("cluster-types", views.ClusterTypeUIViewSet)
 router.register("virtual-machines", views.VirtualMachineUIViewSet)
 
 urlpatterns = [
-    # Clusters
-    path(
-        "clusters/<uuid:pk>/devices/add/",
-        views.ClusterAddDevicesView.as_view(),
-        name="cluster_add_devices",
-    ),
-    path(
-        "clusters/<uuid:pk>/devices/remove/",
-        views.ClusterRemoveDevicesView.as_view(),
-        name="cluster_remove_devices",
-    ),
-    # Virtual machines
-    path(
-        "virtual-machines/<uuid:pk>/config-context/",
-        views.VirtualMachineConfigContextView.as_view(),
-        name="virtualmachine_configcontext",
-    ),
-    path(
-        "virtual-machines/<uuid:virtualmachine>/services/assign/",
-        ServiceEditView.as_view(),
-        name="virtualmachine_service_assign",
-    ),
     # VM interfaces
     path("interfaces/", views.VMInterfaceListView.as_view(), name="vminterface_list"),
     path("interfaces/add/", views.VMInterfaceCreateView.as_view(), name="vminterface_add"),

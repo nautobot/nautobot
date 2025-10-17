@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.0.0a1"
+version = "3.0.0a2"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -41,7 +41,7 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~45.0.7"
 # Fundamental web framework for Nautobot
-Django = "~4.2.24"
+Django = "~4.2.25"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -89,7 +89,7 @@ django-tree-queries = "~0.20.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = ">=3.15.2,<3.17.0"
+djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
@@ -119,7 +119,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.3.0"
+nh3 = "~0.3.1"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -128,18 +128,20 @@ Pillow = "^11.0"
 prometheus-client = "~0.22.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.10"
+psycopg2-binary = "~2.9.11"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.4"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
-PyYAML = "~6.0.2"
+PyYAML = "~6.0.3"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
 social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
+# NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
+#       that addresses a security vulnerability in social-auth-app-django 5.4.3
 social-auth-app-django = "~5.4.3"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.3"
@@ -188,25 +190,26 @@ markdown-version-annotations = "~1.0.1"
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "^0.4.0"
-# Allow Markdown files to include other files
-# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.9"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.18"
+mkdocs-material = "~9.6.21"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.0"
+mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~1.16.12"
 
 [tool.poetry.group.linting.dependencies]
+# Django template files indenter
+djhtml = "~3.0.10"
+# Django template files linter and formatter
+djlint = "~1.36.4"
 # Code static analysis
-pylint = "~3.3.8"
+pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
@@ -236,6 +239,7 @@ time-machine = "~2.17.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -254,6 +258,11 @@ omit = [
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+[tool.djlint]
+ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
+profile="django"
+extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
@@ -408,7 +417,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.4.md"
+filename = "nautobot/docs/release-notes/version-3.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

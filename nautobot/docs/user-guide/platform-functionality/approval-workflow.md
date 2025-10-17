@@ -144,13 +144,16 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Create an Approval Workflow Definition with stages
 
-<!-- pyml disable-num-lines 6 no-inline-html -->
+<!-- pyml disable-num-lines 7 no-inline-html -->
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
-    <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-        <img src="../../media/development/approval-workflows/nav-approval-workflow-definition.png" width="45%" />
-        <img src="../../media/development/approval-workflows/approval-workflow-definition.png" width="45%" />
+    <div class="grid cards example-images" markdown>
+
+    - ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/nav-approval-workflow-definition.png){ .on-glb }
+    - ![Approval Workflow Definition](../../media/development/approval-workflows/approval-workflow-definition.png){ .on-glb }
+    - ![Add Approval Workflow Definition](../../media/development/approval-workflows/add-approval-workflow-definition.png){ .on-glb }
+
     </div>
-    <img src="../../media/development/approval-workflows/add-approval-workflow-definition.png" width="90%" />
+
 2. Enter:
     - **Name** (e.g., "Scheduled Job Run Workflow").
     - **Model** (e.g., `extras|scheduled job`).
@@ -165,13 +168,16 @@ Workflows are automatically attached after creating, running, or updating an obj
 
 #### Approve or Deny a Stage
 
-<!-- pyml disable-num-lines 6 no-inline-html -->
+<!-- pyml disable-num-lines 24 no-inline-html -->
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
-    <p align="center">
-        <img src="../../media/development/approval-workflows/nav-approval-dashboard1.png" width="30%" />
-        <img src="../../media/development/approval-workflows/nav-approval-dashboard2.png" width="30%" />
-    </p>
-    <img src="../../media/development/approval-workflows/approval-dashboard-approvals.png" width="90%" />
+    <div class="grid cards example-images" markdown>
+
+    - ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/nav-approval-dashboard1.png){ .on-glb }
+    - ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/nav-approval-dashboard2.png){ .on-glb }
+    - ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/approval-dashboard-approvals.png){ .on-glb }
+
+    </div>
+
 2. Locate the relevant object under review in the table. The table displays:
     - **Object under review** - Linked to the object’s detail view.
     - **Workflow** - Name of the workflow definition (linked to the workflow detail view).
@@ -180,17 +186,24 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **State** - Current workflow state.
 3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
 4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
-<!-- pyml disable-num-lines 5 no-inline-html -->
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
-    <p align="center">
-        <img src="../../media/development/approval-workflows/approve-window.png" width="45%" />
-        <img src="../../media/development/approval-workflows/deny-window.png" width="45%" />
-    </p>
+    <div class="grid cards example-images" markdown>
+
+    - ![Approval Workflow Approve](../../media/development/approval-workflows/approve-window.png){ .on-glb }
+    - ![Approval Workflow Deny](../../media/development/approval-workflows/deny-window.png){ .on-glb }
+
+    </div>
 
 #### View My Requests
 
+<!-- pyml disable-num-lines 5 no-inline-html -->
 1. Open the **Approval Dashboard** and select the **My Requests** tab.
-    ![Approval Dashboard Requests](../../media/development/approval-workflows/approval-dashboard-requests.png)
+    <div class="grid cards example-images" markdown>
+
+    - ![Approval Dashboard Requests](../../media/development/approval-workflows/approval-dashboard-requests.png){ .on-glb }
+
+    </div>
+
 2. The table lists all workflows initiated by the current user. The columns include:
     - **Approval Workflow Definition** - Linked to the workflow definition.
     - **Object Type Under Review** - Model and object type for the request.
@@ -204,20 +217,36 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 
 ##### Check State as Object Operator/Approver**
 
+<!-- pyml disable-num-lines 9 no-inline-html -->
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard`
 2. Select **My Approvals** or **My Requests** tab.
 3. Click the workflow (in My Approvals view) or details button (in My Requests view) for specific workflow.
-    ![My Approvals Workflow](../../media/development/approval-workflows/my-approvals-workflow.png)
-    ![My Requests Workflow](../../media/development/approval-workflows/my-requests-workflow.png)
+    <div class="grid cards example-images" markdown>
+
+    - ![My Approvals Workflow](../../media/development/approval-workflows/my-approvals-workflow.png){ .on-glb }
+    - ![My Requests Workflow](../../media/development/approval-workflows/my-requests-workflow.png){ .on-glb }
+
+    </div>
 
 ##### Check State as Workflow Architect**
 
+<!-- pyml disable-num-lines 38 no-inline-html -->
 1. Go to `Approvals > Approval Workflow Definition`
 2. Select the required workflow definition.
-    ![Select Approval Workflow Definition](../../media/development/approval-workflows/select-approval-workflow-definition.png)
+    <div class="grid cards example-images" markdown>
+
+    - ![Select Approval Workflow Definition](../../media/development/approval-workflows/select-approval-workflow-definition.png){ .on-glb }
+
+    </div>
+
 3. In the **Workflows** list, all workflows for this definition are displayed.
 4. Select the details button for a specific workflow.
-    ![Approval Workflow Definition details](../../media/development/approval-workflows/approval-workflow-definition-details.png)
+    <div class="grid cards example-images" markdown>
+
+    - ![Approval Workflow Definition details](../../media/development/approval-workflows/approval-workflow-definition-details.png){ .on-glb }
+
+    </div>
+
 5. View **Approval Workflow** details view contains:
     - **Approval Workflow** panel:
         - **Approval Workflow Definition** - Linked definition for the workflow.
@@ -236,7 +265,11 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
         - **Comments** - Submitted comment.
         - **State** - Decision state (`Pending`, `Approved`, `Denied`).
 
-    ![Approval Workflow details](../../media/development/approval-workflows/approval-workflow-details.png)
+<div class="grid cards example-images" markdown>
+
+- ![Approval Workflow details](../../media/development/approval-workflows/approval-workflow-details.png){ .on-glb }
+
+</div>
 
 ### Using Approval Workflow via API
 
@@ -332,7 +365,7 @@ Approval actions are controlled not only by permissions but also by **approver g
 
 ### From Nautobot 2.x
 
-If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available to identify Jobs and Scheduled Jobs that have `approval_required=True`.
+If upgrading from Nautobot 2.x, the management command `check_job_approval_status` is available in Nautobot 2.4.15+ to identify Jobs and Scheduled Jobs that have `approval_required=True`.
 
 - Running the command doesn't approve/run/deny jobs, it just identifies the ones that need such action to be performed as a separate step.
 - After running this command to identify the impacted Jobs, and completing the upgrade to Nautobot 3.x, you'll want to define appropriate approval workflows to apply to those jobs.

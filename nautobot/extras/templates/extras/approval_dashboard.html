@@ -2,12 +2,12 @@
 {% load helpers %}
 
 {% block buttons %}
-<div class="btn-group">
-    <a class="btn {% if approval_view %}btn-primary{% else %}btn-default{% endif %}" href="{% url 'extras:approver_dashboard' %}">
-        My Approvals
-    </a>
-    <a class="btn {% if not approval_view %}btn-primary{% else %}btn-default{% endif %}" href="{% url 'extras:approvee_dashboard' %}">
-        My Requests
-    </a>
-</div>
+    <div class="btn-group">
+        <a class="btn {% if approval_view %}btn-primary{% else %}btn-secondary{% endif %}" href="{% url 'extras:approver_dashboard' %}">
+            My Approvals
+        </a>
+        <a class="btn {% if not approval_view %}btn-primary{% else %}btn-secondary{% endif %}" href="{% url 'extras:approvee_dashboard' %}">
+            My Requests
+        </a>
+    </div>
 {% endblock %}

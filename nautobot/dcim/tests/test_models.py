@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import caches
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Model
@@ -16,6 +17,7 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceUniquenessChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -39,6 +41,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -1422,6 +1425,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
     def setUp(self):
+        # clear Constance cache
+        cache = caches[settings.CONSTANCE_DATABASE_CACHE_BACKEND]
+        cache.clear()
+
         manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -1510,6 +1517,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device.validated_save()
 
+        self.cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        self.cluster = Cluster.objects.create(
+            name="Test Cluster", cluster_type=self.cluster_type, location=self.location_3
+        )
+        self.device.clusters.add(self.cluster)
+
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
@@ -1525,11 +1538,24 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_overrides(self):
         """Ensure that the natural-key for Device is affected by settings/Constance."""
-        with override_config(DEVICE_NAME_AS_NATURAL_KEY=True):
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME):
             self.assertEqual([self.device.name], self.device.natural_key())
             # self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))
             # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME):
+            self.assertEqual(
+                [self.device.name, self.device.tenant, self.device.location.name], self.device.natural_key()
+            )
+            self.assertEqual(
+                self.device,
+                Device.objects.get_by_natural_key([self.device.name, self.device.tenant, self.device.location]),
+            )
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE):
+            self.assertEqual([str(self.device.pk)], self.device.natural_key())
+            self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.pk]))
 
         with override_config(LOCATION_NAME_AS_NATURAL_KEY=True):
             self.assertEqual([self.device.name, None, self.device.location.name], self.device.natural_key())
@@ -1643,6 +1669,28 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIn(
             f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
+
+    def test_device_cluster_location_mismatch(self):
+        with self.subTest("Invalid cluster assignment at creation time"):
+            device = Device(
+                name="Device in different location from cluster",
+                device_type=self.device_type,
+                role=self.device_role,
+                status=self.device_status,
+                location=self.location_2,
+                cluster=self.cluster,  # belongs to self.location_3
+            )
+            with self.assertRaises(ValidationError) as cm:
+                device.validated_save()
+            self.assertIn("does not include", str(cm.exception))
+
+        new_cluster = Cluster.objects.create(
+            name="New Cluster", cluster_type=self.cluster_type, location=self.location_2
+        )
+        with self.subTest("Invalid cluster assignment via Device.clusters m2m manager"):
+            with self.assertRaises(ValidationError) as cm:
+                self.device.clusters.add(new_cluster)  # self.device belongs to self.location_3
+            self.assertIn("does not include", str(cm.exception))
 
     def test_device_redundancy_group_validation(self):
         d2 = Device(
@@ -1971,6 +2019,42 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+    def test_cluster_queries(self):
+        with self.subTest("Assert filtering and excluding `cluster`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.filter(cluster=self.cluster),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.exclude(cluster=self.cluster),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.filter(cluster__in=[self.cluster]),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Device.objects.exclude(cluster__in=[self.cluster]),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "cluster_type", "location"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert cluster__{field_name} query."):
+                value = getattr(self.cluster, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    Device.objects.filter(**{f"cluster__{field_name}": value}),
+                    Device.objects.filter(**{f"clusters__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    Device.objects.exclude(**{f"cluster__{field_name}": value}),
+                    Device.objects.exclude(**{f"clusters__{field_name}": value}),
+                )
 
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
@@ -3916,3 +4000,147 @@ class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
     def test_modulefamily_str(self):
         """Test string representation of ModuleFamily."""
         self.assertEqual(str(self.module_family), "Test Module Family")
+
+
+class DeviceClusterAssignmentTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create necessary objects for testing
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Test Device Type 1",
+        )
+        cls.devices = (
+            Device.objects.create(
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Test Device 1",
+                location=cls.location,
+                status=cls.device_status,
+            ),
+            Device.objects.create(
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Test Device 2",
+                location=cls.location,
+                status=cls.device_status,
+            ),
+        )
+        cls.cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        cls.clusters = (
+            Cluster.objects.create(name="Test Cluster 1", cluster_type=cls.cluster_type),
+            Cluster.objects.create(name="Test Cluster 2", cluster_type=cls.cluster_type),
+        )
+        cls.assignment = DeviceClusterAssignment.objects.create(
+            device=cls.devices[0],
+            cluster=cls.clusters[0],
+        )
+
+    def test_create_device_cluster_assignment(self):
+        """Test creating a device-cluster assignment."""
+        assignment = DeviceClusterAssignment(
+            device=self.devices[1],
+            cluster=self.clusters[0],
+        )
+        assignment.validated_save()
+        self.assertTrue(
+            DeviceClusterAssignment.objects.filter(
+                device=self.devices[1],
+                cluster=self.clusters[0],
+            ).exists()
+        )
+        self.assertEqual(self.devices[1].clusters.count(), 1)
+        self.assertEqual(self.devices[1].clusters.first(), self.clusters[0])
+        self.assertEqual(self.clusters[0].devices.count(), 2)
+        self.assertIn(self.devices[0], self.clusters[0].devices.all())
+        self.assertIn(self.devices[1], self.clusters[0].devices.all())
+
+    def test_uniqueness_constraint(self):
+        """Test that a device can't be assigned to the same cluster twice."""
+        duplicate_assignment = DeviceClusterAssignment(
+            device=self.devices[0],
+            cluster=self.clusters[0],
+        )
+        with self.assertRaises(ValidationError):
+            duplicate_assignment.full_clean()
+        with self.assertRaises(IntegrityError):
+            duplicate_assignment.save()
+
+    def test_cascade_on_delete(self):
+        """Test that assignments are deleted when either the device or cluster is deleted."""
+        new_assignment = DeviceClusterAssignment.objects.create(
+            device=self.devices[1],
+            cluster=self.clusters[1],
+        )
+        self.assertTrue(DeviceClusterAssignment.objects.filter(id=new_assignment.id).exists())
+        self.devices[1].delete()
+        self.assertFalse(DeviceClusterAssignment.objects.filter(id=new_assignment.id).exists())
+        another_device = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device 3",
+            location=self.location,
+            status=self.device_status,
+        )
+        another_assignment = DeviceClusterAssignment.objects.create(
+            device=another_device,
+            cluster=self.clusters[1],
+        )
+
+        self.assertTrue(DeviceClusterAssignment.objects.filter(id=another_assignment.id).exists())
+
+        self.clusters[1].delete()
+        self.assertFalse(DeviceClusterAssignment.objects.filter(id=another_assignment.id).exists())
+
+    def test_cluster_property_backward_compatibility(self):
+        """Test the backward-compatible cluster property on Device."""
+        self.assertEqual(self.devices[0].cluster, self.clusters[0])
+
+        device_no_clusters = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device No Clusters",
+            location=self.location,
+            status=self.device_status,
+        )
+        self.assertIsNone(device_no_clusters.cluster)
+
+        device_multi_clusters = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device Multi Clusters",
+            location=self.location,
+            status=self.device_status,
+        )
+        DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[0])
+        DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[1])
+
+        with self.assertRaises(Cluster.MultipleObjectsReturned):
+            device_multi_clusters.cluster
+        self.assertEqual(device_multi_clusters.clusters.count(), 2)
+        self.assertIn(self.clusters[0], device_multi_clusters.clusters.all())
+        self.assertIn(self.clusters[1], device_multi_clusters.clusters.all())
+
+    def test_cluster_setter_backward_compatibility(self):
+        """Test the backward-compatible cluster setter on Device."""
+        device = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device For Setter",
+            location=self.location,
+            status=self.device_status,
+        )
+        device.cluster = self.clusters[0]
+        self.assertEqual(device.clusters.count(), 1)
+        self.assertEqual(device.clusters.first(), self.clusters[0])
+        device.cluster = self.clusters[1]
+        self.assertEqual(device.clusters.count(), 1)
+        self.assertEqual(device.clusters.first(), self.clusters[1])
+        device.cluster = None
+        self.assertEqual(device.clusters.count(), 0)
