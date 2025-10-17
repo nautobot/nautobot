@@ -1,4 +1,4 @@
-<div id="{{ chart_container_id }}" style="width: {{ chart_width }}; height: {{ chart_height }};"></div>
+<div class="collapse show" id="{{ chart_container_id }}" style="width: {{ chart_width }}; height: {{ chart_height }};"></div>
 <!-- Safe JSON export from Django -->
 {% with "echarts-config-"|add:chart_container_id as chart_config_id %}
     {{ chart_config|json_script:chart_config_id }}
