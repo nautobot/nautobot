@@ -3,9 +3,12 @@
 import logging
 
 from django.core.exceptions import ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
+from nautobot.core.ui import object_detail
 from nautobot.extras.tables import DynamicGroupTable
 from nautobot.ipam.tables import PrefixTable
 
@@ -59,6 +62,77 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 exclude_columns=[],
             ),
         ],
+        extra_tabs=[
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
+                tab_id="vpn_vpns",
+                label="VPNs",
+                url_name="vpn:vpnprofile_vpns",
+                related_object_attribute="vpns",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="VPNs",
+                        table_class=tables.VPNTable,
+                        table_attribute="vpns",
+                        related_field_name="vpn_profile",
+                        select_related_fields=["role"],
+                        exclude_columns=["vpn_profile"],
+                        tab_id="vpns",
+                        enable_bulk_actions=True,
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
+                tab_id="vpn_tunnels",
+                label="VPN Tunnels",
+                url_name="vpn:vpnprofile_vpntunnels",
+                related_object_attribute="vpn_tunnels",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="VPN Tunnels",
+                        table_class=tables.VPNTunnelTable,
+                        table_attribute="vpn_tunnels",
+                        related_field_name="vpn_profile",
+                        select_related_fields=["endpoint_a", "endpoint_z", "role"],
+                        exclude_columns=["vpn_profile"],
+                        tab_id="vpn_tunnels",
+                        enable_bulk_actions=True,
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 300,
+                tab_id="vpn_endpoints",
+                label="VPN Endpoints",
+                url_name="vpn:vpnprofile_vpnendpoints",
+                related_object_attribute="vpn_tunnel_endpoints",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="VPN Enpoints",
+                        table_class=tables.VPNTunnelEndpointTable,
+                        table_attribute="vpn_tunnel_endpoints",
+                        related_field_name="vpn_profile",
+                        select_related_fields=["source_interface", "role"],
+                        exclude_columns=["vpn_profile"],
+                        tab_id="vpn_endpoints",
+                        enable_bulk_actions=True,
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+        ],
     )
 
     def get_extra_context(self, request, instance=None):
@@ -74,6 +148,36 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 data=request.POST if request.method == "POST" else None,
             )
         return ctx
+
+    @action(
+        detail=True,
+        url_path="vpn-vpns",
+        url_name="vpns",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["vpn.view_vpns"],
+    )
+    def vpn_vpns(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="vpn-tunnels",
+        url_name="vpntunnels",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["vpn.view_vpntunnels"],
+    )
+    def vpn_tunnels(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="vpn-endpoints",
+        url_name="vpnendpoints",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoints"],
+    )
+    def vpn_endpoints(self, request, *args, **kwargs):
+        return Response({})
 
     def form_save(self, form, **kwargs):
         obj = super().form_save(form, **kwargs)
