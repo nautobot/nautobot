@@ -21,7 +21,6 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
@@ -434,28 +433,6 @@ class FilterTestCases:
                             ContentTypeChoiceFilter,
                         ),
                     )
-
-    # Test cases should just explicitly include `name` as a generic_filter_tests entry
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameOnlyFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
-
-    # Test cases should just explicitly include `name` and `slug` as generic_filter_tests entries
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "slug" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["slug"], *self.generic_filter_tests)
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
 
     class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""

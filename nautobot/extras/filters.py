@@ -23,7 +23,6 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobQueueTypeChoices,
@@ -126,14 +125,12 @@ __all__ = (
     "ContactFilterSet",
     "ContentTypeFilterSet",
     "ContentTypeMultipleChoiceFilter",
-    "CreatedUpdatedFilterSet",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldBooleanFilter",
     "CustomFieldCharFilter",
     "CustomFieldDateFilter",
     "CustomFieldFilterMixin",
     "CustomFieldJSONFilter",
-    "CustomFieldModelFilterSet",
     "CustomFieldModelFilterSetMixin",
     "CustomFieldMultiSelectFilter",
     "CustomFieldMultiValueCharFilter",
@@ -153,7 +150,6 @@ __all__ = (
     "JobQueueAssignmentFilterSet",
     "JobQueueFilterSet",
     "JobResultFilterSet",
-    "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
     "MetadataChoiceFilterSet",
     "MetadataTypeFilterSet",
@@ -176,17 +172,6 @@ __all__ = (
     "TeamFilterSet",
     "WebhookFilterSet",
 )
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CreatedUpdatedModelFilterSetMixin)
-class CreatedUpdatedFilterSet(CreatedUpdatedModelFilterSetMixin):
-    pass
-
-
-@class_deprecated_in_favor_of(RelationshipModelFilterSetMixin)
-class RelationshipModelFilterSet(RelationshipModelFilterSetMixin):
-    pass
 
 
 #
@@ -570,12 +555,6 @@ class ContentTypeFilterSet(BaseFilterSet):
 
     def _feature(self, queryset, name, value):
         return queryset.filter(FeatureQuery(value).get_query())
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CustomFieldModelFilterSetMixin)
-class CustomFieldModelFilterSet(CustomFieldModelFilterSetMixin):
-    pass
 
 
 class CustomFieldFilterSet(BaseFilterSet):
@@ -1268,17 +1247,6 @@ class JobButtonFilterSet(BaseFilterSet):
             "button_class",
             "confirmation",
         )
-
-
-#
-# Filter for Local Config Context Data
-#
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(LocalContextModelFilterSetMixin)
-class LocalContextFilterSet(LocalContextModelFilterSetMixin):
-    pass
 
 
 #

@@ -23,7 +23,6 @@ from nautobot.core.api.utils import (
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -137,12 +136,6 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         return None
 
 
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CableTerminationModelSerializerMixin)
-class CableTerminationSerializer(CableTerminationModelSerializerMixin):
-    pass
-
-
 class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
     connected_endpoint_type = serializers.SerializerMethodField(read_only=True)
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
@@ -181,12 +174,6 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
             if obj._path is not None:
                 return obj._path.is_active
         return None
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
-class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
-    pass
 
 
 class ModularDeviceComponentTemplateSerializerMixin:
