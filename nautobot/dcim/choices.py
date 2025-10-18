@@ -778,7 +778,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
-    TYPE_TUNNEL = "tunel"
+    TYPE_TUNNEL = "tunnel"
 
     # Ethernet
     TYPE_100ME_FX = "100base-fx"
