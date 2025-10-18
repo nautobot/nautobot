@@ -224,14 +224,14 @@
         {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
     {% endif %}
     {% if vpn_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VPNs</strong>
             </div>
             {% include 'inc/table.html' with table=vpn_table %}
             {% if perms.vpn.add_vpn %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'vpn:vpn_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpn_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN
                     </a>
                 </div>
@@ -240,14 +240,14 @@
         {% include 'inc/paginator.html' with paginator=vpn_table.paginator page=vpn_table.page %}
     {% endif %}
     {% if vpn_profile_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VPN Profiles</strong>
             </div>
             {% include 'inc/table.html' with table=vpn_profile_table %}
             {% if perms.vpn.add_vpnprofile %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'vpn:vpnprofile_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpnprofile_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Profile
                     </a>
                 </div>
@@ -256,14 +256,14 @@
         {% include 'inc/paginator.html' with paginator=vpn_profile_table.paginator page=vpn_profile_table.page %}
     {% endif %}
     {% if vpn_tunnel_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VPN Tunnels</strong>
             </div>
             {% include 'inc/table.html' with table=vpn_tunnel_table %}
             {% if perms.vpn.add_vpntunnel %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'vpn:vpntunnel_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpntunnel_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Tunnel
                     </a>
                 </div>
@@ -272,14 +272,14 @@
         {% include 'inc/paginator.html' with paginator=vpn_tunnel_table.paginator page=vpn_tunnel_table.page %}
     {% endif %}
     {% if vpn_tunnel_endpoint_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VPN Tunnel Endpoints</strong>
             </div>
             {% include 'inc/table.html' with table=vpn_tunnel_endpoint_table %}
             {% if perms.vpn.add_vpntunnelendpoint %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'vpn:vpntunnelendpoint_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpntunnelendpoint_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Tunnel Endpoint
                     </a>
                 </div>
