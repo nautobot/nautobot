@@ -227,6 +227,7 @@ class VPNTable(RoleTableMixin, BaseTable):
         verbose_name="VPN Tunnels",
         url_params={"vpn": "pk"},
     )
+    vpn_profile = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPN)
     tags = TagColumn(url_name="vpn:vpn_list")
@@ -265,6 +266,8 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    vpn = tables.Column(linkify=True)
+    vpn_profile = tables.Column(linkify=True)
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
     tenant = TenantColumn()
@@ -313,6 +316,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    vpn_profile = tables.Column(linkify=True)
     device = tables.Column(linkify=True)
     source_interface = tables.Column(linkify=True)
     source_ipaddress = tables.Column(linkify=True)

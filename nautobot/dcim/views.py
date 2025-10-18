@@ -15,7 +15,6 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
-from nautobot.vpn.tables import VPNTunnelEndpointTable
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
@@ -92,6 +91,7 @@ from nautobot.ipam.tables import (
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,

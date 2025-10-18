@@ -3,9 +3,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>VPN Profile</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>VPN Profile</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.description %}
             {% render_field form.role %}
@@ -18,9 +18,9 @@
         </div>
     </div>
 
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Phase 1 Policy Assignments</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Phase 1 Policy Assignments</strong></div>
+        <div class="card-body">
             {% if vpn_phase1_policies.errors %}
                 <div class="text-danger">
                     Please correct the error(s) below:
@@ -70,9 +70,9 @@
             </table>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Phase 2 Policy Assignments</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Phase 2 Policy Assignments</strong></div>
+        <div class="card-body">
             {% if vpn_phase2_policies.errors %}
                 <div class="text-danger">
                     Please correct the error(s) below:
@@ -125,26 +125,26 @@
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
 {% block javascript %}
-{{ block.super }}
-<script src="{% static 'jquery/jquery.formset.js' %}"></script>
-<script type="text/javascript">
-    $('.formset_row-{{ vpn_phase1_policies.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: '{{ vpn_phase1_policies.prefix }}',
-        formCssClass: 'dynamic-formset-{{ vpn_phase1_policies.prefix }}',
-        added: jsify_form
-    });
+    {{ block.super }}
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        $('.formset_row-{{ vpn_phase1_policies.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ vpn_phase1_policies.prefix }}',
+            formCssClass: 'dynamic-formset-{{ vpn_phase1_policies.prefix }}',
+            added: jsify_form
+        });
         $('.formset_row-{{ vpn_phase2_policies.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: '{{ vpn_phase2_policies.prefix }}',
-        formCssClass: 'dynamic-formset-{{ vpn_phase2_policies.prefix }}',
-        added: jsify_form
-    });
-</script>
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ vpn_phase2_policies.prefix }}',
+            formCssClass: 'dynamic-formset-{{ vpn_phase2_policies.prefix }}',
+            added: jsify_form
+        });
+    </script>
 {% endblock javascript %}

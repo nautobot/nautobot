@@ -237,7 +237,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vpn_table.paginator page=vpn_table.page %}
+        {% include 'inc/paginator.html' with paginator=vpn_table.paginator page=vpn_table.page %}
     {% endif %}
     {% if vpn_profile_table %}
         <div class="panel panel-default">
@@ -253,7 +253,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vpn_profile_table.paginator page=vpn_profile_table.page %}
+        {% include 'inc/paginator.html' with paginator=vpn_profile_table.paginator page=vpn_profile_table.page %}
     {% endif %}
     {% if vpn_tunnel_table %}
         <div class="panel panel-default">
@@ -269,7 +269,7 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vpn_tunnel_table.paginator page=vpn_tunnel_table.page %}
+        {% include 'inc/paginator.html' with paginator=vpn_tunnel_table.paginator page=vpn_tunnel_table.page %}
     {% endif %}
     {% if vpn_tunnel_endpoint_table %}
         <div class="panel panel-default">
@@ -285,6 +285,6 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vpn_tunnel_endpoint_table.paginator page=vpn_tunnel_endpoint_table.page %}
+        {% include 'inc/paginator.html' with paginator=vpn_tunnel_endpoint_table.paginator page=vpn_tunnel_endpoint_table.page %}
     {% endif %}
- {% endblock content_full_width_page %}
+{% endblock content_full_width_page %}
