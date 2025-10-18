@@ -146,13 +146,13 @@ class NavigationIconChoices(ChoiceSet):
     WIRELESS = "wifi"
     SECRETS = "secrets"
     SECURITY = "security"
-    VIRTUALIZATION = "cloud-upload"
     LOAD_BALANCERS = "arrow-decision"
+    VIRTUALIZATION = "cloud-upload"
     CLOUD = "cloud"
-    DESIGNS = "sliders-vert-2"
+    DESIGNS = "hammer"
     WORKFLOW_APPROVALS = "checkbox-circle"
     EXTENSIBILITY = "extensibility"
-    GOLDEN_CONFIG = "hammer"
+    GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
     APPS = "elements"
 
@@ -166,13 +166,13 @@ class NavigationIconChoices(ChoiceSet):
         (WIRELESS, "wifi"),
         (SECRETS, "secrets"),
         (SECURITY, "security"),
+        (LOAD_BALANCERS, "arrow-decision"),
         (VIRTUALIZATION, "cloud-upload"),
-        (LOAD_BALANCERS, "sliders-vert-2"),
         (CLOUD, "cloud"),
-        (DESIGNS, "atom"),
+        (DESIGNS, "hammer"),
         (WORKFLOW_APPROVALS, "checkbox-circle"),
         (EXTENSIBILITY, "extensibility"),
-        (GOLDEN_CONFIG, "hammer"),
+        (GOLDEN_CONFIG, "sliders-vert-2"),
         (JOBS, "share"),
         (APPS, "elements"),
     )
@@ -190,8 +190,8 @@ class NavigationWeightChoices(ChoiceSet):
     WIRELESS = 550
     SECRETS = 600
     SECURITY = 650
-    VIRTUALIZATION = 700
-    LOAD_BALANCERS = 750
+    LOAD_BALANCERS = 700
+    VIRTUALIZATION = 750
     CLOUD = 800
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
