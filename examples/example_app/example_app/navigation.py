@@ -1,10 +1,11 @@
 from nautobot.apps.ui import (
+    NavigationIconChoices,
+    NavigationWeightChoices,
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
     NavMenuTab,
 )
-from nautobot.apps.ui import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(

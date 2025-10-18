@@ -107,7 +107,7 @@ class NavMenuTestCase(TestCase):
             except (FileNotFoundError, ImportError, SyntaxError):
                 # Skip folders without a valid navigation.py or with import errors
                 continue
-            menu_items = getattr(nav_module, "menu_items", None)
+            menu_items = getattr(nav_module, "menu_items", [])
             if not menu_items:
                 continue
             for tab in menu_items:

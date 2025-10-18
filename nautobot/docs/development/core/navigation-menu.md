@@ -10,7 +10,7 @@ A tab object is being created with the same identifier as an existing object usi
 
 !!! warning
     Weights on `NavMenuTab` instances must always reference `nautobot.apps.NavigationWeightChoices`. Even if not using an existing `NavMenuTab`, you should use sensible offset's from existing entries, as the numeric values are subject to change, such as `NavigationWeightChoices.DEVICE + 10`. Similarly always use `nautobot.apps.NavigationIconChoices` for icon placement or any core provided `NavMenuTab` or you may end up with inconsistent results.
-    
+
 !!! tip
     For the types of `tab`, `group`, `item` or `button`, you can find their reference in the Nautobot source code by finding the `navigation.py` files in each Django app.
 
