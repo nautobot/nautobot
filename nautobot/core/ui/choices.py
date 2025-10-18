@@ -132,3 +132,94 @@ class EChartsTypeTheme(ChoiceSet):
             UI_COLORS["gray-darker"]["dark"],
         ],
     }
+
+
+class NavigationIconChoices(ChoiceSet):
+    """Navigation icons for major Nautobot sections."""
+
+    DEVICE = "server"
+    IPAM = "sitemap-outline"
+    ORGANIZATION = "organization"
+    CIRCUITS = "cable-data"
+    VPN = "route"
+    POWER = "battery-3"
+    WIRELESS = "wifi"
+    SECRETS = "secrets"
+    SECURITY = "security"
+    VIRTUALIZATION = "cloud-upload"
+    LOAD_BALANCERS = "arrow-decision"
+    CLOUD = "cloud"
+    DESIGNS = "sliders-vert-2"
+    WORKFLOW_APPROVALS = "checkbox-circle"
+    EXTENSIBILITY = "extensibility"
+    GOLDEN_CONFIG = "hammer"
+    JOBS = "share"
+    APPS = "elements"
+
+    CHOICES = (
+        (DEVICE, "server"),
+        (IPAM, "sitemap-outline"),
+        (ORGANIZATION, "organization"),
+        (CIRCUITS, "cable-data"),
+        (VPN, "route"),
+        (POWER, "battery-3"),
+        (WIRELESS, "wifi"),
+        (SECRETS, "secrets"),
+        (SECURITY, "security"),
+        (VIRTUALIZATION, "cloud-upload"),
+        (LOAD_BALANCERS, "sliders-vert-2"),
+        (CLOUD, "cloud"),
+        (DESIGNS, "atom"),
+        (WORKFLOW_APPROVALS, "checkbox-circle"),
+        (EXTENSIBILITY, "extensibility"),
+        (GOLDEN_CONFIG, "hammer"),
+        (JOBS, "share"),
+        (APPS, "elements"),
+    )
+
+
+class NavigationWeightChoices(ChoiceSet):
+    """Navigation weights for major Nautobot sections."""
+
+    DEVICE = 100
+    IPAM = 200
+    ORGANIZATION = 300
+    CIRCUITS = 400
+    VPN = 450
+    POWER = 500
+    WIRELESS = 550
+    SECRETS = 600
+    SECURITY = 650
+    VIRTUALIZATION = 700
+    LOAD_BALANCERS = 750
+    CLOUD = 800
+    # We leave a gap here to allow for future expansion and don't use 1000
+    # since it the default weight for NavMenuTab if none is specified.
+    DESIGNS = 1100
+    WORKFLOW_APPROVALS = 1200
+    EXTENSIBILITY = 1300
+    # look to keep these last few items at the end of the nav for easy access
+    GOLDEN_CONFIG = 2000
+    JOBS = 2100
+    APPS = 2200
+
+    CHOICES = (
+        (DEVICE, "Device"),
+        (IPAM, "IPAM"),
+        (ORGANIZATION, "Organization"),
+        (CIRCUITS, "Circuits"),
+        (VPN, "VPN"),
+        (POWER, "Power"),
+        (WIRELESS, "Wireless"),
+        (SECRETS, "Secrets"),
+        (SECURITY, "Security"),
+        (VIRTUALIZATION, "Virtualization"),
+        (LOAD_BALANCERS, "Load Balancers"),
+        (CLOUD, "Cloud"),
+        (DESIGNS, "Designs"),
+        (WORKFLOW_APPROVALS, "Workflow Approvals"),
+        (EXTENSIBILITY, "Extensibility"),
+        (GOLDEN_CONFIG, "Golden Config"),
+        (JOBS, "Jobs"),
+        (APPS, "Apps"),
+    )

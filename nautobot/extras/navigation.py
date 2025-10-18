@@ -4,11 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Approvals",
-        icon="checkbox-circle",
+        icon=NavigationIconChoices.WORKFLOW_APPROVALS,
+        weight=NavigationWeightChoices.WORKFLOW_APPROVALS,
         groups=(
             NavMenuGroup(
                 name="Approval Workflows",
@@ -38,7 +40,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Organization",
-        weight=100,
+        icon=NavigationIconChoices.ORGANIZATION,
+        weight=NavigationWeightChoices.ORGANIZATION,
         groups=(
             NavMenuGroup(
                 name="Contacts",
@@ -140,8 +143,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Secrets",
-        icon="secrets",
-        weight=700,
+        icon=NavigationIconChoices.SECRETS,
+        weight=NavigationWeightChoices.SECRETS,
         groups=(
             NavMenuGroup(
                 name="Secrets",
@@ -169,8 +172,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Jobs",
-        icon="share",
-        weight=800,
+        icon=NavigationIconChoices.JOBS,
+        weight=NavigationWeightChoices.JOBS,
         groups=(
             NavMenuGroup(
                 name="Jobs",
@@ -258,7 +261,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Extensibility",
-        weight=900,
+        icon=NavigationIconChoices.EXTENSIBILITY,
+        weight=NavigationWeightChoices.EXTENSIBILITY,
         groups=(
             NavMenuGroup(
                 name="Logging",
@@ -532,8 +536,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Apps",
-        icon="elements",
-        weight=5000,
+        icon=NavigationIconChoices.APPS,
+        weight=NavigationWeightChoices.APPS,
         groups=(
             NavMenuGroup(
                 name="General",

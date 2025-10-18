@@ -4,10 +4,13 @@ from nautobot.apps.ui import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.apps.ui import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Apps",
+        icon=NavigationIconChoices.APPS,
+        weight=NavigationWeightChoices.APPS,
         groups=(
             NavMenuGroup(
                 name="Example Nautobot App",
@@ -51,7 +54,7 @@ menu_items = (
     ),
     NavMenuTab(
         name="Example Menu",
-        weight=150,
+        weight=NavigationWeightChoices.CLOUD + 10,
         groups=(
             NavMenuGroup(
                 name="Example Group 1",
@@ -76,6 +79,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Circuits",
+        icon=NavigationIconChoices.CIRCUITS,
+        weight=NavigationWeightChoices.CIRCUITS,
         groups=(
             NavMenuGroup(
                 name="Example Circuit Group",

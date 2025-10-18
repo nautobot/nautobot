@@ -1,11 +1,13 @@
 """App navigation menu items."""
 
 from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Extensibility",
-        icon="extensibility",
+        icon=NavigationIconChoices.EXTENSIBILITY,
+        weight=NavigationWeightChoices.EXTENSIBILITY,
         groups=(
             NavMenuGroup(
                 name="Data Validation",

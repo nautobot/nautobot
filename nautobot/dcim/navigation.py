@@ -4,12 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Organization",
-        icon="organization",
-        weight=100,
+        icon=NavigationIconChoices.ORGANIZATION,
+        weight=NavigationWeightChoices.ORGANIZATION,
         groups=(
             NavMenuGroup(
                 name="Locations",
@@ -116,8 +117,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        icon="server",
-        weight=200,
+        icon=NavigationIconChoices.DEVICE,
+        weight=NavigationWeightChoices.DEVICE,
         groups=(
             NavMenuGroup(
                 name="Devices",
@@ -549,8 +550,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Power",
-        icon="battery-3",
-        weight=600,
+        icon=NavigationIconChoices.POWER,
+        weight=NavigationWeightChoices.POWER,
         groups=(
             NavMenuGroup(
                 name="Power",
