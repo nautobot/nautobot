@@ -154,6 +154,8 @@ class VPNTunnelFactory(PrimaryModelFactory):
         None,
     )
     encapsulation = factory.Faker("random_element", elements=choices.EncapsulationChoices.values())
+    endpoint_a = factory.Sequence(lambda n: models.VPNTunnelEndpoint.objects.all()[n])
+    endpoint_z = factory.Sequence(lambda n: models.VPNTunnelEndpoint.objects.all()[n + 10])
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
