@@ -1,2 +1,2 @@
-Updated documentation-generation Invoke tasks to ensure that `collectstatic` is run afterwards.
+Corrected static-docs test cases to correctly use `StaticLiveServerTestCase` base class.
 Added generated example-app docs to `.gitignore`.

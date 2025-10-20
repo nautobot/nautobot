@@ -761,8 +761,6 @@ def build_nautobot_docs(context):
     "Build Nautobot docs."
     command = "mkdocs build --no-directory-urls --strict"
     run_command(context, command)
-    # Ensure that the generated static documentation files are correctly re-gathered
-    run_command(context, "nautobot-server collectstatic")
 
 
 def build_example_app_docs(context):
@@ -775,8 +773,6 @@ def build_example_app_docs(context):
     else:
         docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
-    # Ensure that the generated static documentation files are correctly re-gathered
-    run_command(context, "nautobot-server collectstatic")
 
 
 def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):
