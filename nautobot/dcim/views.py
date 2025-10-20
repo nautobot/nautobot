@@ -2932,7 +2932,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     object_detail.ObjectsTablePanel(
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
-                        table_title="VPN Enpoints",
+                        table_title="VPN Endpoints",
                         table_class=VPNTunnelEndpointTable,
                         table_attribute="vpn_tunnel_endpoints",
                         related_field_name="device",
