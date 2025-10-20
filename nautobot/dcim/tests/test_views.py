@@ -2597,6 +2597,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_vpnendpoints(self):
+        self.add_permissions("vpn.view_vpntunnelendpoint")
+        device = Device.objects.first()
+
+        url = reverse("dcim:device_vpnendpoints", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_napalm_tabs(self):
         self.add_permissions("dcim.napalm_read_device")
         device = Device.objects.first()

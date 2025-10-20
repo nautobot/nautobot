@@ -1,5 +1,8 @@
 """Unit tests for vpn views."""
 
+from django.test import override_settings
+from django.urls import reverse
+
 from nautobot.apps.testing import ViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
@@ -63,6 +66,33 @@ class VPNProfileViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "keepalive_retries": 10,
             "nat_traversal": True,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_profile_vpns(self):
+        self.add_permissions("vpn.view_vpn")
+        profile = models.VPNProfile.objects.filter(vpns__isnull=False).first()
+
+        url = reverse("vpn:vpnprofile_vpns", kwargs={"pk": profile.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_profile_vpntunnels(self):
+        self.add_permissions("vpn.view_vpntunnel")
+        profile = models.VPNProfile.objects.filter(vpn_tunnels__isnull=False).first()
+
+        url = reverse("vpn:vpnprofile_vpntunnels", kwargs={"pk": profile.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_profile_vpnendpoints(self):
+        self.add_permissions("vpn.view_vpntunnelendpoint")
+        profile = models.VPNProfile.objects.filter(vpn_tunnel_endpoints__isnull=False).first()
+
+        url = reverse("vpn:vpnprofile_vpnendpoints", kwargs={"pk": profile.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
 
 
 class VPNPhase1PolicyViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):

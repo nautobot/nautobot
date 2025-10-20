@@ -2998,7 +2998,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         url_path="vpn-endpoints",
         url_name="vpnendpoints",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["dcim.view_vpntunnelendpoints"],
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoint"],
     )
     def vpn_endpoints(self, request, *args, **kwargs):
         return Response({})
