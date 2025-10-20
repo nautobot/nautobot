@@ -165,7 +165,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 if count > 1:
                     self.assertBodyContains(
                         response,
-                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
