@@ -1,0 +1,1 @@
+Created a test to ensure that the imports in `nautobot.apps.*` are always kept up to date.
