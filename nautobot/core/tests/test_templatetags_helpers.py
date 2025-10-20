@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest import mock
 
 from constance.test import override_config
 from django.conf import settings
@@ -364,13 +364,17 @@ class NautobotStaticDocsTestCase(StaticLiveServerTestCase):
         self.assertIsNone(helpers.get_docs_url(another_model))
 
     @tag("example_app")
-    def test_get_docs_url_module_not_found(self):
-        from example_app.models import ExampleModel
-
-        example_model = ExampleModel.objects.create(name="test", number=1)
+    @mock.patch("nautobot.core.templatetags.helpers.find", return_value=False)
+    @mock.patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError)
+    def test_get_docs_url_module_not_found_and_no_static_file(self, mock_files, mock_find):
         # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
         # that is listed in settings.PLUGINS but doesn't actually exist on disk.
         # This ensures the `except ModuleNotFoundError` branch is covered.
-        with patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError):
-            result = helpers.get_docs_url(example_model)
+        from example_app.models import ExampleModel
+
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        result = helpers.get_docs_url(example_model)
         self.assertIsNone(result)
+
+        mock_files.assert_called_once()
+        mock_find.assert_called_once()
