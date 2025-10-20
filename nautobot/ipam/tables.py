@@ -415,7 +415,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "actions",
         )
         row_attrs = {
-            "class": lambda record: "success" if not record.present_in_database else "",
+            "class": lambda record: "table-success" if not record.present_in_database else "",
         }
 
 
@@ -522,7 +522,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "actions",
         )
         row_attrs = {
-            "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
+            "class": lambda record: "table-success" if not isinstance(record, IPAddress) else "",
         }
 
 
@@ -657,7 +657,7 @@ class IPAddressInterfaceTable(InterfaceTable):
             "connection",
         ]
         row_attrs = {
-            "style": cable_status_color_css,
+            "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
 
@@ -750,7 +750,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "description",
         )
         row_attrs = {
-            "class": lambda record: "success" if not isinstance(record, VLAN) else "",
+            "class": lambda record: "table-success" if not isinstance(record, VLAN) else "",
         }
 
 
