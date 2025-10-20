@@ -369,7 +369,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
-    rir = tables.Column(linkify=True)
+    rir = tables.Column(linkify=True, verbose_name="RIR")
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
@@ -449,6 +449,7 @@ class PrefixDetailTable(PrefixTable):
             "role",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -463,6 +464,7 @@ class PrefixDetailTable(PrefixTable):
             "vlan",
             "role",
             "description",
+            "actions",
         )
 
 
@@ -499,6 +501,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         distinct=True,
         verbose_name="Virtual Machines",
     )
+    actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -516,6 +519,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "interface_parent_count",
             "vm_interface_count",
             "vm_interface_parent_count",
+            "actions",
         )
         row_attrs = {
             "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
@@ -545,6 +549,7 @@ class IPAddressDetailTable(IPAddressTable):
             "dns_name",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -557,6 +562,7 @@ class IPAddressDetailTable(IPAddressTable):
             "assigned",
             "dns_name",
             "description",
+            "actions",
         )
 
 
