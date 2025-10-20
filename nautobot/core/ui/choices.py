@@ -146,11 +146,11 @@ class NavigationIconChoices(ChoiceSet):
     WIRELESS = "wifi"
     SECRETS = "secrets"
     SECURITY = "security"
-    LOAD_BALANCERS = "arrow-decision"
+    LOAD_BALANCER = "arrow-decision"
     VIRTUALIZATION = "cloud-upload"
     CLOUD = "cloud"
-    DESIGNS = "hammer"
-    WORKFLOW_APPROVALS = "checkbox-circle"
+    DESIGN_BUILDER = "hammer"
+    APPROVAL_WORKFLOW = "checkbox-circle"
     EXTENSIBILITY = "extensibility"
     GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
@@ -166,11 +166,11 @@ class NavigationIconChoices(ChoiceSet):
         (WIRELESS, "wifi"),
         (SECRETS, "secrets"),
         (SECURITY, "security"),
-        (LOAD_BALANCERS, "arrow-decision"),
+        (LOAD_BALANCER, "arrow-decision"),
         (VIRTUALIZATION, "cloud-upload"),
         (CLOUD, "cloud"),
-        (DESIGNS, "hammer"),
-        (WORKFLOW_APPROVALS, "checkbox-circle"),
+        (DESIGN_BUILDER, "hammer"),
+        (APPROVAL_WORKFLOW, "checkbox-circle"),
         (EXTENSIBILITY, "extensibility"),
         (GOLDEN_CONFIG, "sliders-vert-2"),
         (JOBS, "share"),
@@ -190,13 +190,13 @@ class NavigationWeightChoices(ChoiceSet):
     WIRELESS = 550
     SECRETS = 600
     SECURITY = 650
-    LOAD_BALANCERS = 700
+    LOAD_BALANCER = 700
     VIRTUALIZATION = 750
     CLOUD = 800
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
-    DESIGNS = 1100
-    WORKFLOW_APPROVALS = 1200
+    DESIGN_BUILDER = 1100
+    APPROVAL_WORKFLOW = 1200
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
@@ -214,10 +214,10 @@ class NavigationWeightChoices(ChoiceSet):
         (SECRETS, "Secrets"),
         (SECURITY, "Security"),
         (VIRTUALIZATION, "Virtualization"),
-        (LOAD_BALANCERS, "Load Balancers"),
+        (LOAD_BALANCER, "Load Balancers"),
         (CLOUD, "Cloud"),
-        (DESIGNS, "Designs"),
-        (WORKFLOW_APPROVALS, "Workflow Approvals"),
+        (DESIGN_BUILDER, "Design Builder"),
+        (APPROVAL_WORKFLOW, "Approval Workflows"),
         (EXTENSIBILITY, "Extensibility"),
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),
