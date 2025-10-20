@@ -1,0 +1,2 @@
+Updated documentation-generation Invoke tasks to ensure that `collectstatic` is run afterwards.
+Added generated example-app docs to `.gitignore`.
