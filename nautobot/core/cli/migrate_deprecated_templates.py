@@ -2,7 +2,6 @@ import argparse
 import os
 import re
 
-
 TEMPLATE_REPLACEMENTS = {
     # Format: new_template: [old_template1, old_template2, ...]
     "circuits/circuit_create.html": ["circuits/circuit_edit.html"],
