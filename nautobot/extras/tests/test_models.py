@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
-import warnings
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -16,7 +15,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings, tag
-from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
@@ -90,7 +88,6 @@ from nautobot.extras.models import (
     Team,
     Webhook,
 )
-from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
@@ -3495,22 +3492,6 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.clean()
             self.status.save()
             self.assertEqual(str(self.status), test)
-
-    @isolate_apps("nautobot.extras.tests")
-    def test_deprecated_mixin_class(self):
-        """Test that inheriting from StatusModel raises a DeprecationWarning."""
-        with warnings.catch_warnings(record=True) as warn_list:
-            warnings.simplefilter("always")
-
-            class MyModel(StatusModel):  # pylint: disable=unused-variable
-                pass
-
-        self.assertEqual(len(warn_list), 1)
-        warning = warn_list[0]
-        self.assertTrue(issubclass(warning.category, DeprecationWarning))
-        self.assertIn("StatusModel is deprecated", str(warning))
-        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
-        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
 
 
 class TagTest(ModelTestCases.BaseModelTestCase):

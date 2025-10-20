@@ -42,7 +42,6 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import MultiValueCharField
 from nautobot.core.forms.forms import ConfirmationForm
 from nautobot.core.forms.widgets import ClearableFileInput
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
@@ -153,7 +152,6 @@ __all__ = (
     "ConfigContextSchemaBulkEditForm",
     "ConfigContextSchemaFilterForm",
     "ConfigContextSchemaForm",
-    "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
@@ -825,12 +823,6 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 
             # Annotate the field in the list of CustomField form fields
             self.custom_fields.append(field_name)
-
-
-# 2.0 TODO: remove this class
-@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
-class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
-    """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
 
 
 class CustomFieldBulkDeleteForm(ConfirmationForm):
