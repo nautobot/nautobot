@@ -1,4 +1,3 @@
-
 from unittest import mock
 
 from constance.test import override_config
