@@ -8,7 +8,6 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.ipam.filter_mixins import PrefixFilter
@@ -18,7 +17,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
 __all__ = (
-    "TenancyFilterSet",
     "TenancyModelFilterSetMixin",
     "TenantFilterSet",
     "TenantGroupFilterSet",
@@ -180,9 +178,3 @@ class TenantFilterSet(NautobotFilterSet):
             "name",
             "tags",
         ]
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(TenancyModelFilterSetMixin)
-class TenancyFilterSet(TenancyModelFilterSetMixin):
-    pass
