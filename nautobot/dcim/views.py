@@ -2459,11 +2459,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
             for powerport in instance.all_power_ports.all():
                 utilization = powerport.get_power_draw()
                 # Table row for each power-port
-                powerfeed = powerport.connected_endpoint
-                if powerfeed is not None and powerfeed.available_power:
-                    available_power = powerfeed.available_power
+                connected_endpoint = powerport.connected_endpoint
+                if isinstance(connected_endpoint, PowerFeed) and connected_endpoint.available_power:
+                    available_power = connected_endpoint.available_power
                     utilization_data = Context(
-                        helpers.utilization_graph_raw_data(utilization["allocated"], powerfeed.available_power)
+                        helpers.utilization_graph_raw_data(utilization["allocated"], connected_endpoint.available_power)
                     )
                     utilization_graph = object_detail.render_component_template(
                         "utilities/templatetags/utilization_graph.html", utilization_data
@@ -2482,13 +2482,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
                 # Indented table row for each leg of a three-phase power-port.
                 for leg in utilization["legs"]:
-                    if powerfeed is not None and powerfeed.available_power:
-                        available_power = powerfeed.available_power / 3
+                    if isinstance(connected_endpoint, PowerFeed) and connected_endpoint.available_power:
+                        available_power = connected_endpoint.available_power / 3
                         utilization_data = Context(
-                            helpers.utilization_graph_raw_data(leg["allocated"], powerfeed.available_power / 3)
-                        )
-                        utilization_graph = object_detail.render_component_template(
-                            "utilities/templatetags/utilization_graph.html", utilization_data
+                            helpers.utilization_graph_raw_data(leg["allocated"], connected_endpoint.available_power / 3)
                         )
                     else:
                         available_power = helpers.HTML_NONE
