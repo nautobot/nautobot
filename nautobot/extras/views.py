@@ -1191,7 +1191,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         context = {
             **super().get_extra_context(request, instance),
             "result": job_result or {},
-            "base_template": "extras/gitrepository.html",
+            "base_template": "extras/configcontextschema_retrieve.html",
             "object": instance,
             "active_tab": "result",
             "verbose_name": instance._meta.verbose_name,
@@ -1566,7 +1566,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
-    template_name = "extras/job_detail.html"
+    template_name = "generic/object_retrieve.html"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -2389,7 +2389,7 @@ class ObjectChangeLogView(generic.GenericView):
 
         return render(
             request,
-            "extras/object_changelog.html",
+            "generic/object_changelog.html",
             {
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
@@ -2596,7 +2596,7 @@ class ObjectNotesView(generic.GenericView):
 
         return render(
             request,
-            "extras/object_notes.html",
+            "generic/object_notes.html",
             {
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
@@ -3090,8 +3090,8 @@ class WebhookUIViewSet(NautobotUIViewSet):
 
 
 class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "extras/job_detail.html"
+    base_template = "generic/object_retrieve.html"
 
 
 class JobObjectNotesView(ObjectNotesView):
-    base_template = "extras/job_detail.html"
+    base_template = "generic/object_retrieve.html"
