@@ -121,7 +121,7 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     min_approvers = models.PositiveIntegerField(
         verbose_name="Minimum approvers",
-        help_text="Number of minimum approvers required to approve this stage.",
+        help_text="Minimum number of approvers required to approve this stage.",
     )
     denial_message = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Message to show when the stage is denied."
