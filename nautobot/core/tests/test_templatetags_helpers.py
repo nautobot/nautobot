@@ -350,9 +350,10 @@ class NautobotStaticDocsTestCase(StaticLiveServerTestCase):
     @tag("example_app")
     def test_get_docs_url(self):
         self.assertTrue(callable(helpers.get_docs_url))
-        location = models.Location.objects.first()
-        self.assertIsNotNone(location)
-        self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
+        location_type = models.LocationType.objects.create(name="Some Location Type")
+        self.assertEqual(
+            helpers.get_docs_url(location_type), static("docs/user-guide/core-data-model/dcim/locationtype.html")
+        )
 
         from example_app.models import AnotherExampleModel, ExampleModel
 
