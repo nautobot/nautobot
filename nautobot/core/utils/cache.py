@@ -66,5 +66,6 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
     if params_tokens:
         cache_key += f"({','.join(params_tokens)})"
 
-    logger.debug("Constructed cache key is %s", cache_key)
+    # Disabled as it's very noisy in some cases
+    # logger.debug("Constructed cache key is %s", cache_key)
     return cache_key
