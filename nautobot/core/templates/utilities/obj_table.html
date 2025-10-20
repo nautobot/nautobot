@@ -14,12 +14,20 @@
                     </div>
                     <div class="hstack gap-8">
                         {% if bulk_edit_url and permissions.change %}
-                            <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if bulk_querystring %}?{{ bulk_querystring }}{% elif request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
+                            <button type="submit"
+                                    name="_edit"
+                                    formaction="{% url bulk_edit_url %}{% if bulk_querystring %}?{{ bulk_querystring }}{% elif request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                    class="btn btn-warning btn-sm"
+                                    disabled>
                                 <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
                             </button>
                         {% endif %}
                         {% if bulk_delete_url and permissions.delete %}
-                            <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if bulk_querystring %}?{{ bulk_querystring }}{% elif request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-sm" disabled="disabled">
+                            <button type="submit"
+                                    name="_delete"
+                                    formaction="{% url bulk_delete_url %}{% if bulk_querystring %}?{{ bulk_querystring }}{% elif request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                    class="btn btn-danger btn-sm"
+                                    disabled>
                                 <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
                             </button>
                         {% endif %}

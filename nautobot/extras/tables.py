@@ -125,7 +125,7 @@ GITREPOSITORY_BUTTONS = """
     <button
         data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
         type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled="disabled"{% endif %}
+        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
     >
         <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
         Sync
@@ -164,7 +164,7 @@ JOB_RESULT_BUTTONS = """
         </li>
     {% else %}
         <li>
-            <a href="#" class="dropdown-item disabled">
+            <a class="dropdown-item disabled" aria-disabled="true">
                 <span class="mdi mdi-repeat-off" aria-hidden="true"></span>
                 Job is not available, cannot be re-run
             </a>
@@ -216,7 +216,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
             <button
                 type="button"
                 onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
-                class="dropdown-item{% if perms.extras.run_job and record.job_model.supports_dryrun %} text-primary"{% else %}" disabled="disabled"{% endif %}
+                class="dropdown-item{% if perms.extras.run_job and record.job_model.supports_dryrun %} text-primary"{% else %}" disabled{% endif %}
             >
                 <span class="mdi mdi-play" aria-hidden="true"></span>
                 Dry Run
@@ -226,7 +226,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
             <button
                 type="button"
                 onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
-                class="dropdown-item{% if perms.extras.run_job %} text-success"{% else %}" disabled="disabled"{% endif %}
+                class="dropdown-item{% if perms.extras.run_job %} text-success"{% else %}" disabled{% endif %}
             >
                 <span class="mdi mdi-check" aria-hidden="true"></span>
                 Approve
@@ -236,7 +236,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
             <button
                 type="button"
                 onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
-                class="dropdown-item{% if perms.extras.run_job %} text-danger"{% else %}" disabled="disabled"{% endif %}
+                class="dropdown-item{% if perms.extras.run_job %} text-danger"{% else %}" disabled{% endif %}
             >
                 <span class="mdi mdi-close" aria-hidden="true"></span>
                 Deny
@@ -1061,8 +1061,8 @@ def log_object_link(value, record):
 
 def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
-        return "danger"
-    return record.log_level.lower()
+        return "table-danger"
+    return "table-" + record.log_level.lower()
 
 
 class JobTable(BaseTable):

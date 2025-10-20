@@ -62,8 +62,8 @@ def custom_links(context, obj):
                     )
             except Exception as e:
                 template_code += format_html(
-                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
-                    '<i class="mdi mdi-alert"></i> {}</a>\n',
+                    '<a aria-disabled="true" class="btn btn-sm btn-default disabled" title="{}">'
+                    '<span class="mdi mdi-alert"></span> {}</a>\n',
                     e,
                     cl.name,
                 )
@@ -81,8 +81,8 @@ def custom_links(context, obj):
                     links_rendered += format_html(GROUP_LINK, link_rendered, link_target, text_rendered)
             except Exception as e:
                 links_rendered += format_html(
-                    '<li><a disabled="disabled" title="{}"><span class="text-secondary">'
-                    '<i class="mdi mdi-alert"></i> {}</span></a></li>',
+                    '<li><a aria-disabled="true" class="disabled" title="{}"><span class="text-secondary">'
+                    '<span class="mdi mdi-alert"></span> {}</span></a></li>',
                     e,
                     cl.name,
                 )
