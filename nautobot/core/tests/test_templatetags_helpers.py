@@ -347,7 +347,6 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
 @tag("test")
 class NautobotStaticDocsTestCase(StaticLiveServerTestCase):
-
     @tag("example_app")
     def test_get_docs_url(self):
         self.assertTrue(callable(helpers.get_docs_url))
