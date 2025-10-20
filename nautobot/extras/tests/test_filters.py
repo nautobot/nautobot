@@ -165,35 +165,35 @@ class ApprovalWorkflowTestMixin:
         cls.approval_workflow_1_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 1 Definition",
             model_content_type=cls.scheduledjob_ct,
-            priority=1,
+            weight=1,
         )
         cls.approval_workflow_2_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 2 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=2,
+            weight=2,
         )
         cls.approval_workflow_3_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 3 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=3,
+            weight=3,
         )
         cls.approval_workflow_4_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 4 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=4,
+            weight=4,
         )
         cls.approval_workflow_5_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 5 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=5,
+            weight=5,
         )
         cls.approval_workflow_1_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -201,7 +201,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -209,7 +209,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=3,
             denial_message="Stage 3 Denial Message",
@@ -217,7 +217,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_4_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=400,
+            sequence=400,
             name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=5,
             denial_message="Stage 4 Denial Message",
@@ -225,7 +225,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_5_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=500,
+            sequence=500,
             name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=2,
             denial_message="Stage 5 Denial Message",
@@ -233,7 +233,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_6_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=600,
+            sequence=600,
             name="Test Approval Workflow 1 Stage 6 Definition",
             min_approvers=2,
             denial_message="Stage 6 Denial Message",
@@ -241,7 +241,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 2 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -249,7 +249,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 2 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -257,7 +257,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 2 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -265,7 +265,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 3 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -273,7 +273,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 3 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -281,7 +281,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 3 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -442,7 +442,7 @@ class ApprovalWorkflowStageDefinitionFilterTestCase(ApprovalWorkflowTestMixin, F
         ("created",),
         ("last_updated",),
         ("approval_workflow_definition",),
-        ("weight",),
+        ("sequence",),
         ("name",),
         ("min_approvers",),
         ("denial_message",),

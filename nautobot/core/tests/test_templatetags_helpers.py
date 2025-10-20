@@ -1,11 +1,13 @@
-from unittest.mock import patch
+from unittest import mock
 
 from constance.test import override_config
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.templatetags.static import static
-from django.test import override_settings, tag, TestCase
+from django.test import override_settings, tag
 
 from nautobot.core.templatetags import helpers
+from nautobot.core.testing import TestCase
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
 
@@ -213,32 +215,6 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.percentage(2, 10), 20)
         self.assertEqual(helpers.percentage(10, 3), 333)
 
-    @tag("example_app")
-    def test_get_docs_url(self):
-        self.assertTrue(callable(helpers.get_docs_url))
-        location = models.Location.objects.first()
-        self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
-
-        from example_app.models import AnotherExampleModel, ExampleModel
-
-        example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example-app/models/examplemodel.html")
-        # AnotherExampleModel does not have documentation.
-        another_model = AnotherExampleModel.objects.create(name="test", number=1)
-        self.assertIsNone(helpers.get_docs_url(another_model))
-
-    @tag("example_app")
-    def test_get_docs_url_module_not_found(self):
-        from example_app.models import ExampleModel
-
-        example_model = ExampleModel.objects.create(name="test", number=1)
-        # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
-        # that is listed in settings.PLUGINS but doesn't actually exist on disk.
-        # This ensures the `except ModuleNotFoundError` branch is covered.
-        with patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError):
-            result = helpers.get_docs_url(example_model)
-        self.assertIsNone(result)
-
     def test_has_perms(self):
         self.assertTrue(callable(helpers.has_perms))
         # TODO add unit tests for has_perms
@@ -367,3 +343,38 @@ class NautobotTemplatetagsHelperTest(TestCase):
             "-85 dBm",
         )
         self.assertEqual(helpers.dbm(None), helpers.placeholder(None))
+
+
+@tag("test")
+class NautobotStaticDocsTestCase(StaticLiveServerTestCase):
+    @tag("example_app")
+    def test_get_docs_url(self):
+        self.assertTrue(callable(helpers.get_docs_url))
+        location_type = models.LocationType.objects.create(name="Some Location Type")
+        self.assertEqual(
+            helpers.get_docs_url(location_type), static("docs/user-guide/core-data-model/dcim/locationtype.html")
+        )
+
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example-app/models/examplemodel.html")
+        # AnotherExampleModel does not have documentation.
+        another_model = AnotherExampleModel.objects.create(name="test", number=1)
+        self.assertIsNone(helpers.get_docs_url(another_model))
+
+    @tag("example_app")
+    @mock.patch("nautobot.core.templatetags.helpers.find", return_value=False)
+    @mock.patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError)
+    def test_get_docs_url_module_not_found_and_no_static_file(self, mock_files, mock_find):
+        # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
+        # that is listed in settings.PLUGINS but doesn't actually exist on disk.
+        # This ensures the `except ModuleNotFoundError` branch is covered.
+        from example_app.models import ExampleModel
+
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        result = helpers.get_docs_url(example_model)
+        self.assertIsNone(result)
+
+        mock_files.assert_called_once()
+        mock_find.assert_called_once()

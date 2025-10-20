@@ -290,7 +290,7 @@ class ApprovalWorkflowStageDefinitionTable(BaseTable):
         fields = (
             "pk",
             "approval_workflow_definition",
-            "weight",
+            "sequence",
             "name",
             "min_approvers",
             "denial_message",
@@ -299,7 +299,7 @@ class ApprovalWorkflowStageDefinitionTable(BaseTable):
         default_columns = (
             "pk",
             "approval_workflow_definition",
-            "weight",
+            "sequence",
             "name",
             "min_approvers",
             "denial_message",
@@ -1061,8 +1061,8 @@ def log_object_link(value, record):
 
 def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
-        return "danger"
-    return record.log_level.lower()
+        return "table-danger"
+    return "table-" + record.log_level.lower()
 
 
 class JobTable(BaseTable):
