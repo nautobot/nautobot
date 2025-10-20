@@ -80,8 +80,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Circuits",
-        icon=NavigationIconChoices.CIRCUITS,
-        weight=NavigationWeightChoices.CIRCUITS,
+        icon=NavigationIconChoices.CIRCUIT,
+        weight=NavigationWeightChoices.CIRCUIT,
         groups=(
             NavMenuGroup(
                 name="Example Circuit Group",
