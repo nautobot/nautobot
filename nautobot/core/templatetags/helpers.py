@@ -952,7 +952,7 @@ def table_config_button(table, table_name=None, extra_classes="", disabled=False
             <span class="mdi mdi-cog" aria-hidden="true"></span>
             <span class="visually-hidden">Configure</span>
         </button>"""
-    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "", table_name)
+    return format_html(html_template, extra_classes, table_name, "disabled" if disabled else "", table_name)
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
