@@ -45,7 +45,7 @@ def load_plugin(plugin_name, settings):
     except AttributeError as err:
         raise PluginImproperlyConfigured(
             f"Plugin {plugin_name} does not provide a 'config' variable. This should be defined in the plugin's "
-            f"__init__.py file and point to the PluginConfig subclass."
+            f"__init__.py file and point to the NautobotAppConfig subclass."
         ) from err
 
     # Validate user-provided configuration settings and assign defaults. Plugin

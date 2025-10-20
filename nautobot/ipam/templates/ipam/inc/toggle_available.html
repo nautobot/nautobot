@@ -1,11 +1,22 @@
 {% load helpers %}
-{% if show_available is not None %}
-    <div class="btn-group" role="group">
-        <a href="{{ request.path }}{% legacy_querystring request show_available='true' %}" class="btn btn-secondary btn-sm{% if show_available %} active disabled{% endif %}">
-            <span class="mdi mdi-eye-outline"></span> Show available
+<div class="btn-group" role="group">
+    {% if show_available %}
+        <a aria-disabled="true"
+           class="btn btn-secondary disabled">
+            <span class="mdi mdi-eye-outline"></span> Show {{ label }}
         </a>
-        <a href="{{ request.path }}{% legacy_querystring request show_available='false' %}" class="btn btn-secondary btn-sm{% if not show_available %} active disabled{% endif %}">
-            <span class="mdi mdi-eye-off-outline"></span> Hide available
+        <a href="{{ request.path }}{% legacy_querystring request show_available='false' %}"
+           class="btn btn-secondary">
+            <span class="mdi mdi-eye-off-outline"></span> Hide {{ label }}
         </a>
-    </div>
-{% endif %}
+    {% else %}
+        <a href="{{ request.path }}{% legacy_querystring request show_available='true' %}"
+           class="btn btn-secondary">
+            <span class="mdi mdi-eye-outline"></span> Show {{ label }}
+        </a>
+        <a aria-disabled="true"
+           class="btn btn-secondary disabled">
+            <span class="mdi mdi-eye-off-outline"></span> Hide {{ label }}
+        </a>
+    {% endif %}
+</div>

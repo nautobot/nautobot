@@ -24,7 +24,7 @@
                 <div class="col-lg-9 offset-lg-3">
                     <div class="form-check">
                         <label>
-                            <input type="checkbox" disabled="true" {% if obj.installed %}checked="checked"{% endif %}>
+                            <input type="checkbox" disabled {% if obj.installed %}checked="checked"{% endif %}>
                             Installed
                         </label>
                         <span class="form-text">
@@ -37,7 +37,7 @@
                 <div class="col-lg-9 offset-lg-3">
                     <div class="form-check">
                         <label>
-                            <input type="checkbox" disabled="true" {% if obj.supports_dryrun %}checked="checked"{% endif %}>
+                            <input type="checkbox" disabled {% if obj.supports_dryrun %}checked="checked"{% endif %}>
                             Supports dryrun
                         </label>
                         <span class="form-text">
@@ -50,7 +50,7 @@
                 <div class="col-lg-9 offset-lg-3">
                     <div class="form-check">
                         <label>
-                            <input type="checkbox" disabled="true" {% if obj.is_job_hook_receiver %}checked="checked"{% endif %}>
+                            <input type="checkbox" disabled {% if obj.is_job_hook_receiver %}checked="checked"{% endif %}>
                             Is job hook receiver
                         </label>
                         <span class="form-text">
@@ -63,7 +63,7 @@
                 <div class="col-lg-9 offset-lg-3">
                     <div class="form-check">
                         <label>
-                            <input type="checkbox" disabled="true" {% if obj.is_job_button_receiver %}checked="checked"{% endif %}>
+                            <input type="checkbox" disabled {% if obj.is_job_button_receiver %}checked="checked"{% endif %}>
                             Is job button receiver
                         </label>
                         <span class="form-text">

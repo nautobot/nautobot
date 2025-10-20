@@ -1,4 +1,5 @@
 import json
+from unittest import skip
 import warnings
 
 from django.contrib.auth import get_user_model
@@ -14,14 +15,9 @@ from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoi
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
-    CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFormMixin,
     JobButtonForm,
     JobHookForm,
-    RelationshipModelFormMixin,
-    StatusModelBulkEditFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
     WebhookForm,
 )
 from nautobot.extras.models import (
@@ -1095,29 +1091,30 @@ class WebhookFormTestCase(TestCase):
         )
 
 
+@skip(reason="Skipping until we have items that need to be deprecated again.")
 class DeprecatedAliasesTestCase(TestCase):
     """Test that deprecated class names still exist, but report a DeprecationWarning when used."""
 
     def test_deprecated_form_mixin_classes(self):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
-        from nautobot.extras.forms import CustomFieldBulkCreateForm
-        from nautobot.extras.forms.mixins import (
-            AddRemoveTagsForm,
-            CustomFieldBulkEditForm,
-            CustomFieldModelForm,
-            RelationshipModelForm,
-            StatusBulkEditFormMixin,
-            StatusFilterFormMixin,
-        )
+        # from nautobot.extras.forms import CustomFieldBulkCreateForm
+        # from nautobot.extras.forms.mixins import (
+        #     AddRemoveTagsForm,
+        #     CustomFieldBulkEditForm,
+        #     CustomFieldModelForm,
+        #     RelationshipModelForm,
+        #     StatusBulkEditFormMixin,
+        #     StatusFilterFormMixin,
+        # )
 
         for deprecated_form_class, replacement_form_class in (
-            (AddRemoveTagsForm, TagsBulkEditFormMixin),
-            (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
-            (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
-            (CustomFieldModelForm, CustomFieldModelFormMixin),
-            (RelationshipModelForm, RelationshipModelFormMixin),
-            (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
-            (StatusFilterFormMixin, StatusModelFilterFormMixin),
+            # (AddRemoveTagsForm, TagsBulkEditFormMixin),
+            # (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
+            # (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
+            # (CustomFieldModelForm, CustomFieldModelFormMixin),
+            # (RelationshipModelForm, RelationshipModelFormMixin),
+            # (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
+            # (StatusFilterFormMixin, StatusModelFilterFormMixin),
         ):
             with self.subTest(msg=f"Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
                 # Subclassing the deprecated class should raise a DeprecationWarning

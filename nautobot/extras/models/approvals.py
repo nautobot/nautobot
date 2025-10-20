@@ -28,8 +28,8 @@ class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuer
         """
         content_type = ContentType.objects.get_for_model(model_instance)
 
-        # Get all workflow definitions for this content type, ordered by priority (lowest first = highest priority)
-        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("priority")
+        # Get all workflow definitions for this content type, ordered by weight (highest wins)
+        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("-weight")
 
         for workflow_definition in workflow_definitions:
             if not workflow_definition.model_constraints:
@@ -77,8 +77,8 @@ class ApprovalWorkflowDefinition(PrimaryModel):
         default=dict,
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
-    priority = models.IntegerField(
-        default=0, help_text="Determines workflow relevance when multiple apply. Lower values indicate higher priority."
+    weight = models.IntegerField(
+        default=0, help_text="Determines workflow relevance when multiple apply. Higher weight wins."
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_dynamic_group_associable = False
@@ -91,7 +91,7 @@ class ApprovalWorkflowDefinition(PrimaryModel):
 
         verbose_name = "Approval Workflow Definition"
         ordering = ["name"]
-        unique_together = [["model_content_type", "priority"]]
+        unique_together = [["model_content_type", "weight"]]
 
     def __str__(self):
         """Stringify instance."""
@@ -115,12 +115,13 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         on_delete=models.CASCADE,
         help_text="Approval workflow definition to which this stage belongs.",
     )
-    weight = models.PositiveIntegerField(
-        help_text="The weight dictates the order in which this stage will need to be approved. The lower the number, the earlier it will be.",
+    sequence = models.PositiveIntegerField(
+        help_text="The sequence dictates the order in which this stage will need to be approved. The lower the number, the earlier it will be.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     min_approvers = models.PositiveIntegerField(
-        help_text="Number of minimum approvers required to approve this stage.",
+        verbose_name="Minimum approvers",
+        help_text="Minimum number of approvers required to approve this stage.",
     )
     denial_message = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Message to show when the stage is denied."
@@ -129,7 +130,7 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         to=Group,
         related_name="approval_workflow_stage_definitions",
         verbose_name="Group",
-        help_text="Group of users who are eligible to approve this stage.",
+        help_text="Group of users who are eligible to approve this stage. Only admin users can create new groups.",
         on_delete=models.PROTECT,
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
@@ -141,8 +142,8 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         """Meta class for ApprovalWorkflowStage."""
 
         verbose_name = "Approval Workflow Stage Definition"
-        unique_together = [["approval_workflow_definition", "name"], ["approval_workflow_definition", "weight"]]
-        ordering = ["approval_workflow_definition", "weight"]
+        unique_together = [["approval_workflow_definition", "name"], ["approval_workflow_definition", "sequence"]]
+        ordering = ["approval_workflow_definition", "sequence"]
 
     def __str__(self):
         """Stringify instance."""
@@ -229,7 +230,7 @@ class ApprovalWorkflow(OrganizationalModel):
         """
         first_nonapproved_stage = (
             self.approval_workflow_stages.exclude(state=ApprovalWorkflowStateChoices.APPROVED)
-            .order_by("approval_workflow_stage_definition__weight")
+            .order_by("approval_workflow_stage_definition__sequence")
             .first()
         )
         return first_nonapproved_stage
@@ -328,7 +329,7 @@ class ApprovalWorkflowStage(OrganizationalModel):
 
         verbose_name = "Approval Workflow Stage"
         unique_together = [["approval_workflow", "approval_workflow_stage_definition"]]
-        ordering = ["approval_workflow", "approval_workflow_stage_definition__weight"]
+        ordering = ["approval_workflow", "approval_workflow_stage_definition__sequence"]
 
     def __str__(self):
         """Stringify instance."""

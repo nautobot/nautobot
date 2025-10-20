@@ -144,7 +144,7 @@ class ApprovalWorkflowStageTest(
 
         cls.approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, priority=i
+                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, weight=i
             )
             for i in range(4)
         ]
@@ -160,7 +160,7 @@ class ApprovalWorkflowStageTest(
         cls.approval_workflow_stage_definitions = [
             ApprovalWorkflowStageDefinition.objects.create(
                 approval_workflow_definition=cls.approval_workflow_definitions[i],
-                weight=i * 100,
+                sequence=i * 100,
                 name=f"Test Approval Workflow Stage {i} Definition",
                 min_approvers=1,
                 denial_message="Stage Denial Message",
@@ -403,7 +403,7 @@ class ApprovalWorkflowStageTest(
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
                     approval_workflow_definition=approval_workflow.approval_workflow_definition,
-                    weight=200,
+                    sequence=200,
                     name="Approval Workflow Stage Definition 2",
                     min_approvers=1,
                     denial_message="Stage 2 Denial Message",
@@ -496,7 +496,7 @@ class ApprovalWorkflowStageTest(
 
                 approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
                     approval_workflow_definition=approval_workflow.approval_workflow_definition,
-                    weight=200,
+                    sequence=200,
                     name="Approval Workflow Stage Definition 2",
                     min_approvers=1,
                     denial_message="Stage 2 Denial Message",
@@ -645,7 +645,7 @@ class ApprovalWorkflowStageTest(
         approver_group_2 = Group.objects.create(name="Approver Group 2")
         approval_workflow_stage_definition_approver_group_2 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=self.approval_workflow_definitions[3],
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow Stage 1 Definition",
             min_approvers=1,
             denial_message="Stage Denial Message",
@@ -2219,7 +2219,7 @@ class JobTest(
         ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         # Do the stuff.
@@ -2492,7 +2492,7 @@ class JobTest(
         ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         mock_get_worker_count.return_value = 1
@@ -2707,7 +2707,7 @@ class JobTest(
         ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         mock_get_worker_count.return_value = 1
@@ -2807,7 +2807,7 @@ class JobTest(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         start_time = now() + timedelta(minutes=1)

@@ -1,7 +1,7 @@
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.apps.models import CustomValidator
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.data_validation.models import RequiredValidationRule
 from nautobot.dcim.choices import DeviceUniquenessChoices
 from nautobot.dcim.models import Device
@@ -14,7 +14,10 @@ class DeviceUniquenessValidator(CustomValidator):
 
     def clean(self):
         obj = self.context["object"]
-        uniqueness_mode = getattr(settings, "DEVICE_UNIQUENESS", DeviceUniquenessChoices.DEFAULT)
+        try:
+            uniqueness_mode = get_settings_or_config("DEVICE_UNIQUENESS", fallback=DeviceUniquenessChoices.DEFAULT)
+        except AttributeError:
+            uniqueness_mode = DeviceUniquenessChoices.DEFAULT
         device_name_required = RequiredValidationRule.objects.filter(
             content_type=ContentType.objects.get_for_model(Device), field="name"
         ).exists()
