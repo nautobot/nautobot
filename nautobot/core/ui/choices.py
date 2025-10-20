@@ -140,7 +140,7 @@ class NavigationIconChoices(ChoiceSet):
     DEVICE = "server"
     IPAM = "sitemap-outline"
     ORGANIZATION = "organization"
-    CIRCUITS = "cable-data"
+    CIRCUIT = "cable-data"
     VPN = "route"
     POWER = "battery-3"
     WIRELESS = "wifi"
@@ -160,7 +160,7 @@ class NavigationIconChoices(ChoiceSet):
         (DEVICE, "server"),
         (IPAM, "sitemap-outline"),
         (ORGANIZATION, "organization"),
-        (CIRCUITS, "cable-data"),
+        (CIRCUIT, "cable-data"),
         (VPN, "route"),
         (POWER, "battery-3"),
         (WIRELESS, "wifi"),
@@ -184,7 +184,7 @@ class NavigationWeightChoices(ChoiceSet):
     DEVICE = 100
     IPAM = 200
     ORGANIZATION = 300
-    CIRCUITS = 400
+    CIRCUIT = 400
     VPN = 450
     POWER = 500
     WIRELESS = 550
@@ -207,7 +207,7 @@ class NavigationWeightChoices(ChoiceSet):
         (DEVICE, "Device"),
         (IPAM, "IPAM"),
         (ORGANIZATION, "Organization"),
-        (CIRCUITS, "Circuits"),
+        (CIRCUIT, "Circuit"),
         (VPN, "VPN"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
