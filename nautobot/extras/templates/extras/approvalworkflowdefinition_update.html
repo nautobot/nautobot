@@ -9,7 +9,7 @@
             {% render_field form.name %}
             {% render_field form.model_content_type %}
             {% render_field form.model_constraints %}
-            {% render_field form.priority %}
+            {% render_field form.weight %}
         </div>
     </div>
     <div class="card">
@@ -22,7 +22,9 @@
                         <thead>
                             <tr>
                                 {% for field in stage.visible_fields %}
-                                    <th>{{ field.label|capfirst }}</th>
+                                    <th>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="{{ field.help_text }}">{{ field.label|capfirst }}</span>
+                                    </th>
                                 {% endfor %}
                             </tr>
                         </thead>
