@@ -628,6 +628,10 @@ class DynamicGroup(PrimaryModel):
         else:
             # Validate against the filterset's internal form validation.
             filterset = self.filterset_class(self.filter)  # pylint: disable=not-callable
+            # TODO: the below is more generous than one might expect. For example, passing a list of strings ["foo"]
+            # to a (single-input) CharFilter will quietly normalize the list to a string '["foo"]' instead of reporting
+            # any failure of is_valid(). We've had cases of such "should be invalid but isn't caught" DynamicGroups causing
+            # exceptions when trying to evaluate their membership; it would be good to be stricter here instead!
             if not filterset.is_valid():
                 raise ValidationError(filterset.errors)
 
@@ -703,9 +707,12 @@ class DynamicGroup(PrimaryModel):
             # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str) and not is_uuid(value[0]):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
-                related_model = model_field.related_model
-                lookup_kwargs = {f"{to_field_name}__in": value}
-                gq_value = related_model.objects.filter(**lookup_kwargs)
+                if model_field is None:
+                    gq_value = value
+                else:
+                    related_model = model_field.related_model
+                    lookup_kwargs = {f"{to_field_name}__in": value}
+                    gq_value = related_model.objects.filter(**lookup_kwargs)
             else:
                 gq_value = value
             query |= filter_field.generate_query(gq_value)
