@@ -1,9 +1,9 @@
 {% load helpers %}
 <div class="btn-group" role="group">
-    <a href="{{ link }}{% legacy_querystring request show_available='true' %}" class="btn btn-primary{% if show_available %} active disabled{% endif %}">
+    <a href="{% legacy_querystring request show_available='true' %}" class="btn btn-primary{% if show_available %} active disabled{% endif %}">
         <span class="mdi mdi-eye-outline"></span> Show {{ label }}
     </a>
-    <a href="{{ link }}{% legacy_querystring request show_available='false' %}" class="btn btn-primary{% if not show_available %} active disabled{% endif %}">
+    <a href="{% legacy_querystring request show_available='false' %}" class="btn btn-primary{% if not show_available %} active disabled{% endif %}">
         <span class="mdi mdi-eye-off-outline"></span> Hide {{ label }}
     </a>
 </div>

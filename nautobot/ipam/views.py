@@ -562,7 +562,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "view_action": "prefixes",
                 "show_available": request.GET.get("show_available", "true") == "true",
                 "badge_count_override": child_prefixes.count(),
-                "show_table_config_button": True,
             }
         )
 
