@@ -4,7 +4,7 @@
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}b
-        <div class="col-xl-8 offset-lg-1 col-lg-10">
+        <div class="col-xl-8 offset-xl-2 col-lg-10 offset-lg-1">
             <h3 class="mb-16">{% block title %}Add New Member to Virtual Chassis {{ virtual_chassis }}{% endblock %}</h3>
             {% if membership_form.non_field_errors %}
                 <div class="card border-danger">
