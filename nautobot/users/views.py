@@ -64,6 +64,7 @@ class LoginView(View):
             self.template_name,
             {
                 "form": form,
+                "title": "Login",
             },
         )
 
@@ -91,6 +92,7 @@ class LoginView(View):
             self.template_name,
             {
                 "form": form,
+                "title": "Login",
             },
         )
 

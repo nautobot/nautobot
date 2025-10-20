@@ -405,7 +405,8 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         "th": {"class": "nb-actionable nb-w-0"},
     }
     # Note that braces are escaped to allow for string formatting prior to template rendering
-    template_code = """
+    template_code = """\
+{{% if record.present_in_database %}}
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
@@ -439,6 +440,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% endif %}}
         </ul>
     </div>
+{{% endif %}}
     """
 
     def __init__(
