@@ -1061,8 +1061,8 @@ def log_object_link(value, record):
 
 def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
-        return "danger"
-    return record.log_level.lower()
+        return "table-danger"
+    return "table-" + record.log_level.lower()
 
 
 class JobTable(BaseTable):
