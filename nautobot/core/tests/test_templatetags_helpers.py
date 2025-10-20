@@ -229,9 +229,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     @tag("example_app")
     def test_get_docs_url_module_not_found(self):
-        from example_app.models import ExampleModel
+        from example_app.models import AnotherExampleModel
 
-        example_model = ExampleModel.objects.create(name="test", number=1)
+        example_model = AnotherExampleModel.objects.create(name="test", number=1)
         # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
         # that is listed in settings.PLUGINS but doesn't actually exist on disk.
         # This ensures the `except ModuleNotFoundError` branch is covered.
