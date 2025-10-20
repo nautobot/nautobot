@@ -33,6 +33,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         verbose_name="VPN Phase 2 Policy",
         url_params={"vpn_profiles": "pk"},
     )
+    tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")
 
@@ -52,6 +53,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
             "nat_traversal",
             "secrets_group",
             "role",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -65,6 +67,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
             "nat_traversal",
             "secrets_group",
             "role",
+            "tenant",
             "actions",
         )
 
@@ -81,6 +84,7 @@ class VPNPhase1PolicyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase1Policy)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpnphase1policy_list")
 
     class Meta(BaseTable.Meta):
@@ -99,6 +103,7 @@ class VPNPhase1PolicyTable(BaseTable):
             "lifetime_seconds",
             "lifetime_kb",
             "authentication_method",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -112,6 +117,7 @@ class VPNPhase1PolicyTable(BaseTable):
             "lifetime_seconds",
             "lifetime_kb",
             "authentication_method",
+            "tenant",
             "actions",
         )
 
@@ -132,6 +138,7 @@ class VPNPhase2PolicyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     actions = ButtonsColumn(models.VPNPhase2Policy)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpnphase2policy_list")
 
     class Meta(BaseTable.Meta):
@@ -146,6 +153,7 @@ class VPNPhase2PolicyTable(BaseTable):
             "integrity_algorithm",
             "pfs_group",
             "lifetime",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -155,6 +163,7 @@ class VPNPhase2PolicyTable(BaseTable):
             "integrity_algorithm",
             "pfs_group",
             "lifetime",
+            "tenant",
             "actions",
         )
 
@@ -243,8 +252,8 @@ class VPNTable(RoleTableMixin, BaseTable):
             "tunnel_count",
             "vpn_profile",
             "vpn_id",
-            "tenant",
             "role",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -253,8 +262,8 @@ class VPNTable(RoleTableMixin, BaseTable):
             "description",
             "tunnel_count",
             "vpn_id",
-            "tenant",
             "role",
+            "tenant",
             "actions",
         )
         order_by = ["name"]
@@ -288,9 +297,9 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "endpoint_a",
             "endpoint_z",
             "encapsulation",
-            "tenant",
             "role",
             "status",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -302,9 +311,9 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "endpoint_a",
             "endpoint_z",
             "encapsulation",
-            "tenant",
             "role",
             "status",
+            "tenant",
             "actions",
         )
         order_by = ["name"]
@@ -334,6 +343,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         reverse_lookup="vpn_tunnel_endpoints",
     )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
+    tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
 
     class Meta(BaseTable.Meta):
@@ -352,7 +362,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
-            "status",
+            "tenant",
         )
         default_columns = (
             "pk",
@@ -363,8 +373,8 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
+            "tenant",
             "actions",
         )

@@ -16,6 +16,8 @@ Nevertheless, Nautobot users have the flexibility to create VPN Tunnel Endpoints
 ![VPN Tunnel Endpoint Detail View](../../../media/models/vpn_models_vpntunnelendpoint_detail02_dark.png#only-dark)
 
 In multiple firewall implementations, users may need to define the encryption domain for a VPN Tunnel (also known as the "interesting traffic" or "local/remote networks"). This is typically done by specifying one or more prefixes that represent the local and remote networks that will be routed through the VPN tunnel. In Nautobot, users can define prefixes "protected" by the VPN Tunnel Endpoint in two ways:
+
 - by explicitly selecting existing Prefix objects or
 - by defining a Prefix Dynamic Group that matches the desired prefixes.
+
 This allows for flexible and dynamic management of the networks associated with each VPN Tunnel Endpoint.
