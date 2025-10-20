@@ -652,11 +652,11 @@ class LinkedCountColumn(django_tables2.Column):
                 {k: (getattr(record, v) or settings.FILTERS_NULL_CHOICE_VALUE) for k, v in self.url_params.items()}
             )
         if value > 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         if related_record is not None:
             return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         return helpers.placeholder(value)
 
 

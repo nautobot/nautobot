@@ -160,7 +160,7 @@
                             <span class="badge" style="color: {{ powerfeed.status.color|fgcolor }}; background-color: #{{powerfeed.status.color}}">{{ powerfeed.get_status_display }}</span>
                         </td>
                         <td>
-                            <span class="badge badge-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>
+                            <span class="badge bg-{{ powerfeed.get_type_class }}">{{ powerfeed.get_type_display }}</span>
                         </td>
                         {% with power_port=powerfeed.connected_endpoint %}
                             {% if power_port %}
