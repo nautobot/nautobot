@@ -86,7 +86,6 @@ class InstalledAppsView(GenericView):
     """
 
     table = InstalledAppsTable
-    breadcrumbs = Breadcrumbs(items={"*": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]})
     view_titles = Titles(titles={"*": "Installed Apps"})
 
     def get(self, request):
@@ -250,9 +249,6 @@ class MarketplaceView(GenericView):
     View for listing all available Apps.
     """
 
-    breadcrumbs = Breadcrumbs(
-        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
-    )
     view_titles = Titles(titles={"generic": "Apps Marketplace"})
 
     def get(self, request):

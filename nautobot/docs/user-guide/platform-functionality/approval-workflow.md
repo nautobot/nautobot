@@ -27,11 +27,11 @@ erDiagram
         string name
         ContentType model_content_type FK
         json model_constraints
-        int priority
+        int weight
     }
     "extras.ApprovalWorkflowStageDefinition" {
         ApprovalWorkflowDefinition approval_workflow_definition FK
-        int weight
+        int sequence
         string name
         int min_approvers
         string denial_message
@@ -88,25 +88,25 @@ Constraints define when a workflow definition should apply to a particular model
 - If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
 
-#### Priority
+#### Weight
 
 When multiple workflow definitions exist for the same model, only **one** will apply to any given object under review.
-The workflow with the **lowest priority value** (i.e., highest priority) that matches the object’s constraints is selected.
+The workflow with the **highest weight value** that matches the object’s constraints is selected.
 
 ##### Example 1: Specific scheduled job
 
 - Workflow Definition A:
     - Model: `Scheduled Job`
     - Constraints: `{"job_model__name": "Bulk Delete Objects"}`
-    - Priority: **10**
+    - Weight: **20**
 - Workflow Definition B:
     - Model: `Scheduled Job`
     - Constraints: none (applies to all scheduled jobs)
-    - Priority: **20**
+    - Weight: **10**
 
 Result:
-If the object under review is the *Bulk Delete Objects Scheduled Job*, Workflow A applies (priority 10 wins).
-For all other scheduled jobs, Workflow B applies (priority 20).
+If the object under review is the *Bulk Delete Objects Scheduled Job*, Workflow A applies (weight 20 wins).
+For all other scheduled jobs, Workflow B applies (weight 10).
 
 ### ApprovalWorkflowStageDefinition
 
@@ -158,10 +158,10 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **Name** (e.g., "Scheduled Job Run Workflow").
     - **Model** (e.g., `extras|scheduled job`).
     - **Constraints** (optional JSON filter, e.g., `{"job_model__name": "Bulk Delete Objects"}`, see [Contraints](#constraints)).
-    - **Priority** (only one workflow definition (the highest, i.e. smallest priority one) will apply to any given object under review, see [Priority](#priority)).
+    - **Weight** (only one workflow definition (with the highest weight) will apply to any given object under review, see [Weight](#weight)).
 3. In the **Approval Workflow Stage Definitions** section, define one or more stages:
     - **Stage Name** (a descriptive name for the approval step (e.g., "Finance Approval", "Security Review", "Management Approval")).
-    - **Weight** (order in which the stage is executed).
+    - **Sequence** (order in which the stage is executed).
     - **Minimum Approvers** (number of approvals required).
     - **Approver Group** (group of users eligible to approve)
     - **Denial Message** (optional message shown if denied).

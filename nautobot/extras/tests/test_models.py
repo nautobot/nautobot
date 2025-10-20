@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
-import warnings
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -16,7 +15,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings, tag
-from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
@@ -90,7 +88,6 @@ from nautobot.extras.models import (
     Team,
     Webhook,
 )
-from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
@@ -144,12 +141,12 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Approval Workflow with Three Stages",
             model_content_type=cls.scheduledjob_ct,
-            priority=1,
+            weight=1,
         )
         # Create three stages of the Approval Workflow Definition
         cls.approval_workflow_stage_definition_1 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=100,
+            sequence=100,
             name="Approval Workflow Stage Definition 1",
             min_approvers=1,
             denial_message="Stage 1 Denial Message",
@@ -157,7 +154,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=200,
+            sequence=200,
             name="Approval Workflow Stage Definition 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -165,7 +162,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_3 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=300,
+            sequence=300,
             name="Approval Workflow Stage Definition 3",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -226,7 +223,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         """
         Test the active_stage property of the ApprovalWorkflow model.
         """
-        # Test that the active stage is the one with the lowest weight when all stages are pending
+        # Test that the active stage is the one with the lowest sequence when all stages are pending
         self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_1)
         # Test that the active stage is the second stage when the first stage is approved
         self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
@@ -321,7 +318,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Scheduled Job Approval Workflow",
             model_content_type=scheduled_job_ct,
-            priority=2,
+            weight=2,
         )
         approval_workflow = ApprovalWorkflow(
             approval_workflow_definition=approval_workflow_definition,
@@ -3495,22 +3492,6 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.clean()
             self.status.save()
             self.assertEqual(str(self.status), test)
-
-    @isolate_apps("nautobot.extras.tests")
-    def test_deprecated_mixin_class(self):
-        """Test that inheriting from StatusModel raises a DeprecationWarning."""
-        with warnings.catch_warnings(record=True) as warn_list:
-            warnings.simplefilter("always")
-
-            class MyModel(StatusModel):  # pylint: disable=unused-variable
-                pass
-
-        self.assertEqual(len(warn_list), 1)
-        warning = warn_list[0]
-        self.assertTrue(issubclass(warning.category, DeprecationWarning))
-        self.assertIn("StatusModel is deprecated", str(warning))
-        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
-        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
 
 
 class TagTest(ModelTestCases.BaseModelTestCase):
