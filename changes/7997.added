@@ -1,0 +1,1 @@
+Added logic to `nautobot-migrate-bootstrap-v3-to-v5` script to add missing `class="dropdown-item"` to menu items.
