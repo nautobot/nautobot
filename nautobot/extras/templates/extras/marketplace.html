@@ -115,7 +115,7 @@
                             {% if app.docs|default:None != None %}
                                 <a href="{{ app.docs }}" class="btn btn-info btn-sm" target="_blank" data-bs-title="Docs">
                             {% else %}
-                                <a href="" class="btn btn-info btn-sm disabled" target="_blank" data-bs-title="No docs provided">
+                                <a aria-disabled="true" class="btn btn-info btn-sm disabled" data-bs-title="No docs provided">
                             {% endif %}
                             <span class="mdi mdi-book-open-page-variant"></span>
                         </a>

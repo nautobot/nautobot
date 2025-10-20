@@ -72,9 +72,16 @@
                                         </td>
                                         <td>
                                             {% if virtual_chassis.present_in_database %}
-                                                <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}" class="btn btn-danger btn-sm{% if virtual_chassis.master == device %} disabled{% endif %}">
-                                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                                                </a>
+                                                {% if virtual_chassis.master != device %}
+                                                    <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}"
+                                                       class="btn btn-danger btn-sm">
+                                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                    </a>
+                                                {% else %}
+                                                    <a aria-disabled="true" class="btn btn-danger btn-sm disabled">
+                                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                    </a>
+                                                {% endif %}
                                             {% endif %}
                                         </td>
                                     </tr>

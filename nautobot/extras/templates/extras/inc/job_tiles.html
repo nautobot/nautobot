@@ -19,9 +19,21 @@
             <header class="nb-tile-header">
                 <h3>{{ row.record.grouping|bettertitle }}</h3>
 
-                <a href="{% url 'extras:job_run' pk=row.record.pk %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Run/Schedule" {% if not perms.extras.run_job or not row.record.runnable %}disabled="disabled"{% endif %}>
-                    <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
-                </a>
+                {% if perms.extras.run_job and row.record.runnable %}
+                    <a href="{% url 'extras:job_run' pk=row.record.pk %}"
+                       class="btn btn-primary btn-sm"
+                       data-bs-toggle="tooltip"
+                       data-bs-title="Run/Schedule">
+                        <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
+                    </a>
+                {% else %}
+                    <a aria-disabled="true"
+                       class="btn btn-primary btn-sm disabled"
+                       data-bs-toggle="tooltip"
+                       data-bs-title="Run/Schedule">
+                        <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
+                    </a>
+                {% endif %}
 
                 {% comment "TODO(norbert-mieczkowski-codilime): use the same buttons (actions) in tables and tiles when tables support dropdown menus" %}
                     {% for item in row.items %}

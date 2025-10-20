@@ -88,7 +88,7 @@
                     id="id__run"
                     name="_run"
                     type="submit"
-                    {% if not perms.extras.run_job or not job_model.runnable %}disabled="disabled"{% endif %}
+                    {% if not perms.extras.run_job or not job_model.runnable %}disabled{% endif %}
                 >
                     <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
                 -->Run Job Now

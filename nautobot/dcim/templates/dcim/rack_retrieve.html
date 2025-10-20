@@ -3,12 +3,24 @@
 {% load static %}
 
 {% block extra_buttons %}
-    <a {% if prev_rack %}href="{% url 'dcim:rack' pk=prev_rack.pk %}"{% else %}disabled="disabled"{% endif %} class="btn btn-primary">
-        <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
-    </a>
-    <a {% if next_rack %}href="{% url 'dcim:rack' pk=next_rack.pk %}"{% else %}disabled="disabled"{% endif %} class="btn btn-primary">
-        <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
-    </a>
+    {% if prev_rack %}
+        <a href="{% url 'dcim:rack' pk=prev_rack.pk %}" class="btn btn-primary">
+            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
+        </a>
+    {% else %}
+        <a aria-disabled="true" class="btn btn-primary disabled">
+            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
+        </a>
+    {% endif %}
+    {% if next_rack %}
+        <a href="{% url 'dcim:rack' pk=next_rack.pk %}" class="btn btn-primary">
+            <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
+        </a>
+    {% else %}
+        <a aria-disabled="true" class="btn btn-primary disabled">
+            <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
+        </a>
+    {% endif %}
     <button class="btn btn-secondary toggle-fullname" selected="selected">
         <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
     </button>

@@ -4577,7 +4577,7 @@ class BaseVCMemberFormSet(forms.BaseModelFormSet):
                 vc_position_list.append(vc_position)
 
 
-class DeviceVCMembershipForm(forms.ModelForm):
+class DeviceVCMembershipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Device
         fields = [

@@ -94,7 +94,8 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     except Exception as exc:
         return (
             format_html(
-                '<a class="btn btn-sm btn-{}" disabled="disabled" title="{}"><i class="mdi mdi-alert"></i> {}</a>\n',
+                '<a aria-disabled="true" class="btn btn-sm btn-{} disabled" title="{}">'
+                '<span class="mdi mdi-alert"></span> {}</a>\n',
                 "default" if not job_button.group_name else "link",
                 exc,
                 job_button.name,
