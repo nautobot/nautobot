@@ -1,1 +1,2 @@
 Added individual and bulk delete methods to the `/extras/scheduled-jobs/` API endpoint.
+
