@@ -1,7 +1,7 @@
 {% comment %}disabled_message is not part of the default render context but a tab can define it if needed.{% endcomment %}
 {% if disabled_message %}
     <li class="nav-item" role="presentation" title="{{ disabled_message }}">
-        <a class="nav-link disabled" href="#">{{ label }}</a>
+        <a aria-disabled="true" class="nav-link disabled">{{ label }}</a>
     </li>
 {% else %}
     <li class="nav-item" role="presentation">

@@ -92,7 +92,7 @@ Nautobot v3.x:
     <button
         data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
         type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled="disabled"{% endif %}
+        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
     >
         <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
         Sync

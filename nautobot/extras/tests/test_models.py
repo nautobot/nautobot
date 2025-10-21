@@ -141,12 +141,12 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Approval Workflow with Three Stages",
             model_content_type=cls.scheduledjob_ct,
-            priority=1,
+            weight=1,
         )
         # Create three stages of the Approval Workflow Definition
         cls.approval_workflow_stage_definition_1 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=100,
+            sequence=100,
             name="Approval Workflow Stage Definition 1",
             min_approvers=1,
             denial_message="Stage 1 Denial Message",
@@ -154,7 +154,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=200,
+            sequence=200,
             name="Approval Workflow Stage Definition 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -162,7 +162,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_3 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=300,
+            sequence=300,
             name="Approval Workflow Stage Definition 3",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -223,7 +223,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         """
         Test the active_stage property of the ApprovalWorkflow model.
         """
-        # Test that the active stage is the one with the lowest weight when all stages are pending
+        # Test that the active stage is the one with the lowest sequence when all stages are pending
         self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_1)
         # Test that the active stage is the second stage when the first stage is approved
         self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
@@ -318,7 +318,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Scheduled Job Approval Workflow",
             model_content_type=scheduled_job_ct,
-            priority=2,
+            weight=2,
         )
         approval_workflow = ApprovalWorkflow(
             approval_workflow_definition=approval_workflow_definition,

@@ -440,7 +440,7 @@ $grid-breakpoints: (
   md: 768px + $sidenav-width-for-breakpoints,
   lg: 992px + $sidenav-width-for-breakpoints,
   xl: 1200px + $sidenav-width-for-breakpoints,
-  xxl: 1400px + $sidenav-width-for-breakpoints + 260px // added 260px for 4k screens to break later and let col-xxl-n be smaller
+  xxl: 1400px + $sidenav-width-for-breakpoints
 );
 
 /* 5. Include remainder of required parts */
@@ -1427,6 +1427,14 @@ textarea {
   }
 }
 
+/* Code */
+pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
+  background: var(--#{$prefix}secondary-bg);
+  border-radius: $border-radius;
+  padding-block: map.get($spacers, 8);
+  padding-inline: map.get($spacers, 10);
+}
+
 /* Collapse */
 .nb-collapse-toggle {
   @include transition($btn-transition);
@@ -1441,7 +1449,7 @@ textarea {
     display: inline-block; /* `transform` does not work on standard `inline` elements, like `span`, hence `inline-block`. */
   }
 
-  &:not([aria-expanded="true"]) > * {
+  &:not([aria-expanded="true"]) > .mdi-chevron-down {
     transform: rotate(-90deg); /* Rotate chevron icon when collapse is closed. */
   }
 }
@@ -2248,11 +2256,11 @@ ul.nb-software-image-hierarchy {
 
 ul.nb-tree-hierarchy {
   list-style-type: none;
-  padding-block-start: map.get($spacers, 0);
+  padding-inline-start: map.get($spacers, 0);
 
   ul {
     list-style-type: "↳ ";
-    padding-block-start: map.get($spacers, 4);
+    padding-inline-start: 1.125rem; /* 18px */
   }
 }
 
@@ -2450,4 +2458,8 @@ pre code.hljs {
     transform: translateX(-50%);
     font-size: 1em;
   }
+}
+
+.nb-lg-max-width {
+  max-width: 960px;
 }
