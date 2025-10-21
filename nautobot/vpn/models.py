@@ -482,10 +482,11 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         "source_interface",
         "source_ipaddress",
         "source_fqdn",
-        "tunnel_interface",
         "protected_prefixes",
         "protected_prefixes_dg",
     ]
+
+    natural_key_field_names = ["pk"]  # TODO: name is not unique, nor are there any uniqueness criteria on this model?
 
     class Meta:
         """Meta class for VPNTunnelEndpoint."""
@@ -496,10 +497,14 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     def _name(self):
         """Dynamic name field."""
         if self.source_interface:
-            device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
+            if self.source_interface.parent:
+                parent_intf = f"{self.source_interface.parent.name} {self.source_interface.name}"
+            else:
+                # Interface on a module that isn't installed in a device at present
+                parent_intf = f"{self.source_interface.module} {self.source_interface.name}"
             if self.source_ipaddress:
-                return f"{device_intf} ({self.source_ipaddress.address})"
-            return device_intf
+                return f"{parent_intf} ({self.source_ipaddress.address})"
+            return parent_intf
         return self.source_fqdn
 
     def __str__(self):
