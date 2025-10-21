@@ -779,7 +779,7 @@ def render_address(address):
             quote_plus(address),
         )
         address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
-        return format_html('<div class="pull-right d-print-none">{}</div>{}', map_link, address)
+        return format_html('<div class="float-end d-print-none">{}</div>{}', map_link, address)
     return HTML_NONE
 
 
@@ -818,7 +818,11 @@ def render_button_class(value):
     """
     if value:
         base = value.split()[0]
-        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+        return format_html(
+            '<button class="btn btn-{}">{}</button>',
+            base.lower() if base.lower() != "default" else "secondary",
+            base.capitalize(),
+        )
     return ""
 
 

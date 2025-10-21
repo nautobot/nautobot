@@ -158,7 +158,7 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 class ButtonClassChoices(ChoiceSet):
-    CLASS_DEFAULT = "default"
+    CLASS_DEFAULT = "default"  # maps to "secondary" in v3 UI, but kept for backwards compatibility
     CLASS_PRIMARY = "primary"
     CLASS_SUCCESS = "success"
     CLASS_INFO = "info"
@@ -170,7 +170,7 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DEFAULT, "Default"),
         (CLASS_PRIMARY, "Primary (blue)"),
         (CLASS_SUCCESS, "Success (green)"),
-        (CLASS_INFO, "Info (aqua)"),
+        (CLASS_INFO, "Info (blue)"),
         (CLASS_WARNING, "Warning (orange)"),
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),

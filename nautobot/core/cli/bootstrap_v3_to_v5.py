@@ -577,6 +577,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "checkbox-inline": "form-check-input",
         "close": "btn-close",
         "control-label": "col-form-label",
+        "dropdown-menu-right": "dropdown-menu-end",
         "form-control-static": "form-control-plaintext",
         "form-group": "mb-10 d-flex justify-content-center",
         "help-block": "form-text",

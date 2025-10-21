@@ -103,7 +103,7 @@
                         <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
                             <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-right">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'dcim:powerport_connect' termination_a_id=object.pk termination_b_type='power-outlet' %}?return_url={{ object.get_absolute_url }}">Power Outlet</a></li>
                             <li><a class="dropdown-item" href="{% url 'dcim:powerport_connect' termination_a_id=object.pk termination_b_type='power-feed' %}?return_url={{ object.get_absolute_url }}">Power Feed</a></li>
                         </ul>
