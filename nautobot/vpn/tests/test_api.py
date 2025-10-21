@@ -301,9 +301,6 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
             "endpoint_z": endpoints[8].pk,
         }
 
-    def test_recreate_object_csv(self):
-        """This needs a fix."""
-
 
 class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
     """VPNTunnelEndpoint API tests."""

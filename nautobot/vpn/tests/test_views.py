@@ -279,6 +279,3 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.bulk_edit_data = {"vpn_profile": models.VPNProfile.objects.last().pk}
-
-    def test_get_object_with_permission(self):
-        """This needs a fix."""
