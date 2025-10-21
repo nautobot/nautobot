@@ -175,10 +175,8 @@ class Command(BaseCommand):
         _create_batch(SavedViewFactory, 20)
         _create_batch(ContactFactory, 20)
         _create_batch(TeamFactory, 20)
-        _create_batch(TenantGroupFactory, 10, description="without parents", has_parent=False)
-        _create_batch(TenantGroupFactory, 10, description="with parents", has_parent=True)
-        _create_batch(TenantFactory, 10, description="without a parent group", has_tenant_group=False)
-        _create_batch(TenantFactory, 10, description="with a parent group", has_tenant_group=True)
+        _create_batch(TenantGroupFactory, 20)
+        _create_batch(TenantFactory, 30)
         _create_batch(LocationTypeFactory, 7)  # only 7 unique LocationTypes are hard-coded presently
         # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
         _create_batch(LocationFactory, 7, description="as structure", has_parent=True)
