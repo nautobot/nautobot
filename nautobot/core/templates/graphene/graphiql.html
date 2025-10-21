@@ -143,7 +143,7 @@ add "&raw" to the end of the URL within a browser.
                                              <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
                                                  <strong>{{ query.name }}</strong>
                                              </a>
-                                             <a class="btn btn-sm btn-warning flex-shrink-0 me-12 dropdown-item" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
+                                             <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
                                          {% else %}
                                              <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
                                          {% endif %}
