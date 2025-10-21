@@ -9,10 +9,11 @@ from django.core.validators import MinValueValidator, ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.extras.models.mixins import DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -323,7 +324,11 @@ class UniqueValidationRule(ValidationRuleModelMixin, PrimaryModel):
             raise ValidationError({"field": "This field is already unique by default."})
 
 
-class DataCompliance(PrimaryModel):
+@extras_features(
+    "export_templates",
+    "graphql",
+)
+class DataCompliance(DynamicGroupsModelMixin, NotesMixin, SavedViewMixin, BaseModel):
     """Model to represent the results of an audit method."""
 
     compliance_class_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False)
