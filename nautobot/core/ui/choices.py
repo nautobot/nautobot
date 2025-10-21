@@ -141,7 +141,8 @@ class NavigationIconChoices(ChoiceSet):
     IPAM = "sitemap-outline"
     ORGANIZATION = "organization"
     CIRCUITS = "cable-data"
-    VPN = "route"
+    VPN = "atom"
+    ROUTING = "route"
     POWER = "battery-3"
     WIRELESS = "wifi"
     SECRETS = "secrets"
@@ -162,6 +163,7 @@ class NavigationIconChoices(ChoiceSet):
         (ORGANIZATION, "Organization"),
         (CIRCUITS, "Circuits"),
         (VPN, "VPN"),
+        (ROUTING, "Routing"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
         (SECRETS, "Secrets"),
@@ -181,18 +183,24 @@ class NavigationIconChoices(ChoiceSet):
 class NavigationWeightChoices(ChoiceSet):
     """Navigation weights for major Nautobot sections."""
 
+    # In general we are looking to:
+    # - Keep data models before the default weight of 1000
+    # - Leave a gap between the default location of 1000
+    # - Keep non-model items after the default weight of 1000
+    # - Keep key items of GC, Jobs, and Apps at the end for easy access
     DEVICES = 100
     IPAM = 200
     ORGANIZATION = 300
     CIRCUITS = 400
     VPN = 450
-    POWER = 500
-    WIRELESS = 550
-    SECRETS = 600
-    SECURITY = 650
-    LOAD_BALANCERS = 700
-    VIRTUALIZATION = 750
-    CLOUD = 800
+    ROUTING = 500
+    POWER = 550
+    WIRELESS = 600
+    SECRETS = 650
+    SECURITY = 700
+    LOAD_BALANCERS = 750
+    VIRTUALIZATION = 800
+    CLOUD = 850
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
@@ -209,6 +217,7 @@ class NavigationWeightChoices(ChoiceSet):
         (ORGANIZATION, "Organization"),
         (CIRCUITS, "Circuits"),
         (VPN, "VPN"),
+        (ROUTING, "Routing"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
         (SECRETS, "Secrets"),
