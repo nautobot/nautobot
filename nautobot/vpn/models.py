@@ -401,11 +401,13 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_links",
     "custom_validators",
     "export_templates",
+    "graphql",
     "webhooks",
 )
 class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint model."""
 
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, editable=False)
     device = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.CASCADE,
@@ -488,11 +490,11 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNTunnelEndpoint."""
 
+        ordering = ("name",)
         verbose_name = "VPN Tunnel Endpoint"
 
-    @property
-    def name(self):
-        """Name property."""
+    def _name(self):
+        """Dynamic name field."""
         if self.source_interface:
             device_intf = f"{self.source_interface.device.name} {self.source_interface.name}"
             if self.source_ipaddress:
@@ -516,4 +518,5 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     def save(self, *args, **kwargs):
         if self.source_interface and not self.device:
             self.device = self.source_interface.device
+        self.name = self._name()
         super().save(*args, **kwargs)

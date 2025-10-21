@@ -1,5 +1,4 @@
-from drf_spectacular.utils import extend_schema_field
-from rest_framework.serializers import CharField, ChoiceField, ListField, SerializerMethodField
+from rest_framework.serializers import ChoiceField, ListField
 
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 
@@ -107,14 +106,8 @@ class VPNTunnelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer): 
 class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint Serializer."""
 
-    name = SerializerMethodField(read_only=True)
-
     class Meta:
         """Meta attributes."""
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
-
-    @extend_schema_field(CharField)
-    def get_name(self, instance):
-        return instance.name

@@ -1,7 +1,5 @@
 """Unit tests for vpn."""
 
-from unittest import skip
-
 from nautobot.apps.testing import APIViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
@@ -337,11 +335,3 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
             "source_interface": interfaces[2].pk,
             "vpn_profile": models.VPNProfile.objects.last().pk,
         }
-
-    @skip("Name is not a database field.")
-    def test_list_objects_ascending_ordered(self):
-        """Model name is a dynamic property not a database field."""
-
-    @skip("Name is not a database field.")
-    def test_list_objects_descending_ordered(self):
-        """Model name is a dynamic property not a database field."""

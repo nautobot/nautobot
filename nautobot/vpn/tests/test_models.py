@@ -64,12 +64,6 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPNTunnelEndpoint
 
-    def test_composite_key(self):
-        """Model doesn't support this property."""
-
-    def test_natural_key_symmetry(self):
-        """Model doesn't support this property."""
-
     def test_name(self):
         """Test dynamic name property."""
         with self.subTest("Test name contains interface name and device name."):
