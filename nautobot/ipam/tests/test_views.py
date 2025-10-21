@@ -165,7 +165,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 if count > 1:
                     self.assertBodyContains(
                         response,
-                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
@@ -250,7 +250,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 count = prefix.locations.count()
                 if count > 1:
                     self.assertBodyContains(
-                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                        response,
+                        f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))

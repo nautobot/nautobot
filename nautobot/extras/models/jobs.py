@@ -1108,6 +1108,13 @@ class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesM
     class Meta:
         ordering = ["group_name", "weight", "name"]
 
+    @property
+    def button_class_css_class(self):
+        """Map self.button_class database value to the correct CSS class for buttons."""
+        if self.button_class == ButtonClassChoices.CLASS_DEFAULT:
+            return "secondary"
+        return self.button_class
+
     def __str__(self):
         return self.name
 

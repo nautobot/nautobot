@@ -132,14 +132,14 @@ class ApprovalWorkflowDefinitionViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
             )
 
         cls.form_data = {
             "name": "Test Approval Workflow Definition 5",
             "model_content_type": cls.scheduledjob_ct.pk,
             "model_constraints": '{"name": "Bulk Delete Objects"}',
-            "priority": 5,
+            "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
             "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
             "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
@@ -161,14 +161,14 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=cls.scheduledjob_ct,
-            priority=10,
+            weight=10,
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
         # Deletable objects
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -176,7 +176,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=3,
             denial_message="Stage 2 Denial Message",
@@ -184,7 +184,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=4,
             denial_message="Stage 3 Denial Message",
@@ -192,7 +192,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=400,
+            sequence=400,
             name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=4,
             denial_message="Stage 4 Denial Message",
@@ -200,7 +200,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=500,
+            sequence=500,
             name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=4,
             denial_message="Stage 5 Denial Message",
@@ -209,7 +209,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.form_data = {
             "approval_workflow_definition": cls.approval_workflow_definition.pk,
-            "weight": 600,
+            "sequence": 600,
             "name": "Approval Workflow Stage 1 Definition",
             "min_approvers": 2,
             "denial_message": "Stage 1 is denied",
@@ -218,7 +218,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.update_data = {
             "approval_workflow_definition": cls.approval_workflow_definition.pk,
-            "weight": 700,
+            "sequence": 700,
             "name": "Updated approval workflow stage 1",
             "min_approvers": 3,
             "denial_message": "updated message",
@@ -226,7 +226,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         }
 
         cls.bulk_edit_data = {
-            "weight": 800,
+            "sequence": 800,
             "min_approvers": 5,
             "denial_message": "updated denial message",
         }
@@ -264,7 +264,7 @@ class ApprovalWorkflowViewTestCase(
         ]
         approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, priority=i
+                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, weight=i
             )
             for i in range(5)
         ]
@@ -332,7 +332,7 @@ class ApprovalWorkflowStageViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
             )
             for i in range(5)
         ]
@@ -342,7 +342,7 @@ class ApprovalWorkflowStageViewTestCase(
                 cls.approval_workflow_stage_definitions.append(
                     ApprovalWorkflowStageDefinition.objects.create(
                         approval_workflow_definition=approval_workflow_definition,
-                        weight=i * 100,
+                        sequence=i * 100,
                         name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
@@ -516,7 +516,7 @@ class ApprovalWorkflowStageResponseViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i} Definition",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
             )
             for i in range(5)
         ]
@@ -526,7 +526,7 @@ class ApprovalWorkflowStageResponseViewTestCase(
                 cls.approval_workflow_stage_definitions.append(
                     ApprovalWorkflowStageDefinition.objects.create(
                         approval_workflow_definition=approval_workflow_definition,
-                        weight=i * 100,
+                        sequence=i * 100,
                         name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
@@ -3462,7 +3462,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         self.add_permissions("extras.run_job")
@@ -3492,7 +3492,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
         data = {
             "_schedule_type": "immediately",
@@ -3514,7 +3514,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
         data = {
             "_schedule_type": "future",
@@ -3575,7 +3575,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         data = {
@@ -3600,7 +3600,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
 
         data = {
@@ -3626,7 +3626,7 @@ class JobTestCase(
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
         data = {
             "_schedule_type": "future",
@@ -4613,7 +4613,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
                         self.assertInHTML(
-                            f'<strong>{result}</strong><div class="pull-right d-print-none">',
+                            f'<strong>{result}</strong><div class="float-end d-print-none">',
                             response_body,
                         )
                         # ContactAssociationTable related to this role instances should not be there.

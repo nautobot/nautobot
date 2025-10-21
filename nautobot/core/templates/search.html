@@ -32,7 +32,7 @@
                             {% for obj_type in results %}
                                 <a href="#{{ obj_type.name|lower }}" class="list-group-item">
                                     {{ obj_type.name|bettertitle }}
-                                    <span class="badge">{{ obj_type.table.page.paginator.count }}</span>
+                                    <span class="badge bg-primary">{{ obj_type.table.page.paginator.count }}</span>
                                 </a>
                             {% endfor %}
                         </div>

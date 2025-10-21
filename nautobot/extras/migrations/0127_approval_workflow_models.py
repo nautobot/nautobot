@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
                 ("model_constraints", models.JSONField(blank=True, default=dict)),
-                ("priority", models.IntegerField(default=0)),
+                ("weight", models.IntegerField(default=0)),
                 (
                     "model_content_type",
                     models.ForeignKey(
@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Approval Workflow Definition",
                 "ordering": ["name"],
-                "unique_together": {("model_content_type", "priority")},
+                "unique_together": {("model_content_type", "weight")},
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -122,7 +122,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Stage",
-                "ordering": ["approval_workflow", "approval_workflow_stage_definition__weight"],
+                "ordering": ["approval_workflow", "approval_workflow_stage_definition__sequence"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
@@ -179,7 +179,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("weight", models.PositiveIntegerField()),
+                ("sequence", models.PositiveIntegerField()),
                 ("name", models.CharField(max_length=255)),
                 ("min_approvers", models.PositiveIntegerField()),
                 ("denial_message", models.CharField(blank=True, max_length=255)),
@@ -202,10 +202,10 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Approval Workflow Stage Definition",
-                "ordering": ["approval_workflow_definition", "weight"],
+                "ordering": ["approval_workflow_definition", "sequence"],
                 "unique_together": {
                     ("approval_workflow_definition", "name"),
-                    ("approval_workflow_definition", "weight"),
+                    ("approval_workflow_definition", "sequence"),
                 },
             },
             bases=(

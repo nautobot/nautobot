@@ -5322,7 +5322,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 + f"?return_url={instance.get_absolute_url()}"
             )
             connect_link = format_html(
-                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<a href="{}" class="btn btn-primary btn-sm float-end">'
                 '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
                 connect_url,
             )

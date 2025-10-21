@@ -2,9 +2,11 @@
 {% load helpers %}
 {% load form_helpers %}
 
+{% block title %}Home{% endblock title %}
+
 {% block content %}
     <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-        <div class="col-sm-12 col-md-9 col-lg-7 col-xl-5 col-xxl-3">
+        <div class="col-sm-12 col-md-9 col-lg-7 nb-lg-max-width">
             {% if "BANNER_LOGIN"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
                     {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}

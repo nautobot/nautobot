@@ -4,36 +4,6 @@
 
 {% block title %}{{ object }} - Change Log{% endblock %}
 
-{% block header %}
-    <div class="row d-print-none">
-        <div class="col-md-8 col-lg-9">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'extras:objectchange_list' %}">Change Log</a></li>
-                {% if object.related_object.get_absolute_url %}
-                    <li class="breadcrumb-item"><a href="{{ object.related_object.get_absolute_url }}changelog/">{{ object.related_object }}</a></li>
-                {% elif object.changed_object and object.changed_object.get_absolute_url %}
-                    <li class="breadcrumb-item"><a href="{{ object.changed_object.get_absolute_url }}changelog/">{{ object.changed_object }}</a></li>
-                {% elif object.changed_object is not None %}
-                    <li class="breadcrumb-item">{{ object.changed_object }}</li>
-                {% endif %}
-                <li class="breadcrumb-item">{{ object }}</li>
-            </ol>
-        </div>
-        <div class="col-md-4 col-lg-3">
-            <form action="{% url 'extras:objectchange_list' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search change logs" />
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
-    </div>
-{% endblock %}
-
 {% block content %}
     <div class="row">
         <div class="col-lg-5">
@@ -114,12 +84,24 @@
                 <div class="card-header">
                     <strong>Difference</strong>
                     <div class="btn-group btn-group-xs float-end d-print-none">
-                        <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-secondary">
-                            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
-                        </a>
-                        <a {% if next_change %}href="{% url 'extras:objectchange' pk=next_change.pk %}"{% else %}disabled{% endif %} class="btn btn-secondary">
-                            Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
-                        </a>
+                        {% if prev_change %}
+                            <a href="{% url 'extras:objectchange' pk=prev_change.pk %}" class="btn btn-secondary">
+                                <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
+                            </a>
+                        {% else %}
+                            <a aria-disabled="true" class="btn btn-secondary disabled">
+                                <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
+                            </a>
+                        {% endif %}
+                        {% if next_change %}
+                            <a href="{% url 'extras:objectchange' pk=next_change.pk %}" class="btn btn-secondary">
+                                Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
+                            </a>
+                        {% else %}
+                            <a aria-disabled="true" class="btn btn-secondary disabled">
+                                Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="card-body">

@@ -405,7 +405,8 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         "th": {"class": "nb-actionable nb-w-0"},
     }
     # Note that braces are escaped to allow for string formatting prior to template rendering
-    template_code = """
+    template_code = """\
+{{% if record.present_in_database %}}
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
@@ -439,6 +440,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% endif %}}
         </ul>
     </div>
+{{% endif %}}
     """
 
     def __init__(
@@ -490,7 +492,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
-    attrs = {"td": {"class": "d-print-none text-right text-nowrap"}}
+    attrs = {"td": {"class": "d-print-none text-end text-nowrap"}}
     template_name = "extras/inc/approval_buttons_column.html"
 
     def __init__(
@@ -652,11 +654,11 @@ class LinkedCountColumn(django_tables2.Column):
                 {k: (getattr(record, v) or settings.FILTERS_NULL_CHOICE_VALUE) for k, v in self.url_params.items()}
             )
         if value > 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         if related_record is not None:
             return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         return helpers.placeholder(value)
 
 

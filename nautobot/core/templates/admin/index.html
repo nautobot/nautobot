@@ -14,19 +14,19 @@
             <ul class="dropdown-menu" role="menu">
                 {% for app in app_list %}
                     <li>
-                        <a href="#"><strong>{% render_app_name app %}</strong></a>
+                        <a class="dropdown-item" href="#"><strong>{% render_app_name app %}</strong></a>
                     </li>
                     {% for model in app.models %}
                         <li>
                             {% if model.admin_url %}
-                                <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                                <a class="dropdown-item" href="{{ model.admin_url }}">{{ model.name }}</a>
                             {% else %}
                                 {{ model.name }}
                             {% endif %}
                         </li>
                     {% endfor %}
                     {% if not forloop.last %}
-                        <li role="presentation" class="divider"></li>
+                        <li><hr class="dropdown-divider"></li>
                     {% endif %}
                 {% endfor %}
             </ul>

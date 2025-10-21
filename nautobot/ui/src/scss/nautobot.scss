@@ -414,8 +414,8 @@ $btn-close-opacity:          0.68;
 $btn-close-hover-opacity:    1;
 $btn-close-focus-opacity:    1;
 $btn-close-disabled-opacity: 0.31;
-$btn-close-filter:           invert(1%) sepia(10%) saturate(233%) hue-rotate(314deg) brightness(99%) contrast(81%);
-$btn-close-filter-dark:      invert(96%) sepia(0%) saturate(1%) hue-rotate(250deg) brightness(86%) contrast(91%);
+$btn-close-filter:           invert(1%) sepia(10%) saturate(233%) hue-rotate(314deg) brightness(99%) contrast(81%); /* $black-0: #1a1a1a; */
+$btn-close-filter-dark:      invert(100%); /* $black-0-dark: #ffffff; */
 $btn-close-white-filter:     $btn-close-filter-dark;
 
 /* Code */
@@ -440,7 +440,7 @@ $grid-breakpoints: (
   md: 768px + $sidenav-width-for-breakpoints,
   lg: 992px + $sidenav-width-for-breakpoints,
   xl: 1200px + $sidenav-width-for-breakpoints,
-  xxl: 1400px + $sidenav-width-for-breakpoints + 260px // added 260px for 4k screens to break later and let col-xxl-n be smaller
+  xxl: 1400px + $sidenav-width-for-breakpoints
 );
 
 /* 5. Include remainder of required parts */
@@ -1427,6 +1427,14 @@ textarea {
   }
 }
 
+/* Code */
+pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
+  background: var(--#{$prefix}secondary-bg);
+  border-radius: $border-radius;
+  padding-block: map.get($spacers, 8);
+  padding-inline: map.get($spacers, 10);
+}
+
 /* Collapse */
 .nb-collapse-toggle {
   @include transition($btn-transition);
@@ -1441,7 +1449,7 @@ textarea {
     display: inline-block; /* `transform` does not work on standard `inline` elements, like `span`, hence `inline-block`. */
   }
 
-  &:not([aria-expanded="true"]) > * {
+  &:not([aria-expanded="true"]) > .mdi-chevron-down {
     transform: rotate(-90deg); /* Rotate chevron icon when collapse is closed. */
   }
 }
@@ -1562,10 +1570,11 @@ body {
   @mixin filter-nav-orange-0 {
     /*
      * CSS workaround to change element color (including its `background-image`)
-     * from white to any given color, `$orange-0` in this case.
+     * from white to any given color, `$orange-0-dark` in this case. Though it
+     * evaluates to `#ff9938`, not the exact `#ff9933`, it is _good enough_.
      * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
      */
-    filter: invert(50%) sepia(99%) saturate(1810%) hue-rotate(3deg) brightness(93%) contrast(94%);
+    filter: invert(57%) sepia(100%) saturate(478%) hue-rotate(336deg) brightness(141%) contrast(101%);
   }
 
   @mixin filter-nav-gray-3 {
@@ -1573,7 +1582,7 @@ body {
      * CSS workaround to change element color (including its `background-image`) from white to `$nav-gray-3`.
      * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
      */
-    filter: invert(39%) sepia(6%) saturate(1228%) hue-rotate(166deg) brightness(54%) contrast(86%);
+    filter: invert(69%) sepia(15%) saturate(1%) hue-rotate(311deg) brightness(223%) contrast(98%);
   }
 
   @include box-shadow(0.0625rem 0 0 0 $navy-2, $box-shadow);
@@ -1698,7 +1707,7 @@ body {
     width: $sidenav-link-width;
 
     &-active {
-      color: $orange-0;
+      color: $orange-0-dark;
     }
 
     &::before { /* Segment icon */
@@ -1833,7 +1842,7 @@ body {
     }
 
     &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
-      color: $orange-0;
+      color: $orange-0-dark;
 
       > :first-child, /* Nav menu tab icon */
       > :last-child::after { /* Chevron icon */
@@ -2248,11 +2257,11 @@ ul.nb-software-image-hierarchy {
 
 ul.nb-tree-hierarchy {
   list-style-type: none;
-  padding-block-start: map.get($spacers, 0);
+  padding-inline-start: map.get($spacers, 0);
 
   ul {
     list-style-type: "↳ ";
-    padding-block-start: map.get($spacers, 4);
+    padding-inline-start: 1.125rem; /* 18px */
   }
 }
 
@@ -2450,4 +2459,8 @@ pre code.hljs {
     transform: translateX(-50%);
     font-size: 1em;
   }
+}
+
+.nb-lg-max-width {
+  max-width: 960px;
 }
