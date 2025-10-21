@@ -74,6 +74,7 @@ class VPNProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNProfile."""
 
+        ordering = ("name",)
         verbose_name = "VPN Profile"
 
     def __str__(self):
@@ -147,6 +148,7 @@ class VPNPhase1Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNPhase1Policy."""
 
+        ordering = ("name",)
         verbose_name = "VPN Phase 1 Policy"
         verbose_name_plural = "VPN Phase 1 Policies"
 
@@ -203,6 +205,7 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNPhase2Policy."""
 
+        ordering = ("name",)
         verbose_name = "VPN Phase 2 Policy"
         verbose_name_plural = "VPN Phase 2 Policies"
 
@@ -293,6 +296,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPN."""
 
+        ordering = ("name",)
         verbose_name = "VPN"
 
     def __str__(self):
@@ -380,6 +384,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
     class Meta:
         """Meta class for VPNTunnel."""
 
+        ordering = ("name",)
         verbose_name = "VPN Tunnel"
 
     def __str__(self):

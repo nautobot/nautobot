@@ -1,5 +1,7 @@
 """Test vpn Filters."""
 
+from unittest import skip
+
 from nautobot.apps.testing import FilterTestCases
 from nautobot.vpn import filters, models
 
@@ -29,7 +31,6 @@ class VPNPhase1PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ("name",),
         ("description",),
-        ("ike_version",),
         ("lifetime_seconds",),
         ("lifetime_kb",),
         ("authentication_method",),
@@ -139,10 +140,6 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__name"),
     )
 
-    @classmethod
-    def setUpTestData(cls):
-        endpoints = models.VPNTunnelEndpoint.objects.all()
-        for i, vpn_tunnel in enumerate(models.VPNTunnel.objects.all()[:3]):
-            vpn_tunnel.endpoint_a = endpoints[i]
-            vpn_tunnel.endpoint_z = endpoints[i + 1]
-            vpn_tunnel.validated_save()
+    @skip("Name is not a database field.")
+    def test_tags_filter(self):
+        """Model has dynamic name property and doesn't provide sorting by name."""

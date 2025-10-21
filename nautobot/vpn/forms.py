@@ -63,8 +63,15 @@ class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # py
     """VPNProfile bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNProfile.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
+    keepalive_interval = forms.IntegerField(
+        min_value=0,
+        required=False,
+    )
+    keepalive_retries = forms.IntegerField(
+        min_value=0,
+        required=False,
+    )
     keepalive_enabled = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, label="Keepalive Enabled"
     )
@@ -78,9 +85,6 @@ class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # py
             "description",
             "keepalive_interval",
             "keepalive_retries",
-            "extra_options",
-            "secrets_group",
-            "role",
         ]
 
 
@@ -143,7 +147,6 @@ class VPNPhase1PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
     """VPNPhase1Policy bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNPhase1Policy.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
     ike_version = forms.ChoiceField(
         required=False,
@@ -170,6 +173,14 @@ class VPNPhase1PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
         required=False,
         label="Dh Group",
     )
+    lifetime_seconds = forms.IntegerField(
+        min_value=0,
+        required=False,
+    )
+    lifetime_kb = forms.IntegerField(
+        min_value=0,
+        required=False,
+    )
     authentication_method = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(choices.AuthenticationMethodChoices),
@@ -184,7 +195,6 @@ class VPNPhase1PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
         nullable_fields = [
             "description",
             "ike_version",
-            "aggressive_mode",
             "encryption_algorithm",
             "integrity_algorithm",
             "dh_group",
@@ -216,7 +226,6 @@ class VPNPhase2PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
     """VPNPhase2Policy bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNPhase2Policy.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
     encryption_algorithm = JSONArrayFormField(
         choices=choices.EncryptionAlgorithmChoices,
@@ -235,6 +244,10 @@ class VPNPhase2PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
         base_field=forms.CharField(),
         required=False,
         label="Pfs Group",
+    )
+    lifetime = forms.IntegerField(
+        min_value=0,
+        required=False,
     )
 
     class Meta:
@@ -278,21 +291,20 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: d
     """VPN bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPN.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
-    vpn_id = forms.CharField(required=False, label="Vpn Id")
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
+        required=False,
+        label="VPN Profile",
+    )
 
     class Meta:
         """Meta attributes."""
 
         model = models.VPN
         nullable_fields = [
-            "vpn_profile",
             "description",
-            "vpn_id",
-            "tenant",
-            "role",
-            "contact_associations",
+            "vpn_profile",
         ]
 
 
@@ -345,9 +357,17 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
     """VPNTunnel bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNTunnel.objects.all(), widget=forms.MultipleHiddenInput)
-    name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
-    tunnel_id = forms.CharField(required=False, label="Tunnel Id")
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
+        required=False,
+        label="VPN Profile",
+    )
+    vpn = DynamicModelChoiceField(
+        queryset=models.VPN.objects.all(),
+        required=False,
+        label="VPN",
+    )
     encapsulation = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(choices.EncapsulationChoices),
@@ -363,10 +383,7 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
             "vpn_profile",
             "vpn",
             "description",
-            "tunnel_id",
             "encapsulation",
-            "tenant",
-            "role",
         ]
 
 
@@ -445,18 +462,11 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
     pk = forms.ModelMultipleChoiceField(
         queryset=models.VPNTunnelEndpoint.objects.all(), widget=forms.MultipleHiddenInput
     )
-    source_fqdn = forms.CharField(required=False, label="Source Fqdn")
-    protected_prefixes = DynamicModelMultipleChoiceField(
-        queryset=Prefix.objects.all(),
+    vpn_profile = DynamicModelChoiceField(
+        queryset=models.VPNProfile.objects.all(),
         required=False,
-        label="Prefix",
-        to_field_name="name",
-    )
-    protected_prefixes_dg = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(),
-        required=False,
-        label="Dynamic Group",
-        to_field_name="name",
+        label="VPN Profile",
+        help_text="VPN Profile for the tunnel endpoint.",
     )
 
     class Meta:
@@ -465,14 +475,6 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         model = models.VPNTunnelEndpoint
         nullable_fields = [
             "vpn_profile",
-            "source_ipaddress",
-            "source_interface",
-            "source_fqdn",
-            "tunnel_interface",
-            "protected_prefixes_dg",
-            "protected_prefixes",
-            "role",
-            "status",
         ]
 
 
