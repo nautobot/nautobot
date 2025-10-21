@@ -20,7 +20,7 @@
             <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}"/>
         </a>
 
-        <ul class="list-unstyled my-0 overflow-auto pt-10 w-100">
+        <ul class="list-unstyled my-0 overflow-x-hidden overflow-y-auto pt-10 w-100">
             {% if request.user.is_authenticated %}
                 {% if nav_menu_version_control %}
                     <li>
