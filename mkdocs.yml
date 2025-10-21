@@ -631,6 +631,7 @@ nav:
               - nautobot.apps.querysets: "code-reference/nautobot/apps/querysets.md"
               - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
               - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
+              - nautobot.apps.templatetags: "code-reference/nautobot/apps/templatetags.md"
               - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
               - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
               - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
