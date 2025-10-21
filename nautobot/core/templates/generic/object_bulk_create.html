@@ -25,11 +25,12 @@ Leaving it here for now in case apps are making use of it.
     </style>
 {% endblock %}
 
+{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}
+
 {% block content %}
     {% block tabs %}{% endblock %}
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h1 class="mb-16">{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
             {% if form.non_field_errors %}
                 <div class="card border-danger">
                     <div class="card-header bg-danger-subtle border-danger text-body">

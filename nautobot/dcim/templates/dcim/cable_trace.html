@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% load helpers %}
 
-{% block header %}
-    <h1>{% block title %}Cable Trace for {{ object|meta:"verbose_name"|bettertitle }} {{ object }}{% endblock %}</h1>
-{% endblock %}
+{% block title %}Cable Trace for {{ object|meta:"verbose_name"|bettertitle }} {{ object }}{% endblock %}
 
 {% block content %}
     <div class="row">

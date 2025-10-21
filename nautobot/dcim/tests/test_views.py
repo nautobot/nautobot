@@ -4552,7 +4552,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
-        self.assertBodyContains(response, "<h1>Cable Trace for Rear Port Rear Port 1</h1>", html=True)
+        self.assertBodyContains(response, "Cable Trace for Rear Port Rear Port 1", html=True)
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
