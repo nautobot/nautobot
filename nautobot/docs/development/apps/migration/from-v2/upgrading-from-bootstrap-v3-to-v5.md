@@ -287,7 +287,7 @@ Let's take a look at this example from [Bootstrap v3.4.1 Single button dropdowns
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             Action <span class="caret"></span>
         </button>
-        <ul class="dropdown-menu">
+        <ul class="dropdown-menu dropdown-menu-right">
             <li><a href="#">Action</a></li>
             <li><a href="#">Another action</a></li>
             <li><a href="#">Something else here</a></li>
@@ -304,7 +304,7 @@ Let's take a look at this example from [Bootstrap v3.4.1 Single button dropdowns
         <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
             Action <span class="mdi mdi-chevron-down"></span>
         </button>
-        <ul class="dropdown-menu">
+        <ul class="dropdown-menu dropdown-menu-end">
             <li><a href="#" class="dropdown-item">Action</a></li>
             <li><a href="#" class="dropdown-item">Another action</a></li>
             <li><a href="#" class="dropdown-item">Something else here</a></li>

@@ -312,7 +312,7 @@ Screenshot of migrated view:
             </div>
             {% include 'inc/table.html' with table=cluster_table %}
             {% if perms.virtualization.add_cluster %}
-                <div class="panel-footer text-right d-print-none">
+                <div class="panel-footer text-end d-print-none">
                     <a href="{% url 'virtualization:cluster_add' %}?cluster_type={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cluster
                     </a>

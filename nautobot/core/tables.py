@@ -492,7 +492,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
-    attrs = {"td": {"class": "d-print-none text-right text-nowrap"}}
+    attrs = {"td": {"class": "d-print-none text-end text-nowrap"}}
     template_name = "extras/inc/approval_buttons_column.html"
 
     def __init__(

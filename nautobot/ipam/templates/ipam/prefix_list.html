@@ -10,9 +10,12 @@
             </button>
             <ul class="dropdown-menu" aria-labelledby="max_length">
                 {% for i in "4,8,12,16,20,24,28,32,40,48,56,64"|split %}
-                    <li><a href="{% url 'ipam:prefix_list' %}{% legacy_querystring request prefix_length__lte=i page=1 %}">
-                        {{ i }} {% if request.GET.prefix_length__lte == i %}<span class="mdi mdi-check-bold"></span>{% endif %}
-                    </a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'ipam:prefix_list' %}{% legacy_querystring request prefix_length__lte=i page=1 %}">
+                            {{ i }} {% if request.GET.prefix_length__lte == i %}<span class="mdi mdi-check-bold"></span>{% endif %}
+                        </a>
+                    </li>
                 {% endfor %}
             </ul>
         </div>
