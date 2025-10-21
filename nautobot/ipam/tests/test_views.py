@@ -250,7 +250,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 count = prefix.locations.count()
                 if count > 1:
                     self.assertBodyContains(
-                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                        response,
+                        f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
