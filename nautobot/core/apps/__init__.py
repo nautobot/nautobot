@@ -170,7 +170,7 @@ def register_menu_items(tab_list):
                             item.link += f"?{urlencode(item.query_params)}"
                     except NoReverseMatch as e:
                         # Catch the invalid link here and render the link name as an error message in the template
-                        logger.debug("%s", e)
+                        logger.debug("Unable to reverse match url %s: %s", item.link, e)
                         item.name = "ERROR: Invalid link!"
 
                     create_or_check_entry(
@@ -188,7 +188,7 @@ def register_menu_items(tab_list):
                                 button.link += f"?{urlencode(button.query_params)}"
                         except NoReverseMatch as e:
                             # Catch the invalid link here and render the link name as an error message in the template
-                            logger.debug("%s", e)
+                            logger.debug("Unable to reverse match url %s: %s", button.link, e)
                             button.title = "ERROR: Invalid link!"
                             button.link = ""
                             button.button_class = "danger"
