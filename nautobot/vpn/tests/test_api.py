@@ -301,9 +301,7 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
 
     def get_deletable_object(self):
         """Return VPNTunnel where both endpoints are attached to a device."""
-        return models.VPNTunnel.objects.filter(
-            endpoint_a__device__isnull=False, endpoint_z__device__isnull=False
-        ).first()
+        return models.VPNTunnel.objects.create(name="Deletable VPN Tunnel")
 
 
 class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
