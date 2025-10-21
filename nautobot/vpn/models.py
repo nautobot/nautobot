@@ -388,7 +388,7 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     def clean(self):
         if self.endpoint_a and self.endpoint_z and self.endpoint_a == self.endpoint_z:
-            raise ValidationError("EndPoint A and EndPoint Z cannot be the same.")
+            raise ValidationError("Endpoint A and Endpoint Z cannot be the same.")
         return super().clean()
 
 
