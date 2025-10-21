@@ -2,16 +2,49 @@
 {% load helpers %}
 
 {% block usercontent %}
-    <small class="text-secondary">User login</small>
-    <h5>{{ request.user.username }}</h5>
-    <small class="text-secondary">Full name</small>
-    <h5>{{ request.user.first_name }} {{ request.user.last_name }}</h5>
-    <small class="text-secondary">Email</small>
-    <h5>{{ request.user.email }}</h5>
-    <small class="text-secondary">Registered</small>
-    <h5>{{ request.user.date_joined }}</h5>
-    <small class="text-secondary">Groups</small>
-    <h5>{{ request.user.groups.all|join:', ' }}</h5>
-    <small class="text-secondary">Admin access</small>
-    <h5>{{ request.user.is_staff|yesno|capfirst }}</h5>
+    <div class="row align-content-start flex-fill">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <strong>User Profile</strong>
+                </div>
+                <div class="collapse show">
+                    <table class="table table-hover attr-table">
+                        <tr>
+                            <td>User login</td>
+                            <td>{{ request.user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td>Full name</td>
+                            {% if request.user.first_name or request.user.last_name %}
+                                <td>{{ request.user.first_name }} {{ request.user.last_name }}</td>
+                            {% else %}
+                                <td>{{ None|placeholder }}</td>
+                            {% endif %}
+                        </tr>
+                        <tr>
+                            <td>Email</td>
+                            <td>{{ request.user.email|hyperlinked_email }}</td>
+                        </tr>
+                        <tr>
+                            <td>Registered</td>
+                            <td>{{ request.user.date_joined|date:settings.SHORT_DATETIME_FORMAT }}</td>
+                        </tr>
+                        <tr>
+                            <td>Groups</td>
+                            <td>{{ request.user.groups.all|join:', '|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Admin access</td>
+                            <td>{{ request.user.is_staff|render_boolean }}</td>
+                        </tr>
+                        <tr>
+                            <td>Superuser access</td>
+                            <td>{{ request.user.is_superuser|render_boolean }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
