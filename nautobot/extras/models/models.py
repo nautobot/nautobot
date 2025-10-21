@@ -355,6 +355,12 @@ class CustomLink(
 
     is_data_compliance_model = False
 
+    @property
+    def button_class_css_class(self):
+        if self.button_class == ButtonClassChoices.CLASS_DEFAULT:
+            return "secondary"
+        return self.button_class
+
     class Meta:
         ordering = ["group_name", "weight", "name"]
 

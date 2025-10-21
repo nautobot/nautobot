@@ -135,6 +135,61 @@ def _fix_nav_tabs_items(html: str, stats: dict, file_path=None) -> str:
     return pattern.sub(ul_replacer, html)
 
 
+def _fix_dropdown_lis(html: str, stats: dict, file_path=None) -> str:
+    """Adds 'dropdown-item' class to all <li><a>...</a></li> tags in the given HTML string."""
+
+    def a_replacer(match):
+        a_tag = match.group(0)
+        # If Django template logic is found, notify user and skip auto-fix
+        if re.search(r"{%.*%}", a_tag):
+            if "manual_nav_template_lines" not in stats:
+                stats["manual_nav_template_lines"] = []
+            # Get line number and character position of li_tag
+            html_lines = html.splitlines()
+            for i, line in enumerate(html_lines):
+                if a_tag in line:
+                    # Append line number, character position and file path for easier identification
+                    stats["manual_nav_template_lines"].append(
+                        f"{file_path}:{i + 1}:{line.index(a_tag)} - Please review manually '{a_tag}'"
+                    )
+                    break
+            else:
+                stats["manual_nav_template_lines"].append(f"{file_path} - Please review manually '{a_tag}'")
+            return a_tag
+
+        # Add dropdown-item to <a>
+        class_attr_match = re.search(r"""class=(["'])(.*?)\1""", a_tag)
+        if class_attr_match:
+            classes = class_attr_match.group(2).split()
+            if not any("dropdown-item" in _class for _class in classes):
+                classes.append("dropdown-item")
+                stats["dropdown_items"] += 1
+            new_class_attr = f'class="{" ".join(classes)}"'
+            a_tag = re.sub(r"""class=(["'])(.*?)\1""", new_class_attr, a_tag, count=1)
+        else:
+            a_tag = re.sub(r"<a(\s|>)", r'<a class="dropdown-item"\1', a_tag, count=1)
+            stats["dropdown_items"] += 1
+
+        return a_tag
+
+    return re.sub("<a[^>]*>.*?</a>", a_replacer, html, flags=re.DOTALL)
+
+
+def _fix_dropdown_items(html: str, stats: dict, file_path=None) -> str:
+    """Ensures that all <li> elements within <ul class="dropdown-menu"> have class="dropdown-item" as appropriate."""
+
+    def ul_replacer(ul_match):
+        ul_tag = ul_match.group(0)
+        ul_tag_new = _fix_dropdown_lis(ul_tag, stats, file_path=file_path)
+        return ul_tag_new
+
+    pattern = re.compile(
+        r"""<ul\s+class=(["'])(?:[^"']*\s)?dropdown-menu(?:\s[^"']*)?\1[^>]*>.*?</ul>""",
+        re.DOTALL | re.IGNORECASE,
+    )
+    return pattern.sub(ul_replacer, html)
+
+
 def _fix_extra_nav_tabs_block(html_string: str, stats: dict, file_path: str) -> str:
     """
     Finds {% block extra_nav_tabs %} blocks and adds nav-item/nav-link to <li> tags inside using regex.
@@ -505,6 +560,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "extra_breadcrumbs": 0,
         "breadcrumb_items": 0,
         "nav_items": 0,
+        "dropdown_items": 0,
         "panel_classes": 0,
         "manual_nav_template_lines": [],
     }
@@ -521,6 +577,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "checkbox-inline": "form-check-input",
         "close": "btn-close",
         "control-label": "col-form-label",
+        "dropdown-menu-right": "dropdown-menu-end",
         "form-control-static": "form-control-plaintext",
         "form-group": "mb-10 d-flex justify-content-center",
         "help-block": "form-text",
@@ -582,6 +639,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
     current_html = _convert_caret_in_span_to_mdi(current_html, stats)
     current_html = _convert_hover_copy_buttons(current_html, stats)
     current_html = _fix_nav_tabs_items(current_html, stats, file_path=file_path)
+    current_html = _fix_dropdown_items(current_html, stats, file_path=file_path)
 
     return current_html, stats
 
@@ -598,7 +656,15 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
 
     totals = {
         k: 0
-        for k in ["replacements", "extra_breadcrumbs", "breadcrumb_items", "nav_items", "panel_classes", "resizing_xs"]
+        for k in [
+            "replacements",
+            "extra_breadcrumbs",
+            "breadcrumb_items",
+            "nav_items",
+            "dropdown_items",
+            "panel_classes",
+            "resizing_xs",
+        ]
     }
     # Breakpoints that are not xs do not count as failures in djlint, so we keep a separate counter
     resizing_other = 0
@@ -663,6 +729,8 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
                         print(f"{stats['breadcrumb_items']} breadcrumb-items, ", end="")
                     if stats["nav_items"]:
                         print(f"{stats['nav_items']} nav-items, ", end="")
+                    if stats["dropdown_items"]:
+                        print(f"{stats['dropdown_items']} dropdown-items, ", end="")
                     if stats["panel_classes"]:
                         print(f"{stats['panel_classes']} panel replacements, ", end="")
                     print()
@@ -683,6 +751,7 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
     print(f"- Extra-breadcrumb fixes:      {totals['extra_breadcrumbs']}")
     print(f"- <li> in <ol.breadcrumb>:     {totals['breadcrumb_items']}")
     print(f"- <li> in <ul.nav-tabs>:       {totals['nav_items']}")
+    print(f"- <a> in <ul.dropdown-menu>:   {totals['dropdown_items']}")
     print(f"- Panel class replacements:    {totals['panel_classes']}")
     print(f"- Resizing breakpoint xs:      {totals['resizing_xs']}")
     print("-------------------------------------")
