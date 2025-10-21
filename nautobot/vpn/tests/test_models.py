@@ -86,7 +86,12 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             self.assertEqual(endpoint.source_fqdn, endpoint.name)
 
     def test_save(self):
-        """Test save adds device field when only interface is given on create."""
+        """Test save adds dynamic fields."""
         interface = Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True).first()
         new_endpoint = models.VPNTunnelEndpoint.objects.create(source_interface=interface)
-        self.assertEqual(new_endpoint.device, interface.device)
+
+        with self.subTest("Test device field is saved"):
+            self.assertEqual(new_endpoint.device, interface.device)
+
+        with self.subTest("Test name field is saved"):
+            self.assertEqual(new_endpoint.name, new_endpoint._name())
