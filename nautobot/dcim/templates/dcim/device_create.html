@@ -61,7 +61,9 @@
         <div class="card-body">
             {% render_field form.platform %}
             {% render_field form.software_version %}
-            <div class="mb-10 d-flex justify-content-center" id="software_version_image_container" style="display:none">
+            <div class="mb-10 d-flex justify-content-center"
+                 id="software_version_image_container"
+                 style="display:none !important">{# comment !important is required to override d-flex #}
                 <div class="col-lg-3"></div>
                 <div class="col-lg-9">
                     <span class="form-text">
@@ -185,7 +187,7 @@
         }
 
         function hide_software_image_container(){
-            software_version_image_container.style.display = 'none';
+            software_version_image_container.style.setProperty('display', 'none', 'important');
             software_version_image_description.innerHTML = '';
             clear_software_image_list();
         }
@@ -194,7 +196,7 @@
             clear_software_image_list();
             software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
             software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
-            software_version_image_container.style.display = 'block';
+            software_version_image_container.style.setProperty('display', 'flex', 'important');
             let device_type_id = $('select#id_device_type').find(':selected')[0].value;
             if (!device_type_id) {
                 software_version_image_description.innerHTML = '<b>Unable to display software image list. Select a device type first.</b>';
