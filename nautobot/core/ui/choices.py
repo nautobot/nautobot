@@ -137,66 +137,66 @@ class EChartsTypeTheme(ChoiceSet):
 class NavigationIconChoices(ChoiceSet):
     """Navigation icons for major Nautobot sections."""
 
-    DEVICE = "server"
+    DEVICES = "server"
     IPAM = "sitemap-outline"
     ORGANIZATION = "organization"
-    CIRCUIT = "cable-data"
+    CIRCUITS = "cable-data"
     VPN = "route"
     POWER = "battery-3"
     WIRELESS = "wifi"
     SECRETS = "secrets"
     SECURITY = "security"
-    LOAD_BALANCER = "arrow-decision"
+    LOAD_BALANCERS = "arrow-decision"
     VIRTUALIZATION = "cloud-upload"
     CLOUD = "cloud"
-    DESIGN_BUILDER = "hammer"
-    APPROVAL_WORKFLOW = "checkbox-circle"
+    DESIGN = "hammer"
+    APPROVAL_WORKFLOWS = "checkbox-circle"
     EXTENSIBILITY = "extensibility"
     GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
     APPS = "elements"
 
     CHOICES = (
-        (DEVICE, "server"),
-        (IPAM, "sitemap-outline"),
-        (ORGANIZATION, "organization"),
-        (CIRCUIT, "cable-data"),
-        (VPN, "route"),
-        (POWER, "battery-3"),
-        (WIRELESS, "wifi"),
-        (SECRETS, "secrets"),
-        (SECURITY, "security"),
-        (LOAD_BALANCER, "arrow-decision"),
-        (VIRTUALIZATION, "cloud-upload"),
-        (CLOUD, "cloud"),
-        (DESIGN_BUILDER, "hammer"),
-        (APPROVAL_WORKFLOW, "checkbox-circle"),
-        (EXTENSIBILITY, "extensibility"),
-        (GOLDEN_CONFIG, "sliders-vert-2"),
-        (JOBS, "share"),
-        (APPS, "elements"),
+        (DEVICES, "Devices"),
+        (IPAM, "IPAM"),
+        (ORGANIZATION, "Organization"),
+        (CIRCUITS, "Circuits"),
+        (VPN, "VPN"),
+        (POWER, "Power"),
+        (WIRELESS, "Wireless"),
+        (SECRETS, "Secrets"),
+        (SECURITY, "Security"),
+        (LOAD_BALANCERS, "Load Balancers"),
+        (VIRTUALIZATION, "Virtualization"),
+        (CLOUD, "Cloud"),
+        (DESIGN, "Design"),
+        (APPROVAL_WORKFLOWS, "Approval Workflows"),
+        (EXTENSIBILITY, "Extensibility"),
+        (GOLDEN_CONFIG, "Golden Config"),
+        (JOBS, "Jobs"),
+        (APPS, "Apps"),
     )
 
 
 class NavigationWeightChoices(ChoiceSet):
     """Navigation weights for major Nautobot sections."""
 
-    DEVICE = 100
+    DEVICES = 100
     IPAM = 200
     ORGANIZATION = 300
-    CIRCUIT = 400
+    CIRCUITS = 400
     VPN = 450
     POWER = 500
     WIRELESS = 550
     SECRETS = 600
     SECURITY = 650
-    LOAD_BALANCER = 700
+    LOAD_BALANCERS = 700
     VIRTUALIZATION = 750
     CLOUD = 800
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
-    DESIGN_BUILDER = 1100
-    APPROVAL_WORKFLOW = 1200
+    DESIGN = 1100
+    APPROVAL_WORKFLOWS = 1200
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
@@ -204,20 +204,20 @@ class NavigationWeightChoices(ChoiceSet):
     APPS = 2200
 
     CHOICES = (
-        (DEVICE, "Device"),
+        (DEVICES, "Devices"),
         (IPAM, "IPAM"),
         (ORGANIZATION, "Organization"),
-        (CIRCUIT, "Circuit"),
+        (CIRCUITS, "Circuits"),
         (VPN, "VPN"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
         (SECRETS, "Secrets"),
         (SECURITY, "Security"),
         (VIRTUALIZATION, "Virtualization"),
-        (LOAD_BALANCER, "Load Balancer"),
+        (LOAD_BALANCERS, "Load Balancers"),
         (CLOUD, "Cloud"),
-        (DESIGN_BUILDER, "Design Builder"),
-        (APPROVAL_WORKFLOW, "Approval Workflow"),
+        (DESIGN, "Design"),
+        (APPROVAL_WORKFLOWS, "Approval Workflows"),
         (EXTENSIBILITY, "Extensibility"),
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),

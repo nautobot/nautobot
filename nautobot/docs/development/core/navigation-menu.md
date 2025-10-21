@@ -20,8 +20,8 @@ This pattern works for modifying all objects in the tree. New items can be added
 menu_tabs = (
     NavMenuTab(
         name="Circuits",
-        weight=NavigationWeightChoices.CIRCUIT,
-        icon=NavigationIconChoices.CIRCUIT,
+        weight=NavigationWeightChoices.CIRCUITS,
+        icon=NavigationIconChoices.CIRCUITS,
         groups=(
             NavMenuGroup(
                 name="Example Circuit Group",

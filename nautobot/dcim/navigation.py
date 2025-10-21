@@ -117,8 +117,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        icon=NavigationIconChoices.DEVICE,
-        weight=NavigationWeightChoices.DEVICE,
+        icon=NavigationIconChoices.DEVICES,
+        weight=NavigationWeightChoices.DEVICES,
         groups=(
             NavMenuGroup(
                 name="Devices",

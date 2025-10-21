@@ -9,8 +9,8 @@ from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoi
 menu_items = (
     NavMenuTab(
         name="Approvals",
-        icon=NavigationIconChoices.APPROVAL_WORKFLOW,
-        weight=NavigationWeightChoices.APPROVAL_WORKFLOW,
+        icon=NavigationIconChoices.APPROVAL_WORKFLOWS,
+        weight=NavigationWeightChoices.APPROVAL_WORKFLOWS,
         groups=(
             NavMenuGroup(
                 name="Approval Workflows",
