@@ -417,6 +417,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=100,
+                table_title="Protected Prefixes",
                 table_class=PrefixTable,
                 table_filter="vpn_tunnel_endpoints",
                 section=SectionChoices.FULL_WIDTH,
@@ -425,6 +426,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=200,
+                table_title="Protected Prefixes from Dynamic Group",
                 table_class=DynamicGroupTable,
                 table_filter="vpn_tunnel_endpoints",
                 section=SectionChoices.FULL_WIDTH,
