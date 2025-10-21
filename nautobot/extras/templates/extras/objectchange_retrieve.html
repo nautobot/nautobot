@@ -84,12 +84,24 @@
                 <div class="card-header">
                     <strong>Difference</strong>
                     <div class="btn-group btn-group-xs float-end d-print-none">
-                        <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-secondary">
-                            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
-                        </a>
-                        <a {% if next_change %}href="{% url 'extras:objectchange' pk=next_change.pk %}"{% else %}disabled{% endif %} class="btn btn-secondary">
-                            Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
-                        </a>
+                        {% if prev_change %}
+                            <a href="{% url 'extras:objectchange' pk=prev_change.pk %}" class="btn btn-secondary">
+                                <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
+                            </a>
+                        {% else %}
+                            <a aria-disabled="true" class="btn btn-secondary disabled">
+                                <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
+                            </a>
+                        {% endif %}
+                        {% if next_change %}
+                            <a href="{% url 'extras:objectchange' pk=next_change.pk %}" class="btn btn-secondary">
+                                Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
+                            </a>
+                        {% else %}
+                            <a aria-disabled="true" class="btn btn-secondary disabled">
+                                Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="card-body">
