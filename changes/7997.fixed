@@ -1,1 +1,2 @@
 Added missing `class="dropdown-item"` to various dropdown menu items.
+Fixed rendering of Custom Links and Job Buttons in Bootstrap 5.
