@@ -4,12 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Virtualization",
-        icon="cloud-upload",
-        weight=400,
+        icon=NavigationIconChoices.VIRTUALIZATION,
+        weight=NavigationWeightChoices.VIRTUALIZATION,
         groups=(
             NavMenuGroup(
                 name="Virtual Machines",

@@ -132,3 +132,103 @@ class EChartsTypeTheme(ChoiceSet):
             UI_COLORS["gray-darker"]["dark"],
         ],
     }
+
+
+class NavigationIconChoices(ChoiceSet):
+    """Navigation icons for major Nautobot sections."""
+
+    DEVICES = "server"
+    IPAM = "sitemap-outline"
+    ORGANIZATION = "organization"
+    CIRCUITS = "cable-data"
+    VPN = "atom"
+    ROUTING = "route"
+    POWER = "battery-3"
+    WIRELESS = "wifi"
+    SECRETS = "secrets"
+    SECURITY = "security"
+    LOAD_BALANCERS = "arrow-decision"
+    VIRTUALIZATION = "cloud-upload"
+    CLOUD = "cloud"
+    DESIGN = "hammer"
+    APPROVAL_WORKFLOWS = "checkbox-circle"
+    EXTENSIBILITY = "extensibility"
+    GOLDEN_CONFIG = "sliders-vert-2"
+    JOBS = "share"
+    APPS = "elements"
+
+    CHOICES = (
+        (DEVICES, "Devices"),
+        (IPAM, "IPAM"),
+        (ORGANIZATION, "Organization"),
+        (CIRCUITS, "Circuits"),
+        (VPN, "VPN"),
+        (ROUTING, "Routing"),
+        (POWER, "Power"),
+        (WIRELESS, "Wireless"),
+        (SECRETS, "Secrets"),
+        (SECURITY, "Security"),
+        (LOAD_BALANCERS, "Load Balancers"),
+        (VIRTUALIZATION, "Virtualization"),
+        (CLOUD, "Cloud"),
+        (DESIGN, "Design"),
+        (APPROVAL_WORKFLOWS, "Approval Workflows"),
+        (EXTENSIBILITY, "Extensibility"),
+        (GOLDEN_CONFIG, "Golden Config"),
+        (JOBS, "Jobs"),
+        (APPS, "Apps"),
+    )
+
+
+class NavigationWeightChoices(ChoiceSet):
+    """Navigation weights for major Nautobot sections."""
+
+    # In general we are looking to:
+    # - Keep data models before the default weight of 1000
+    # - Leave a gap between the default location of 1000
+    # - Keep non-model items after the default weight of 1000
+    # - Keep key items of GC, Jobs, and Apps at the end for easy access
+    DEVICES = 100
+    IPAM = 200
+    ORGANIZATION = 300
+    CIRCUITS = 400
+    VPN = 450
+    ROUTING = 500
+    POWER = 550
+    WIRELESS = 600
+    SECRETS = 650
+    SECURITY = 700
+    LOAD_BALANCERS = 750
+    VIRTUALIZATION = 800
+    CLOUD = 850
+    # We leave a gap here to allow for future expansion and don't use 1000
+    # since it the default weight for NavMenuTab if none is specified.
+    DESIGN = 1100
+    APPROVAL_WORKFLOWS = 1200
+    EXTENSIBILITY = 1300
+    # look to keep these last few items at the end of the nav for easy access
+    GOLDEN_CONFIG = 2000
+    JOBS = 2100
+    APPS = 2200
+
+    CHOICES = (
+        (DEVICES, "Devices"),
+        (IPAM, "IPAM"),
+        (ORGANIZATION, "Organization"),
+        (CIRCUITS, "Circuits"),
+        (VPN, "VPN"),
+        (ROUTING, "Routing"),
+        (POWER, "Power"),
+        (WIRELESS, "Wireless"),
+        (SECRETS, "Secrets"),
+        (SECURITY, "Security"),
+        (VIRTUALIZATION, "Virtualization"),
+        (LOAD_BALANCERS, "Load Balancers"),
+        (CLOUD, "Cloud"),
+        (DESIGN, "Design"),
+        (APPROVAL_WORKFLOWS, "Approval Workflows"),
+        (EXTENSIBILITY, "Extensibility"),
+        (GOLDEN_CONFIG, "Golden Config"),
+        (JOBS, "Jobs"),
+        (APPS, "Apps"),
+    )

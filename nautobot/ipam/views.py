@@ -44,6 +44,7 @@ from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 
 from . import filters, forms, tables, ui
 from .models import (
@@ -419,6 +420,25 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 table_title="Assigned Cloud Networks",
                 exclude_columns=["actions", "assigned_prefix_count", "circuit_count", "cloud_service_count"],
                 related_field_name="cloud_networks",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                table_class=VPNTunnelEndpointTable,
+                table_attribute="vpn_tunnel_endpoints",
+                table_title="VPN Tunnel Endpoints",
+                exclude_columns=[
+                    "vpn_profile",
+                    "destination_ipaddress",
+                    "destination_fqdn",
+                    "protected_prefixes_dg_count",
+                    "protected_prefixes_count",
+                    "actions",
+                ],
+                related_field_name="vpn_tunnel_endpoints",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,

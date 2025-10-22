@@ -11,6 +11,7 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.extras import choices as extras_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
+from nautobot.vpn import choices as vpn_choices
 
 # List of 2-tuples of (model_path, choiceset)
 # Add new mappings here as other models are supported.
@@ -36,6 +37,7 @@ STATUS_CHOICESET_MAP = {
     "ipam.VRF": ipam_choices.VRFStatusChoices,
     "virtualization.VirtualMachine": vm_choices.VirtualMachineStatusChoices,
     "virtualization.VMInterface": vm_choices.VMInterfaceStatusChoices,
+    "vpn.VPNTunnel": vpn_choices.VPNTunnelStatusChoices,
 }
 
 
@@ -101,6 +103,7 @@ STATUS_DESCRIPTION_MAP = {
 # Add new mappings here as other models are supported.
 ROLE_CHOICESET_MAP = {
     "extras.ContactAssociation": extras_choices.ContactAssociationRoleChoices,
+    "vpn.VPNTunnelEndpoint": vpn_choices.VPNTunnelEndpointRoleChoices,
 }
 
 # Map of role name -> default hex_color used when importing color choices in `export_roles_from_choiceset()`.
@@ -110,6 +113,9 @@ ROLE_COLOR_MAP = {
     "Billing": ColorChoices.COLOR_GREEN,
     "Support": ColorChoices.COLOR_YELLOW,
     "On Site": ColorChoices.COLOR_BLACK,
+    "Hub": ColorChoices.COLOR_DARK_GREEN,
+    "Spoke": ColorChoices.COLOR_LIGHT_GREEN,
+    "Peer": ColorChoices.COLOR_ORANGE,
 }
 
 # Map of role name -> description used when importing role choices in `export_roles_from_choiceset()`.
@@ -118,6 +124,9 @@ ROLE_DESCRIPTION_MAP = {
     "Billing": "Unit plays a billing role",
     "Support": "Unit plays a support role",
     "On Site": "Unit plays an on site role",
+    "Hub": "Unit plays a Hub role",
+    "Spoke": "Unit plays a Spoke role",
+    "Peer": "Unit plays a Peer role",
 }
 
 

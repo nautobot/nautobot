@@ -91,6 +91,7 @@ from nautobot.ipam.tables import (
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -2920,29 +2921,52 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     ),
                 ),
             ),
-            DeviceNAPALMTab(
+            object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1200,
+                tab_id="vpn_endpoints",
+                label="VPN Endpoints",
+                url_name="dcim:device_vpnendpoints",
+                related_object_attribute="vpn_tunnel_endpoints",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="VPN Endpoints",
+                        table_class=VPNTunnelEndpointTable,
+                        table_attribute="vpn_tunnel_endpoints",
+                        related_field_name="device",
+                        select_related_fields=["source_interface", "role"],
+                        exclude_columns=["device"],
+                        tab_id="vpn_endpoints",
+                        enable_bulk_actions=True,
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
                 tab_id="status",
                 label="Status",
                 url_name="dcim:device_status",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             DeviceNAPALMTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
                 tab_id="lldp_neighbors",
                 label="LLDP Neighbors",
                 url_name="dcim:device_lldp_neighbors",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             DeviceNAPALMTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
                 tab_id="config",
                 label="Configuration",
                 url_name="dcim:device_config",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             object_detail.DistinctViewTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1600,
                 tab_id="config_context",
                 label="Config Context",
                 url_name="dcim:device_configcontext",
@@ -2968,6 +2992,16 @@ class DeviceUIViewSet(NautobotUIViewSet):
             extra_context["vc_members_table"] = vc_members_table
 
         return extra_context
+
+    @action(
+        detail=True,
+        url_path="vpn-endpoints",
+        url_name="vpnendpoints",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoint"],
+    )
+    def vpn_endpoints(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,

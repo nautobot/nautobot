@@ -12,7 +12,13 @@ from nautobot.core.ui.breadcrumbs import (
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
-from nautobot.core.ui.choices import EChartsTypeChoices, LayoutChoices, SectionChoices
+from nautobot.core.ui.choices import (
+    EChartsTypeChoices,
+    LayoutChoices,
+    NavigationIconChoices,
+    NavigationWeightChoices,
+    SectionChoices,
+)
 from nautobot.core.ui.echarts import (
     EChartsBase,
     queryset_to_nested_dict_keys_as_series,
@@ -90,6 +96,8 @@ __all__ = (
     "NavMenuImportButton",
     "NavMenuItem",
     "NavMenuTab",
+    "NavigationIconChoices",
+    "NavigationWeightChoices",
     "ObjectDetailContent",
     "ObjectFieldsPanel",
     "ObjectTextPanel",

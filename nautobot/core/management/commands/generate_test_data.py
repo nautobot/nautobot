@@ -133,6 +133,14 @@ class Command(BaseCommand):
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
             from nautobot.users.factory import UserFactory
+            from nautobot.vpn.factory import (
+                VPNFactory,
+                VPNPhase1PolicyFactory,
+                VPNPhase2PolicyFactory,
+                VPNProfileFactory,
+                VPNTunnelEndpointFactory,
+                VPNTunnelFactory,
+            )
             from nautobot.wireless.factory import (
                 ControllerManagedDeviceGroupWithMembersFactory,
                 RadioProfileFactory,
@@ -175,7 +183,7 @@ class Command(BaseCommand):
         _create_batch(SavedViewFactory, 20)
         _create_batch(ContactFactory, 20)
         _create_batch(TeamFactory, 20)
-        _create_batch(TenantGroupFactory, 20)
+        _create_batch(TenantGroupFactory, 30)
         _create_batch(TenantFactory, 30)
         _create_batch(LocationTypeFactory, 7)  # only 7 unique LocationTypes are hard-coded presently
         # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
@@ -220,7 +228,7 @@ class Command(BaseCommand):
         _create_batch(ConsoleServerPortTemplateFactory, 30)
         _create_batch(RearPortTemplateFactory, 30)
         _create_batch(FrontPortTemplateFactory, 30)
-        _create_batch(InterfaceTemplateFactory, 30)
+        _create_batch(InterfaceTemplateFactory, 50)
         _create_batch(PowerPortTemplateFactory, 30)
         _create_batch(PowerOutletTemplateFactory, 30)
         _create_batch(ModuleBayTemplateFactory, 60, description="without module families", has_module_family=False)
@@ -322,6 +330,12 @@ class Command(BaseCommand):
         _create_batch(WirelessNetworksWithMembersFactory, 5, description="with members")
         # make sure we have some supported data rates that have null relationships to make filter tests happy
         _create_batch(SupportedDataRateFactory, 10, description="without any associated objects")
+        _create_batch(VPNPhase1PolicyFactory, 10)
+        _create_batch(VPNPhase2PolicyFactory, 10)
+        _create_batch(VPNProfileFactory, 20)
+        _create_batch(VPNFactory, 10)
+        _create_batch(VPNTunnelEndpointFactory, 20)
+        _create_batch(VPNTunnelFactory, 10)
         _create_batch(JobQueueFactory, 10)
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")

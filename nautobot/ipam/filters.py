@@ -27,6 +27,7 @@ from nautobot.ipam import choices
 from nautobot.ipam.filter_mixins import PrefixFilter
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.models import VPNTunnelEndpoint
 
 from .models import (
     IPAddress,
@@ -288,6 +289,11 @@ class PrefixFilterSet(
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
+    )
+    vpn_tunnel_endpoints = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VPNTunnelEndpoint.objects.all(),
+        to_field_name="pk",
+        label="VPN Tunnel Endpoint ID",
     )
 
     class Meta:
