@@ -301,7 +301,7 @@ def get_table_class_string_from_view_name(view_name):
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:
-        instance (class): A model class instance
+        instance (Model): A model class instance
 
     Returns:
         (str, str): Usernames of the users that created the instance and last modified the instance.
