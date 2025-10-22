@@ -2564,6 +2564,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
 class ScheduledJobTest(
     APIViewTestCases.GetObjectViewTestCase,
     APIViewTestCases.ListObjectsViewTestCase,
+    APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = ScheduledJob
     choices_fields = []

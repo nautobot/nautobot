@@ -25,6 +25,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -1203,6 +1204,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     filterset_class = filters.GitRepositoryFilterSet
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
+    view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -1246,6 +1248,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         job_result = instance.get_latest_sync()
 
         context = {
+            **super().get_extra_context(request, instance),
             "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
@@ -1253,7 +1256,10 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             "verbose_name": instance._meta.verbose_name,
         }
 
-        return render(request, "extras/gitrepository_result.html", context)
+        return Response(
+            context,
+            template_name="extras/gitrepository_result.html",
+        )
 
     @action(
         detail=True,
@@ -1299,6 +1305,27 @@ class GraphQLQueryUIViewSet(
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Query",
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["name", "query", "variables"],
+                value_transforms={
+                    "query": [lambda val: format_html('<pre><code class="language-graphql">{}</code></pre>', val)],
+                    "variables": [lambda val: helpers.render_json(val, syntax_highlight=True, pretty_print=True)],
+                },
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=object_detail.SectionChoices.RIGHT_HALF,
+                body_content_template_path="extras/inc/graphqlquery_execute.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        )
+    )
 
 
 #
