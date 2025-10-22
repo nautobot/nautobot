@@ -1,0 +1,1 @@
+Changed the `DataCompliance` model to not be change-logged and to not support custom fields (as it's not a user-editable model) and updated migrations accordingly.

@@ -198,12 +198,6 @@ class Migration(migrations.Migration):
                         default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
                     ),
                 ),
-                ("created", models.DateTimeField(auto_now_add=True, null=True)),
-                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                (
-                    "_custom_field_data",
-                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
-                ),
                 ("compliance_class_name", models.CharField(max_length=255)),
                 ("last_validation_date", models.DateTimeField(auto_now=True)),
                 ("object_id", models.UUIDField(blank=False, null=False)),
@@ -216,7 +210,6 @@ class Migration(migrations.Migration):
                     "content_type",
                     models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="contenttypes.contenttype"),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name_plural": "Data Compliance",
