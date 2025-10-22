@@ -1,11 +1,13 @@
 """Menu items for the vpn models."""
 
 from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="VPN",
-        weight=250,
+        icon=NavigationIconChoices.VPN,
+        weight=NavigationWeightChoices.VPN,
         groups=(
             NavMenuGroup(
                 name="VPNs",
