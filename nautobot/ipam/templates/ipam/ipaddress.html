@@ -136,6 +136,20 @@
                     {% endif %}
                 </td>
             </tr>
+            <tr>
+                <td>VPN Endpoints</td>
+                <td>
+                    {% if object.vpn_tunnel_endpoints_src_ip.exists %}
+                        <ul class="list-unstyled">
+                            {% for endpoint in object.vpn_tunnel_endpoints_src_ip.all %}
+                                <li>{{ endpoint|hyperlinked_object }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <span class="text-secondary">None</span>
+                    {% endif %}
+                </td>
+            </tr>
         </table>
     </div>
 {% endblock content_right_page %}

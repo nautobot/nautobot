@@ -47,6 +47,7 @@ urlpatterns = [
     path("user/", include("nautobot.users.urls")),
     path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
+    path("vpn/", include("nautobot.vpn.urls")),
     path("wireless/", include("nautobot.wireless.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),

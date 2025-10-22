@@ -3594,6 +3594,7 @@ class DeviceTypeToSoftwareImageFileTestCase(
 
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
+    choices_fields = ("capabilities",)
 
     def get_deletable_object(self):
         # This method is used in `test_recreate_object_csv`,
@@ -3653,6 +3654,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+    choices_fields = ("capabilities",)
 
     def get_deletable_object(self):
         # This method is used in `test_recreate_object_csv`,
