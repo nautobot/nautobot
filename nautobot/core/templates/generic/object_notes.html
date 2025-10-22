@@ -5,8 +5,8 @@
 {% block content %}
     {% if perms.extras.add_note %}
         <form action="{% url 'extras:note_add' %}?return_url={{ request.path }}?tab=notes" method="post" enctype="multipart/form-data">
-            <div class="row">
-                <div class="col-md-6 offset-md-3">
+            <div class="row justify-content-center">
+                <div class="col-md-10 col-lg-8">
                     <h3 class="mb-16">Add a new note</h3>
                     <div class="card">
                         <div class="card-header">
@@ -18,7 +18,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 offset-md-3 gap-8 hstack justify-content-end mb-16">
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-md-10 col-lg-8 gap-8 hstack justify-content-end mb-16">
                     <button id="createNote" type="submit" class="btn btn-primary">
                         <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
                         -->Create

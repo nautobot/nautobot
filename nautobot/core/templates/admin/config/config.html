@@ -13,8 +13,8 @@
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}
-        <div class="row">
-            <div class="col-lg-6 offset-lg-3">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
                 {% if form.non_field_errors %}
                     <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body"><strong>Errors</strong></div>
@@ -59,14 +59,14 @@
                                                 </div>
                                                 {{ item.form_field.as_hidden }}
                                             {% else %}
-                                                <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
-                                                    <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
+                                                <div class="mb-10 d-md-flex align-content-start justify-content-between{% if item.form_field.errors %} has-error{% endif %}">
+                                                    <label class="col-12 col-md-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                         {{ name | split:"_" | join:" " }}
-                                                        <span class="form-text">
+                                                        <span class="form-text ps-2">
                                                             (default: <code>{{ item.default }}</code>)
                                                         </span>
                                                     </label>
-                                                    <div class="col-lg-9">
+                                                    <div class="col-12 col-md-9">
                                                         {{ item.form_field.errors }}
                                                         {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                         {{ item.form_field }}
@@ -89,14 +89,14 @@
                                             </div>
                                             {{ item.form_field.as_hidden }}
                                         {% else %}
-                                            <div class="mb-10 d-flex justify-content-center{% if item.form_field.errors %} has-error{% endif %}">
-                                                <label class="col-lg-3 col-form-label" for="{{ item.form_field.id_for_label }}">
+                                            <div class="mb-10 d-md-flex align-content-start justify-content-between{% if item.form_field.errors %} has-error{% endif %}">
+                                                <label class="col-12 col-md-3 d-flex d-md-block col-form-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ item.name | split:"_" | join:" " }}
-                                                    <span class="form-text">
+                                                    <span class="form-text ps-2">
                                                         (default: <code>{{ item.default }}</code>)
                                                     </span>
                                                 </label>
-                                                <div class="col-lg-9">
+                                                <div class="col-12 col-md-9">
                                                     {{ item.form_field.errors }}
                                                     {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                     {{ item.form_field }}
@@ -112,8 +112,8 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-6 offset-lg-3 text-end">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-end">
                 <input type="submit" name="_save" class="btn btn-primary" value="{% trans 'Save' %}"/>
             </div>
         </div>
