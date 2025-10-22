@@ -8,9 +8,9 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.ipam.models import Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.vpn import choices, models
 
@@ -163,21 +163,19 @@ class VPNTunnelFactory(PrimaryModelFactory):
 class VPNTunnelEndpointFactory(PrimaryModelFactory):
     class Meta:
         model = models.VPNTunnelEndpoint
-        exclude = ("has_device", "has_profile", "has_role", "has_tenant")
+        exclude = ("has_source_interface", "has_profile", "has_role", "has_tenant")
 
-    has_device = NautobotBoolIterator()
-    device = factory.Maybe("has_device", random_instance(Device), None)
+    has_source_interface = NautobotBoolIterator()
     source_interface = factory.Maybe(
-        "has_device",
+        "has_source_interface",
         random_instance(
             lambda: Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True, device__isnull=False)
         ),
         None,
     )
-    source_ipaddress = factory.Maybe("has_device", random_instance(IPAddress), None)
-    source_fqdn = factory.Maybe("has_device", "", factory.Faker("word"))
+    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("word"))
     tunnel_interface = factory.Maybe(
-        "has_device",
+        "has_source_interface",
         random_instance(lambda: Interface.objects.filter(type="tunnel", vpn_tunnel_endpoints_tunnel__isnull=True)),
         None,
     )

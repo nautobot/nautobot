@@ -500,8 +500,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             if self.source_interface.parent:
                 parent_intf = f"{self.source_interface.parent.name} {self.source_interface.name}"
             else:
-                # Interface on a module that isn't installed in a device at present
-                parent_intf = f"{self.source_interface.module} {self.source_interface.name}"
+                parent_intf = f"{self.source_interface.module.device.name} {self.source_interface.name}"
             if self.source_ipaddress:
                 return f"{parent_intf} ({self.source_ipaddress.address})"
             return parent_intf
@@ -516,12 +515,22 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             raise ValidationError("Source IP Address and Source FQDN are mutually exclusive fields. Select only one.")
         if not any([self.source_interface, self.source_ipaddress, self.source_fqdn]):
             raise ValidationError("Source Interface or Source IP Address or Source FQDN Is required.")
-        if self.source_interface and not self.source_interface.device:
+        if (
+            self.source_interface
+            and not self.source_interface.parent
+            and (not hasattr(self.source_interface.module, "device") or not self.source_interface.module.device)
+        ):
             raise ValidationError("Source Interface must belong to a device.")
+        if (
+            self.source_ipaddress
+            and self.source_interface
+            and (self.source_ipaddress not in self.source_interface.ip_addresses.all())
+        ):
+            raise ValidationError("Source IP address must be assigned to Source Interface.")
         return super().clean()
 
     def save(self, *args, **kwargs):
-        if self.source_interface and not self.device:
-            self.device = self.source_interface.device
+        if self.source_interface:
+            self.device = self.source_interface.parent or self.source_interface.module.device
         self.name = self._name()
         super().save(*args, **kwargs)

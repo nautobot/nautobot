@@ -266,14 +266,12 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         interfaces = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True)
 
         cls.form_data = {
-            "device": interfaces.first().device.pk,
             "source_interface": interfaces.first().pk,
             "vpn_profile": models.VPNProfile.objects.first().pk,
             "protected_prefixes": [Prefix.objects.first().pk],
         }
 
         cls.update_data = {
-            "device": interfaces.last().device.pk,
             "source_interface": interfaces.last().pk,
             "protected_prefixes": [Prefix.objects.last().pk],
         }

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 from nautobot.apps.testing import ModelTestCases
 from nautobot.dcim.models import Interface
+from nautobot.ipam.models import IPAddress
 from nautobot.vpn import models
 
 
@@ -64,17 +65,42 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
 
     model = models.VPNTunnelEndpoint
 
+    def test_clean(self):
+        """Test model constraints."""
+        with self.subTest("Test source_ipaddress conflicts with source_fqdn"):
+            endpoint = models.VPNTunnelEndpoint(source_ipaddress=IPAddress.objects.first(), source_fqdn="cloud.com")
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
+        with self.subTest("Test at least one required field is missing"):
+            endpoint = models.VPNTunnelEndpoint()
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
+        with self.subTest("Test Interface without device or device module"):
+            endpoint = models.VPNTunnelEndpoint(
+                source_interface=Interface(name="Ethernet"),
+            )
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
+        with self.subTest("Test source_ipaddress is assigned to source_interface"):
+            endpoint = models.VPNTunnelEndpoint(
+                source_interface=Interface.objects.filter(device__isnull=False).first(),
+                source_ipaddress=IPAddress.objects.filter(interfaces__isnull=True).first(),
+            )
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
     def test_name(self):
         """Test dynamic name property."""
-        with self.subTest("Test name contains interface name and device name."):
-            endpoint = models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=False).first()
-            self.assertIn(endpoint.source_interface.name, endpoint.name)
-            self.assertIn(endpoint.source_interface.device.name, endpoint.name)
+        endpoint = models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=False).first()
+        ip = IPAddress.objects.filter(interface_assignments__isnull=True).last()
+        ip.interfaces.add(endpoint.source_interface)
+        endpoint.source_ipaddress = ip
+        endpoint.save()
 
         with self.subTest("Test name contains interface name, device name and IP address."):
-            endpoint = models.VPNTunnelEndpoint.objects.filter(
-                source_interface__isnull=False, source_ipaddress__isnull=False
-            ).first()
             self.assertIn(endpoint.source_interface.name, endpoint.name)
             self.assertIn(endpoint.source_interface.device.name, endpoint.name)
             self.assertIn(endpoint.source_ipaddress.host, endpoint.name)
@@ -87,7 +113,7 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
 
     def test_save(self):
         """Test save adds dynamic fields."""
-        interface = Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True).first()
+        interface = Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True, device__isnull=False).first()
         new_endpoint = models.VPNTunnelEndpoint.objects.create(source_interface=interface)
 
         with self.subTest("Test device field is saved"):
