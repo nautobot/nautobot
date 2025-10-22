@@ -78,7 +78,7 @@ def qs_filter_from_constraints(constraints, tokens=None):
         tokens (dict, optional): user tokens. Defaults to a None.
 
     Returns:
-        QuerySet object: A QuerySet of tuples or, an empty QuerySet if constraints are null.
+        (QuerySet): A QuerySet of tuples or, an empty QuerySet if constraints are null.
     """
     if tokens is None:
         tokens = {}

@@ -301,11 +301,10 @@ def get_table_class_string_from_view_name(view_name):
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:
-        instance: A model class instance
+        instance (class): A model class instance
 
     Returns:
-        created_by: Username of the user that created the instance
-        last_updated_by: Username of the user that last modified the instance
+        (str, str): Usernames of the users that created the instance and last modified the instance.
     """
     from nautobot.extras.choices import ObjectChangeActionChoices
     from nautobot.extras.models import ObjectChange
