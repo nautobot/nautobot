@@ -733,7 +733,14 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             if obj.group_type == "dynamic-filter":
                 return obj.filter
-            return helpers.HTML_NONE
+            return super().get_value(context)
+
+        def render_body_content(self, context):
+            """Return placeholder directly to avoid JSON encoding of safe HTML for non-dynamic groups."""
+            obj = get_obj_from_context(context)
+            if obj and obj.group_type != "dynamic-filter":
+                return helpers.HTML_NONE
+            return super().render_body_content(context)
 
     class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
         def get_value(self, context):
