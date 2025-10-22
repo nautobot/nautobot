@@ -2313,7 +2313,7 @@ class JobResultUIViewSet(
         object_detail.ObjectFieldsPanel(
             label="Worker",
             section=SectionChoices.RIGHT_HALF,
-            weight=100,
+            weight=110,
             fields=[
                 "worker",
                 "queue",
