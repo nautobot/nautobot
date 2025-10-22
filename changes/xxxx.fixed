@@ -1,0 +1,1 @@
+Fixed `d-none` being overridden by responsive display utility classes (e.g. `d-md-flex`), causing elements meant to be hidden to remain visible.

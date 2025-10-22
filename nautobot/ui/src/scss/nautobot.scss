@@ -2464,3 +2464,8 @@ pre code.hljs {
 .nb-lg-max-width {
   max-width: 960px;
 }
+
+/* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
+.d-none {
+  display: none !important;
+}
