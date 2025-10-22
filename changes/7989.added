@@ -1,0 +1,2 @@
+Implemented a centralized system for managing icons and weights in the navigation bar.
+Added tests to ensure the navbar is is properly configured.

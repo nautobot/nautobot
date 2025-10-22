@@ -4,12 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="IPAM",
-        icon="sitemap-outline",
-        weight=300,
+        icon=NavigationIconChoices.IPAM,
+        weight=NavigationWeightChoices.IPAM,
         groups=(
             NavMenuGroup(
                 name="IP Addresses",
