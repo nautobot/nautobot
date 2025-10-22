@@ -25,6 +25,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -1144,6 +1145,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     filterset_class = filters.GitRepositoryFilterSet
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
+    view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -1187,6 +1189,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         job_result = instance.get_latest_sync()
 
         context = {
+            **super().get_extra_context(request, instance),
             "result": job_result or {},
             "base_template": "extras/gitrepository.html",
             "object": instance,
@@ -1194,7 +1197,10 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             "verbose_name": instance._meta.verbose_name,
         }
 
-        return render(request, "extras/gitrepository_result.html", context)
+        return Response(
+            context,
+            template_name="extras/gitrepository_result.html",
+        )
 
     @action(
         detail=True,
