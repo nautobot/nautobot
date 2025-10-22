@@ -3,7 +3,7 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.apps.testing import ModelTestCases
-from nautobot.dcim.models import Interface
+from nautobot.dcim.models import Interface, Module
 from nautobot.ipam.models import IPAddress
 from nautobot.vpn import models
 
@@ -77,9 +77,12 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             with self.assertRaises(ValidationError):
                 endpoint.clean()
 
-        with self.subTest("Test Interface without device or device module"):
+        with self.subTest("Test Interface without device."):
             endpoint = models.VPNTunnelEndpoint(
-                source_interface=Interface(name="Ethernet"),
+                source_interface=Interface(
+                    name="Ethernet",
+                    module=Module(),
+                ),
             )
             with self.assertRaises(ValidationError):
                 endpoint.clean()
