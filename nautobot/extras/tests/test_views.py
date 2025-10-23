@@ -3903,9 +3903,6 @@ class ApprovalQueueTestCase(
     # Many interactions with a ScheduledJob also require permissions to view the associated Job
     user_permissions = ("extras.view_job",)
 
-    def get_list_view(self):
-        return ScheduledJobApprovalQueueListView
-
     def _get_url(self, action, instance=None):
         if action == "list":
             return reverse("extras:scheduledjob_approval_queue_list")
