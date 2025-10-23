@@ -440,8 +440,10 @@ def clean_compliance_rules_results_for_instance(instance, excluded_pks):
 class RunRegisteredDataComplianceRules(Job):
     """Run the validate function on all registered DataComplianceRule classes and, optionally, the built-in data validation rules."""
 
-    name = "Run Registered Data Compliance Rules"
-    description = "Runs selected Data Compliance rule classes."
+    class Meta:
+        name = "Run Registered Data Compliance Rules"
+        description = "Runs selected Data Compliance rule classes."
+        has_sensitive_variables = False
 
     selected_data_compliance_rules = MultiChoiceVar(
         choices=get_data_compliance_choices,

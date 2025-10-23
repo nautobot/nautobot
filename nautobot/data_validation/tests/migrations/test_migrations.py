@@ -210,7 +210,26 @@ CREATE TABLE `nautobot_data_validation_engine_uniquevalidationrule` (
 
 def _populate_tables_postgresql(ContentType, DeviceType, VLAN):
     with connection.cursor() as cursor:
-        # TODO: datacompliance
+        cursor.execute(
+            """\
+INSERT INTO nautobot_data_validation_engine_datacompliance
+VALUES (
+  'f20e4572-84cf-4f28-9fe6-5f0f96f78d14',
+  '2025-10-21 16:07:55.123456+00',
+  '2025-10-21 16:07:55.123456+00',
+  '{}',
+  'DcimDevicetypeCustomValidator',
+  '2025-10-21 16:07:55.123456+00',
+  '96591cd4-c4d1-4d69-982d-195bcea71a2c',
+  'Juniper SRX300',
+  'part_number',
+  '',
+  'f',
+  'A device type may only contain alpha numeric, dashes, and underscore characters.',
+  %s
+);""",
+            [ContentType.objects.get_for_model(DeviceType).id],
+        )
 
         # Min/max validation rules
         cursor.execute(
@@ -269,7 +288,26 @@ VALUES (
 
 def _populate_tables_mysql(ContentType, DeviceType, VLAN):
     with connection.cursor() as cursor:
-        # TODO: datacompliance
+        cursor.execute(
+            """\
+INSERT INTO `nautobot_data_validation_engine_datacompliance`
+VALUES (
+  'f20e457284cf4f289fe65f0f96f78d14',
+  '2025-10-21 16:07:55.123456',
+  '2025-10-21 16:07:55.123456',
+  '{}',
+  'DcimDevicetypeCustomValidator',
+  '2025-10-21 16:07:55.123456',
+  '96591cd4c4d14d69982d195bcea71a2c',
+  'Juniper SRX300',
+  'part_number',
+  '',
+  0,
+  'A device type may only contain alpha numeric, dashes, and underscore characters.',
+  %s
+);""",
+            [ContentType.objects.get_for_model(DeviceType).id],
+        )
 
         # Min/max validation rules
         cursor.execute(
@@ -366,7 +404,7 @@ class DVEToDataValidationMigrationTestCase(MigratorTestCase):
         UniqueValidationRule = self.new_state.apps.get_model("data_validation", "uniquevalidationrule")
 
         with self.subTest("DataCompliance"):
-            self.assertEqual(DataCompliance.objects.count(), 0)
+            self.assertEqual(DataCompliance.objects.count(), 1)
 
         with self.subTest("MinMaxValidationRule"):
             self.assertEqual(MinMaxValidationRule.objects.count(), 1)
@@ -396,6 +434,48 @@ class DataValidationToDVEMigrationTestCase(MigratorTestCase):
             _create_tables_mysql()
         else:
             raise ValueError(f"Unknown/unsupported database vendor {connection.vendor}")
+
+        ContentType = self.old_state.apps.get_model("contenttypes", "contenttype")
+        DeviceType = self.old_state.apps.get_model("dcim", "devicetype")
+        VLAN = self.old_state.apps.get_model("ipam", "vlan")
+
+        DataCompliance = self.old_state.apps.get_model("data_validation", "datacompliance")
+        MinMaxValidationRule = self.old_state.apps.get_model("data_validation", "minmaxvalidationrule")
+        RegularExpressionValidationRule = self.old_state.apps.get_model(
+            "data_validation", "regularexpressionvalidationrule"
+        )
+
+        DataCompliance.objects.create(
+            compliance_class_name="DcimDevicetypeCustomValidator",
+            object_id="96591cd4-c4d1-4d69-982d-195bcea71a2c",
+            validated_object_str="Juniper SRX300",
+            validated_attribute="part_number",
+            validated_attribute_value="",
+            valid=False,
+            message="A device type may only contain alpha numeric, dashes, and underscore characters.",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+        )
+        MinMaxValidationRule.objects.create(
+            name="Max VLAN ID",
+            enabled=False,
+            error_message="",
+            field="vid",
+            min=None,
+            max=3999,
+            content_type=ContentType.objects.get_for_model(VLAN),
+        )
+        RegularExpressionValidationRule.objects.create(
+            name="Device Type Part Number",
+            enabled=True,
+            error_message="A device type may only contain alpha numeric, dashes, and underscore characters.",
+            field="part_number",
+            regular_expression="^[a-zA-Z0-9_-]+$",
+            content_type=ContentType.objects.get_for_model(DeviceType),
+            context_processing=False,
+        )
+
+        # TODO: requiredvalidationrule
+        # TODO: uniquevalidationrule
 
     def tearDown(self):
         super().tearDown()
