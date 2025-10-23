@@ -6,8 +6,8 @@
 {% block content %}
     <form action="" method="post" class="h-100 vstack">
         {% csrf_token %}
-        <div class="row align-content-start flex-fill">
-            <div class="col-xl-8 offset-xl-2 col-lg-10 offset-lg-1">
+        <div class="row justify-content-center align-content-start flex-fill">
+            <div class="col-xl-8 col-lg-10">
                 {% if form.non_field_errors %}
                     <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body">

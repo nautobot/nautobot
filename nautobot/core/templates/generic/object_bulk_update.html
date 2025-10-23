@@ -14,7 +14,7 @@
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row align-content-start flex-fill">
+        <div class="row justify-content-center align-content-start flex-fill">
             {% if form.errors %}
                 <div class="card border-danger">
                     <div class="card-header bg-danger-subtle border-danger text-body">
@@ -39,7 +39,7 @@
                     </div>
                 </div>
             {% endif %}
-            <div class="{% if table %}col-lg-4{% else %}col-lg-8 offset-lg-2 col-md-10 offset-md-1{% endif %}">
+            <div class="{% if table %}col-lg-4{% else %}col-lg-8 col-md-12{% endif %}">
                 <div class="card">
                     <div class="card-header"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                     <div class="card-body">
