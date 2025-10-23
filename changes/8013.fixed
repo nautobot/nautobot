@@ -1,0 +1,2 @@
+Fixed `d-none` being overridden by responsive display utility classes (e.g. `d-md-flex`), causing elements meant to be hidden to remain visible.
+Added the `required` attribute to input fields(schedule_name, schedule_start_time and recurrence_custom_time) when visible and applied the `nb-required` class to their corresponding labels.
