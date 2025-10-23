@@ -146,13 +146,32 @@
 
                     // Toggle schedule name and schedule time field rows.
                     ['#id__schedule_name', '#id__schedule_start_time'].forEach((selector) => {
-                        const row = document.querySelector(selector).parentElement.parentElement;
+                        const input = document.querySelector(selector);
+                        const row = input?.parentElement.parentElement;
                         row.classList.toggle('d-none', immediately);
+                        const label = row.querySelector('label');
+
+                        if (label) {
+                            label.classList.add('nb-required');
+                            if(!immediately) {
+                                input.setAttribute("required", immediately);
+                            }
+                        }
                     });
 
                     // Toggle custom crontab field row.
-                    const row = document.querySelector('#id__recurrence_custom_time').parentElement.parentElement;
+                    input = document.querySelector('#id__recurrence_custom_time')
+                    const row = input.parentElement.parentElement;
                     row.classList.toggle('d-none', !custom);
+                    const label = row.querySelector('label');
+
+                    if (label) {
+                        label.classList.add('nb-required');
+                        if(custom) {
+                            input.setAttribute("required", custom);
+                        }
+                    }
+
                 };
 
                 {% if job_model.has_sensitive_variables %}
