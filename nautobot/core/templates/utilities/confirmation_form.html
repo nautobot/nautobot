@@ -3,7 +3,7 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6 mx-auto">
+        <div class="col-md-8 col-lg-6 mx-auto nb-lg-max-width">
             <form action="" method="post">
                 {% csrf_token %}
                 {% for field in form.hidden_fields %}
@@ -14,7 +14,7 @@
                         {% block title %}{% endblock %}
                     </div>
                     <div class="card-body">
-                        {% block message %}<p>Are you sure?</p>{% endblock %}
+                        <div class="mb-16">{% block message %}<p>Are you sure?</p>{% endblock %}</div>
                         <div class="gap-8 hstack justify-content-end">
                             <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:'danger' }}">
                                 <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
