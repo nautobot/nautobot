@@ -162,6 +162,13 @@ Example:
 
 Above is a short summary for the positioning and layout changes in Bootstrap v5.x, see more details in the Bootstrap v5.x documentation about [columns](https://getbootstrap.com/docs/5.3/layout/columns/), [float](https://getbootstrap.com/docs/5.3/utilities/float/), and [position](https://getbootstrap.com/docs/5.3/utilities/position/).
 
+#### Grid - best practices
+
+ - Use `col-lg-*` instead of `col-md-*` to have better support for narrow view ports. On larger screens it will fill page with defined size, but below `lg` it will fill the 100% width.
+ - You can use `nb-lg-max-width` to limit the max width to the size of `lg` viewport. Then you don't need to specify `col-xl-*` or `col-xxl-*` sizes to limit the width on 4k or wide screens.
+ - For non-full-width boxes like error information, some confirmation site, that should be in "modal" format please use fine-grained col sizes. For example `col-sm-12 col-md-9 col-lg-7` along with `nb-lg-max-width`.
+ - Use `justify-content-center` class on the `<div class="row">` container, instead of specifying `offset-lg-*` to center the columns. This may lead to centering issues or overflowing columns when offset is miscalculated or set to the different viewport than `col-*-*` definition.
+
 ### Responsive utilities
 
 Bootstrap v3.4.1 shipped with [Responsive utilities](https://getbootstrap.com/docs/3.4/css/#responsive-utilities) which provided simple mechanisms to display and hide elements on various screen sizes and for print. Bootstrap v5.x takes this idea a step further and delivers media breakpoints for **all** [Helpers and Utilities](#helper-classes-helpers-and-utilities), no longer constraining responsive utility classes to an arbitrary set.
