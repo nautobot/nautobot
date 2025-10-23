@@ -56,7 +56,7 @@
                 {% export_button content_type list_element=True %}
             </ul>
         </div>
-        <div class="btn-group">
+        <div class="dropdown d-inline-flex">
             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 Actions
             </button>
@@ -469,6 +469,15 @@
                                 <button type="button" class="btn btn-warning disabled">Warning</button>
                                 <button type="button" class="btn btn-danger disabled">Danger</button>
                                 <button type="button" class="btn btn-link disabled">Link</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>btn-group</code> like radio buttons</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-primary bg-primary nb-text-body-bg">Current Active Option</button>
+                                    <button type="button" class="btn btn-primary">Alternative Option</button>
+                                </div>
                             </td>
                         </tr>
                     </table>
