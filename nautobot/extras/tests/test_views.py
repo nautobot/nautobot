@@ -89,7 +89,6 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.extras.views import ScheduledJobApprovalQueueListView
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -2341,9 +2340,6 @@ class ApprovalQueueTestCase(
     model = ScheduledJob
     # Many interactions with a ScheduledJob also require permissions to view the associated Job
     user_permissions = ("extras.view_job",)
-
-    def get_list_view(self):
-        return ScheduledJobApprovalQueueListView
 
     def _get_url(self, action, instance=None):
         if action == "list":
