@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
@@ -233,6 +235,32 @@ class ChangeLogViewTest(ModelViewTestCase):
             resp = self.client.get(oc_with_object_data_v2.get_absolute_url())
             self.assertContains(resp, escape('"description": "changed description2"'))
             self.assertContains(resp, escape('"description": "changed description3"'))
+
+    def test_objectchange_skips_add_conditional_prefetch(self):
+        """
+        Test that ObjectChange.objects.all() skips prefetch_related on ContentTypes without a model class.
+        """
+        self.add_permissions("extras.view_objectchange")
+
+        ct = ContentType.objects.create(app_label="nonexistent_app", model="nonexistentmodel")
+        oc = ObjectChange.objects.create(
+            changed_object_type=ct,
+            changed_object_id=1,
+            object_repr="nonexistentobject",
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            user=self.user,
+            object_data={},
+            request_id=uuid.uuid4(),
+        )
+        url = reverse("extras:objectchange_list")
+        with self.assertLogs(level="WARNING") as cm:
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, oc.object_repr)
+            self.assertIn(
+                ("One or more ContentType entries in the database are invalid."),
+                cm.output[0],
+            )
 
 
 class ChangeLogAPITest(APITestCase):
