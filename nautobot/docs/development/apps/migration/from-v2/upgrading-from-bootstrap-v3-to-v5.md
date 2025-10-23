@@ -164,10 +164,10 @@ Above is a short summary for the positioning and layout changes in Bootstrap v5.
 
 #### Grid - best practices
 
- - Use `col-lg-*` instead of `col-md-*` to have better support for narrow view ports. On larger screens it will fill page with defined size, but below `lg` it will fill the 100% width.
- - You can use `nb-lg-max-width` to limit the max width to the size of `lg` viewport. Then you don't need to specify `col-xl-*` or `col-xxl-*` sizes to limit the width on 4k or wide screens.
- - For non-full-width boxes like error information, some confirmation site, that should be in "modal" format please use fine-grained col sizes. For example `col-sm-12 col-md-9 col-lg-7` along with `nb-lg-max-width`.
- - Use `justify-content-center` class on the `<div class="row">` container, instead of specifying `offset-lg-*` to center the columns. This may lead to centering issues or overflowing columns when offset is miscalculated or set to the different viewport than `col-*-*` definition.
+- Use `col-lg-*` instead of `col-md-*` to have better support for narrow view ports. On larger screens it will fill page with defined size, but below `lg` it will fill the 100% width.
+- You can use `nb-lg-max-width` to limit the max width to the size of `lg` viewport. Then you don't need to specify `col-xl-*` or `col-xxl-*` sizes to limit the width on 4k or wide screens.
+- For non-full-width boxes like error information, some confirmation site, that should be in "modal" format please use fine-grained col sizes. For example `col-sm-12 col-md-9 col-lg-7` along with `nb-lg-max-width`.
+- Use `justify-content-center` class on the `<div class="row">` container, instead of specifying `offset-lg-*` to center the columns. This may lead to centering issues or overflowing columns when offset is miscalculated or set to the different viewport than `col-*-*` definition.
 
 ### Responsive utilities
 
