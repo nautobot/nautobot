@@ -28,10 +28,12 @@
            class="btn btn-primary{% if display == 'list' %} bg-primary nb-text-body-bg{% endif %}">
             <span class="mdi mdi-view-sequential" aria-hidden="true"></span> List
         </a>
+        {# djlint:off B123 #}
         <a href="{% django_querystring display='tiles' %}"
            class="btn btn-primary{% if display == 'tiles' %} bg-primary nb-text-body-bg{% endif %}">
             <span class="mdi mdi-view-grid" aria-hidden="true"></span> Tiles
         </a>
+        {# djlint:on B123 #}
     </div>
 
     <button
