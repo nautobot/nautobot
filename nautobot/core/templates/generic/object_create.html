@@ -2,6 +2,8 @@
 {% load form_helpers %}
 {% load helpers %}
 
+{% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
+
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
@@ -10,18 +12,15 @@
         {% endfor %}
         <div class="row align-content-start flex-fill">
             <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 mb-10">
-                <h3>
-                    {% if obj %}
-                        {% with obj|get_docs_url as docs_url %}
-                            {% if docs_url %}
-                                <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm float-end" title="Help">
-                                    <span aria-hidden="true" class="mdi mdi-help-circle"></span>
-                                </a>
-                            {% endif %}
-                        {% endwith %}
-                    {% endif %}
-                    {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
-                </h3>
+                {% if obj %}
+                    {% with obj|get_docs_url as docs_url %}
+                        {% if docs_url %}
+                            <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm float-end" title="Help">
+                                <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                            </a>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
             </div>
             <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
                 {% block tabs %}{% endblock %}
