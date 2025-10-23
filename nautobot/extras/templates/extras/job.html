@@ -151,11 +151,11 @@
                         row.classList.toggle('d-none', immediately);
                         const label = row.querySelector('label');
 
-                        if (label) {
-                            label.classList.add('nb-required');
-                            if(!immediately) {
-                                input.setAttribute("required", immediately);
-                            }
+                        label?.classList.toggle('nb-required', !immediately);
+                        if (immediately) {
+                            input.removeAttribute('required');
+                        } else {
+                            input.setAttribute('required', '');
                         }
                     });
 
@@ -165,11 +165,11 @@
                     row.classList.toggle('d-none', !custom);
                     const label = row.querySelector('label');
 
-                    if (label) {
-                        label.classList.add('nb-required');
-                        if(custom) {
-                            input.setAttribute("required", custom);
-                        }
+                    label?.classList.toggle('nb-required', custom);
+                    if (!custom) {
+                        input.removeAttribute('required');
+                    } else {
+                        input.setAttribute('required', '');
                     }
 
                 };
