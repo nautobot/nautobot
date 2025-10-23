@@ -628,8 +628,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
     # Wire up the JobButton for Dynamic Group member refresh
     JobButton = apps.get_model("extras", "JobButton")
-    ContentType = apps.get_model("contenttypes", "ContentType")
-    DynamicGroup = apps.get_model("extras", "DynamicGroup")
+    ContentType = apps.get_model("contenttypes", "ContentType")  # pylint: disable=redefined-outer-name
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")  # pylint: disable=redefined-outer-name
 
     dg_job_button, _ = JobButton.objects.get_or_create(
         name="Refresh Dynamic Group Members Cache",

@@ -66,4 +66,3 @@ class RefreshDynamicGroupCacheJobButtonReceiver(JobButtonReceiver):
             )
             obj.update_cached_members()
             self.logger.success("Cache refreshed successfully, now with %d members", obj.count, extra={"object": obj})
-            return obj.count
