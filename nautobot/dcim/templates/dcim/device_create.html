@@ -20,17 +20,11 @@
             {% render_field form.rack_group %}
             {% render_field form.rack %}
             {% if obj.device_type.is_child_device and obj.parent_bay %}
-                <div class="mb-10 d-flex justify-content-center">
-                    <label class="col-lg-3 col-form-label">Parent device</label>
-                    <div class="col-lg-9">
-                        <p class="form-control-plaintext">
-                            {{ obj.parent_bay.device|hyperlinked_object }}
-                        </p>
-                    </div>
-                </div>
-                <div class="mb-10 d-flex justify-content-center">
-                    <label class="col-lg-3 col-form-label">Parent bay</label>
-                    <div class="col-lg-9">
+                {% include "inc/form_static_field.html" with label="Parent device" value=obj.parent_bay.device|hyperlinked_object %}
+                {# inc/form_static_field.html copied below due to non standard "value" #}
+                <div class="mb-10 d-md-flex">
+                    <label class="col-md-3 col-form-label">Parent bay</label>
+                    <div class="col-md-9">
                         <p class="form-control-plaintext">
                             {{ obj.parent_bay.name }}
                             {% if perms.dcim.change_devicebay %}

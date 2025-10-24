@@ -10,24 +10,9 @@
             <div class="card-body">
                 {% render_field form.action %}
                 {% render_field form.location %}
-                <div class="mb-10 d-flex justify-content-center">
-                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Name"</label>
-                    <div class="col-lg-9">
-                        <p class="form-control-plaintext">{{ obj.contact_name | placeholder}}</p>
-                    </div>
-                </div>
-                <div class="mb-10 d-flex justify-content-center">
-                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Phone"</label>
-                    <div class="col-lg-9">
-                        <p class="form-control-plaintext">{{ obj.contact_phone | placeholder}}</p>
-                    </div>
-                </div>
-                <div class="mb-10 d-flex justify-content-center">
-                    <label class="col-lg-3 col-form-label nb-required">Source Location "Contact Email"</label>
-                    <div class="col-lg-9">
-                        <p class="form-control-plaintext">{{ obj.contact_email | placeholder}}</p>
-                    </div>
-                </div>
+                {% include "inc/form_static_field.html" with label='Source Location "Contact Name"' value=obj.contact_name|placeholder required=True %}
+                {% include "inc/form_static_field.html" with label='Source Location "Contact Phone"' value=obj.contact_phone|placeholder required=True %}
+                {% include "inc/form_static_field.html" with label='Source Location "Contact Email"' value=obj.contact_email|placeholder required=True %}
                 {% render_field form.name %}
                 {% render_field form.phone %}
                 {% render_field form.email %}

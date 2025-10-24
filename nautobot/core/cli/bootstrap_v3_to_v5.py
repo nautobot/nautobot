@@ -579,7 +579,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "control-label": "col-form-label",
         "dropdown-menu-right": "dropdown-menu-end",
         "form-control-static": "form-control-plaintext",
-        "form-group": "mb-10 d-flex justify-content-center",
+        "form-group": "mb-10 d-md-flex justify-content-center",
         "help-block": "form-text",
         "label label-default": "badge bg-default",  # Bootstrap 5 uses general background classes instead of label-default
         "label label-primary": "badge bg-primary",

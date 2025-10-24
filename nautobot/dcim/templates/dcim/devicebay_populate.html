@@ -19,18 +19,8 @@
                 <div class="card">
                     <div class="card-header">{% block title %}Populate {{ device_bay }}{% endblock %}</div>
                     <div class="card-body">
-                        <div class="mb-10 d-flex justify-content-center">
-                            <label class="col-lg-3 col-form-label nb-required">Parent Device</label>
-                            <div class="col-lg-9">
-                                <p class="form-control-plaintext">{{ device_bay.device }}</p>
-                            </div>
-                        </div>
-                        <div class="mb-10 d-flex justify-content-center">
-                            <label class="col-lg-3 col-form-label nb-required">Bay</label>
-                            <div class="col-lg-9">
-                                <p class="form-control-plaintext">{{ device_bay }}</p>
-                            </div>
-                        </div>
+                        {% include "inc/form_static_field.html" with label="Parent Device" value=device_bay.device required=True %}
+                        {% include "inc/form_static_field.html" with label="Bay" value=device_bay required=True %}
                         {% render_form form %}
                     </div>
                 </div>
