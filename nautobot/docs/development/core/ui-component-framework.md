@@ -148,9 +148,7 @@ There are 3 main breadcrumb items classes:
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
 
-By default, breadcrumbs class will add to the breadcrumbs path following items:
-- link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
-- link to view the `object` details at the end - built-in behavior
+By default, breadcrumbs class will render only link to the `list_url` if view is `detail=True`. Label will be taken from model associated to this path or set to `title` (if in the context).
 
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
@@ -172,7 +170,6 @@ It will generate:
 ```html
 <ol class="breadcrumb">
     <li><a href="/dcim/devices">Devices</a></li>
-    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
 </ol>
 ```
 
@@ -201,7 +198,6 @@ It will generate:
 <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li><a href="/dcim/locations">Locations</a></li>
-    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
 </ol>
 ```
 

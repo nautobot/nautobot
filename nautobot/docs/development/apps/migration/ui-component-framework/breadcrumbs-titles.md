@@ -29,22 +29,22 @@ Refer to the [Nautobot UI Framework Documentation](../../../core/ui-component-fr
 - Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`.
 - Use the built-in template tags to render the breadcrumbs and title: `{% render_breadcrumbs %}` and `{% render_title %}`
 
-Complete example:
+Complete example for extending `base.html`:
 
 ```html
+{% extends "base.html" %}
 {% load ui_framework %}
 
-{% block content %}
-<div class="row noprint">
-    <div class="col-md-12">
-        <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
-        {% render_breadcrumbs %}
-    </div>
-</div>
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
-<h1>{% block title %}{% render_title %}{% endblock %}</h1>
+{% block content %}
+{# Content here #}
 {% endblock %}
 ```
+
+When extending other templates that already extending `base.html`, for example `generic/object_list.html`
+they already apply render breadcrumbs or render title. So you just need to remove your custom title / breadcrumbs from template
+and define it on view level.
 
 ## Generic views
 
@@ -98,7 +98,7 @@ class SomeGenericView(GenericView):
 {% endblock %}
 ```
 
-#### Generic view "after" example
+#### Generic view "after" example in 3.0
 
 ```python
 class SomeGenericView(GenericView):
@@ -131,16 +131,9 @@ class SomeGenericView(GenericView):
 {% load static %}
 {% load ui_framework %}
 
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
 {% block content %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
-            {% render_breadcrumbs %}
-        </div>
-    </div>
-
-    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
-
     <div class="row">
         Some data
     </div>
