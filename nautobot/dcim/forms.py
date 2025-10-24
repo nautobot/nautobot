@@ -3205,15 +3205,13 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
     )
     virtual_device_contexts = DynamicModelMultipleChoiceField(
         queryset=VirtualDeviceContext.objects.all(),
-        label="Virtual Device Contexts",
+        label="xxxVirtual Device Contexts",
         required=False,
         query_params={
             "device": "$device",
         },
     )
-    # speed = forms.ChoiceField(
-    #     choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
-    # )
+
 
     class Meta:
         model = Interface
