@@ -17,8 +17,8 @@ def create_default_namespace(apps, schema):
         name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
     )
 
-    nautobot.ipam.models.FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = namespace.pk
-    # Do not populate FOREIGN_KEY_DEFAULTS["namespace"]["object"] at this time as we're using historical models here!
+    # Populate the contextvars cache so that subsequent calls to get_default_namespace_pk() do not error out
+    nautobot.ipam.models.default_namespace_pk.set(namespace.pk)
 
 
 class Migration(migrations.Migration):

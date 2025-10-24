@@ -966,6 +966,10 @@ def tests(
         # Integration tests require selenium to be up and running!
         start(context, service="selenium")
 
+    if tag and "migration_test" in tag:
+        # Migration tests hit the database pretty hard, so running them in parallel tends to not work out
+        parallel = False
+
     if coverage and not append_coverage:
         run_command(context, "coverage erase")
 
