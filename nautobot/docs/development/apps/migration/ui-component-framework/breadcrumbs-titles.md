@@ -35,16 +35,40 @@ Complete example for extending `base.html`:
 {% extends "base.html" %}
 {% load ui_framework %}
 
-{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
-
 {% block content %}
-{# Content here #}
+<div class="row noprint">
+    <div class="col-md-12">
+        <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
+        {% render_breadcrumbs %}
+    </div>
+</div>
+
+<h1>{% block title %}{% render_title %}{% endblock %}</h1>
+
+<div class="row"></div>
 {% endblock %}
 ```
 
-When extending other templates that already extending `base.html`, for example `generic/object_list.html`
-they already apply render breadcrumbs or render title. So you just need to remove your custom title / breadcrumbs from template
-and define it on view level.
++/- 3.0.0
+    In v3 breadcrumbs and title are located outside of block content. Because of that, structure of template needs to be updated as following:
+
+    ```html
+    {% extends "base.html" %}
+    {% load ui_framework %}
+
+    {% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
+    {% block content %}
+    {# Content here #}
+    {% endblock %}
+    ```
+
+    Please note that there is no need to use `{% block title %}` - it's already prepared in `base.html`.
+
+    When extending other templates that already extending `base.html`, for example `generic/object_list.html`
+    there is no need to add `{% render breadcrumbs %}`.
+
+    To migrate such views in 3.0 you just need to remove custom breadcrumbs / title code from your template and define it on the view level.
 
 ## Generic views
 
@@ -98,7 +122,7 @@ class SomeGenericView(GenericView):
 {% endblock %}
 ```
 
-#### Generic view "after" example in 3.0
+#### Generic view "after" example
 
 ```python
 class SomeGenericView(GenericView):
@@ -131,14 +155,37 @@ class SomeGenericView(GenericView):
 {% load static %}
 {% load ui_framework %}
 
-{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
-
 {% block content %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
+            {% render_breadcrumbs %}
+        </div>
+    </div>
+
+    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
+
     <div class="row">
         Some data
     </div>
 {% endblock %}
 ```
+
++/- 3.0.0
+    ```html
+    {% extends "base.html" %}
+    {% load helpers %}
+    {% load static %}
+    {% load ui_framework %}
+
+    {% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
+    {% block content %}
+        <div class="row">
+            Some data
+        </div>
+    {% endblock %}
+    ```
 
 !!! info
     Default `{% render_breadcrumbs %}` template will add the `<ol class="breadcrumbs">` tag, and both `{% block breadcrumbs %}` and `{% block extra_breadcrumbs %}` blocks.
