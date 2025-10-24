@@ -1,0 +1,4 @@
+Fixed incorrect logic in `django_querystring` templatetag.
+Added missing `request` to the render context for rendering NautobotUIViewSet views.
+Added missing icons to various "Add components" menus for Device, Module, and ModuleType.
+Added missing chevron when rendering grouped Custom Links or grouped Job Buttons.

@@ -8,7 +8,7 @@
             <div class="card">
                 <div class="card-header">
                     <strong>Rendered Context</strong>
-                    {% include 'extras/inc/configcontext_format.html' %}
+                    {% include 'extras/inc/configcontext_format.html' with data_format=format %}
                 </div>
                 <div class="card-body">
                     {% include 'extras/inc/json_data.html' with data=rendered_context format=format %}
