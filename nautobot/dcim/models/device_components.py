@@ -895,25 +895,18 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
             InterfaceTypeChoices.TYPE_100ME_T1,
         }
 
-        # LAG does not have speed/duplex
+        # Check settings by interface type
         if self.is_lag:
             if self.speed:
                 raise ValidationError({"speed": "LAG interfaces do not have an operational speed."})
             if self.duplex:
                 raise ValidationError({"duplex": "LAG interfaces do not have duplex settings."})
-            return
-
-        # Check settings by interface type
-        if self.is_virtual or self.is_wireless:
+        elif self.is_virtual or self.is_wireless:
             if self.speed:
                 raise ValidationError({"speed": "Speed is not applicable to virtual or wireless interfaces."})
             if self.duplex:
                 raise ValidationError({"duplex": "Duplex is not applicable to virtual or wireless interfaces."})
-            return
-        elif self.type in copper_twisted_pair_types:
-            # Duplex allowed on copper twisted-pair types (optional)
-            return
-        else:
+        elif self.type not in copper_twisted_pair_types:
             # Optical/backplane/etc do not use duplex
             if self.duplex:
                 raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
