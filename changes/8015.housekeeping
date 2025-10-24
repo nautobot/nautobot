@@ -1,0 +1,1 @@
+Added `ssl-verify-server-cert=FALSE` to MySQL/MariaDB dev environment configuration to avoid an exception when running tests locally.

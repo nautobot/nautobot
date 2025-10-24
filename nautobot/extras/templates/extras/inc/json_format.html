@@ -1,6 +1,13 @@
+{% load helpers %}
 <div class="float-end">
-    <div class="btn-group btn-group-xs" role="group">
-        <a href="?format=json" class="btn btn-secondary{% if format == 'json' %} active{% endif %}">JSON</a>
-        <a href="?format=yaml" class="btn btn-secondary{% if format == 'yaml' %} active{% endif %}">YAML</a>
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="{% django_querystring format='json' %}"
+           class="btn btn-primary{% if format == 'json' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-code-json" aria-hidden="true"></span> JSON
+        </a>
+        <a href="{% django_querystring format='yaml' %}"
+           class="btn btn-primary{% if format == 'yaml' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-format-list-group" aria-hidden="true"></span> YAML
+        </a>
     </div>
 </div>
