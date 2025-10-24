@@ -1151,7 +1151,7 @@ class InterfaceDuplexChoices(ChoiceSet):
 
 
 class InterfaceSpeedChoices(ChoiceSet):
-    # Stored in Kbps (for compatibility with humanize_speed filter)
+    # Stored in Kbps (for compatibility with circuits and humanize_speed filter)
     SPEED_1M = 1_000
     SPEED_10M = 10_000
     SPEED_100M = 100_000
@@ -1166,7 +1166,7 @@ class InterfaceSpeedChoices(ChoiceSet):
     SPEED_200G = 200_000_000
     SPEED_400G = 400_000_000
     SPEED_800G = 800_000_000
-    SPEED_1600G = 1_600_000_000
+    SPEED_1_6T = 1_600_000_000
 
     CHOICES = (
         (SPEED_1M, "1 Mbps"),
@@ -1183,7 +1183,7 @@ class InterfaceSpeedChoices(ChoiceSet):
         (SPEED_200G, "200 Gbps"),
         (SPEED_400G, "400 Gbps"),
         (SPEED_800G, "800 Gbps"),
-        (SPEED_1600G, "1.6 Tbps"),
+        (SPEED_1_6T, "1.6 Tbps"),
     )
 
 
