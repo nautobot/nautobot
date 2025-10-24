@@ -754,6 +754,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         self.add_permissions("ipam.change_ipaddress")
         num_ips_before = IPAddress.objects.all().count()
         ips = IPAddress.objects.all().exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk])
+        self.assertGreaterEqual(len(ips), 6)
         ip_ct = ContentType.objects.get_for_model(IPAddress)
         locations = Location.objects.all()
         location_ct = ContentType.objects.get_for_model(Location)

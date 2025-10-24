@@ -5,9 +5,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
-from django.test import TestCase
 import netaddr
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType

@@ -179,7 +179,7 @@ class Command(BaseCommand):
         )
         # ...and some tags that apply to a random subset of content-types
         _create_batch(TagFactory, 15, description="on some content-types")
-        _create_batch(UserFactory, 5)
+        _create_batch(UserFactory, 10)
         _create_batch(SavedViewFactory, 20)
         _create_batch(ContactFactory, 20)
         _create_batch(TeamFactory, 20)
@@ -348,7 +348,6 @@ class Command(BaseCommand):
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
-        # _create_batch(UserFactory, 10)
         # _create_batch(RackFactory, 10)
         # _create_batch(RackReservationFactory, 10)
         # _create_batch(ClusterTypeFactory, 10)
