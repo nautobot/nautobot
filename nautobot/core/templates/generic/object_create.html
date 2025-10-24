@@ -2,6 +2,8 @@
 {% load form_helpers %}
 {% load helpers %}
 
+{% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
+
 {% block content %}
     <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
@@ -20,7 +22,6 @@
                             {% endif %}
                         {% endwith %}
                     {% endif %}
-                    {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
                 </h3>
             </div>
             <div class="col-lg-8 col-md-10">
