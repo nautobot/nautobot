@@ -23,13 +23,17 @@
 {% endblock %}
 
 {% block buttons %}
-    <div class="btn-group">
-        <a class="btn btn-secondary set-job_list-display" data-display="tiles" href="" title="Tiles">
-            <span class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></span>
+    <div class="btn-group" role="group">
+        <a href="{% django_querystring display='list' %}"
+           class="btn btn-primary{% if display == 'list' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-view-sequential" aria-hidden="true"></span> List
         </a>
-        <a class="btn btn-secondary set-job_list-display" data-display="list" href="" title="List">
-            <span class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></span>
+        {# djlint:off B123 #}
+        <a href="{% django_querystring display='tiles' %}"
+           class="btn btn-primary{% if display == 'tiles' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-view-grid" aria-hidden="true"></span> Tiles
         </a>
+        {# djlint:on B123 #}
     </div>
 
     <button
@@ -42,18 +46,4 @@
     >
         Collapse All
     </button>
-{% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Set display anchor links without losing other potentially active query params such as applied filters.
-            [...document.querySelectorAll('.set-job_list-display')].forEach((button) => {
-                const queryParams = new URLSearchParams(window.location.search);
-                queryParams.set('display', button.dataset.display);
-                button.setAttribute('href', `?${queryParams.toString()}`);
-            });
-        });
-    </script>
 {% endblock %}
