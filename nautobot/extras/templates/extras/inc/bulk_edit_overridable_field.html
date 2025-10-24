@@ -1,7 +1,8 @@
 {% load form_helpers %}
 
-<hr>
-<div class="mb-10 d-flex justify-content-center{% if field.errors %} has-error{% endif %}">
+
+<hr class="border-top">
+<div class="mb-10 d-lg-flex justify-content-center{% if field.errors %} has-error{% endif %}">
     <label class="col-lg-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
         {{ field.label }}
     </label>
@@ -19,18 +20,18 @@
         {% endif %}
     </div>
 </div>
-<div class="mb-10 d-flex justify-content-center">
+<div class="mb-10 d-lg-flex justify-content-center">
     <span class="col-lg-3 col-form-label">
     </span>
     <div class="col-lg-9">
-        <div>
-            <label for="{{ override_field.id_for_label }}">
-                {{ override_field }}
+        <div class="form-check">
+            {{ override_field }}
+            <label class="form-check-label" for="{{ override_field.id_for_label }}">
                 <i>Clear override</i>
+                {% if override_field.help_text %}
+                    <span class="form-text">{{ override_field.help_text|safe }}</span>
+                {% endif %}
             </label>
-            {% if override_field.help_text %}
-                <span class="form-text">{{ override_field.help_text|safe }}</span>
-            {% endif %}
         </div>
     </div>
 </div>

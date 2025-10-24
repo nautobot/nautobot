@@ -1,6 +1,24 @@
 {% extends 'generic/object_bulk_update.html' %}
 {% load form_helpers %}
 
+{% block extra_styles %}
+    <style>
+        tr a.job_run {
+            display: inline-flex;
+            gap: 0.625rem; /* 10px */
+        }
+
+        tr a.job_run .btn {
+            align-self: flex-start;
+            margin-block: -0.09375rem; /* -1.5px */
+        }
+
+        tr p:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+{% endblock %}
+
 {% block form_fields %}
     {% render_field form.enabled %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.clear_grouping_override %}

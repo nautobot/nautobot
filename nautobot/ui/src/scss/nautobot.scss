@@ -1126,6 +1126,11 @@ textarea {
   }
 }
 
+.nb-form-check-input-sm {
+  height: 1rem; /* 16px */
+  width: 1rem; /* 16px */
+}
+
 .form-text {
   display: block;
   font-weight: $font-weight-normal;
