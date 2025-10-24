@@ -494,7 +494,7 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
 
 class IPAMDataMigration0031TestCase(MigratorTestCase):
     migrate_from = ("ipam", "0030_ipam__namespaces")
-    migrate_to = ("ipam", "0054_add_namespace_defaults")
+    migrate_to = ("ipam", "0032_ipam__namespaces_finish")
 
     def prepare(self):
         # Create an arbitrary set of prefixes and IPs mostly subdividing and consuming the given subnet, including dupes
@@ -514,7 +514,7 @@ class NamespaceTenantCircularDependencyTestCase(MigratorTestCase):
     """Test that our 3-phase migration approach resolves circular dependencies and supports rollback."""
 
     migrate_from = ("ipam", "0029_ip_address_to_interface_uniqueness_constraints")  # Before namespace creation
-    migrate_to = ("ipam", "0054_add_namespace_defaults")  # After our complete sequence
+    migrate_to = ("ipam", "0054_namespace_tenant")  # After our complete sequence
 
     def prepare(self):
         """Create minimal data to test namespace-tenant migration sequence."""
@@ -567,7 +567,7 @@ class NamespaceTenantRollbackTestCase(MigratorTestCase):
     """Test rolling back the namespace-tenant feature works safely."""
 
     # For rollback testing: migrate_from is AFTER our changes, migrate_to is BEFORE
-    migrate_from = ("ipam", "0054_add_namespace_defaults")  # After our complete sequence
+    migrate_from = ("ipam", "0054_namespace_tenant")  # After our complete sequence
     migrate_to = ("ipam", "0052_alter_ipaddress_index_together_and_more")  # Before our changes
 
     def prepare(self):
