@@ -1,12 +1,12 @@
+import contextvars
 import logging
 import operator
 from typing import Optional
-import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import connection, models, transaction
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
@@ -49,6 +49,9 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+default_namespace_pk = contextvars.ContextVar("default_namespace_pk", default=None)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -88,49 +91,34 @@ class Namespace(PrimaryModel):
     def __str__(self):
         return self.name
 
-
-FOREIGN_KEY_DEFAULTS = {
-    "namespace": {
-        "object": None,
-        "pk": None,
-    }
-}
+    def delete(self, *args, **kwargs):
+        if self.name == "Global":
+            default_namespace_pk.set(None)
+        super().delete(*args, **kwargs)
 
 
 def get_default_namespace():
-    """Return the Global namespace."""
-    global FOREIGN_KEY_DEFAULTS
-    if FOREIGN_KEY_DEFAULTS["namespace"]["object"] is None:
-        obj, _ = Namespace.objects.get_or_create(
-            name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
-        )
-        FOREIGN_KEY_DEFAULTS["namespace"]["object"] = obj
-        if FOREIGN_KEY_DEFAULTS["namespace"]["pk"] is None:
-            FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = obj.pk
+    """Return the Global namespace.
 
-    return FOREIGN_KEY_DEFAULTS["namespace"]["object"]
+    Because this has no access to historical models, this MUST NOT be called during migrations.
+    """
+    obj, _ = Namespace.objects.get_or_create(
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
+    return obj
 
 
 def get_default_namespace_pk():
     """Return the PK of the Global namespace for use in default value for foreign keys."""
-    global FOREIGN_KEY_DEFAULTS
-    if FOREIGN_KEY_DEFAULTS["namespace"]["pk"] is None:
-        # This really needs to use the historical model in order to work in migration ipam_0030 as the model evolves...
-        # but for now, the below direct SQL "works":
-        with connection.cursor() as cursor:
-            cursor.execute("""SELECT id FROM ipam_namespace WHERE name = %s""", ["Global"])
-            row = cursor.fetchone()
-            if row is not None:
-                pk = row[0]
-            else:
-                pk = uuid.uuid4()
-                cursor.execute(
-                    """INSERT INTO ipam_namespace (id, name, description, _custom_field_data) VALUES (%s, %s, %s, %s)""",
-                    [pk, "Global", "Default Global namespace. Created by Nautobot", "{}"],
-                )
-            FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = pk
+    pk = default_namespace_pk.get()
+    if pk is None:
+        # MUST NEVER HAPPEN DURING MIGRATIONS, because get_default_namespace() doesn't use historical models.
+        # This is accommodated in migration ipam__0030 to directly set default_namespace_pk *from* the historical model
+        # but any other migrations using this function may need to implement similar workarounds.
+        pk = get_default_namespace().pk
+        default_namespace_pk.set(pk)
 
-    return FOREIGN_KEY_DEFAULTS["namespace"]["pk"]
+    return pk
 
 
 @extras_features(
