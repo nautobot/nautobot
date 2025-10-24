@@ -296,8 +296,8 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
 
         # Should have defaults for list and details
-        self.assertEqual(len(breadcrumbs.items["list"]), 2)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["list"]), 0)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
         # Verify adding items
         new_item = BaseBreadcrumbItem()
@@ -306,7 +306,7 @@ class BreadcrumbsTestCase(TestCase):
         self.assertEqual(len(breadcrumbs.items["list"]), 1)
         self.assertEqual(breadcrumbs.items["list"][0], new_item)
 
-        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 1)
         self.assertEqual(breadcrumbs.items["detail"][0], new_item)
 
         self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
@@ -325,7 +325,7 @@ class BreadcrumbsTestCase(TestCase):
 
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""
