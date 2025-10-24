@@ -3212,7 +3212,6 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         },
     )
 
-
     class Meta:
         model = Interface
         fields = [
