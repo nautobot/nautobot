@@ -1,11 +1,12 @@
 import logging
 import operator
 from typing import Optional
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import connection, models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
@@ -88,17 +89,48 @@ class Namespace(PrimaryModel):
         return self.name
 
 
+FOREIGN_KEY_DEFAULTS = {
+    "namespace": {
+        "object": None,
+        "pk": None,
+    }
+}
+
+
 def get_default_namespace():
     """Return the Global namespace."""
-    obj, _ = Namespace.objects.get_or_create(
-        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
-    )
-    return obj
+    global FOREIGN_KEY_DEFAULTS
+    if FOREIGN_KEY_DEFAULTS["namespace"]["object"] is None:
+        obj, _ = Namespace.objects.get_or_create(
+            name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+        )
+        FOREIGN_KEY_DEFAULTS["namespace"]["object"] = obj
+        if FOREIGN_KEY_DEFAULTS["namespace"]["pk"] is None:
+            FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = obj.pk
+
+    return FOREIGN_KEY_DEFAULTS["namespace"]["object"]
 
 
 def get_default_namespace_pk():
     """Return the PK of the Global namespace for use in default value for foreign keys."""
-    return get_default_namespace().pk
+    global FOREIGN_KEY_DEFAULTS
+    if FOREIGN_KEY_DEFAULTS["namespace"]["pk"] is None:
+        # This really needs to use the historical model in order to work in migration ipam_0030 as the model evolves...
+        # but for now, the below direct SQL "works":
+        with connection.cursor() as cursor:
+            cursor.execute("""SELECT id FROM ipam_namespace WHERE name = %s""", ["Global"])
+            row = cursor.fetchone()
+            if row is not None:
+                pk = row[0]
+            else:
+                pk = uuid.uuid4()
+                cursor.execute(
+                    """INSERT INTO ipam_namespace (id, name, description, _custom_field_data) VALUES (%s, %s, %s, %s)""",
+                    [pk, "Global", "Default Global namespace. Created by Nautobot", "{}"],
+                )
+            FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = pk
+
+    return FOREIGN_KEY_DEFAULTS["namespace"]["pk"]
 
 
 @extras_features(

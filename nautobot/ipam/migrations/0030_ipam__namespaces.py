@@ -10,6 +10,17 @@ import nautobot.extras.models.mixins
 import nautobot.ipam.models
 
 
+def create_default_namespace(apps, schema):
+    Namespace = apps.get_model("ipam", "Namespace")
+
+    namespace, _ = Namespace.objects.get_or_create(
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
+
+    nautobot.ipam.models.FOREIGN_KEY_DEFAULTS["namespace"]["pk"] = namespace.pk
+    # Do not populate FOREIGN_KEY_DEFAULTS["namespace"]["object"] at this time as we're using historical models here!
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0072_rename_model_fields"),
@@ -130,15 +141,16 @@ class Migration(migrations.Migration):
             name="ip_version",
             field=models.IntegerField(db_index=True, editable=False, null=True),
         ),
+        # We shouldn't mix data migrations with schema migrations, but we didn't catch this data dependency until much later
+        migrations.RunPython(create_default_namespace, migrations.RunPython.noop),
         migrations.AddField(
             model_name="prefix",
             name="namespace",
             field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="prefixes",
                 to="ipam.namespace",
-                null=True,
-                blank=True,
             ),
         ),
         migrations.AlterModelOptions(
@@ -164,11 +176,10 @@ class Migration(migrations.Migration):
             model_name="vrf",
             name="namespace",
             field=models.ForeignKey(
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="vrfs",
                 to="ipam.namespace",
-                null=True,
-                blank=True,
             ),
         ),
         migrations.AlterField(
