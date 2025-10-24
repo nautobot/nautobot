@@ -148,7 +148,6 @@ There are 3 main breadcrumb items classes:
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
 
-
 By default, breadcrumbs class will add to the breadcrumbs path following items:
 - link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
 - link to view the `object` details at the end - built-in behavior
