@@ -24,14 +24,14 @@
     <span class="col-lg-3 col-form-label">
     </span>
     <div class="col-lg-9">
-        <div class="form-check">
+        <div class="form-check flex-wrap">
             {{ override_field }}
             <label class="form-check-label" for="{{ override_field.id_for_label }}">
                 <i>Clear override</i>
-                {% if override_field.help_text %}
-                    <span class="form-text">{{ override_field.help_text|safe }}</span>
-                {% endif %}
             </label>
+            {% if override_field.help_text %}
+                <span class="form-text w-100">{{ override_field.help_text|safe }}</span>
+            {% endif %}
         </div>
     </div>
 </div>
