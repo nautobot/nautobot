@@ -7,24 +7,9 @@
     <div class="card">
         <div class="card-header"><strong>Termination</strong></div>
         <div class="card-body">
-            <div class="mb-10 d-flex justify-content-center">
-                <label class="col-lg-3 col-form-label">Provider</label>
-                <div class="col-lg-9">
-                    <p class="form-control-plaintext">{{ obj.circuit.provider }}</p>
-                </div>
-            </div>
-            <div class="mb-10 d-flex justify-content-center">
-                <label class="col-lg-3 col-form-label">Circuit</label>
-                <div class="col-lg-9">
-                    <p class="form-control-plaintext">{{ obj.circuit.cid }}</p>
-                </div>
-            </div>
-            <div class="mb-10 d-flex justify-content-center">
-                <label class="col-lg-3 col-form-label">Termination</label>
-                <div class="col-lg-9">
-                    <p class="form-control-plaintext">{{ form.term_side.value }}</p>
-                </div>
-            </div>
+            {% include "inc/form_static_field.html" with label="Provider" value=obj.circuit.provider %}
+            {% include "inc/form_static_field.html" with label="Circuit" value=obj.circuit.cid %}
+            {% include "inc/form_static_field.html" with label="Termination" value=form.term_side.value %}
             {% with location_tab_active=form.initial.location %}
                 {% with providernetwork_tab_active=form.initial.provider_network %}
                     {% with cloudnetwork_tab_active=form.initial.cloud_network %}
@@ -58,9 +43,9 @@
     <div class="card">
         <div class="card-header"><strong>Termination Details</strong></div>
         <div class="card-body">
-            <div class="mb-10 d-flex justify-content-center">
-                <label class="col-lg-3 col-form-label" for="id_port_speed">{{ form.port_speed.label }}</label>
-                <div class="col-lg-9">
+            <div class="mb-10 d-md-flex justify-content-center">
+                <label class="col-md-3 col-form-label" for="id_port_speed">{{ form.port_speed.label }}</label>
+                <div class="col-md-9">
                     <div class="input-group">
                         {{ form.port_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='port_speed' %}
@@ -68,9 +53,9 @@
                     <span class="form-text">{{ form.port_speed.help_text }}</span>
                 </div>
             </div>
-            <div class="mb-10 d-flex justify-content-center">
-                <label class="col-lg-3 col-form-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
-                <div class="col-lg-9">
+            <div class="mb-10 d-md-flex justify-content-center">
+                <label class="col-md-3 col-form-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
+                <div class="col-md-9">
                     <div class="input-group">
                         {{ form.upstream_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='upstream_speed' %}
