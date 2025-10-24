@@ -1,0 +1,1 @@
+humanize_speed now returns a decimalized values instead of finding an integer value (e.g. 2.5 Gbps instead of 2500 Mbps).
