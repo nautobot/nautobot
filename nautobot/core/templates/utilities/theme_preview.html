@@ -56,7 +56,7 @@
                 {% export_button content_type list_element=True %}
             </ul>
         </div>
-        <div class="btn-group">
+        <div class="dropdown d-inline-flex">
             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 Actions
             </button>
@@ -234,11 +234,11 @@
                         <div class="mb-10 d-flex justify-content-center">
                             <label class="col-md-3 col-form-label nb-required" for="id_status">
                                 Status
-                                <span class="form-text">Help text for this form field</span>
                             </label>
                             <div class="col-md-9">
                                 <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" placeholder="Status" data-url="/api/extras/statuses/" id="id_status">
                                 </select>
+                                <span class="form-text">Help text for this form field</span>
                             </div>
                         </div>
                     </div>
@@ -469,6 +469,15 @@
                                 <button type="button" class="btn btn-warning disabled">Warning</button>
                                 <button type="button" class="btn btn-danger disabled">Danger</button>
                                 <button type="button" class="btn btn-link disabled">Link</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>btn-group</code> like radio buttons</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-primary bg-primary nb-text-body-bg">Current Active Option</button>
+                                    <button type="button" class="btn btn-primary">Alternative Option</button>
+                                </div>
                             </td>
                         </tr>
                     </table>

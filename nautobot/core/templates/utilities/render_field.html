@@ -7,9 +7,6 @@
                 {{ field }}
                 <label class="form-check-label" for="{{ field.id_for_label }}">
                     {{ field.label }}
-                    {% if field.help_text %}
-                        <span class="form-text">{{ field.help_text|safe }}</span>
-                    {% endif %}
                 </label>
             </div>
             {% if bulk_nullable %}
@@ -17,6 +14,9 @@
                     <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
                     <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
                 </div>
+            {% endif %}
+            {% if field.help_text %}
+                <span class="form-text">{{ field.help_text|safe }}</span>
             {% endif %}
     {% elif field|widget_type == 'textarea' and not field.label %}
         <div class="col-md-12">
@@ -33,9 +33,6 @@
     {% else %}
         <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
             {{ field.label }}
-            {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
-            {% endif %}
         </label>
         <div class="col-md-9">
             {{ field }}
@@ -44,6 +41,9 @@
                     <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
                     <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
                 </div>
+            {% endif %}
+            {% if field.help_text %}
+                <span class="form-text">{{ field.help_text|safe }}</span>
             {% endif %}
     {% endif %}
     {% if field.errors %}
