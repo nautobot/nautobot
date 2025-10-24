@@ -10,19 +10,21 @@
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row align-content-start flex-fill">
-            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 mb-10">
-                {% if obj %}
-                    {% with obj|get_docs_url as docs_url %}
-                        {% if docs_url %}
-                            <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm float-end" title="Help">
-                                <span aria-hidden="true" class="mdi mdi-help-circle"></span>
-                            </a>
-                        {% endif %}
-                    {% endwith %}
-                {% endif %}
+        <div class="row justify-content-center align-content-start flex-fill">
+            <div class="col-lg-8 col-md-10 mb-10">
+                <h3>
+                    {% if obj %}
+                        {% with obj|get_docs_url as docs_url %}
+                            {% if docs_url %}
+                                <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm float-end" title="Help">
+                                    <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                                </a>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </h3>
             </div>
-            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+            <div class="col-lg-8 col-md-10">
                 {% block tabs %}{% endblock %}
                 {% block form_errors %}
                     {% if form.non_field_errors or model_form.non_field_errors %}
