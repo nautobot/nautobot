@@ -923,7 +923,7 @@ def django_querystring(context, query_dict=None, **kwargs):
         {% django_querystring my_query_dict foo=3 %}
     """
     if query_dict is None:
-        query_dict = context.request.GET
+        query_dict = context["request"].GET
     params = query_dict.copy()
     for key, value in kwargs.items():
         if value is None:

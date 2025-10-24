@@ -10,12 +10,24 @@
         <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
     </button>
     <div class="btn-group" role="group">
-        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request face='front' %}" class="btn btn-secondary{% if rack_face == 'front' %} active{% endif %}">Front</a>
-        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request face='rear' %}" class="btn btn-secondary{% if rack_face == 'rear' %} active{% endif %}">Rear</a>
+        <a href="{% django_querystring face='front' %}"
+           class="btn btn-primary{% if rack_face == 'front' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-flip-to-front"></span> Front
+        </a>
+        <a href="{% django_querystring face='rear' %}"
+           class="btn btn-primary{% if rack_face == 'rear' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-flip-to-back"></span> Rear
+        </a>
     </div>
     <div class="btn-group" role="group">
-        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request reverse=None %}" class="btn btn-secondary{% if not reverse %} active{% endif %}">Normal</a>
-        <a href="{% url 'dcim:rack_elevation_list' %}{% legacy_querystring request reverse='true' %}" class="btn btn-secondary{% if reverse %} active{% endif %}">Reversed</a>
+        <a href="{% django_querystring reverse=None %}"
+           class="btn btn-primary{% if not reverse %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-arrow-right"></span> Normal
+        </a>
+        <a href="{% django_querystring reverse='true' %}"
+           class="btn btn-primary{% if reverse %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-arrow-left"></span> Reversed
+        </a>
     </div>
 {% endblock %}
 
