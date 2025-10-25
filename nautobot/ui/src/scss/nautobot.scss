@@ -758,12 +758,6 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
-@mixin nb-firefox-only {
-  @supports (-moz-appearance: none) {
-    @content;
-  }
-}
-
 /* Links */
 a,
 button {
@@ -1679,19 +1673,20 @@ body {
     min-width: $sidenav-link-width;
 
     /*
-     * FIXME(norbert-mieczkowski-codilime): remove this Firefox hack when it fixes its bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     * FIXME(norbert-mieczkowski-codilime): remove this hack when browsers fix their bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     *   Bug has already been observed in Firefox and Safari, Chrome is confirmed to be _clean_.
      *   Workaround based on: https://www.answeroverflow.com/m/1353731321620598945.
      */
-    @include nb-firefox-only {
-      flex-direction: row;
-      padding-block: map.get($spacers, 0);
-      padding-inline: map.get($spacers, 20);
-      writing-mode: vertical-lr;
+    /* hack */
+    flex-direction: row;
+    padding-block: map.get($spacers, 0);
+    padding-inline: map.get($spacers, 20);
+    writing-mode: vertical-lr;
 
-      > * {
-        writing-mode: horizontal-tb;
-      }
+    > * {
+      writing-mode: horizontal-tb;
     }
+    /* endhack */
   }
 
   .nb-sidenav-link {
