@@ -1027,6 +1027,8 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         """Build Jinja context from selected object, following Custom Links pattern."""
         content_type_obj = validated_data["content_type"]
         content_type_obj_model_class = content_type_obj.model_class()
+        if content_type_obj_model_class is None:
+            raise ValidationError(f"Model not found for {content_type_obj.app_label}.{content_type_obj.model}.")
 
         try:
             obj = content_type_obj_model_class.objects.restrict(request.user, "view").get(

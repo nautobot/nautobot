@@ -1394,6 +1394,24 @@ class RenderJinjaViewTest(testing.APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertIn(expected_error, str(response.data))
 
+    def test_render_jinja_template_model_class_none(self):
+        """Test error handling when ContentType exists but model_class() returns None (stale content type)."""
+        stale_ct = ContentType.objects.create(app_label="ghostapp", model="ghostmodel")
+
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "content_type": f"{stale_ct.app_label}.{stale_ct.model}",
+                "object_uuid": str(uuid.uuid4()),
+            },
+            format="json",
+            **self.header,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Model not found for ghostapp.ghostmodel", str(response.data))
+
     def test_render_jinja_template_nonexistent_object(self):
         """Test error handling for non-existent object UUID."""
         fake_uuid = str(uuid.uuid4())
