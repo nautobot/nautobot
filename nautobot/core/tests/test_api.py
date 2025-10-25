@@ -1218,6 +1218,27 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Cannot specify both", str(response.data))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_render_jinja_template_without_object_view_permission(self):
+        """User lacking view permission on the object should not be able to render it."""
+        # Pick an existing object; do not grant any view permissions
+        location = dcim_models.Location.objects.first()
+
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "content_type": "dcim.location",
+                "object_uuid": str(location.pk),
+            },
+            format="json",
+            **self.header,
+        )
+
+        # Expect object lookup to fail due to lack of permissions
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Object not found", str(response.data))
+
     def test_render_jinja_template_validation_incomplete_object(self):
         """Test validation when object mode fields are incomplete."""
         test_cases = [

@@ -1025,13 +1025,13 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
 
     def _build_object_context(self, request, validated_data):
         """Build Jinja context from selected object, following Custom Links pattern."""
-        # ContentTypeField already provides ContentType instance
         content_type_obj = validated_data["content_type"]
         content_type_obj_model_class = content_type_obj.model_class()
 
-        # Fetch object with proper error handling
         try:
-            obj = content_type_obj_model_class.objects.get(pk=validated_data["object_uuid"])
+            obj = content_type_obj_model_class.objects.restrict(request.user, "view").get(
+                pk=validated_data["object_uuid"]
+            )
         except content_type_obj_model_class.DoesNotExist:
             raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
 
