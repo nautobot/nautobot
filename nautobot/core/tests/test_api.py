@@ -1115,6 +1115,10 @@ class RenderJinjaViewTest(testing.APITestCase):
         """
         Test rendering a valid Jinja template with object context across different object types.
         """
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("dcim.view_device")
+        self.add_permissions("dcim.view_interface")
+
         test_cases = [
             ("dcim.location", dcim_models.Location.objects.first(), "Location: {{ obj.name }}"),
             ("dcim.device", dcim_models.Device.objects.first(), "Device: {{ obj.name }}"),
@@ -1152,6 +1156,8 @@ class RenderJinjaViewTest(testing.APITestCase):
         """
         Test that object context includes all expected variables.
         """
+        self.add_permissions("dcim.view_location")
+
         # Use existing location from test database
         location = dcim_models.Location.objects.first()
 
@@ -1203,6 +1209,8 @@ class RenderJinjaViewTest(testing.APITestCase):
 
     def test_render_jinja_template_validation_both_provided(self):
         """Test validation error when both context and object fields provided."""
+        self.add_permissions("dcim.view_location")
+
         location = dcim_models.Location.objects.first()
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
@@ -1221,7 +1229,6 @@ class RenderJinjaViewTest(testing.APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_jinja_template_without_object_view_permission(self):
         """User lacking view permission on the object should not be able to render it."""
-        # Pick an existing object; do not grant any view permissions
         location = dcim_models.Location.objects.first()
 
         response = self.client.post(
@@ -1235,12 +1242,13 @@ class RenderJinjaViewTest(testing.APITestCase):
             **self.header,
         )
 
-        # Expect object lookup to fail due to lack of permissions
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Object not found", str(response.data))
 
     def test_render_jinja_template_validation_incomplete_object(self):
         """Test validation when object mode fields are incomplete."""
+        self.add_permissions("dcim.view_location")
+
         test_cases = [
             {"content_type": "dcim.location"},  # Missing object_uuid
             {"object_uuid": str(uuid.uuid4())},  # Missing content_type
@@ -1260,6 +1268,8 @@ class RenderJinjaViewTest(testing.APITestCase):
 
     def test_render_jinja_template_validation_empty_strings(self):
         """Test that validation properly handles empty strings and whitespace."""
+        self.add_permissions("dcim.view_location")
+
         # Test cases that should be caught by field validation
         field_validation_cases = [
             {
@@ -1317,6 +1327,8 @@ class RenderJinjaViewTest(testing.APITestCase):
 
     def test_render_jinja_template_validation_wrong_data_types(self):
         """Test that validation handles wrong data types appropriately."""
+        self.add_permissions("dcim.view_location")
+
         # Field validation catches these
         field_validation_cases = [
             {
@@ -1414,6 +1426,8 @@ class RenderJinjaViewTest(testing.APITestCase):
 
     def test_render_jinja_template_nonexistent_object(self):
         """Test error handling for non-existent object UUID."""
+        self.add_permissions("dcim.view_location")
+
         fake_uuid = str(uuid.uuid4())
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
@@ -1430,6 +1444,8 @@ class RenderJinjaViewTest(testing.APITestCase):
 
     def test_render_jinja_template_wrong_object_type(self):
         """Test error when valid content_type and UUID but UUID is for different object type."""
+        self.add_permissions("dcim.view_device")
+
         location = dcim_models.Location.objects.first()
 
         # Try to get a Device using a Location's UUID
