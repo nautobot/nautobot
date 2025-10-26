@@ -6,7 +6,12 @@ Nautobot provides a built-in [Jinja2](https://jinja.palletsprojects.com/) templa
 
 ## REST API
 
-It's possible to render Jinja2 templates via the Nautobot REST API. You can use the `POST /api/core/render-jinja-template/` endpoint to render a template using Nautobot's Jinja2 environment. The request body should include the template content and the context data to render the template.
+It's possible to render Jinja2 templates via the Nautobot REST API. You can use the `POST /api/core/render-jinja-template/` endpoint to render a template using Nautobot's Jinja2 environment.
+
+
+### JSON Data Mode
+
+The request body should include the template content and the context data to render the template.
 
 ```json
 {
@@ -14,6 +19,18 @@ It's possible to render Jinja2 templates via the Nautobot REST API. You can use 
   "context": {
     "name": "World"
   }
+}
+```
+
+### Nautobot Object Mode
+
+The request body should include the template content, the content type of the object to render, and the UUID of the object to render.
+
+```json
+{
+  "template_code": "{{ obj.name }}",
+  "content_type": "dcim.device",
+  "object_uuid": "c2c80545-6b3d-4882-ab4d-f23bc2a135e6"
 }
 ```
 
@@ -81,7 +98,9 @@ interface Management1
 !
 {%- for interface in obj.interfaces.all() %}
 interface {{ interface.name }}
+ {%- if interface.description %}
  description {{ interface.description | default }}
+ {% endif %}
  {%- if interface.ip_addresses.exists() %}
  ip address {{ interface.ip_addresses.first().address }}
  {% endif %}
