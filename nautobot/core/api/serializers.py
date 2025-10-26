@@ -922,4 +922,7 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         if has_context and has_object:
             raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
 
+        if content_type and content_type.model_class() is None:
+            raise ValidationError(f"Model not found for {content_type.app_label}.{content_type.model}.")
+
         return attrs
