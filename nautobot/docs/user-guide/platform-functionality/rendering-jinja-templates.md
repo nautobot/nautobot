@@ -27,23 +27,14 @@ The default mode allows you to provide custom JSON data as context for your temp
 
 ### Nautobot Object Mode
 
-The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc.
-
-#### Context Data
-
-| Variable | Description |
-|----------|-------------|
-| `obj`      | The selected Nautobot object |
-| `debug`    | A boolean indicating whether debugging is enabled |
-| `request`  | The current WSGI request |
-| `user`     | The current user (if authenticated) |
-| `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
+The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
 
 All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
 
 ### Quick Access from Object Views
 
 You can quickly test templates against any object by navigating to the object's detail page, clicking on the "Advanced" tab, and selecting "Test with Jinja Renderer":
+
 ![Image of Advanced object info with Jinja2 link](../../img/object_advanced_jinja2_link.png)
 
 This will open the Jinja renderer with the object pre-selected:

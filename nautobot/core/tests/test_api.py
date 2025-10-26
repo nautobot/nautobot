@@ -1150,7 +1150,7 @@ class RenderJinjaViewTest(testing.APITestCase):
 
                 # Verify context contains expected object data
                 self.assertIn("obj", response.data["context"])
-                self.assertEqual(response.data["context"]["obj"]["name"], obj.name)
+                self.assertEqual(response.data["context"]["obj"].name, obj.name)
 
     def test_render_jinja_template_object_context_variables(self):
         """
@@ -1164,9 +1164,6 @@ class RenderJinjaViewTest(testing.APITestCase):
         template_code = "\n".join(
             [
                 "Object: {{ obj.name }}",
-                "User: {{ user.username }}",
-                "Debug: {{ debug }}",
-                "Has perms: {{ perms|length > 0 }}",
             ]
         )
 
@@ -1186,15 +1183,11 @@ class RenderJinjaViewTest(testing.APITestCase):
         # Verify context contains all expected variables
         context = response.data["context"]
         self.assertIn("obj", context)
-        self.assertIn("user", context)
-        self.assertIn("debug", context)
-        self.assertIn("perms", context)
 
         # Verify context structure
-        self.assertEqual(context["obj"]["name"], location.name)
-        self.assertEqual(context["user"]["username"], self.user.username)
-        self.assertIsInstance(context["debug"], bool)
-        self.assertIsInstance(context["perms"], list)
+        self.assertIsInstance(context["obj"], dcim_models.Location)
+        self.assertEqual(context["obj"].pk, location.pk)
+        self.assertEqual(context["obj"].name, location.name)
 
     def test_render_jinja_template_validation_missing_both(self):
         """Test validation error when neither context nor object fields provided."""
