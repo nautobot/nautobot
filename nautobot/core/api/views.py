@@ -44,7 +44,6 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.fields import TagsField
-from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
@@ -1011,15 +1010,12 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         except Exception as exc:
             raise RenderJinjaError(f"Failed to render Jinja template: {exc}") from exc
 
-        # Create a serializable version of context for the API response
-        serializable_context = self._make_context_serializable(context)
-
         return Response(
             {
                 "rendered_template": rendered_template,
                 "rendered_template_lines": rendered_template.split("\n"),
                 "template_code": template_code,
-                "context": serializable_context,
+                "context": context,
             }
         )
 
@@ -1035,34 +1031,7 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         except content_type_obj_model_class.DoesNotExist:
             raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
 
-        # Build context following Custom Links/Job Buttons pattern
-        context = {
-            "obj": obj,
-            "debug": settings.DEBUG,
-            "request": request,
-            "user": request.user,
-            "perms": request.user.get_all_permissions() if request.user.is_authenticated else {},
-        }
+        # Build context with the minimal data needed for the template
+        context = {"obj": obj}
 
         return context
-
-    def _make_context_serializable(self, context):
-        """Create a JSON-serializable version of the context for API response."""
-        serializable_context = {}
-
-        for key, value in context.items():
-            # Skip request entirely
-            if key == "request":
-                continue
-
-            # Apply appropriate serialization based on key and value type
-            if key in ("obj", "user") and isinstance(value, BaseModel):
-                serializable_context[key] = serialize_object_v2(value)
-            elif key == "perms":
-                # Convert permissions set to list (always works)
-                serializable_context[key] = list(value)
-            elif key == "debug":
-                # Boolean value, always serializable
-                serializable_context[key] = value
-
-        return serializable_context
