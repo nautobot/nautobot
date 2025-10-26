@@ -447,17 +447,20 @@ class RenderJinjaForm(BootstrapMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         from nautobot.core.forms.utils import add_blank_choice
 
         # Populate ContentType choices for BaseModel subclasses with string values
         choices = []
-        for ct in ContentType.objects.all().order_by("app_label", "model"):
+        for ct in ContentType.objects.exclude(app_label="users").order_by("app_label", "model"):
             model_class = ct.model_class()
-            if model_class and issubclass(model_class, BaseModel):
-                # Use string format as value (what ContentTypeField expects)
-                value = f"{ct.app_label}.{ct.model}"
-                label = ct.app_labeled_name
-                choices.append((value, label))
+            if not (model_class and issubclass(model_class, BaseModel)):
+                continue
+            # If a user is provided, only include content types with at least one object the user can view
+            if user and not model_class.objects.restrict(user, "view").exists():
+                continue
+            # Use string format as value (what ContentTypeField expects)
+            choices.append((f"{ct.app_label}.{ct.model}", ct.app_labeled_name))
 
         self.fields["content_type"].choices = add_blank_choice(choices)

@@ -6,13 +6,14 @@ from django import forms as django_forms
 from django.apps import apps as django_apps
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
-from django.test import TestCase
+from django.test import override_settings, TestCase
 from django.urls import reverse
 from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.forms.forms import RenderJinjaForm
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.utils import requests
 from nautobot.core.utils.filtering import get_filterset_parameter_form_field
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
@@ -908,7 +909,10 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
 
 
-class RenderJinjaFormTest(TestCase):
+class RenderJinjaFormTest(NautobotTestCaseMixin, TestCase):
+    def setUp(self):
+        self.setUpNautobot()
+
     def test_defaults_and_content_type_choices(self):
         """Test the default values and content type choices of the RenderJinjaForm."""
         form = RenderJinjaForm()
@@ -941,3 +945,17 @@ class RenderJinjaFormTest(TestCase):
         self.assertEqual(form.initial.get("content_type"), content_type_str)
         self.assertEqual(form.initial.get("object_uuid"), str(obj.pk))
         self.assertEqual(form.initial.get("context_mode"), "object")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_user_permissions_limit_content_type_choices(self):
+        """Test that the user permissions limit the content type choices."""
+        self.add_permissions("dcim.view_device")
+
+        # Instantiate the form with this user
+        form = RenderJinjaForm(user=self.user)
+
+        # Extract values from choices (skip blank choice)
+        values = [value for value, _ in form.fields["content_type"].choices if value]
+
+        # Assert only dcim.device is present
+        self.assertEqual(values, ["dcim.device"])

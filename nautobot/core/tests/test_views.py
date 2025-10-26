@@ -883,7 +883,11 @@ class RenderJinjaViewTest(TestCase):
         self.assertIsNone(form.initial.get("content_type"))
         self.assertIsNone(form.initial.get("object_uuid"))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_jinja_view_preselects_from_query_params(self):
+        """Test that the render Jinja view preselects from query params."""
+        self.add_permissions("extras.view_status")
+
         # Use a known BaseModel subclass (Status) for content_type/object UUID
         ct = ContentType.objects.get_for_model(Status)
         content_type_str = f"{ct.app_label}.{ct.model}"
