@@ -31,7 +31,12 @@
                     <div class="panel-heading"><strong>Template</strong></div>
                     <div class="panel-body">
                         {% render_field form.template_code %}
-
+                        <div class="form-group" id="template_obj_help_group">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9 text-right">
+                                <span class="help-block" id="template_obj_help_text" style="visibility: hidden;">Use <code>obj</code> to refer to the selected object.</span>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
                             <div class="col-md-9">
@@ -112,6 +117,7 @@
             const jsonGroup = document.getElementById("json_context_group");
             const contentTypeGroup = document.getElementById("object_content_type_group");
             const uuidGroup = document.getElementById("object_uuid_group");
+            const templateObjHelp = document.getElementById("template_obj_help_text");
 
             if (mode === "object") {
                 // Save current JSON data before hiding
@@ -120,6 +126,7 @@
                 jsonGroup.style.display = "none";
                 contentTypeGroup.style.display = "block";
                 uuidGroup.style.display = "block";
+                templateObjHelp.style.visibility = "visible";
 
                 // Clear JSON field (for submission logic)
                 document.getElementById("id_context").value = "{}";
@@ -143,6 +150,7 @@
                 jsonGroup.style.display = "block";
                 contentTypeGroup.style.display = "none";
                 uuidGroup.style.display = "none";
+                templateObjHelp.style.visibility = "hidden";
 
                 // Clear object fields (for submission logic)
                 document.getElementById("id_content_type").value = "";
@@ -157,6 +165,22 @@
             }
         }
 
+        function extractApiErrorMessage(data) {
+            if (!data || typeof data !== "object") return "Bad Request";
+            if (data.detail) return String(data.detail);
+
+            if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+              return data.non_field_errors.join("; ");
+            }
+
+            // Flatten field errors: { field: ["msg1", "msg2"], ... }
+            const fieldMsgs = [];
+            for (const [field, value] of Object.entries(data)) {
+              if (Array.isArray(value) && value.length) fieldMsgs.push(`${field}: ${value.join(", ")}`);
+              else if (typeof value === "string" && value) fieldMsgs.push(`${field}: ${value}`);
+            }
+            return fieldMsgs.length ? fieldMsgs.join("; ") : "Bad Request";
+        }
 
         async function handleFormSubmit(event) {
             event.preventDefault();
@@ -203,7 +227,7 @@
 
                 const responseData = await response.json();
                 if (!response.ok) {
-                    const msg = responseData.detail ? responseData.detail : response.statusText;
+                    const msg = extractApiErrorMessage(responseData);
                     rendered_template.innerHTML = sanitize(`An error occurred:\n\n${msg}`);
                 } else {
                     rendered_template.innerHTML = sanitize(responseData.rendered_template);
