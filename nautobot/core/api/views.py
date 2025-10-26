@@ -1031,7 +1031,10 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         except content_type_obj_model_class.DoesNotExist:
             raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
 
-        # Build context with the minimal data needed for the template
+        # Build context with the minimal data needed for the template. serialize_object_v2 is not used for
+        # performance reasons. With it, a dcim.device render uses 10 queries in the basic case; fetching
+        # all subobjects the first time it's rendered. Without it, the basic dcim.device case uses 1 query and
+        # subobjects are fetched on demand.
         context = {"obj": obj}
 
         return context
