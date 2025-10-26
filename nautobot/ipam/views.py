@@ -429,7 +429,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=300,
                 table_class=VPNTunnelEndpointTable,
                 table_attribute="vpn_tunnel_endpoints",
-                table_title="VPN Tunnel Endpoints Using Prefix",
+                table_title="VPN Tunnel Endpoints Protecting Prefix",
                 exclude_columns=[
                     "vpn_profile",
                     "destination_ipaddress",
