@@ -1550,7 +1550,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         super().__init__(body_id=body_id, **kwargs)
 
     def render_header_extra_content(self, context: Context):
-        """Add a "Collapse All" button to the header."""
+        """Add a "Collapse All Groups" button to the header."""
         return format_html(
             """
             <button
@@ -1560,7 +1560,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                 data-nb-toggle="collapse-all"
                 type="button"
             >
-                Collapse All
+                Collapse All Groups
             </button>
             """,
             body_id=self.body_id,

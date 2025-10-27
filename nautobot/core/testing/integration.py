@@ -146,7 +146,7 @@ class ObjectDetailsMixin:
         TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
         """
         panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
-        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All']"
+        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All Groups']"
         expand_button = self.browser.find_by_xpath(expand_button_xpath)
         if not expand_button.is_empty():
             expand_button.click()
