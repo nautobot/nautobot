@@ -920,9 +920,7 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
             )
 
         if has_context and has_object:
-            raise ValidationError(
-                "Cannot specify both 'context' and object selection. Choose one approach."
-            )
+            raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
 
         if has_context and (content_type or object_uuid):
             raise ValidationError("Cannot specify both 'context' and partial object selection. Choose one approach.")
