@@ -590,7 +590,7 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
             )
 
         # Create form instance with pre-selection if applicable; pass user for permission-filtered choices
-        form = RenderJinjaForm(initial=initial_data, user=self.request.user)
+        form = RenderJinjaForm(initial=initial_data)
         context["form"] = form
 
         return context

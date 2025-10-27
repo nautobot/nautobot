@@ -12,7 +12,7 @@ from django.urls import reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
-from nautobot.core.models import BaseModel
+from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
@@ -433,9 +433,9 @@ class RenderJinjaForm(BootstrapMixin, forms.Form):
         help_text="Enter data in JSON format.",
     )
 
-    content_type = forms.ChoiceField(
-        choices=[],  # Set in __init__
-        required=False,
+    content_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.all(),
+        query_params={"can_view": True},
         label="Object Type",
         help_text="Choose the type of object to use as template context.",
     )
@@ -445,22 +445,3 @@ class RenderJinjaForm(BootstrapMixin, forms.Form):
         label="Object UUID",
         help_text="Enter the UUID of the object to use as template context.",
     )
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop("user", None)
-        super().__init__(*args, **kwargs)
-        from nautobot.core.forms.utils import add_blank_choice
-
-        # Populate ContentType choices for BaseModel subclasses with string values
-        choices = []
-        for ct in ContentType.objects.exclude(app_label="users").order_by("app_label", "model"):
-            model_class = ct.model_class()
-            if not (model_class and issubclass(model_class, BaseModel)):
-                continue
-            # If a user is provided, only include content types with at least one object the user can view
-            if user and not model_class.objects.restrict(user, "view").exists():
-                continue
-            # Use string format as value (what ContentTypeField expects)
-            choices.append((f"{ct.app_label}.{ct.model}", ct.app_labeled_name))
-
-        self.fields["content_type"].choices = add_blank_choice(choices)

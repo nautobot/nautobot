@@ -26,7 +26,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
@@ -883,16 +883,12 @@ class RenderJinjaViewTest(TestCase):
         self.assertIsNone(form.initial.get("content_type"))
         self.assertIsNone(form.initial.get("object_uuid"))
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_jinja_view_preselects_from_query_params(self):
         """Test that the render Jinja view preselects from query params."""
-        self.add_permissions("extras.view_status")
 
-        # Use a known BaseModel subclass (Status) for content_type/object UUID
-        ct = ContentType.objects.get_for_model(Status)
-        content_type_str = f"{ct.app_label}.{ct.model}"
-        obj = Status.objects.first()
-        url = reverse("render_jinja_template") + f"?content_type={content_type_str}&object_uuid={obj.pk}"
+        ct = ContentType.objects.get_for_model(Device)
+        obj = Device.objects.first()
+        url = reverse("render_jinja_template") + f"?content_type={ct.pk}&object_uuid={obj.pk}"
 
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
@@ -901,10 +897,12 @@ class RenderJinjaViewTest(TestCase):
         self.assertIsInstance(form, RenderJinjaForm)
 
         # URL params should drive initial values and set context_mode to object
-        self.assertEqual(form.initial.get("content_type"), content_type_str)
+        self.assertEqual(form.initial.get("content_type"), str(ct.pk))
         self.assertEqual(str(form.initial.get("object_uuid")), str(obj.pk))
         self.assertEqual(form.initial.get("context_mode"), "object")
 
         # The provided content_type value should be one of the available choices
-        choice_values = [value for value, _ in form.fields["content_type"].choices]
-        self.assertIn(content_type_str, choice_values)
+        choice_values = [value for value, _ in form.fields["content_type"].choices if value]
+
+        self.assertEqual(len(choice_values), 1)
+        self.assertIn(ct.pk, choice_values)

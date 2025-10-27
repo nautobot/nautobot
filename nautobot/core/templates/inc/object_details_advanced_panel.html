@@ -88,7 +88,7 @@
                 <tr>
                     <td>Test with Jinja Renderer</td>
                     <td>
-                        <a href="{% url 'render_jinja_template' %}?content_type={{ content_type.app_label }}.{{ content_type.model }}&object_uuid={{ object.pk }}" target="_blank">
+                        <a href="{% url 'render_jinja_template' %}?content_type={{ content_type.pk }}&object_uuid={{ object.pk }}" target="_blank">
                             <span class="mdi mdi-open-in-new"></span>
                         </a>
                     </td>

@@ -1953,9 +1953,7 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
             obj = get_obj_from_context(context, self.context_object_key)
             content_type = context["content_type"]  # Always available in object detail views
             jinja_base_url = reverse("render_jinja_template")
-            data["jinja_url"] = (
-                f"{jinja_base_url}?content_type={content_type.app_label}.{content_type.model}&object_uuid={obj.pk}"
-            )
+            data["jinja_url"] = f"{jinja_base_url}?content_type={content_type.pk}&object_uuid={obj.pk}"
 
         return data
 
