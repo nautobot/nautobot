@@ -8,9 +8,7 @@ Nautobot provides a built-in [Jinja2](https://jinja.palletsprojects.com/) templa
 
 It's possible to render Jinja2 templates via the Nautobot REST API. You can use the `POST /api/core/render-jinja-template/` endpoint to render a template using Nautobot's Jinja2 environment.
 
-### JSON Data Mode (REST)
-
-The request body should include the template content and the context data to render the template.
+When using JSON data mode, the request body should include the template content and the context data to render the template.
 
 ```json
 {
@@ -21,9 +19,7 @@ The request body should include the template content and the context data to ren
 }
 ```
 
-### Nautobot Object Mode (REST)
-
-The request body should include the template content, the content type of the object to render, and the UUID of the object to render.
+When using object mode, the request body should include the template content, the content type of the object to render, and the UUID of the object to render.
 
 ```json
 {
@@ -35,15 +31,9 @@ The request body should include the template content, the content type of the ob
 
 ## UI
 
-There is also a UI for rendering Jinja2 templates in the Nautobot web interface. You can access it by navigating to `/render-jinja-template/` or by clicking the "Jinja Renderer" link in the footer of any Nautobot page. The UI provides a form where you can enter the template content and choose between two context modes:
+There is also a UI for rendering Jinja2 templates in the Nautobot web interface. You can access it by navigating to `/render-jinja-template/` or by clicking the "Jinja Renderer" link in the footer of any Nautobot page. The UI provides a form where you can enter the template content and choose between two context modes.
 
-### JSON Data Mode (UI)
-
-The default mode allows you to provide custom JSON data as context for your template. This is useful for testing templates with arbitrary data.
-
-### Nautobot Object Mode (UI)
-
-The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
+In JSON mode, the UI allows you to provide custom JSON data as context for your template. This is useful for testing templates with arbitrary data. In object mode, the UI allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
 
 All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
 
@@ -56,6 +46,11 @@ You can quickly test templates against any object by navigating to the object's 
 This will open the Jinja renderer with the object pre-selected:
 
 ![Image of Jinja Renderer UI with Content Type and UUID prepopulated](../../img/object_jinja_renderer_form.png)
+
+### Debugging Template Issues
+If a template fails to render, the reason for the failure will be displayed in "Rendered Template" section of the UI:
+
+![Image of error message due to a syntax error in a user-supplied template](../../img/jinja_syntax_error_ui.png)
 
 ## Conditional Rendering
 
