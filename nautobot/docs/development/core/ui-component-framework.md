@@ -148,9 +148,8 @@ There are 3 main breadcrumb items classes:
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
 
-By default, breadcrumbs class will add to the breadcrumbs path following items:
-- link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
-- link to view the `object` details at the end - built-in behavior
+By default, breadcrumbs class will render only link to the `list_url` if view is `detail=True`.
+Label will be taken from model associated to this path or set to `title` (if in the context).
 
 +/- 3.0.0 "Default breadcrumbs have changed"
     In Nautobot 2.x, all breadcrumbs defaulted to including the `list_url` at the beginning, and "detail" breadcrumbs additionally appended the
