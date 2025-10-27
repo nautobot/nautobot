@@ -626,31 +626,48 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         label="Group member ID",
     )
 
-    descendants = django_filters.UUIDFilter(method="filter_descendants", label="Descendant of Dynamic Group")
-    ancestors = django_filters.UUIDFilter(method="filter_ancestors", label="Ancestor of Dynamic Group")
+    descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        method="filter_descendants",
+        label="Descendant of Dynamic Group",
+    )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        method="filter_ancestors",
+        label="Ancestor of Dynamic Group",
+    )
 
     class Meta:
         model = DynamicGroup
         fields = ("id", "name", "description", "group_type", "tags", "descendants", "ancestors")
 
     def filter_descendants(self, queryset, name, value):
-        try:
-            root_group = DynamicGroup.objects.get(pk=value)
-        except DynamicGroup.DoesNotExist:
+        if not value:
+            return queryset
+
+        descendant_ids = set()
+        for root_group in value:
+            for membership in root_group.membership_tree():
+                descendant_ids.add(membership.group_id)
+
+        if not descendant_ids:
             return queryset.none()
 
-        descendants = root_group.membership_tree()
-        descendant_groups = [membership.group.pk for membership in descendants]
-        return queryset.filter(pk__in=descendant_groups)
+        return queryset.filter(pk__in=descendant_ids)
 
     def filter_ancestors(self, queryset, name, value):
-        try:
-            child_group = DynamicGroup.objects.get(pk=value)
-        except DynamicGroup.DoesNotExist:
+        if not value:
+            return queryset
+
+        ancestor_ids = set()
+        for child_group in value:
+            ancestor_ids.update(group.pk for group in child_group.get_ancestors())
+
+        if not ancestor_ids:
             return queryset.none()
 
-        ancestors = child_group.get_ancestors()
-        ancestor_ids = [group.pk for group in ancestors]
         return queryset.filter(pk__in=ancestor_ids)
 
 
