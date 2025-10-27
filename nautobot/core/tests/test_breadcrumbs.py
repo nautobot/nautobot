@@ -371,7 +371,7 @@ class BreadcrumbsTestCase(TestCase):
     def test_render_method(self):
         """Test the render method."""
         breadcrumbs = Breadcrumbs()
-        context = Context({"view_action": "list", "model": Device})
+        context = Context({"detail": True, "model": Device})
 
         html = breadcrumbs.render(context)
 
