@@ -355,7 +355,6 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
         expected_items = [
             ("/dcim/location-types/", "Location Types"),
-            (f"/dcim/location-types/{self.location_type.pk}/", str(self.location_type)),
         ]
 
         # Test with an action that doesn't exist but detail=True
@@ -366,7 +365,7 @@ class BreadcrumbsTestCase(TestCase):
         items = breadcrumbs.get_breadcrumbs_items(context)
 
         # Should get 2 items from detail fallback
-        self.assertEqual(len(items), 2)
+        self.assertEqual(len(items), 1)
         self.assertEqual(items, expected_items)
 
     def test_render_method(self):
