@@ -2009,12 +2009,20 @@ class CustomFieldFilterTest(TestCase):
         )
 
     def test_filter_multi_select(self):
-        self.assertQuerysetEqual(
+        self.assertQuerysetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Foo"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerysetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"cf_cf9": ["Foo"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"cf_cf9": ["Bar"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
         self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009

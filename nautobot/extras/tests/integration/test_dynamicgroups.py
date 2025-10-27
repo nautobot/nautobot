@@ -69,8 +69,12 @@ class DynamicGroupTestCase(SeleniumTestCase):
 
         # And just a cursory check to make sure that the filter worked.
         group = DynamicGroup.objects.get(name=name)
-        self.assertEqual(group.count, Device.objects.filter(status__name="Active").count())
         self.assertEqual(group.filter, {"status": ["Active"]})
+        # Because we don't auto-refresh the members on UI create/update any more:
+        # TODO: a more complete integration test could click the "Refresh Members" JobButton, wait until the job completes,
+        #       and so forth, rather than doing so programmatically here:
+        group.update_cached_members()
+        self.assertEqual(group.count, Device.objects.filter(status__name="Active").count())
 
         # Verify dynamic group shows up on device detail tab
         self.browser.visit(

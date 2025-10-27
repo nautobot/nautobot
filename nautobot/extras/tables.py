@@ -1,4 +1,12 @@
+import logging
+from textwrap import dedent
+
 from django.conf import settings
+<<<<<<< HEAD
+=======
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import QuerySet
+>>>>>>> develop
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -69,6 +77,7 @@ from .models import (
 )
 from .registry import registry
 
+<<<<<<< HEAD
 APPROVAL_WORKFLOW_OBJECT = """
 {% if record.object_under_review and record.object_under_review.get_absolute_url %}
     <a href="{{ record.object_under_review.get_absolute_url }}">{{ record.object_under_review }}</a>
@@ -76,6 +85,9 @@ APPROVAL_WORKFLOW_OBJECT = """
     {{ record.object_under_review }}
 {% endif %}
 """
+=======
+logger = logging.getLogger(__name__)
+>>>>>>> develop
 
 ASSIGNED_OBJECT = """
 {% load helpers %}
@@ -1543,8 +1555,31 @@ class ObjectChangeTable(BaseTable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # The `object_repr` column also uses the `changed_object` generic-foreign-key value
-        self.add_conditional_prefetch("object_repr", "changed_object")
+        # Only prefetch if all content types are valid
+        if all(ct.model_class() is not None for ct in ContentType.objects.all()):
+            self.add_conditional_prefetch("object_repr", "changed_object")
+        else:
+            error_message = dedent("""\
+                            One or more ContentType entries in the database are invalid.
+                            This will likely cause performance degradation when viewing the Object Change log.
+                            An administrator can follow these steps to resolve common issues:
+                             - Run `nautobot-server remove_stale_contenttypes`
+                             - Run `nautobot-server migrate <app_label> zero` for any app labels which no longer exist
+                             - Manually dropping tables for any models which have been removed from Nautobot or its plugins from your database
+                             - Run ```
+                                    from django.contrib.contenttypes.models import ContentType
+                                    qs = ContentType.objects.filter(
+                                        app_label__in=[
+                                            "<app_label_of_removed_plugin_1>",
+                                            "<app_label_of_removed_plugin_2>",
+                                        ]
+                                    ) | ContentType.objects.filter(model__icontains="<name_of_removed_model_1>")
+                                    # Review the queryset before running delete
+                                    qs.delete()
+                                   ```
+                            Please ensure you fully understand the implications of these actions before proceeding.
+                            """)
+            logger.warning(error_message)
 
 
 #
