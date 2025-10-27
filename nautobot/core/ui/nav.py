@@ -203,6 +203,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
+            "args": [],
+            "kwargs": {},
             "querystring": self.querystring,
         }
 
@@ -224,6 +226,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         button_class=ButtonActionColorChoices.DEFAULT,
         permissions=None,
         weight=1000,
+        args=None,
+        kwargs=None,
         query_params=None,
     ):
         """
@@ -236,6 +240,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             button_class (str): The button class defines to be used to define the style of the button.
             permissions (list): The permissions required to view this button.
             weight (int): The weight of this button.
+            args (list): Arguments that are being passed to the url with reverse() method.
+            kwargs (dict): Keyword arguments are are being passed to the url with reverse() method.
             query_params (dict): Query parameters to be appended to the URL.
         """
         super().__init__(permissions)
@@ -244,6 +250,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         self.icon_class = icon_class
         self.weight = weight
         self.button_class = button_class
+        self.args = args
+        self.kwargs = kwargs
         self.query_params = query_params
         self.querystring = f"?{urlencode(query_params)}" if query_params else ""
 

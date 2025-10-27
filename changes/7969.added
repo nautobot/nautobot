@@ -1,0 +1,1 @@
+Added arg and kwargs to navigation buttons. Added reverse lookup to navigations.py at button load rather than inside of template.

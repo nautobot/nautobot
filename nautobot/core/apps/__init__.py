@@ -170,7 +170,7 @@ def register_menu_items(tab_list):
                             item.link += f"?{urlencode(item.query_params)}"
                     except NoReverseMatch as e:
                         # Catch the invalid link here and render the link name as an error message in the template
-                        logger.debug("%s", e)
+                        logger.debug("Unable to reverse match url %s: %s", item.link, e)
                         item.name = "ERROR: Invalid link!"
 
                     create_or_check_entry(
@@ -182,6 +182,17 @@ def register_menu_items(tab_list):
 
                     registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
                     for button in item.buttons:
+                        try:
+                            button.link = reverse(button.link, args=button.args, kwargs=button.kwargs)
+                            if button.query_params:
+                                button.link += f"?{urlencode(button.query_params)}"
+                        except NoReverseMatch as e:
+                            # Catch the invalid link here and render the link name as an error message in the template
+                            logger.debug("Unable to reverse match url %s: %s", button.link, e)
+                            button.title = "ERROR: Invalid link!"
+                            button.link = ""
+                            button.button_class = "danger"
+                            button.icon_class = "mdi mdi-alert"
                         create_or_check_entry(
                             registry_buttons,
                             button,

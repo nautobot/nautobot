@@ -48,11 +48,19 @@ class NavMenuTestCase(TestCase):
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.
-                                self.assertIn(get_permission_for_model(view_model, "view"), item_details["permissions"])
+                                self.assertIn(
+                                    get_permission_for_model(view_model, "view"),
+                                    item_details["permissions"],
+                                )
                         except AttributeError:
                             # Not a model view?
                             self.assertIn(
-                                item_details["name"], {"Apps Marketplace", "Installed Apps", "Interface Connections"}
+                                item_details["name"],
+                                {
+                                    "Apps Marketplace",
+                                    "Installed Apps",
+                                    "Interface Connections",
+                                },
                             )
 
                     for button, button_details in item_details["buttons"].items():
@@ -60,11 +68,21 @@ class NavMenuTestCase(TestCase):
                             # Currently all core menu items should have just a single Add button
                             self.assertEqual(button, "Add")
                             self.assertEqual(
-                                button_details["permissions"], {get_permission_for_model(view_model, "add")}
+                                button_details["permissions"],
+                                {get_permission_for_model(view_model, "add")},
                             )
-                            self.assertEqual(button_details["link"], get_route_for_model(view_model, "add"))
-                            self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
-                            self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
+                            self.assertEqual(
+                                resolve(button_details["link"].split("?")[0]).view_name,
+                                get_route_for_model(view_model, "add"),
+                            )
+                            self.assertEqual(
+                                button_details["button_class"],
+                                ButtonActionColorChoices.ADD,
+                            )
+                            self.assertEqual(
+                                button_details["icon_class"],
+                                ButtonActionIconChoices.ADD,
+                            )
 
     def test_permissions_rollup(self):
         menus = registry["nav_menu"]
