@@ -2534,8 +2534,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
         """ObjectsTablePanel for device interfaces; shows the "Device" column if the device is a VirtualChassis master."""
 
         def get_extra_context(self, context):
-            extra_context = super().get_extra_context(context)
             obj = get_obj_from_context(context)
+            context["return_url"] = reverse("dcim:device_interfaces", kwargs={"pk": obj.pk})
+            extra_context = super().get_extra_context(context)
             if VirtualChassis.objects.filter(master=obj).exists():
                 extra_context["body_content_table"].columns.show("device")
             return extra_context
@@ -2800,7 +2801,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         prefetch_related_fields=["_path__destination"],
                         select_related_fields=["cable", "lag"],
                         related_field_name="device",
-                        tab_id="interfaces",
                         enable_bulk_actions=True,
                         form_id="interfaces-form",
                         footer_buttons=bulk_cable_termination_footer_buttons(
