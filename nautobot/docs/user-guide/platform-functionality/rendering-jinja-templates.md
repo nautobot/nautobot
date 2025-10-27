@@ -48,6 +48,7 @@ This will open the Jinja renderer with the object pre-selected:
 ![Image of Jinja Renderer UI with Content Type and UUID prepopulated](../../img/object_jinja_renderer_form.png)
 
 ### Debugging Template Issues
+
 If a template fails to render, the reason for the failure will be displayed in "Rendered Template" section of the UI:
 
 ![Image of error message due to a syntax error in a user-supplied template](../../img/jinja_syntax_error_ui.png)
