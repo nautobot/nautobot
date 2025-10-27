@@ -732,22 +732,22 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     class FilterBaseTextPanel(object_detail.BaseTextPanel):
         def get_value(self, context):
             obj = get_obj_from_context(context)
-            if obj.group_type == "dynamic-filter":
+            if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
                 return obj.filter
             return super().get_value(context)
 
         def render_body_content(self, context):
             """Return placeholder directly to avoid JSON encoding of safe HTML for non-dynamic groups."""
             obj = get_obj_from_context(context)
-            if obj and obj.group_type != "dynamic-filter":
+            if obj and obj.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
                 return helpers.HTML_NONE
             return super().render_body_content(context)
 
     class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
         def get_value(self, context):
             obj = get_obj_from_context(context)
-            if obj.group_type != "static":
-                if obj.group_type == "dynamic-set":
+            if obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
                     self.body_wrapper_template_path = "extras/inc/filter_query_body_wrapper.html"
                 return pretty_print_query(obj.generate_query())
             return helpers.HTML_NONE
