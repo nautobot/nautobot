@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from django.conf import settings as django_settings
 from django.urls import NoReverseMatch, reverse
 
@@ -78,6 +80,12 @@ def nav_menu(request):
             pass
 
     nav_menu_object = {"tabs": {}}
+
+    htmx_current_url = request.headers.get("HX-Current-URL")
+    current_url = request.path
+    if htmx_current_url:
+        current_url = urlparse(htmx_current_url).path
+
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
         if not tab_details["permissions"] or has_one_or_more_perms(request.user, tab_details["permissions"]):
             nav_menu_object["tabs"][tab_name] = {"groups": {}, "icon": tab_details["icon"]}
@@ -93,7 +101,7 @@ def nav_menu(request):
                             if has_identified_active_link:
                                 is_active = False
                             else:
-                                is_active = item_link in [request.path, related_list_view_link]
+                                is_active = item_link in [current_url, related_list_view_link]
                                 if is_active:
                                     has_identified_active_link = True
 
