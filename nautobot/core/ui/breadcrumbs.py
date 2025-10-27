@@ -507,14 +507,7 @@ class Breadcrumbs:
          and there is `context['detail'] = True` set in context
 
     !!! important
-        This class automatically adds the:
-        - `InstanceBreadcrumbItem` at the end of `detail` breadcrumbs
-        - `ModelBreadcrumbItem` at the beginning of `list` and `detail` breadcrumbs
-
-        You can override this behavior by subclassing this class and updating
-        the `list_breadcrumb_item` or `detail_breadcrumb_item` attributes.
-
-        If you're using custom action other than `list` / `detail` you need to remember to add above breadcrumbs
+        If you're using custom action other than `list` / `detail` you need to remember to add list view breadcrumb manually
         if you need them in your custom action.
 
     Attributes:
@@ -553,16 +546,13 @@ class Breadcrumbs:
 
         # Set the default breadcrumbs
         self.items = {
-            "list": [*self.breadcrumb_items],
+            "list": [],
             "detail": [*self.breadcrumb_items],
         }
 
         # If custom items are present, merge with defaults
         if items:
             self.items = {**self.items, **items}
-
-        # Built-in feature: always add the instance details at the end of breadcrumbs path
-        self.items["detail"].append(InstanceBreadcrumbItem(label=detail_item_label))
 
     def get_breadcrumbs_items(self, context: Context) -> list[tuple[str, str]]:
         """

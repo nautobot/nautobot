@@ -65,7 +65,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
             {
                 "list_url": "home",
                 "title": "New Home",
-                "view_action": "list",
+                "detail": True,
                 "breadcrumbs": Breadcrumbs(),
             }
         )
@@ -98,7 +98,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
             {
                 "list_url": "home",
                 "title": "New Home",
-                "view_action": "list",
+                "detail": True,
                 "breadcrumbs": Breadcrumbs(),
             }
         )
@@ -126,7 +126,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
             {
                 "list_url": "home",
                 "title": "New Home",
-                "view_action": "list",
+                "detail": True,
                 "breadcrumbs": Breadcrumbs(),
             }
         )
@@ -152,7 +152,7 @@ class NautobotTemplatetagsUIComponentsTest(TestCase):
             {
                 "list_url": "home",
                 "title": "New Home",
-                "view_action": "list",
+                "detail": True,
                 "breadcrumbs": Breadcrumbs(),
             }
         )
