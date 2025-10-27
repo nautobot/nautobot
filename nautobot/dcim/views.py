@@ -308,13 +308,13 @@ class LocationRackGroupsPanel(object_detail.Panel):
             """
             <tr>
                 <td style="padding-left: {}px">
-                    <i class="mdi mdi-folder-open"></i>
+                    <span class="mdi mdi-folder-open"></span>
                     <a href="{}">{}</a>
                 </td>
                 <td>{}</td>
-                <td class="text-right noprint">
-                    <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
-                        <i class="mdi mdi-server"></i>
+                <td class="float-end d-print-none">
+                    <a href="{}" class="btn btn-sm btn-primary" title="View elevations">
+                        <span class="mdi mdi-server"></span>
                     </a>
                 </td>
             </tr>
