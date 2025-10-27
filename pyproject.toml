@@ -240,6 +240,7 @@ time-machine = "~2.19.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
