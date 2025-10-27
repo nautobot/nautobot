@@ -8,8 +8,7 @@ Nautobot provides a built-in [Jinja2](https://jinja.palletsprojects.com/) templa
 
 It's possible to render Jinja2 templates via the Nautobot REST API. You can use the `POST /api/core/render-jinja-template/` endpoint to render a template using Nautobot's Jinja2 environment.
 
-
-### JSON Data Mode
+### JSON Data Mode (REST)
 
 The request body should include the template content and the context data to render the template.
 
@@ -22,7 +21,7 @@ The request body should include the template content and the context data to ren
 }
 ```
 
-### Nautobot Object Mode
+### Nautobot Object Mode (REST)
 
 The request body should include the template content, the content type of the object to render, and the UUID of the object to render.
 
@@ -38,15 +37,15 @@ The request body should include the template content, the content type of the ob
 
 There is also a UI for rendering Jinja2 templates in the Nautobot web interface. You can access it by navigating to `/render-jinja-template/` or by clicking the "Jinja Renderer" link in the footer of any Nautobot page. The UI provides a form where you can enter the template content and choose between two context modes:
 
-### JSON Data Mode
+### JSON Data Mode (UI)
 
 The default mode allows you to provide custom JSON data as context for your template. This is useful for testing templates with arbitrary data.
 
-### Nautobot Object Mode
+### Nautobot Object Mode (UI)
 
-The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
+The object mode allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
 
-All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register a custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
+All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
 
 ### Quick Access from Object Views
 
@@ -92,7 +91,7 @@ hostname {{ obj.name }}
 !
 interface Management1
  description {{ obj.location.name }} - {{ obj.device_type.manufacturer.name }} {{ obj.device_type.model }}
-{%- if obj.primary_ipv4 %}
+{%- if obj.primary_ip4 %}
  ip address {{ obj.primary_ip4.address }}
 {% endif %}
 !
