@@ -321,17 +321,18 @@ Feature requests will follow our published workflow from inbound triage to ultim
 
 #### Creating Changelog Fragments
 
-All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are:
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your GitHub issue number (or the number of the pull request, if no issue was opened beforehand) and fragment type as the filename. For example, `changes/2362.added`. Valid fragment types are:
 
-* `added`
-* `changed`
-* `dependencies`
-* `deprecated`
-* `documentation`
-* `fixed`
-* `housekeeping`
-* `removed`
-* `security`
+* `added` -- net-new features and functionality
+* `breaking` -- breaking changes to existing features and functionality
+* `changed` -- non-breaking changes to existing features and functionality
+* `dependencies` -- changes to dependencies (added, updated, or removed Python package dependencies, etc.)
+* `deprecated` -- deprecation of existing features and functionality that may be removed entirely in the future
+* `documentation` -- changes to Nautobot's documentation (additions, clarifications, corrections, etc.)
+* `fixed` -- bug fixes
+* `housekeeping` -- changes to the development environment or project internals that have no direct impact to end users
+* `removed` -- removal of existing features and functionality (may be `breaking` in many cases, even if previously `deprecated`)
+* `security` -- security fixes, usually corresponding to a CVE or other security disclosure against either Nautobot or one of its dependencies
 
 The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
 
@@ -339,12 +340,12 @@ The change summary is added to the file in plain text. Change summaries should b
 
     **Wrong**
     ```plaintext title="changes/1234.fixed"
-    fix critical bug in documentation
+    fix critical bug in feature xyz
     ```
 
     **Right**
     ```plaintext title="changes/1234.fixed"
-    Fixed critical bug in documentation.
+    Fixed a bug in feature XYZ in which... (details about the impact to users go here).
     ```
 
 !!! example "Multiple Entry Example"
@@ -352,12 +353,12 @@ The change summary is added to the file in plain text. Change summaries should b
     This will generate 2 entries in the `fixed` category and one entry in the `changed` category.
 
     ```plaintext title="changes/1234.fixed"
-    Fixed critical bug in documentation.
-    Fixed release notes generation.
+    Fixed critical bug in feature XYZ in which ....
+    Fixed a failure in release notes generation.
     ```
 
     ```plaintext title="changes/1234.changed"
-    Changed release notes generation.
+    Changed release notes generation to more robustly handle ....
     ```
 
 ### Documentation Updates
