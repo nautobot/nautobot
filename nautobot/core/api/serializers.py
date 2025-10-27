@@ -17,7 +17,6 @@ from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
-from jinja2.exceptions import TemplateError, TemplateSyntaxError
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.fields import CreateOnlyDefault
@@ -35,7 +34,6 @@ from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.settings_funcs import is_truthy
-from nautobot.core.utils.data import validate_jinja2
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
@@ -917,26 +915,19 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         has_object = bool(content_type and object_uuid)
 
         if not has_context and not has_object:
-            raise ValidationError(
+            raise serializers.ValidationError(
                 "Either 'context' or object selection ('content_type' and 'object_uuid') must be provided."
             )
 
         if has_context and has_object:
-            raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
+            raise serializers.ValidationError(
+                "Cannot specify both 'context' and object selection. Choose one approach."
+            )
 
         if has_context and (content_type or object_uuid):
             raise ValidationError("Cannot specify both 'context' and partial object selection. Choose one approach.")
 
         if content_type and content_type.model_class() is None:
             raise ValidationError(f"Model not found for {content_type.app_label}.{content_type.model}.")
-
-        try:
-            validate_jinja2(attrs["template_code"])
-        except TemplateSyntaxError as exc:
-            raise ValidationError(f"Invalid Jinja2 template syntax: {exc}") from exc
-        except TemplateError as exc:
-            raise ValidationError(f"Invalid Jinja2 template: {exc}") from exc
-        except Exception as exc:
-            raise ValidationError(f"Invalid Jinja2 template: {exc}") from exc
 
         return attrs
