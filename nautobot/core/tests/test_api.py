@@ -1111,6 +1111,39 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.assertEqual(response.data["rendered_template"], "Hello world")
         self.assertEqual(response.data["context"], {})
 
+    def test_render_jinja_validation_template_rejects_context_with_partial_object_fields(self):
+        """Providing context together with either content_type or object_uuid should raise a validation error."""
+        # Use a real object for a valid UUID
+        location = dcim_models.Location.objects.first()
+
+        # Case 1: context + content_type only
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "Hello",
+                "context": {"foo": "bar"},
+                "content_type": "dcim.location",
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot specify both 'context' and partial object selection", str(response.data))
+
+        # Case 2: context + object_uuid only
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "Hello",
+                "context": {"foo": "bar"},
+                "object_uuid": str(location.pk),
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cannot specify both 'context' and partial object selection", str(response.data))
+
     def test_render_jinja_template_with_object_context(self):
         """
         Test rendering a valid Jinja template with object context across different object types.
