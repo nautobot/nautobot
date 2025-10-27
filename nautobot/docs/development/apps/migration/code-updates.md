@@ -164,3 +164,22 @@ In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. A
 ## Revamp CSV Import and Export
 
 CSV Import for models are now done automatically via the REST API. As a result of this change, `CSVForm` classes are no longer needed and should be deleted. In addition, the Model `csv_headers` attribute and `to_csv` method are no longer needed or used in CSV generation, and should be removed from your model definitions. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-254) for this specific change.
+
+## Deprecated Templates
+
+Over time, some templates have been deprecated and either consolidated or replaced with new ones.
+If you are using a deprecated template, you should migrate to the new template.
+We have included a script to help migrate all html files that extend a deprecated template to the new template.
+You can run it with the following command:
+
+```bash
+nautobot-migrate-deprecated-templates <path-to-your-app> [--dry-run]
+```
+
+This will recursively find all `.html` files in the given path and replace extends references (`{% extends 'path/to/deprecated_template.html' %}`) to deprecated templates with the replacement ones.
+You can also run it with the `--dry-run` flag to see what changes would be made without actually making any changes.
+
+For a list of deprecated templates and their replacements, see the following table:
+
+??? info "Full table of deprecated templates and their replacements"
+    {data-table development/apps/migration/tables/deprecated-html-templates.yml}
