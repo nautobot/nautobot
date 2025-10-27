@@ -3,7 +3,7 @@ from unittest import mock
 from django import forms as django_forms
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
-from django.test import tag, TestCase
+from django.test import tag
 from django.urls import reverse
 from netaddr import IPNetwork
 
@@ -15,7 +15,7 @@ from nautobot.extras import filters as extras_filters, models as extras_models
 from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
-class ExpandIPAddress(TestCase):
+class ExpandIPAddress(testing.TestCase):
     """
     Validate the operation of expand_ipaddress_pattern().
     """
@@ -198,7 +198,7 @@ class ExpandIPAddress(TestCase):
             sorted(forms.expand_ipaddress_pattern("1.2.3.[4,,5]/32", 4))
 
 
-class ExpandAlphanumeric(TestCase):
+class ExpandAlphanumeric(testing.TestCase):
     """
     Validate the operation of expand_alphanumeric_pattern().
     """
@@ -332,7 +332,7 @@ class ExpandAlphanumeric(TestCase):
             sorted(forms.expand_alphanumeric_pattern("r[a,,b]a"))
 
 
-class AddFieldToFormClassTest(TestCase):
+class AddFieldToFormClassTest(testing.TestCase):
     def test_field_added(self):
         """
         Test adding of a new field to an existing form.
@@ -361,7 +361,7 @@ class AddFieldToFormClassTest(TestCase):
             )
 
 
-class DynamicModelChoiceFieldTest(TestCase):
+class DynamicModelChoiceFieldTest(testing.TestCase):
     """Tests for DynamicModelChoiceField."""
 
     def setUp(self):
@@ -397,7 +397,7 @@ class DynamicModelChoiceFieldTest(TestCase):
         self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
 
 
-class DynamicModelMultipleChoiceFieldTest(TestCase):
+class DynamicModelMultipleChoiceFieldTest(testing.TestCase):
     """Tests for DynamicModelMultipleChoiceField."""
 
     def setUp(self):
@@ -434,7 +434,7 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
         )
 
 
-class MultiValueCharFieldTest(TestCase):
+class MultiValueCharFieldTest(testing.TestCase):
     def setUp(self):
         self.filter = filters.MultiValueCharFilter()
         self.field = forms.MultiValueCharField()
@@ -467,7 +467,7 @@ class MultiValueCharFieldTest(TestCase):
         )
 
 
-class NumericArrayFieldTest(TestCase):
+class NumericArrayFieldTest(testing.TestCase):
     def setUp(self):
         super().setUp()
         # We need to use a field with required=False so we can test empty/None inputs
@@ -497,7 +497,7 @@ class NumericArrayFieldTest(TestCase):
                 self.field.clean(test)
 
 
-class AddressFieldMixinTest(TestCase):
+class AddressFieldMixinTest(testing.TestCase):
     """Test cases for the AddressFieldMixin."""
 
     def setUp(self):
@@ -527,7 +527,7 @@ class AddressFieldMixinTest(TestCase):
             mock_init.assert_called_with(initial=self.initial, instance=self.ip)
 
 
-class PrefixFieldMixinTest(TestCase):
+class PrefixFieldMixinTest(testing.TestCase):
     """Test cases for the PrefixFieldMixin."""
 
     def setUp(self):
@@ -576,7 +576,7 @@ class JSONFieldTest(testing.TestCase):
         self.assertEqual('"I am UTF-8! 😀"', forms.JSONField().prepare_value("I am UTF-8! 😀"))
 
 
-class MultiMatchModelMultipleChoiceFieldTest(TestCase):
+class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
     def test_clean(self):
         field = forms.MultiMatchModelMultipleChoiceField(
             queryset=ipam_models.VLANGroup.objects.all(), to_field_name="name"
@@ -604,14 +604,14 @@ class MultiMatchModelMultipleChoiceFieldTest(TestCase):
                 field.clean(value)
 
 
-class WidgetsTest(TestCase):
+class WidgetsTest(testing.TestCase):
     def test_api_select_add_query_param_with_utf8(self):
         widget = forms.APISelect()
         widget.add_query_param("utf8", "I am UTF-8! 😀")
         self.assertEqual('["I am UTF-8! 😀"]', widget.attrs["data-query-param-utf8"])
 
 
-class DynamicFilterFormTest(TestCase):
+class DynamicFilterFormTest(testing.TestCase):
     # TODO(timizuo): investigate why test fails on CI
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:

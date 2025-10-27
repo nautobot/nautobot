@@ -19,6 +19,7 @@ from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.ipam.models import default_namespace_pk
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -81,6 +82,7 @@ class NautobotTestCaseMixin:
         """
         super().tearDown()
         cache.clear()
+        default_namespace_pk.set(None)
 
     def prepare_instance(self, instance):
         """
