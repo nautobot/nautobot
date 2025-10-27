@@ -131,7 +131,7 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "{panel_label}")]/following-sibling::div[contains(@class, "collapse")]/table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
@@ -376,7 +376,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
         if not sidenav_button["aria-expanded"] == "true":
             sidenav_button.click()
-        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
+        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[contains(@class, 'nb-sidenav-link') and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
         child_menu.click()

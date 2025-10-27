@@ -110,38 +110,25 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in header
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col text-center" method="get" id="navbar_search" role="search">.*</form>.*</header>'
+            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        # Global search bar in body/container-fluid wrapper
-        body_search_bar_pattern = re.compile(
-            '<div class="container-fluid wrapper" id="main-content">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>',
-            re.DOTALL,
-        )
-
-        body_search_bar_result = body_search_bar_pattern.search(
-            response.content.decode(response.charset).replace("\n", "")
-        )
-
-        return header_search_bar_result, body_search_bar_result
+        return header_search_bar_result
 
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        header_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
         self.assertIsNone(header_search_bar_result)
-        self.assertIsNone(body_search_bar_result)
 
-    @tag("fix_in_v3")
     def test_search_bar_visible_if_user_authenticated(self):
-        header_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
         self.assertIsNotNone(header_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
 
     @override_settings(VERSION="1.2.3")
     def test_footer_version_visible_authenticated_users_only(self):
@@ -396,29 +383,45 @@ class SearchFieldsTestCase(TestCase):
         # SearchForm will redirect the user to the login Page
         self.assertEqual(response.status_code, 302)
 
-    @tag("fix_in_v3")
-    def test_global_and_model_search_bar(self):
+    def test_global_search_bar_scoped_to_model(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            html=True,
+        )
+        self.assertBodyContains(
+            response,
+            """
+                <span class="badge border" data-nb-link="/dcim/locations/"><!--
+                    -->in: Locations<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
             html=True,
         )
-
-        # Assert global search bar present in UI
-        self.assertContains(  # not using assertBodyContains because this is in the nav
+        self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
+            """
+                <span class="badge border" data-nb-link="/dcim/devices/"><!--
+                    -->in: Devices<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
