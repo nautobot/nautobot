@@ -35,6 +35,9 @@ fi
 echo "Checking Markdown files..."
 invoke markdownlint || EXIT=1
 
+echo "Checking that docs build successfully..."
+invoke build-and-check-docs || EXIT=1
+
 echo "Check formatting and static analysis via ruff..."
 invoke ruff || EXIT=1
 
