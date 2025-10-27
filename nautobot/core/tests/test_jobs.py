@@ -17,11 +17,12 @@ from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.models import (
     Contact,
     ContactAssociation,
+    DynamicGroup,
     ExportTemplate,
     FileProxy,
     JobLogEntry,
@@ -1248,3 +1249,76 @@ class BulkDeleteTestCase(TransactionTestCase):
             saved_view_id=None,
         )
         self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
+
+
+class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.job_module = "nautobot.core.jobs.groups"
+        self.job_name = "RefreshDynamicGroupCacheJobButtonReceiver"
+
+    def test_successful_cache_refresh(self):
+        LocationType.objects.create(name="DG Test LT 1")
+        LocationType.objects.create(name="DG Test LT 2")
+        LocationType.objects.create(name="DG Test LT 3")
+        dg = DynamicGroup(
+            name="Location Types",
+            content_type=ContentType.objects.get_for_model(LocationType),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name__isw": ["DG Test"]},
+        )
+        dg.clean()
+        dg.save(update_cached_members=False)
+        self.assertEqual(0, dg.count)
+
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.dynamicgroup",
+            object_pk=dg.pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(3, dg.count)
+
+        dg.filter = {"name__iew": ["DG Test"]}
+        dg.clean()
+        dg.save(update_cached_members=False)
+        self.assertEqual(3, dg.count)
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.dynamicgroup",
+            object_pk=dg.pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(0, dg.count)
+
+    def test_failure_on_non_dg(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.status",
+            object_pk=Status.objects.first().pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertEqual(log_fail.message, "This job button should only be used with Dynamic Group records.")
+
+    def test_failure_on_static_dg(self):
+        dg = DynamicGroup.objects.create(
+            name="Location Types",
+            content_type=ContentType.objects.get_for_model(LocationType),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.dynamicgroup",
+            object_pk=dg.pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertEqual(
+            log_fail.message,
+            "The members of this Dynamic Group are statically defined and do not need to be recalculated.",
+        )

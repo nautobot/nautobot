@@ -339,7 +339,7 @@ class TokenDeleteView(GenericView):
 
         return render(
             request,
-            "generic/object_delete.html",
+            "generic/object_destroy.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -358,7 +358,7 @@ class TokenDeleteView(GenericView):
 
         return render(
             request,
-            "generic/object_delete.html",
+            "generic/object_destroy.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,

@@ -19,7 +19,7 @@ from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
-from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
+from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import (
@@ -381,5 +381,6 @@ jobs = [
     ImportObjects,
     LogsCleanup,
     RefreshDynamicGroupCaches,
+    RefreshDynamicGroupCacheJobButtonReceiver,
 ]
 register_jobs(*jobs)
