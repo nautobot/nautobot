@@ -2,11 +2,7 @@ import logging
 from textwrap import dedent
 
 from django.conf import settings
-<<<<<<< HEAD
-=======
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import QuerySet
->>>>>>> develop
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -77,7 +73,8 @@ from .models import (
 )
 from .registry import registry
 
-<<<<<<< HEAD
+logger = logging.getLogger(__name__)
+
 APPROVAL_WORKFLOW_OBJECT = """
 {% if record.object_under_review and record.object_under_review.get_absolute_url %}
     <a href="{{ record.object_under_review.get_absolute_url }}">{{ record.object_under_review }}</a>
@@ -85,9 +82,6 @@ APPROVAL_WORKFLOW_OBJECT = """
     {{ record.object_under_review }}
 {% endif %}
 """
-=======
-logger = logging.getLogger(__name__)
->>>>>>> develop
 
 ASSIGNED_OBJECT = """
 {% load helpers %}

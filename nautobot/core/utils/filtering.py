@@ -18,12 +18,18 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
 MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
+    "approval_workflow_definitions": "approval_workflows",
     "cables": "cable_terminations",
-    "metadata_types": "metadata",
-    "object_metadata": "metadata",
+    "data_compliance": "custom_validators",
     "location_types": "locations",
-    "static_group_associations": "dynamic_groups",
+    "metadata_types": "metadata",
+    "min_max_validation_rules": "custom_validators",
+    "object_metadata": "metadata",
+    "regular_expression_validation_rules": "custom_validators",
     "relationship_associations": "relationships",
+    "required_validation_rules": "custom_validators",
+    "static_group_associations": "dynamic_groups",
+    "unique_validation_rules": "custom_validators",
 }
 
 
@@ -144,26 +150,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
-<<<<<<< HEAD
-
-        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
-        if plural_name == "cables":
-            plural_name = "cable_terminations"
-        elif plural_name == "metadata_types":
-            plural_name = "metadata"
-        elif plural_name == "object_metadata":
-            plural_name = "metadata"
-        elif plural_name in [
-            "data_compliance",
-            "min_max_validation_rules",
-            "regular_expression_validation_rules",
-            "required_validation_rules",
-            "unique_validation_rules",
-        ]:
-            plural_name = "custom_validators"
-=======
         plural_name = MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING.get(plural_name, plural_name)
->>>>>>> develop
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

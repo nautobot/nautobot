@@ -616,10 +616,7 @@ class WidgetsTest(testing.TestCase):
         self.assertEqual('["I am UTF-8! 😀"]', widget.attrs["data-query-param-utf8"])
 
 
-<<<<<<< HEAD
 class DynamicFilterFormTest(testing.TestCase):
-=======
-class DynamicFilterFormTest(TestCase):
     def test_get_filterset_parameter_form_field_all_filters(self):
         """
         Test every FilterSet to validate that Plural names are correctly mapped in get_filterset_parameter_form_field.
@@ -656,7 +653,6 @@ class DynamicFilterFormTest(TestCase):
                         f" FilterClass: {filterset_class.__name__} name: {filter_name}: {e}"
                     )
 
->>>>>>> develop
     # TODO(timizuo): investigate why test fails on CI
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:

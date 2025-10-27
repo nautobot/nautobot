@@ -6,12 +6,7 @@ import zoneinfo
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-<<<<<<< HEAD
 from django.test import override_settings, tag
-from django.test.client import RequestFactory
-=======
-from django.test import override_settings
->>>>>>> develop
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI

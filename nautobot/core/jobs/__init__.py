@@ -538,10 +538,7 @@ jobs = [
     ImportObjects,
     LogsCleanup,
     RefreshDynamicGroupCaches,
-<<<<<<< HEAD
-    RunRegisteredDataComplianceRules,
-=======
     RefreshDynamicGroupCacheJobButtonReceiver,
->>>>>>> develop
+    RunRegisteredDataComplianceRules,
 ]
 register_jobs(*jobs)

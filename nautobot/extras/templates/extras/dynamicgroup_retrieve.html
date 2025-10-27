@@ -11,15 +11,9 @@
 
 {% block extra_tab_content %}
     <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "members" %}active{% else %}fade{% endif %}">
-<<<<<<< HEAD
-        {% if members_list_url %}
-            <div class="row">
-                <div class="col-lg-12">
-=======
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-lg-12">
                 {% if members_list_url %}
->>>>>>> develop
                     <div class="alert alert-success" role="alert">
                         You can bulk-add and bulk-remove members of this group from the <a href="{{ members_list_url }}">{{ members_verbose_name_plural|bettertitle }} list view</a>.
                     </div>

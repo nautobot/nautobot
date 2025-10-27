@@ -2166,18 +2166,12 @@ class _ObjectDetailContactsTab(Tab):
         )
 
 
-<<<<<<< HEAD
 class _ObjectDetailDataComplianceTab(DistinctViewTab):
     """Built-in class for a Tab displaying information about data compliance."""
-=======
-class DynamicGroupsTextPanel(BaseTextPanel):
-    """Panel displaying a note about caching of dynamic groups."""
->>>>>>> develop
 
     def __init__(
         self,
         *,
-<<<<<<< HEAD
         tab_id="data_compliance",
         label="Data Compliance",
         weight=Tab.WEIGHT_DATACOMPLIANCE_TAB,
@@ -2206,7 +2200,14 @@ class DynamicGroupsTextPanel(BaseTextPanel):
         if not super().should_render(context):
             return False
         return getattr(get_obj_from_context(context), "is_data_compliance_model", False)
-=======
+
+
+class DynamicGroupsTextPanel(BaseTextPanel):
+    """Panel displaying a note about caching of dynamic groups."""
+
+    def __init__(
+        self,
+        *,
         weight,
         render_as=BaseTextPanel.RenderOptions.MARKDOWN,
         label="Dynamic Group caching",
@@ -2229,7 +2230,6 @@ class DynamicGroupsTextPanel(BaseTextPanel):
             "You can also refresh the membership of **all** groups by running the "
             f"[Refresh Dynamic Group Caches job]({job_run_url})."
         )
->>>>>>> develop
 
 
 @dataclass
