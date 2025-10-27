@@ -915,19 +915,19 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         has_object = bool(content_type and object_uuid)
 
         if not has_context and not has_object:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 "Either 'context' or object selection ('content_type' and 'object_uuid') must be provided."
             )
 
         if has_context and has_object:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 "Cannot specify both 'context' and object selection. Choose one approach."
             )
 
         if has_context and (content_type or object_uuid):
-            raise serializers.ValidationError("Cannot specify both 'context' and partial object selection. Choose one approach.")
+            raise ValidationError("Cannot specify both 'context' and partial object selection. Choose one approach.")
 
         if content_type and content_type.model_class() is None:
-            raise serializers.ValidationError(f"Model not found for {content_type.app_label}.{content_type.model}.")
+            raise ValidationError(f"Model not found for {content_type.app_label}.{content_type.model}.")
 
         return attrs
