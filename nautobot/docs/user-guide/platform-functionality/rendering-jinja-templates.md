@@ -102,6 +102,8 @@ interface {{ interface.name }}
 {%- endfor %}
 ```
 
+If you find you need to add/remove whitespace from the rendered output, the [Jinja2 Documentation](https://jinja.palletsprojects.com/en/stable/templates/#whitespace-control) documentation has details on this.
+
 ### Testing Custom Link Templates
 
 Test custom link URL generation with real object data:
