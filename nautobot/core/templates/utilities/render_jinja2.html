@@ -170,14 +170,14 @@
             if (data.detail) return String(data.detail);
 
             if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
-              return data.non_field_errors.join("; ");
+                return data.non_field_errors.join("; ");
             }
 
             // Flatten field errors: { field: ["msg1", "msg2"], ... }
             const fieldMsgs = [];
             for (const [field, value] of Object.entries(data)) {
-              if (Array.isArray(value) && value.length) fieldMsgs.push(`${field}: ${value.join(", ")}`);
-              else if (typeof value === "string" && value) fieldMsgs.push(`${field}: ${value}`);
+                if (Array.isArray(value) && value.length) fieldMsgs.push(`${field}: ${value.join(", ")}`);
+                else if (typeof value === "string" && value) fieldMsgs.push(`${field}: ${value}`);
             }
             return fieldMsgs.length ? fieldMsgs.join("; ") : "Bad Request";
         }
