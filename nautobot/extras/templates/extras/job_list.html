@@ -3,12 +3,22 @@
 
 {% block extra_styles %}
     <style>
-        tr a.job_run .btn {
-            margin: -4px 10px 0 0;
+        tr a.job_run {
+            display: inline-flex;
+            gap: 0.625rem; /* 10px */
         }
 
-        tr.disabled {
-            color: #7d7f7c;
+        tr a.job_run .btn {
+            align-self: flex-start;
+            margin-block: -0.09375rem; /* -1.5px */
+        }
+
+        tr :last-child {
+            margin-bottom: 0;
+        }
+
+        tr.disabled td {
+            color: var(--bs-secondary-color);
         }
 
         tr.disabled a.job_run {
@@ -17,7 +27,11 @@
         }
 
         tr.disabled a.job_run .btn {
-            cursor: not-allowed;
+            cursor: inherit;
+        }
+
+        tr.disabled p {
+            color: inherit;
         }
     </style>
 {% endblock %}
