@@ -22,6 +22,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -40,6 +41,7 @@ from nautobot.extras.filters import (
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
+    DynamicGroupFilterSet,
     ExportTemplateFilterSet,
     ExternalIntegrationFilterSet,
     FileProxyFilterSet,
@@ -79,6 +81,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -1828,6 +1831,70 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_secret_type(self):
         params = {"secret_type": [SecretsGroupSecretTypeChoices.TYPE_PASSWORD]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DynamicGroup.objects.all()
+    filterset = DynamicGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.parent_group = DynamicGroup.objects.create(
+            name="Filter Root Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.child_group = DynamicGroup.objects.create(
+            name="Filter Child Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.sibling_group = DynamicGroup.objects.create(
+            name="Filter Sibling Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.grandchild_group = DynamicGroup.objects.create(
+            name="Filter Grandchild Group",
+            content_type=cls.device_ct,
+        )
+        cls.unrelated_group = DynamicGroup.objects.create(
+            name="Filter Unrelated Group",
+            content_type=cls.device_ct,
+        )
+
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.child_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.sibling_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.child_group,
+            group=cls.grandchild_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=30,
+        )
+
+    def test_filter_descendants_returns_expected_groups(self):
+        params = {"descendants": self.parent_group.pk}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_ancestors_returns_expected_groups(self):
+        params = {"ancestors": self.grandchild_group.pk}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
 
 
 class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
