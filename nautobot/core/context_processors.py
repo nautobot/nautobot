@@ -81,10 +81,10 @@ def nav_menu(request):
 
     nav_menu_object = {"tabs": {}}
 
-    htmx_current_url = request.headers.get("HX-Current-URL")
-    current_url = request.path
-    if htmx_current_url:
+    if htmx_current_url := request.headers.get("HX-Current-URL")
         current_url = urlparse(htmx_current_url).path
+    else:
+        current_url = request.path
 
     for tab_name, tab_details in registry["nav_menu"]["tabs"].items():
         if not tab_details["permissions"] or has_one_or_more_perms(request.user, tab_details["permissions"]):
