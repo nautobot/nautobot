@@ -121,10 +121,6 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
-        #form_field = forms.IntegerField()
-
-        # XXX NOAH XXX If a numeric filter declares choices and the lookup is exact/in,
-        # XXX NOAH XXX render a dropdown instead of a free integer input
         if field.lookup_expr in ("exact", "in") and getattr(field, "choices", None):
             form_field = forms.MultipleChoiceField(
                 choices=field.choices,
