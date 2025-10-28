@@ -13,7 +13,7 @@ from nautobot.extras.models import Job, JobButton, JobQueue
 register = template.Library()
 
 GROUP_DROPDOWN = """
-<div class="dropdown d-inline-flex">
+<div class="dropdown d-inline-flex align-middle">
   <button type="button" class="btn btn-{group_button_class} dropdown-toggle" data-bs-toggle="dropdown">
     {group_name} <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
   </button>

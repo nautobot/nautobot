@@ -12,7 +12,7 @@ register = template.Library()
 
 LINK_BUTTON = '<a href="{}"{} class="btn btn-{}">{}</a>\n'
 GROUP_BUTTON = (
-    '<div class="dropdown d-inline-flex">\n'
+    '<div class="dropdown d-inline-flex align-middle">\n'
     '<button type="button" class="btn btn-{} dropdown-toggle" data-bs-toggle="dropdown">\n'
     '{} <span class="mdi mdi-chevron-down" aria-hidden="true"></span>\n'
     "</button>\n"
