@@ -3205,7 +3205,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
     )
     virtual_device_contexts = DynamicModelMultipleChoiceField(
         queryset=VirtualDeviceContext.objects.all(),
-        label="xxxVirtual Device Contexts",
+        label="Virtual Device Contexts",
         required=False,
         query_params={
             "device": "$device",
