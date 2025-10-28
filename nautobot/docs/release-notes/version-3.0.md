@@ -139,6 +139,121 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.0a3 (2025-10-28)
+
+### Added in v3.0.0a3
+
+- [#4499](https://github.com/nautobot/nautobot/issues/4499) - Added new Constance setting `DEVICE_UNIQUENESS` to configure how Device instances are uniquely identified.
+- [#4499](https://github.com/nautobot/nautobot/issues/4499) - Introduced a new Device Constraints management view accessible from the Data Validation Engine submenu. This endpoint allows staff users to configure device uniqueness and naming enforcement without accessing the generic Constance admin UI.
+- [#6422](https://github.com/nautobot/nautobot/issues/6422) - Added `tenant` attribute to `Namespace`.
+- [#7355](https://github.com/nautobot/nautobot/issues/7355) - Added VPN models.
+- [#7722](https://github.com/nautobot/nautobot/issues/7722) - Added `DataComplianceModelMixin` and applied to base models.
+- [#7722](https://github.com/nautobot/nautobot/issues/7722) - Added `DataComplianceModelMixin` to `nautobot.apps.models`.
+- [#7927](https://github.com/nautobot/nautobot/issues/7927) - Added simplified dark theme to Swagger (`/api/docs/`) and Redoc (`/api/redoc/`) views, without using Nautobot color palette, utilizing mostly CSS `filter` property.
+- [#7983](https://github.com/nautobot/nautobot/issues/7983) - Added tooltip with help text to column names in Approval Workflow Stage Definitions panel.
+- [#7989](https://github.com/nautobot/nautobot/issues/7989) - Implemented a centralized system for managing icons and weights in the navigation bar.
+- [#7989](https://github.com/nautobot/nautobot/issues/7989) - Added tests to ensure the navbar is is properly configured.
+- [#7997](https://github.com/nautobot/nautobot/issues/7997) - Added logic to `nautobot-migrate-bootstrap-v3-to-v5` script to add missing `class="dropdown-item"` to menu items.
+- [#8034](https://github.com/nautobot/nautobot/issues/8034) - Added tooltip for details page timestamp below tabs to indicate type of timestamp: created or last updated.
+
+### Changed in v3.0.0a3
+
+- [#4499](https://github.com/nautobot/nautobot/issues/4499) - Device uniqueness enforcement has been moved from database-level constraints to application-level validation via custom validators.
+- [#7459](https://github.com/nautobot/nautobot/issues/7459) - Changed the default behavior of the REST API to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default.
+- [#7722](https://github.com/nautobot/nautobot/issues/7722) - Changed the Data Compliance tab to use a dynamic route pattern.
+- [#7856](https://github.com/nautobot/nautobot/issues/7856) - Stored JobLogEntry counts on JobResult for more efficient display of this information in list views.
+- [#7903](https://github.com/nautobot/nautobot/issues/7903) - Changed how App documentation is handled - it is now served via a dedicated endpoint whose access is restricted to authenticated users, replacing the previous static public serving.
+- [#7926](https://github.com/nautobot/nautobot/issues/7926) - Updated ECharts color palette.
+- [#7927](https://github.com/nautobot/nautobot/issues/7927) - Updated GraphiQL dark theme colors.
+- [#7944](https://github.com/nautobot/nautobot/issues/7944) - Increased default Bootstrap 5 breakpoints to narrow down view a little bit faster because of sidenav width.
+- [#7944](https://github.com/nautobot/nautobot/issues/7944) - Updated login page for better scaling on different screen sizes.
+- [#7944](https://github.com/nautobot/nautobot/issues/7944) - Changed forms behavior to wrap input below label on smaller screens.
+- [#7974](https://github.com/nautobot/nautobot/issues/7974) - Updated Nautobot icons.
+- [#7978](https://github.com/nautobot/nautobot/issues/7978) - Removed `logger.debug()` call from `construct_cache_key()` function as being too noisy.
+- [#7982](https://github.com/nautobot/nautobot/issues/7982) - Changed the IPAM and circuit navigation icons.
+- [#7983](https://github.com/nautobot/nautobot/issues/7983) - Changed `priority` to `weight` (where highest weight wins) in ApprovalWorkflowDefinition.
+- [#7983](https://github.com/nautobot/nautobot/issues/7983) - Changed `weight` to `sequence` (defines the order in which the stages take effect) in ApprovalWorkflowStageDefinition.
+- [#7983](https://github.com/nautobot/nautobot/issues/7983) - Changed column name from "Min approvers" to "Minimum approvers".
+- [#7989](https://github.com/nautobot/nautobot/issues/7989) - Updated the recommended method for managing the `icon` and `weight` attributes on `NavMenuTab`.
+- [#8002](https://github.com/nautobot/nautobot/issues/8002) - Updated CSS filters and sidenav colors to the latest theme color palette.
+- [#8005](https://github.com/nautobot/nautobot/issues/8005) - Improved rendering of User profile page.
+- [#8008](https://github.com/nautobot/nautobot/issues/8008) - Changed the `DataCompliance` model to not be change-logged and to not support custom fields (as it's not a user-editable model) and updated migrations accordingly.
+- [#8011](https://github.com/nautobot/nautobot/issues/8011) - Changed buttons to be more consistent with placement of positive actions before negative actions.
+- [#8020](https://github.com/nautobot/nautobot/issues/8020) - Restored form-field label positions to once again be located below field inputs.
+- [#8021](https://github.com/nautobot/nautobot/issues/8021) - Changed various "radio-button-like" toggle elements in the UI to be self-consistently styled.
+- [#8028](https://github.com/nautobot/nautobot/issues/8028) - Default breadcrumbs are set to display list url on detail view only.
+- [#8028](https://github.com/nautobot/nautobot/issues/8028) - Instance detail item is removed from breadcrumbs path.
+- [#8029](https://github.com/nautobot/nautobot/issues/8029) - Globally replaced table native checkboxes with their Bootstrap `form-check-input` equivalents.
+- [#8041](https://github.com/nautobot/nautobot/issues/8041) - Merged in latest content from Nautobot v2.4.21.
+- [#8044](https://github.com/nautobot/nautobot/issues/8044) - Moved "Custom Links" and "Job Buttons" to the left of the "default" action buttons on object detail view "main" tabs.
+- [#8044](https://github.com/nautobot/nautobot/issues/8044) - Changed default rendering of Component Framework `Button` to only render on the "main" tab of object detail views.
+
+### Removed in v3.0.0a3
+
+- [#2850](https://github.com/nautobot/nautobot/issues/2850) - Removed many previously deprecated class aliases.
+- [#4499](https://github.com/nautobot/nautobot/issues/4499) - Removed database-level uniqueness constraints on Device (`location`, `tenant`, `name`).
+- [#4499](https://github.com/nautobot/nautobot/issues/4499) - Removed Constance setting `DEVICE_NAME_AS_NATURAL_KEY`.
+- [#8044](https://github.com/nautobot/nautobot/issues/8044) - Removed support for `block panel_buttons` in object detail view templates.
+
+### Fixed in v3.0.0a3
+
+- [#7924](https://github.com/nautobot/nautobot/issues/7924) - Standardized boolean fields on tables to use the default theme.
+- [#7936](https://github.com/nautobot/nautobot/issues/7936) - Fixed a class of circular-import issues by moving various FilterSet mixin classes from `nautobot.*.filters.mixins` to `nautobot.*.filter_mixins` modules.
+- [#7936](https://github.com/nautobot/nautobot/issues/7936) - Fixed suppression of circular-import issues when registering homepage and nav-menu items.
+- [#7945](https://github.com/nautobot/nautobot/issues/7945) - Fixed text color on badges with bg-secondary background.
+- [#7951](https://github.com/nautobot/nautobot/issues/7951) - Fixed various UI related bugs and inconsistencies with bootstrap 5 migration.
+- [#7975](https://github.com/nautobot/nautobot/issues/7975) - Fixed collapsing echarts.
+- [#7976](https://github.com/nautobot/nautobot/issues/7976) - Fixed wrapping on error pages, login page, bulk edit form.
+- [#7976](https://github.com/nautobot/nautobot/issues/7976) - Fixed col/offset not matching breakpoints - for example offset set for md but col set to lg.
+- [#7984](https://github.com/nautobot/nautobot/issues/7984) - Fixed DeviceUniquenessValidator by using `get_settings_or_config` instead of `getattr`.
+- [#7985](https://github.com/nautobot/nautobot/issues/7985) - Fixed chart and table cards to no longer require two clicks to collapse.
+- [#7992](https://github.com/nautobot/nautobot/issues/7992) - Fixed bunch of CSS issues after UI v3 migration.
+- [#7993](https://github.com/nautobot/nautobot/issues/7993) - Added background colors to remaining badges.
+- [#7994](https://github.com/nautobot/nautobot/issues/7994) - Fixed colorless table rows.
+- [#7995](https://github.com/nautobot/nautobot/issues/7995) - Corrected missing/incorrect marking of various links and buttons as `disabled` in appropriate contexts.
+- [#7995](https://github.com/nautobot/nautobot/issues/7995) - Added `aria-disabled="true"` attribute to various disabled links for improved accessibility.
+- [#7997](https://github.com/nautobot/nautobot/issues/7997) - Added missing `class="dropdown-item"` to various dropdown menu items.
+- [#7997](https://github.com/nautobot/nautobot/issues/7997) - Fixed rendering of Custom Links and Job Buttons in Bootstrap 5.
+- [#8001](https://github.com/nautobot/nautobot/issues/8001) - Fixed collapsed sidenav icons invisible after selecting text.
+- [#8004](https://github.com/nautobot/nautobot/issues/8004) - Fixed display of related software images when editing a Device, Inventory Item, or Virtual Machine.
+- [#8006](https://github.com/nautobot/nautobot/issues/8006) - Removed "Advanced" tab from Change Log detail view.
+- [#8007](https://github.com/nautobot/nautobot/issues/8007) - Removed duplicated title/header text from various templates.
+- [#8013](https://github.com/nautobot/nautobot/issues/8013) - Fixed `d-none` being overridden by responsive display utility classes (e.g. `d-md-flex`), causing elements meant to be hidden to remain visible.
+- [#8013](https://github.com/nautobot/nautobot/issues/8013) - Added the `required` attribute to input fields(`schedule_name`, `schedule_start_time` and `recurrence_custom_time` when visible and applied the `nb-required` class to their corresponding labels.
+- [#8016](https://github.com/nautobot/nautobot/issues/8016) - Fixed Job Edit form layout and migrated its script to vanilla JavaScript.
+- [#8018](https://github.com/nautobot/nautobot/issues/8018) - Additional wrapping fixes to more templates.
+- [#8019](https://github.com/nautobot/nautobot/issues/8019) - Fixed rack elevation display in dark mode.
+- [#8020](https://github.com/nautobot/nautobot/issues/8020) - Fixed wrapping fields on narrow viewports.
+- [#8021](https://github.com/nautobot/nautobot/issues/8021) - Fixed incorrect logic in `django_querystring` templatetag.
+- [#8021](https://github.com/nautobot/nautobot/issues/8021) - Added missing `request` to the render context for rendering NautobotUIViewSet views.
+- [#8021](https://github.com/nautobot/nautobot/issues/8021) - Added missing icons to various "Add components" menus for Device, Module, and ModuleType.
+- [#8021](https://github.com/nautobot/nautobot/issues/8021) - Added missing chevron when rendering grouped Custom Links or grouped Job Buttons.
+- [#8029](https://github.com/nautobot/nautobot/issues/8029) - Fixed job list and bulk edit styles.
+- [#8031](https://github.com/nautobot/nautobot/issues/8031) - Fixed missing background in second and subsequent columns in navbar flyouts in Safari.
+- [#8033](https://github.com/nautobot/nautobot/issues/8033) - Fixed form field behavior in Job edit form.
+- [#8034](https://github.com/nautobot/nautobot/issues/8034) - Fixed tooltips staying open after clicking the footer links or opening the theme modal.
+- [#8036](https://github.com/nautobot/nautobot/issues/8036) - Fixed some tests skipped in v3.
+- [#8044](https://github.com/nautobot/nautobot/issues/8044) - Fixed vertical misalignment of rendered Job Button and Custom Link grouped buttons.
+- [#8046](https://github.com/nautobot/nautobot/issues/8046) - Fixed marking menu item as active when adding to favorite.
+- [#8046](https://github.com/nautobot/nautobot/issues/8046) - Fixed redirect after deleting saved view.
+
+### Documentation in v3.0.0a3
+
+- [#7934](https://github.com/nautobot/nautobot/issues/7934) - Prepare documentation for Version 3.0 release.
+
+### Housekeeping in v3.0.0a3
+
+- [#7936](https://github.com/nautobot/nautobot/issues/7936) - Added `example_app` and `example_app_with_view_override` tags to unit and integration tests that depend on these Apps.
+- [#7936](https://github.com/nautobot/nautobot/issues/7936) - Added support for `--config-file` option to `invoke tests` and added alternative config `nautobot/core/tests/nautobot_config_without_example_apps.py` to run tests without enabling the example Apps.
+- [#7936](https://github.com/nautobot/nautobot/issues/7936) - Enhanced Nautobot test runner to automatically exclude tests tagged with `example_app` and/or `example_app_with_view_override` when those Apps are not enabled.
+- [#7948](https://github.com/nautobot/nautobot/issues/7948) - Disabled a flaky integration test that has been holding up merges and releases.
+- [#7979](https://github.com/nautobot/nautobot/issues/7979) - Increased timeout in integration test `click_navbar_entry` to hopefully reduce spurious CI failures.
+- [#7990](https://github.com/nautobot/nautobot/issues/7990) - Corrected static-docs test cases to correctly use `StaticLiveServerTestCase` base class.
+- [#7990](https://github.com/nautobot/nautobot/issues/7990) - Added generated example-app docs to `.gitignore`.
+- [#7991](https://github.com/nautobot/nautobot/issues/7991) - Added a title to the login view.
+- [#8015](https://github.com/nautobot/nautobot/issues/8015) - Added `ssl-verify-server-cert=FALSE` to MySQL/MariaDB dev environment configuration to avoid an exception when running tests locally.
+- [#8044](https://github.com/nautobot/nautobot/issues/8044) - Updated some "example app" content to improve its compatibility with the Bootstrap 5 UI.
+
 ## v3.0.0a2 (2025-10-07)
 
 !!! note

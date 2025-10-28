@@ -1,2 +1,0 @@
-Fixed a class of circular-import issues by moving various FilterSet mixin classes from `nautobot.*.filters.mixins` to `nautobot.*.filter_mixins` modules.
-Fixed suppression of circular-import issues when registering homepage and nav-menu items.
