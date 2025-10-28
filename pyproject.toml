@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.21b1"
+version = "2.4.22b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -38,7 +38,7 @@ celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~45.0.7"
+cryptography = "~46.0.3"
 # Fundamental web framework for Nautobot
 Django = "~4.2.25"
 # Adds AJAX capabilities to django-tables2
@@ -76,7 +76,7 @@ django-silk = "~5.4.3"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^9.1.1", extras = ["celery"]}
+django-structlog = {version = "~10.0.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.5"
 # Tags
@@ -124,7 +124,7 @@ nh3 = "~0.3.1"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "^11.0"
+Pillow = "~12.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.23.1"
 # PostgreSQL database adapter
@@ -240,6 +240,7 @@ time-machine = "~2.19.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
