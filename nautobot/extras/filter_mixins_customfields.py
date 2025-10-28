@@ -1,3 +1,6 @@
+from functools import reduce
+import operator
+
 from django.db.models import Q
 from django.forms import IntegerField
 import django_filters
@@ -47,7 +50,10 @@ class CustomFieldFilterMixin:
         if value == "null" or value == ["null"]:
             return Q(**{f"{self.field_name}__exact": None}) & Q(**{f"{self.field_name}__isnull": False})
 
-        value_match = Q(**{f"{self.field_name}__{self.lookup_expr}": value})
+        if isinstance(value, (list, tuple)):
+            value_match = reduce(operator.or_, [Q(**{f"{self.field_name}__{self.lookup_expr}": v}) for v in value])
+        else:
+            value_match = Q(**{f"{self.field_name}__{self.lookup_expr}": value})
         value_is_not_none = ~Q(**{f"{self.field_name}__exact": None})
         key_is_present_in_jsonb = Q(
             **{f"{self.field_name}__isnull": False}
@@ -88,7 +94,7 @@ class CustomFieldBooleanFilter(CustomFieldFilterMixin, django_filters.BooleanFil
     """Custom field single value filter for backwards compatibility"""
 
 
-class CustomFieldCharFilter(CustomFieldFilterMixin, django_filters.Filter):
+class CustomFieldCharFilter(CustomFieldFilterMixin, django_filters.CharFilter):
     """Custom field single value filter for backwards compatibility"""
 
 
@@ -122,7 +128,7 @@ class CustomFieldMultiSelectFilter(CustomFieldSelectFilter):
         super().__init__(*args, **kwargs)
 
 
-class CustomFieldNumberFilter(CustomFieldFilterMixin, django_filters.Filter):
+class CustomFieldNumberFilter(CustomFieldFilterMixin, django_filters.NumberFilter):
     """Custom field single value filter for backwards compatibility"""
 
     field_class = IntegerField
