@@ -1093,6 +1093,7 @@ class PowerOutletFilterSet(
         model = PowerOutlet
         fields = ["id", "name", "feed_leg", "description", "label", "tags"]
 
+
 class NumericWithChoicesFilter(MultiValueNumberFilter):
     def __init__(self, *args, choices=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1206,9 +1207,6 @@ class InterfaceFilterSet(
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
     duplex = django_filters.MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
-    #
-    # This one results in a dropdown in the Advanced UI and a string in GraphQL.
-    #speed_choices = django_filters.MultipleChoiceFilter(choices=InterfaceSpeedChoices, null_value=None, method="filter_speed")
     speed = NumericWithChoicesFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
 
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(

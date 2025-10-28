@@ -3519,9 +3519,6 @@ class InterfaceBulkEditForm(
         required=False,
     )
     speed = forms.IntegerField(required=False, label="Speed (Kbps)")
-    # speed = forms.TypedChoiceField(
-    #     choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed (Kbps)", coerce=int, empty_value=None
-    # )
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )
