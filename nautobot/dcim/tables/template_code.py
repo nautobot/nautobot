@@ -308,6 +308,7 @@ PARENT_BAY = """
     {{ record.parent_bay }}
 {% endif %}
 """
+
 PARENT_DEVICE = """
 {% load helpers %}
 {% if record.parent_bay %}
