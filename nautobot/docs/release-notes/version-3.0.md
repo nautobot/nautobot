@@ -8,7 +8,8 @@ This document describes all new features and changes in Nautobot 3.0.
 
 - Job approval permissions have been updated in the UI and API. Approvers must now be granted the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permissions, replacing the previous requirement for `extras.approve_job`. This change aligns with updates to the approval workflow implementation and permissions model.
 - The `approval_required` field from `extras.Job` model has been removed. This is a breaking change for any custom Jobs or applications that reference this field. This functionality has been replaced by a new approval workflow system. For more information on how the new approach works, see [approval workflow documentation](../user-guide/platform-functionality/approval-workflow.md)
-    - If you're upgrading from Nautobot 2.x, a management command named `check_job_approval_status` is available in 2.x to help identify jobs and scheduled jobs that still have `approval_required=True`. Running this command prior to upgrading can help you detect and address these cases by either clearing scheduled jobs or defining approval workflows for Jobs.
+    - If you're upgrading from Nautobot 2.x, a management command, `nautobot-server check_job_approval_status` is available in 2.x to help identify jobs and scheduled jobs that still have `approval_required=True`. Running this command prior to upgrading can help you detect and address these cases by either clearing scheduled jobs or defining approval workflows for Jobs.
+- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` before and after the upgrade to identify any impacted Dynamic Groups.
 
 ### Job Authors & App Developers
 
@@ -95,6 +96,43 @@ The Device model has replaced its single `cluster` foreign-key field with a many
 To provide a modicum of backwards-compatibility, the Device model and queryset still support a singular `cluster` property which can be retrieved and (in some cases) set for the case of a single associated Cluster, but App authors, Job Authors, and GraphQL users are encouraged to migrate to using `clusters` as soon as possible. The `cluster` property will raise a `MultipleObjectsReturned` exception if the Device in question has more than one associated Cluster.
 
 Note that due to technical limitations, the Device REST API does *not* support a `cluster` field in Nautobot v3, so users of the REST API *must* migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
+
+#### Filter Standardization Improvements ([#1889](https://github.com/nautobot/nautobot/issues/1889))
+
+To make Nautobot's UI, REST API, and GraphQL filters more self-consistent and standardized, the default filter type for foreign-key and one-to-one model fields has been changed from a single-value filter (`ModelChoiceFilter`) to a multi-value filter (`ModelMultipleChoiceFilter`). This change affects a small number of filters in Nautobot core, as most such fields were already explicitly covered by a `ModelMultipleChoiceFilter` or one of its derivatives, but the following implicit filters are known to have been affected by this change (in addition to any App model filters on one-to-one and foreign-key fields that also were not explicitly defined otherwise):
+
+- Front Port Templates `rear_port_template` filter
+- Power Outlets `power_port` filter
+- Module Bays `parent_module` filter
+- Job Log Entries `job_result` filter
+- Job Results `user` filter
+- IP Address to Interface `ip_address` filter
+
+For users of the UI and REST API, this is purely a feature enhancement to the above filters, as specifying single values in the URL query parameters remains supported, but multiple values are also supported now (for example `/api/extras/job-log-entries/?job_result=<uuid1>&job_result=<uuid2>`.)
+
+For users of GraphQL, this is also a feature enhancement, as queries using the above filters can now specify either a single value (`job_log_entries (job_result: "<uuid>") { message }`) as before, or can now be updated to specify a list of values instead (`job_log_entries (job_result: ["<uuid1>", "<uuid2>"]) { message }`) if desired.
+
+!!! warning "Impact to Dynamic Groups"
+    For Dynamic Groups using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
+
+    ```no-highlight
+    {"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"}
+    ```
+
+    to
+
+    ```no-highlight
+    {"rear_port_template": ["74aac78c-fabb-468c-a036-26c46c56f27a"]}
+    ```
+
+    You can identify impacted Dynamic Groups by running the `nautobot-server validate_models extras.dynamicgroup` management command; in the above case, the invalid group filter would be reported as below:
+
+    ```no-highlight
+    # nautobot-server validate_models extras.dynamicgroup
+    Validating 1 models.
+    extras.DynamicGroup
+    ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
+    ```
 
 #### Many-to-Many Fields in REST API ([#7459](https://github.com/nautobot/nautobot/issues/7459))
 
@@ -206,7 +244,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#7741](https://github.com/nautobot/nautobot/issues/7741) - Added `nautobot.apps.utils.construct_cache_key()` function for consistent construction of Redis cache keys.
 - [#7741](https://github.com/nautobot/nautobot/issues/7741) - Added awareness of Version Control active branch to various Redis caches.
 - [#7837](https://github.com/nautobot/nautobot/issues/7837) - Persist sidenav state in cookies and browser local storage.
-- [#7839](https://github.com/nautobot/nautobot/issues/7839) - Added block job_form_wrapper to provide additional customization on Custom Job Forms.
+- [#7839](https://github.com/nautobot/nautobot/issues/7839) - Added `block job_form_wrapper` to provide additional customization on Custom Job Forms.
 - [#7842](https://github.com/nautobot/nautobot/issues/7842) - Added `Canceled` Approval Workflow State.
 - [#7842](https://github.com/nautobot/nautobot/issues/7842) - Added `nautobot.apps.choices.ApprovalWorkflowStateChoices`.
 - [#7895](https://github.com/nautobot/nautobot/issues/7895) - Added `ObjectApprovalWorkflowView` to `nautobot.apps.views`.
