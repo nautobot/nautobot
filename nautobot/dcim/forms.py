@@ -3165,15 +3165,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         },
         help_text="Assigned LAG interface",
     )
-    # Use TypedChoiceField so blanks map to None and values coerce to int (Kbps)
-    speed = forms.TypedChoiceField(
-        choices=add_blank_choice(InterfaceSpeedChoices),
-        required=False,
-        widget=StaticSelect2(),
-        label="Speed",
-        coerce=int,
-        empty_value=None,
-    )
+    speed = forms.IntegerField(required=False)
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -3244,11 +3236,11 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         widgets = {
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
-            "speed": StaticSelect2(),
             "duplex": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
+            "speed": "Speed (Kbps)",
         }
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
@@ -3321,14 +3313,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         },
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
-    speed = forms.TypedChoiceField(
-        choices=add_blank_choice(InterfaceSpeedChoices),
-        required=False,
-        widget=StaticSelect2(),
-        label="Speed",
-        coerce=int,
-        empty_value=None,
-    )
+    speed = forms.IntegerField(required=False)
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )
@@ -3413,9 +3398,7 @@ class InterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
-    speed = forms.ChoiceField(
-        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
-    )
+    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )
@@ -3453,9 +3436,7 @@ class ModuleInterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
-    speed = forms.ChoiceField(
-        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
-    )
+    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )
@@ -3537,9 +3518,10 @@ class InterfaceBulkEditForm(
         label="VRF",
         required=False,
     )
-    speed = forms.ChoiceField(
-        choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed"
-    )
+    speed = forms.IntegerField(required=False, label="Speed (Kbps)")
+    # speed = forms.TypedChoiceField(
+    #     choices=add_blank_choice(InterfaceSpeedChoices), required=False, widget=StaticSelect2(), label="Speed (Kbps)", coerce=int, empty_value=None
+    # )
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )

@@ -4126,6 +4126,7 @@ class InterfaceCreateView(generic.ComponentCreateView):
     queryset = Interface.objects.all()
     form = forms.InterfaceCreateForm
     model_form = forms.InterfaceForm
+    template_name = "dcim/interface_create.html"
 
 
 class InterfaceEditView(generic.ObjectEditView):
@@ -4149,6 +4150,7 @@ class InterfaceBulkEditView(generic.BulkEditView):
     filterset = filters.InterfaceFilterSet
     table = tables.InterfaceTable
     form = forms.InterfaceBulkEditForm
+    template_name = "dcim/interface_bulk_edit.html"
 
 
 class InterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):

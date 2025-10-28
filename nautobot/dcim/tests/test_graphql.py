@@ -165,7 +165,7 @@ class GraphQLTestCase(TestCase):
             self.assertEqual(eth3["duplex"], None)
 
         with self.subTest("interfaces root filter by speed and duplex"):
-            query = f'query {{ interfaces(speed: "{InterfaceSpeedChoices.SPEED_1G}") {{ name }} }}'
+            query = f'query {{ interfaces(speed: {InterfaceSpeedChoices.SPEED_1G}) {{ name }} }}'
             resp = execute_query(query, user=self.user).to_dict()
             self.assertFalse(resp["data"].get("error"))
             names = {i["name"] for i in resp["data"]["interfaces"]}

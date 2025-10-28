@@ -745,7 +745,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         verbose_name="IP Addresses",
     )
     # Operational attributes (distinct from interface type capabilities)
-    speed = models.PositiveIntegerField(null=True, blank=True, help_text="Operational speed")
+    speed = models.PositiveIntegerField(null=True, blank=True, help_text="Speed (Kbps)")
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
 
     class Meta(ModularComponentModel.Meta):
