@@ -17,13 +17,11 @@ class RackBreadcrumbs(AncestorsBreadcrumbs):
             ModelBreadcrumbItem(),
             InstanceParentBreadcrumbItem(
                 parent_key="location",
+                label=rack.location.name,
             ),
         ]
-        detail_item = InstanceBreadcrumbItem(
-            label=self.detail_item_label,
-        )
         if rack.rack_group:
             ancestors_items = self.get_ancestors_items(rack.rack_group)
-            return [*base_items, *ancestors_items, InstanceBreadcrumbItem(instance=rack.rack_group), detail_item]
+            return [*base_items, *ancestors_items, InstanceBreadcrumbItem(instance=rack.rack_group)]
 
-        return [*base_items, detail_item]
+        return base_items

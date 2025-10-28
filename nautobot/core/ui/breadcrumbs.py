@@ -704,7 +704,6 @@ class AncestorsBreadcrumbs(Breadcrumbs):
         return [
             ModelBreadcrumbItem(model=instance),
             *self.get_ancestors_items(instance),
-            InstanceBreadcrumbItem(instance=instance, label=self.detail_item_label),
         ]
 
     def get_ancestors_items(self, instance: TreeModel) -> list[BaseBreadcrumbItem]:
