@@ -3165,7 +3165,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         },
         help_text="Assigned LAG interface",
     )
-    speed = forms.IntegerField(required=False)
+    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
