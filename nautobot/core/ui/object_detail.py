@@ -203,7 +203,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
-        render_on_tab_id="__all__",
+        render_on_tab_id="main",
         **kwargs,
     ):
         """

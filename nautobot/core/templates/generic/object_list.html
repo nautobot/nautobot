@@ -305,7 +305,7 @@
                 </a>
                 {% if current_saved_view %}
                     {% if current_saved_view.owner == user %}
-                        <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}">
+                        <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}?return_url={{ request.path }}">
                             <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
                         </a>
                     {% else %}
