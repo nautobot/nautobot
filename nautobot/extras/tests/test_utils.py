@@ -4,7 +4,7 @@ import uuid
 from django.core.cache import cache
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Device, LocationType
+from nautobot.dcim.models import Device, Location, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.models import JobQueue
 from nautobot.extras.registry import registry
@@ -23,11 +23,10 @@ class UtilsTestCase(TestCase):
             self.assertEqual(get_base_template("dcim/device/base.html", Device), "dcim/device/base.html")
 
         with self.subTest("<model>.html wins over <model>_retrieve.html"):
-            # TODO: why do we even have both locationtype.html and locationtype_retrieve.html?
-            self.assertEqual(get_base_template(None, LocationType), "dcim/locationtype.html")
+            self.assertEqual(get_base_template(None, PowerPort), "dcim/powerport.html")
 
         with self.subTest("<model>_retrieve.html is used if present"):
-            self.assertEqual(get_base_template(None, JobQueue), "extras/jobqueue_retrieve.html")
+            self.assertEqual(get_base_template(None, Location), "dcim/location_retrieve.html")
 
         with self.subTest("generic/object_retrieve.html is used as a fallback"):
             self.assertEqual(get_base_template(None, Token), "generic/object_retrieve.html")
