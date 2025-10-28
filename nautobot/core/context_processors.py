@@ -81,7 +81,7 @@ def nav_menu(request):
 
     nav_menu_object = {"tabs": {}}
 
-    if htmx_current_url := request.headers.get("HX-Current-URL")
+    if htmx_current_url := request.headers.get("HX-Current-URL"):
         current_url = urlparse(htmx_current_url).path
     else:
         current_url = request.path
