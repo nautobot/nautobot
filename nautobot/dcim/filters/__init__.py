@@ -9,7 +9,7 @@ from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
-    MultiValueNumberFilter,
+    MultiValueNumberWithChoicesFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -1094,12 +1094,6 @@ class PowerOutletFilterSet(
         fields = ["id", "name", "feed_leg", "description", "label", "tags"]
 
 
-class NumericWithChoicesFilter(MultiValueNumberFilter):
-    def __init__(self, *args, choices=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.choices = list(choices) if choices is not None else None
-
-
 class InterfaceFilterSet(
     BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
@@ -1207,7 +1201,7 @@ class InterfaceFilterSet(
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
     duplex = django_filters.MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
-    speed = NumericWithChoicesFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
+    speed = MultiValueNumberWithChoicesFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InterfaceRedundancyGroup.objects.all(),
         to_field_name="name",
