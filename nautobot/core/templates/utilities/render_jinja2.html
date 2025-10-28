@@ -176,10 +176,28 @@
             // Flatten field errors: { field: ["msg1", "msg2"], ... }
             const fieldMsgs = [];
             for (const [field, value] of Object.entries(data)) {
-                if (Array.isArray(value) && value.length) fieldMsgs.push(`${field}: ${value.join(", ")}`);
-                else if (typeof value === "string" && value) fieldMsgs.push(`${field}: ${value}`);
+                if (Array.isArray(value) && value.length) {
+                    fieldMsgs.push(`${field}: ${value.join(", ")}`);
+                } else if (typeof value === "string" && value) {
+                    fieldMsgs.push(`${field}: ${value}`);
+                } else if (typeof value === "object" && value) {
+                    fieldMsgs.push(`${field}: ${JSON.stringify(value)}`);
+                } else {
+                    fieldMsgs.push(`${field}: Failed to parse ${value} (type: ${typeof value})`);
+                }
             }
             return fieldMsgs.length ? fieldMsgs.join("; ") : "Bad Request";
+        }
+
+        async function getContentTypeString(pk) {
+            const base = document.getElementById("id_content_type").getAttribute('data-url');
+            const url = base + pk + "/";
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {"Accept": "application/json"}
+            });
+            const resp = await response.json();
+            return resp.app_label + "." + resp.model;
         }
 
         async function handleFormSubmit(event) {
@@ -194,13 +212,12 @@
 
             if (mode === "object") {
                 // Object mode - send content_type and object_uuid
-                data.content_type = document.getElementById("id_content_type").value;
+                const content_type = document.getElementById("id_content_type").value;
                 data.object_uuid = document.getElementById("id_object_uuid").value;
 
-                if (!data.content_type || !data.object_uuid) {
-                    alert("Please select an object type and enter a UUID.");
-                    return;
-                }
+                // DynamicModelChoiceField returns the PK, so we need to convert it to the string format
+                // the API expects (e.g. "dcim.device")
+                data.content_type = await getContentTypeString(content_type);
             } else {
                 // JSON mode - send context
                 const context = document.getElementById("id_context");
