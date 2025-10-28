@@ -110,6 +110,7 @@
             objectUuid: null
         };
 
+
         function toggleContextMode(mode) {
             const jsonGroup = document.getElementById("json_context_group");
             const contentTypeGroup = document.getElementById("object_content_type_group");
@@ -229,7 +230,7 @@
                     const msg = extractApiErrorMessage(responseData);
                     rendered_template.value = `An error occurred:\n\n${msg}`;
                 } else {
-                    rendered_template.value = responseData.rendered_template;
+                    rendered_template.value = responseData.rendered_template
                 }
             } catch (error) {
                 rendered_template.value = `An error occurred:\n\n${error.message}`;
