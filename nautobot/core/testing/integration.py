@@ -96,7 +96,7 @@ class ObjectsListMixin:
         """
         Click add item button on top of the items table list.
         """
-        self.click_button("#add_button")
+        self.click_button("#add-button")
 
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
@@ -457,19 +457,26 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         search_box.first.type(Keys.ENTER)
 
     def click_button(self, query_selector):
-        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        self.browser.is_element_present_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
+        self.browser.execute_script(
+            f"document.querySelector('{query_selector}').scrollIntoView({{ behavior: 'instant', block: 'start' }});"
+        )
         # Scrolling may be asynchronous, wait until it's actually clickable.
         WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
+        btn = self.browser.find_by_css(query_selector)
         btn.click()
 
     def fill_input(self, input_name, input_value):
         """
         Helper function to fill an input field. Solves issue with element could not be scrolled into view for some pages.
         """
-        element = self.browser.find_by_name(input_name, wait_time=5)
-        self.browser.execute_script("arguments[0].scrollIntoView(true);", element.first._element)
+        self.browser.is_element_present_by_name(input_name, wait_time=5)
+        element = self.browser.find_by_name(input_name)
+        self.browser.execute_script(
+            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", element.first._element
+        )
+        element.is_visible(wait_time=5)
         self.browser.execute_script("arguments[0].focus();", element.first._element)
         self.browser.fill(input_name, input_value)
 
