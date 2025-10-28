@@ -233,7 +233,7 @@
 
             try {
                 const rendered_template = document.getElementById("rendered_template");
-                rendered_template.innerHTML = "Loading...";
+                rendered_template.value = "Loading...";
                 const url = "{% url 'core-api:render_jinja_template' %}";
 
                 const response = await fetch(url, {
@@ -245,12 +245,12 @@
                 const responseData = await response.json();
                 if (!response.ok) {
                     const msg = extractApiErrorMessage(responseData);
-                    rendered_template.innerHTML = sanitize(`An error occurred:\n\n${msg}`);
+                    rendered_template.value = sanitize(`An error occurred:\n\n${msg}`);
                 } else {
-                    rendered_template.innerHTML = sanitize(responseData.rendered_template);
+                    rendered_template.value = sanitize(responseData.rendered_template);
                 }
             } catch (error) {
-                rendered_template.innerHTML = sanitize(`An error occurred:\n\n${error.message}`);
+                rendered_template.value = sanitize(`An error occurred:\n\n${error.message}`);
             }
         }
 
