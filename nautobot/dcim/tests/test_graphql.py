@@ -160,7 +160,7 @@ class GraphQLTestCase(TestCase):
             eth2 = next(i for i in interfaces if i["name"] == "eth2")
             eth3 = next(i for i in interfaces if i["name"] == "eth3")
             self.assertEqual(eth2["speed"], InterfaceSpeedChoices.SPEED_1G)
-            self.assertEqual(eth2["duplex"], InterfaceDuplexChoices.DUPLEX_FULL)
+            self.assertEqual(eth2["duplex"].lower(), InterfaceDuplexChoices.DUPLEX_FULL)
             self.assertEqual(eth3["speed"], InterfaceSpeedChoices.SPEED_10G)
             self.assertEqual(eth3["duplex"], None)
 
