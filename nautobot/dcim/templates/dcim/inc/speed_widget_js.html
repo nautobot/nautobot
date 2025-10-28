@@ -1,0 +1,6 @@
+<script type="text/javascript">
+  $(document).on("click", "a.set_speed", function(e) {
+    e.preventDefault();
+    $("#id_" + $(this).attr("target")).val($(this).attr("data"));
+  });
+</script>
