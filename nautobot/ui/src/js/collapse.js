@@ -5,7 +5,7 @@
  * ---
  * Critical difference between this and default Bootstrap 5 collapse implementation is that Bootstrap only supports
  * toggling individual panel states without an option to toggle them collectively. See an explanation below:
- * Bootstrap 5 on "Collapse All" button click:  |  Nautobot on "Collapse All" button click:
+ * Bootstrap 5 on "Collapse All Groups" button click:  |  Nautobot on "Collapse All Groups" button click:
  *   * X [expanded]  -> [collapsed]             |    * X [expanded]  -> [collapsed]
  *   * Y [collapsed] -> [expanded]              |    * Y [collapsed] -> [collapsed]
  *   * Z [expanded]  -> [collapsed]             |    * Z [expanded]  -> [collapsed]
@@ -45,7 +45,7 @@ export const initializeCollapseToggleAll = () => {
       .filter((collapseToggleAll) => areAll(getCollapseToggleAllTargets(collapseToggleAll), 'collapsed'))
       .forEach((collapseToggleAll) => {
         collapseToggleAll.setAttribute('aria-expanded', 'false');
-        collapseToggleAll.textContent = 'Expand All';
+        collapseToggleAll.textContent = 'Expand All Groups';
       });
 
   const onShownBsCollapse = () =>
@@ -53,7 +53,7 @@ export const initializeCollapseToggleAll = () => {
       .filter((collapseToggleAll) => areAll(getCollapseToggleAllTargets(collapseToggleAll), 'expanded'))
       .forEach((collapseToggleAll) => {
         collapseToggleAll.setAttribute('aria-expanded', 'true');
-        collapseToggleAll.textContent = 'Collapse All';
+        collapseToggleAll.textContent = 'Collapse All Groups';
       });
 
   // Using event delegation pattern here to avoid re-creating listeners each time DOM is modified.
