@@ -39,3 +39,7 @@ Here are the typical instances required for the power utilization of a rack to b
     * power port connected to a power outlet of the PDU
 
 The total power utilization for a rack is calculated as the sum of all allocated draw (from power ports of devices either directly connected to a power feed or connected to a power outlet of a device that is connected to a power feed) divided by the Total Power (Amps × Volts × Max Utilization %) for all power feeds.
+
+## Rack Height Organizational Setting
+
+By default Nautobot sets the rack height to 42 units. This can be changed with the environment variable `NAUTOBOT_DEFAULT_RACK_HEIGHT`. This needs to be a positive integer value.

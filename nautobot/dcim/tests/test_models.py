@@ -1,4 +1,6 @@
 from decimal import Decimal
+from unittest import mock
+import os
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -1131,6 +1133,231 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
         self.assertIn('Racks may not associate to locations of type "Location Type B"', str(cm.exception))
+
+    @mock.patch.dict(os.environ, {}, clear=True)
+    def test_rack_default_height_from_constant_default(self):
+        """Test that Rack uses the default value of 42 when NAUTOBOT_DEFAULT_RACK_HEIGHT is not set."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # Create a rack without specifying u_height
+        rack = Rack(
+            name="TestRackDefaultHeight",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # The rack should have the default height of 42
+        self.assertEqual(rack.u_height, 42)
+
+        # Verify the constant itself is 42
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 42)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "50"}, clear=True)
+    def test_rack_default_height_from_environment_variable(self):
+        """Test that Rack uses custom default height from NAUTOBOT_DEFAULT_RACK_HEIGHT environment variable."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # Verify the constant picked up the environment variable
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 50)
+
+        # Create a rack without specifying u_height
+        rack = Rack(
+            name="TestRackCustomHeight",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # The rack should have the custom default height
+        self.assertEqual(rack.u_height, 50)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "4"}, clear=True)
+    def test_rack_default_height_minimum_boundary(self):
+        """Test that minimum rack height of 4 RU works correctly."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # Verify the constant is set to 4
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 4)
+
+        # Create a rack without specifying u_height
+        rack = Rack(
+            name="TestRackMinHeight",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # The rack should have height of 4
+        self.assertEqual(rack.u_height, 4)
+
+        # Verify the rack units are correct
+        self.assertEqual(list(rack.units), list(reversed(range(1, 5))))
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "100"}, clear=True)
+    def test_rack_default_height_maximum_boundary(self):
+        """Test that maximum rack height of 100 RU works correctly."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # Verify the constant is set to 100
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 100)
+
+        # Create a rack without specifying u_height
+        rack = Rack(
+            name="TestRackMaxHeight",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # The rack should have height of 100
+        self.assertEqual(rack.u_height, 100)
+
+        # Verify the rack units are correct
+        self.assertEqual(list(rack.units), list(reversed(range(1, 101))))
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "3"}, clear=True)
+    def test_rack_default_height_below_minimum_validation(self):
+        """Test that rack height below minimum (< 4 RU) fails validation."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # The constant will be set to 3, but model validation should catch it
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 3)
+
+        # Create a rack without specifying u_height (will use the invalid default)
+        rack = Rack(
+            name="TestRackBelowMin",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # Validation should fail when clean() is called
+        with self.assertRaises(ValidationError) as cm:
+            rack.clean()
+
+        # Check that the error message mentions the minimum value (validator requires >= 1)
+        error_msg = str(cm.exception)
+        self.assertTrue(
+            "Ensure this value is greater than or equal to 1" in error_msg or "u_height" in error_msg,
+            f"Expected validation error for u_height, got: {error_msg}"
+        )
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "501"}, clear=True)
+    def test_rack_default_height_above_maximum_validation(self):
+        """Test that rack height above maximum (> 500 RU) fails validation."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # The constant will be set to 501, but model validation should catch it
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 501)
+
+        # Create a rack without specifying u_height (will use the invalid default)
+        rack = Rack(
+            name="TestRackAboveMax",
+            location=self.location1,
+            status=self.status,
+        )
+        rack.save()
+
+        # Validation should fail when clean() is called
+        with self.assertRaises(ValidationError) as cm:
+            rack.clean()
+
+        # Check that the error message mentions the maximum value (validator requires <= 500)
+        error_msg = str(cm.exception)
+        self.assertTrue(
+            "Ensure this value is less than or equal to 500" in error_msg or "u_height" in error_msg,
+            f"Expected validation error for u_height, got: {error_msg}"
+        )
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "0"}, clear=True)
+    def test_rack_default_height_zero_value(self):
+        """Test that zero rack height from environment variable raises ValueError immediately."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+
+        # Reloading should raise ValueError when trying to use zero
+        with self.assertRaises(ValueError) as cm:
+            reload(constants)
+
+        # Check that the error message is clear about the issue
+        error_msg = str(cm.exception)
+        self.assertIn("NAUTOBOT_DEFAULT_RACK_HEIGHT must be a positive integer", error_msg)
+        self.assertIn("0", error_msg)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "-10"}, clear=True)
+    def test_rack_default_height_negative_value(self):
+        """Test that negative rack height from environment variable raises ValueError immediately."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+
+        # Reloading should raise ValueError when trying to use a negative number
+        with self.assertRaises(ValueError) as cm:
+            reload(constants)
+
+        # Check that the error message is clear about the issue
+        error_msg = str(cm.exception)
+        self.assertIn("NAUTOBOT_DEFAULT_RACK_HEIGHT must be a positive integer", error_msg)
+        self.assertIn("-10", error_msg)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "invalid"}, clear=True)
+    def test_rack_default_height_invalid_value(self):
+        """Test that invalid (non-integer) environment variable value raises ValueError."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+
+        # Reloading should raise ValueError when trying to convert "invalid" to int
+        with self.assertRaises(ValueError) as cm:
+            reload(constants)
+
+        # Check that the error message is clear about the issue
+        error_msg = str(cm.exception)
+        self.assertIn("NAUTOBOT_DEFAULT_RACK_HEIGHT must be a valid integer", error_msg)
+        self.assertIn("invalid", error_msg)
+
+    @mock.patch.dict(os.environ, {"NAUTOBOT_DEFAULT_RACK_HEIGHT": "24"}, clear=True)
+    def test_rack_explicit_height_overrides_environment_default(self):
+        """Test that explicitly setting u_height overrides the environment variable default."""
+        # Need to reload the constants module to pick up the mocked environment
+        from importlib import reload
+        from nautobot.dcim import constants
+        reload(constants)
+
+        # Verify the constant is set to 24 from environment
+        self.assertEqual(constants.RACK_U_HEIGHT_DEFAULT, 24)
+
+        # Create a rack with explicit u_height
+        rack = Rack(
+            name="TestRackExplicitHeight",
+            location=self.location1,
+            status=self.status,
+            u_height=30,  # Explicit value
+        )
+        rack.save()
+
+        # The rack should have the explicitly set height, not the environment default
+        self.assertEqual(rack.u_height, 30)
 
 
 class LocationTypeTestCase(TestCase):

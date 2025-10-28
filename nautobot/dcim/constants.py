@@ -1,3 +1,4 @@
+import os
 from django.db.models import Q
 
 from .choices import InterfaceTypeChoices
@@ -6,7 +7,22 @@ from .choices import InterfaceTypeChoices
 # Racks
 #
 
-RACK_U_HEIGHT_DEFAULT = 42
+# Validate and set the default rack height from environment variable
+_rack_height_env = os.getenv("NAUTOBOT_DEFAULT_RACK_HEIGHT", "42")
+try:
+    RACK_U_HEIGHT_DEFAULT = int(_rack_height_env)
+    if RACK_U_HEIGHT_DEFAULT < 1:
+        raise ValueError(
+            f"NAUTOBOT_DEFAULT_RACK_HEIGHT must be a positive integer (got {RACK_U_HEIGHT_DEFAULT}). "
+            "Rack height must be at least 1 RU."
+        )
+except ValueError as e:
+    if "invalid literal" in str(e):
+        raise ValueError(
+            f"NAUTOBOT_DEFAULT_RACK_HEIGHT must be a valid integer (got '{_rack_height_env}')"
+        ) from e
+    raise
+
 RACK_U_HEIGHT_MAXIMUM = 500
 
 RACK_ELEVATION_BORDER_WIDTH = 2
