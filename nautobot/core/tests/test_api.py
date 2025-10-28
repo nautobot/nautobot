@@ -1115,20 +1115,26 @@ class RenderJinjaViewTest(testing.APITestCase):
         """Providing context together with either content_type or object_uuid should raise a validation error."""
         # Use a real object for a valid UUID
         location = dcim_models.Location.objects.first()
+        content_type = ContentType.objects.get_for_model(dcim_models.Location)
 
-        # Case 1: context + content_type only
-        response = self.client.post(
-            reverse("core-api:render_jinja_template"),
-            {
-                "template_code": "Hello",
-                "context": {"foo": "bar"},
-                "content_type": "dcim.location",
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Cannot specify both 'context' and partial object selection", str(response.data))
+        # Case 1: context + content_type only (string and id variants)
+        for label, selector in [
+            ("string", {"content_type": "dcim.location"}),
+            ("id", {"content_type_id": content_type.pk}),
+        ]:
+            with self.subTest(selector=label):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": "Hello",
+                        "context": {"foo": "bar"},
+                        **selector,
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("Cannot specify both 'context' and partial object selection", str(response.data))
 
         # Case 2: context + object_uuid only
         response = self.client.post(
@@ -1158,32 +1164,36 @@ class RenderJinjaViewTest(testing.APITestCase):
             ("dcim.interface", dcim_models.Interface.objects.first(), "Interface: {{ obj.name }}"),
         ]
 
-        for content_type, obj, template_code in test_cases:
-            with self.subTest(content_type=content_type):
-                response = self.client.post(
-                    reverse("core-api:render_jinja_template"),
-                    {
-                        "template_code": template_code,
-                        "content_type": content_type,
-                        "object_uuid": str(obj.pk),
-                    },
-                    format="json",
-                    **self.header,
-                )
+        for content_type_str, obj, template_code in test_cases:
+            content_type = ContentType.objects.get_for_model(type(obj))
+            for label, selector in [
+                ("string", {"content_type": content_type_str}),
+                ("id", {"content_type_id": content_type.pk}),
+            ]:
+                with self.subTest(content_type=content_type_str, selector=label):
+                    response = self.client.post(
+                        reverse("core-api:render_jinja_template"),
+                        {
+                            "template_code": template_code,
+                            "object_uuid": str(obj.pk),
+                            **selector,
+                        },
+                        format="json",
+                        **self.header,
+                    )
 
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertSequenceEqual(
-                    list(response.data.keys()),
-                    ["rendered_template", "rendered_template_lines", "template_code", "context"],
-                )
+                    self.assertEqual(response.status_code, status.HTTP_200_OK)
+                    self.assertSequenceEqual(
+                        list(response.data.keys()),
+                        ["rendered_template", "rendered_template_lines", "template_code", "context"],
+                    )
 
-                expected_response = f"{content_type.split('.')[1].title()}: {obj.name}"
-                self.assertEqual(response.data["rendered_template"], expected_response)
-                self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+                    expected_response = f"{content_type.model.title()}: {obj.name}"
+                    self.assertEqual(response.data["rendered_template"], expected_response)
+                    self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
 
-                # Verify context contains expected object data
-                self.assertIn("obj", response.data["context"])
-                self.assertEqual(response.data["context"]["obj"].name, obj.name)
+                    # Verify context contains expected object data
+                    self.assertIn("obj", response.data["context"])
 
     def test_render_jinja_template_object_context_variables(self):
         """
@@ -1238,19 +1248,25 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.add_permissions("dcim.view_location")
 
         location = dcim_models.Location.objects.first()
-        response = self.client.post(
-            reverse("core-api:render_jinja_template"),
-            {
-                "template_code": "{{ obj.name }}",
-                "context": {"test": "data"},  # Both context AND object fields
-                "content_type": "dcim.location",
-                "object_uuid": str(location.pk),
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Cannot specify both", str(response.data))
+        content_type = ContentType.objects.get_for_model(dcim_models.Location)
+        for label, selector in [
+            ("string", {"content_type": "dcim.location"}),
+            ("id", {"content_type_id": content_type.pk}),
+        ]:
+            with self.subTest(selector=label):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": "{{ obj.name }}",
+                        "context": {"test": "data"},  # Both context AND object fields
+                        "object_uuid": str(location.pk),
+                        **selector,
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("Cannot specify both", str(response.data))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_jinja_template_without_object_view_permission(self):
@@ -1432,6 +1448,27 @@ class RenderJinjaViewTest(testing.APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertIn(expected_error, str(response.data))
 
+    def test_render_jinja_template_rejects_both_content_type_and_id(self):
+        """Submitting both content_type (string) and content_type_id (PK) should raise a validation error."""
+        self.add_permissions("dcim.view_location")
+
+        content_type = ContentType.objects.get_for_model(dcim_models.Location)
+        location = dcim_models.Location.objects.first()
+
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": "{{ obj.name }}",
+                "content_type": f"{content_type.app_label}.{content_type.model}",
+                "content_type_id": content_type.pk,
+                "object_uuid": str(location.pk),
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("either 'content_type' or 'content_type_id'", str(response.data).lower())
+
     def test_render_jinja_template_model_class_none(self):
         """Test error handling when ContentType exists but model_class() returns None (stale content type)."""
         stale_ct = ContentType.objects.create(app_label="ghostapp", model="ghostmodel")
@@ -1473,20 +1510,26 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.add_permissions("dcim.view_device")
 
         location = dcim_models.Location.objects.first()
+        content_type = ContentType.objects.get_for_model(dcim_models.Device)
 
-        # Try to get a Device using a Location's UUID
-        response = self.client.post(
-            reverse("core-api:render_jinja_template"),
-            {
-                "template_code": "{{ obj.name }}",
-                "content_type": "dcim.device",  # Looking for Device
-                "object_uuid": str(location.pk),  # But using Location UUID
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Object not found", str(response.data))
+        # Try to get a Device using a Location's UUID (string and id variants)
+        for label, selector in [
+            ("string", {"content_type": "dcim.device"}),
+            ("id", {"content_type_id": content_type.pk}),
+        ]:
+            with self.subTest(selector=label):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": "{{ obj.name }}",
+                        "object_uuid": str(location.pk),  # But using Location UUID
+                        **selector,
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("Object not found", str(response.data))
 
     def test_render_jinja_template_failures(self):
         """

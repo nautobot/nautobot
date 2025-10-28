@@ -899,6 +899,10 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         required=False,
         allow_null=True,
     )
+    # Accept a PK variant that normalizes into the same target attribute
+    content_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=ContentType.objects.all(), source="content_type", required=False, allow_null=True
+    )
     object_uuid = serializers.UUIDField(required=False, allow_null=True)
 
     # Read-only response fields
@@ -909,14 +913,27 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         """Ensure either context OR object fields are provided, but not both."""
         has_context = "context" in attrs  # Check presence, not truthiness (allows empty {})
 
-        # Check for meaningful object fields (not just presence)
+        # Enforce exclusivity between content_type and content_type_id using raw payload. This 'if not'
+        # jiggery-pokery is because DRF can return a rest_framwork.fields.empty object which has
+        # no .get() method.
+        raw = getattr(self, "initial_data", {})
+        if not isinstance(raw, dict):
+            raw = {}
+
+        raw_content_type = raw.get("content_type")
+        raw_content_type_id = raw.get("content_type_id")
+        if raw_content_type not in (None, "", []) and raw_content_type_id not in (None, "", []):
+            raise ValidationError("Provide either 'content_type' or 'content_type_id', not both.")
+
+        # Check for meaningful object fields (not just presence). At this point, either input form
+        # will have normalized to attrs['content_type'] when valid.
         content_type = attrs.get("content_type")
         object_uuid = attrs.get("object_uuid")
         has_object = bool(content_type and object_uuid)
 
         if not has_context and not has_object:
             raise ValidationError(
-                "Either 'context' or object selection ('content_type' and 'object_uuid') must be provided."
+                "Either 'context' or object selection ('content_type'/'content_type_id' and 'object_uuid') must be provided."
             )
 
         if has_context and has_object:

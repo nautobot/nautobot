@@ -102,9 +102,6 @@
     {{ block.super }}
     <script>
         new ClipboardJS('.copy-rendered-template');
-        const sanitize = function(string) {
-            return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        };
 
         // Variables to preserve form data when switching between modes
         let savedFormData = {
@@ -189,17 +186,6 @@
             return fieldMsgs.length ? fieldMsgs.join("; ") : "Bad Request";
         }
 
-        async function getContentTypeString(pk) {
-            const base = document.getElementById("id_content_type").getAttribute('data-url');
-            const url = base + pk + "/";
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {"Accept": "application/json"}
-            });
-            const resp = await response.json();
-            return resp.app_label + "." + resp.model;
-        }
-
         async function handleFormSubmit(event) {
             event.preventDefault();
 
@@ -212,12 +198,8 @@
 
             if (mode === "object") {
                 // Object mode - send content_type and object_uuid
-                const content_type = document.getElementById("id_content_type").value;
+                data.content_type_id = document.getElementById("id_content_type").value;
                 data.object_uuid = document.getElementById("id_object_uuid").value;
-
-                // DynamicModelChoiceField returns the PK, so we need to convert it to the string format
-                // the API expects (e.g. "dcim.device")
-                data.content_type = await getContentTypeString(content_type);
             } else {
                 // JSON mode - send context
                 const context = document.getElementById("id_context");
@@ -245,12 +227,12 @@
                 const responseData = await response.json();
                 if (!response.ok) {
                     const msg = extractApiErrorMessage(responseData);
-                    rendered_template.value = sanitize(`An error occurred:\n\n${msg}`);
+                    rendered_template.value = `An error occurred:\n\n${msg}`;
                 } else {
-                    rendered_template.value = sanitize(responseData.rendered_template);
+                    rendered_template.value = responseData.rendered_template;
                 }
             } catch (error) {
-                rendered_template.value = sanitize(`An error occurred:\n\n${error.message}`);
+                rendered_template.value = `An error occurred:\n\n${error.message}`;
             }
         }
 

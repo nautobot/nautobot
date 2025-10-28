@@ -115,12 +115,24 @@ https://monitoring.example.com/devices/{{ obj.name | lower | replace(' ', '-') }
 
 ### REST API with Object Context
 
-The REST API also supports object-based context by providing both `content_type` and `object_uuid` instead of `context`:
+The REST API also supports object-based context by providing `object_uuid` and either `content_type` or `content_type_id` instead of `context`:
+
+#### content_type string
 
 ```json
 {
   "template_code": "Device {{ obj.name }} is located in {{ obj.location.name }}",
   "content_type": "dcim.device",
+  "object_uuid": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+#### content_type_id
+
+```json
+{
+  "template_code": "Device {{ obj.name }} is located in {{ obj.location.name }}",
+  "content_type": 3,
   "object_uuid": "123e4567-e89b-12d3-a456-426614174000"
 }
 ```
