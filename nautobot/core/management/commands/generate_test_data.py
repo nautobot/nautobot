@@ -198,7 +198,7 @@ class Command(BaseCommand):
         _create_batch(VRFFactory, 20)
         _create_batch(VLANGroupFactory, 20)
         _create_batch(VLANFactory, 20)
-        for i in range(30):
+        for i in range(50):
             _create_batch(
                 PrefixFactory,
                 1,

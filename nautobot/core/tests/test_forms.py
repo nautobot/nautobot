@@ -1,14 +1,19 @@
+import inspect
+import sys
 from unittest import mock
 
 from django import forms as django_forms
+from django.apps import apps as django_apps
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
 from django.test import tag
 from django.urls import reverse
+from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
+from nautobot.core.utils.filtering import get_filterset_parameter_form_field
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
 from nautobot.dcim.tests import test_views
 from nautobot.extras import filters as extras_filters, models as extras_models
@@ -612,6 +617,42 @@ class WidgetsTest(testing.TestCase):
 
 
 class DynamicFilterFormTest(testing.TestCase):
+    def test_get_filterset_parameter_form_field_all_filters(self):
+        """
+        Test every FilterSet to validate that Plural names are correctly mapped in get_filterset_parameter_form_field.
+        """
+        filterset_classes = set()
+        for app_config in django_apps.get_app_configs():
+            try:
+                filters_mod = sys.modules.get(f"{app_config.name}.filters")
+                if not filters_mod:
+                    continue
+                for _name, obj in inspect.getmembers(filters_mod):
+                    if (
+                        inspect.isclass(obj)  # Check if obj is a class
+                        and issubclass(obj, FilterSet)  # Check if obj is a subclass of FilterSet
+                        and obj is not FilterSet  # Exclude the base FilterSet class itself
+                        and getattr(getattr(obj, "_meta", None), "model", None)
+                        is not None  # Ensure the FilterSet has a model defined
+                    ):
+                        filterset_classes.add(obj)
+            except Exception as e:
+                # This test might start failing if an app's filters.py gets a design change.
+                self.fail(f"Error processing app '{app_config.name}': {e}")
+        for filterset_class in filterset_classes:
+            filterset = filterset_class()
+            model = filterset._meta.model
+            for filter_name in filterset.filters.keys():
+                try:
+                    field = get_filterset_parameter_form_field(model, filter_name, filterset=filterset)
+                    self.assertIsNotNone(field, "Field was unexpectedly None")
+                except KeyError as e:
+                    self.fail(
+                        f"A filter failed to operate due to mismatched plural name:"
+                        f" Check MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING:"
+                        f" FilterClass: {filterset_class.__name__} name: {filter_name}: {e}"
+                    )
+
     # TODO(timizuo): investigate why test fails on CI
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:

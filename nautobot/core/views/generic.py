@@ -587,7 +587,7 @@ class ObjectDeleteView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionReq
     """
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_delete.html"
+    template_name = "generic/object_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")
@@ -1044,7 +1044,7 @@ class BulkEditView(
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_bulk_edit.html"
+    template_name = "generic/object_bulk_update.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -1246,7 +1246,7 @@ class BulkDeleteView(
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None
-    template_name = "generic/object_bulk_delete.html"
+    template_name = "generic/object_bulk_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")
