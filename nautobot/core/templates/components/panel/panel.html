@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+<div class="panel panel-{{ css_class|default:"default"}}">
     {% if label.strip or header_extra_content.strip %}
         <div class="panel-heading">
             {% if label %}
