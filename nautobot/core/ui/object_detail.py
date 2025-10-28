@@ -915,7 +915,7 @@ class ObjectsTablePanel(Panel):
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
             body_content_table_model = body_content_table.Meta.model
-            list_url = body_content_table.__class__.list_url if hasattr(body_content_table, "list_url") else None
+            list_url = getattr(body_content_table, "list_url", None)
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
