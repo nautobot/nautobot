@@ -130,7 +130,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_interface = VMInterface.objects.create(
             name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
         )
-        ips = list(IPAddress.objects.all()[:10])
+        ips = list(IPAddress.objects.filter(ip_version=4)[:10])
 
         # baseline (no vm_interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
@@ -219,7 +219,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip4, None)
         # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
-        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: does not remove a v6 address, because there are no v6 IPs used in this test
         # NOTE: class.
         count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
         self.assertEqual(count, 0)
