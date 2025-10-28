@@ -184,6 +184,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8028](https://github.com/nautobot/nautobot/issues/8028) - Default breadcrumbs are set to display list url on detail view only.
 - [#8028](https://github.com/nautobot/nautobot/issues/8028) - Instance detail item is removed from breadcrumbs path.
 - [#8029](https://github.com/nautobot/nautobot/issues/8029) - Globally replaced table native checkboxes with their Bootstrap `form-check-input` equivalents.
+- [#8040](https://github.com/nautobot/nautobot/issues/8040) - Changed the label of the Collapse/Expand All buttons to specify they are for the groups rather than the panels.
 - [#8041](https://github.com/nautobot/nautobot/issues/8041) - Merged in latest content from Nautobot v2.4.21.
 - [#8044](https://github.com/nautobot/nautobot/issues/8044) - Moved "Custom Links" and "Job Buttons" to the left of the "default" action buttons on object detail view "main" tabs.
 - [#8044](https://github.com/nautobot/nautobot/issues/8044) - Changed default rendering of Component Framework `Button` to only render on the "main" tab of object detail views.
