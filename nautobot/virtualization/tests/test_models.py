@@ -130,7 +130,8 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_interface = VMInterface.objects.create(
             name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
         )
-        ips = list(IPAddress.objects.filter(ip_version=4)[:10])
+        ips = list(IPAddress.objects.all()[:10])
+        self.assertEqual(len(ips), 10)
 
         # baseline (no vm_interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
@@ -171,7 +172,8 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_interface = VMInterface.objects.create(
             name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
         )
-        ips = list(IPAddress.objects.all()[:10])
+        ips = list(IPAddress.objects.filter(ip_version=4)[:10])
+        self.assertEqual(len(ips), 10)
 
         # baseline (no vm_interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
