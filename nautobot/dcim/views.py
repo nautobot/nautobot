@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
+from functools import partial
 import logging
 import re
 import uuid
@@ -20,7 +21,7 @@ from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html, format_html_join, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -279,6 +280,106 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
+class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
+    def get_data(self, context):
+        data = super().get_data(context)
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if obj and obj.latitude and obj.longitude:
+            data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
+        else:
+            data["GPS Coordinates"] = None
+
+        return data
+
+    def render_value(self, key, value, context):
+        if key == "GPS Coordinates":
+            if value is not None:
+                return helpers.render_address(value)
+            return helpers.HTML_NONE
+
+        return super().render_value(key, value, context)
+
+
+class LocationRackGroupsPanel(object_detail.Panel):
+    def render_rack_row(self, indent_px, url, name, count, elevation_url):
+        """Render a single <tr> for a rack group or summary row."""
+        return format_html(
+            """
+            <tr>
+                <td style="padding-left: {}px">
+                    <span class="mdi mdi-folder-open"></span>
+                    <a href="{}">{}</a>
+                </td>
+                <td>{}</td>
+                <td class="float-end d-print-none">
+                    <a href="{}" class="btn btn-sm btn-primary" title="View elevations">
+                        <span class="mdi mdi-server"></span>
+                    </a>
+                </td>
+            </tr>
+            """,
+            indent_px,
+            url,
+            name,
+            count,
+            elevation_url,
+        )
+
+    def render_body_content(self, context):
+        """Render the <tbody> content for the Rack Groups table."""
+        obj = get_obj_from_context(context)
+        if not obj:
+            return ""
+
+        rack_groups = context.get("rack_groups", [])
+        rack_count = context.get("rack_count", 0)
+
+        rows = []
+
+        # Render each rack group row
+        for rack_group in rack_groups:
+            rows.append(
+                self.render_rack_row(
+                    getattr(rack_group, "tree_depth", 0) * 8,
+                    rack_group.get_absolute_url(),
+                    str(rack_group),
+                    rack_group.rack_count,
+                    f"{reverse('dcim:rack_elevation_list')}?rack_group={rack_group.pk}",
+                )
+            )
+
+        # Add "All racks" row
+        rows.append(
+            self.render_rack_row(
+                10,
+                "#",
+                "All racks",
+                rack_count,
+                f"{reverse('dcim:rack_elevation_list')}?location={obj.pk}",
+            )
+        )
+
+        return format_html_join("", "{}", ((row,) for row in rows))
+
+
+class LocationImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
+    """
+    ObjectsTablePanel with a custom _get_table_add_url() implementation.
+
+    Needed because the URL is `/dcim/devices/<pk>/images/add/`, not `extras/image-attachments/add?location=<pk>`.
+    """
+
+    def _get_table_add_url(self, context):
+        obj = get_obj_from_context(context)
+        request = context["request"]
+        return_url = context.get("return_url", obj.get_absolute_url())
+
+        if not request.user.has_perms(["extras.add_imageattachment"]):
+            return None
+        return reverse("dcim:location_add_image", kwargs={"object_id": obj.pk}) + f"?return_url={return_url}"
+
+
 class LocationUIViewSet(NautobotUIViewSet):
     # We are only accessing the tree fields from the list view, where `with_tree_fields` is called dynamically
     # depending on whether the hierarchy is shown in the UI (note that `parent` itself is a normal foreign key, not a
@@ -293,70 +394,116 @@ class LocationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
     breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    view_titles = Titles(titles={"detail": "{{ object.name }}"})
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "location_type",
+                    "status",
+                    "parent",
+                    "tenant",
+                    "facility",
+                    "asn",
+                    "time_zone",
+                    "description",
+                ],
+                value_transforms={
+                    "location_type": [partial(helpers.hyperlinked_object, field="name")],
+                    "time_zone": [helpers.format_timezone],
+                },
+                key_transforms={
+                    "asn": "AS Number",
+                },
+            ),
+            LocationGeographicalInfoFieldsPanel(
+                weight=110,
+                section=SectionChoices.LEFT_HALF,
+                label="Geographical Info",
+                fields=[
+                    "physical_address",
+                    "shipping_address",
+                ],
+                value_transforms={
+                    "physical_address": [helpers.render_address],
+                    "shipping_address": [helpers.render_address],
+                },
+            ),
+            object_detail.ObjectFieldsPanel(
+                weight=120,
+                section=SectionChoices.LEFT_HALF,
+                label="Contact Info",
+                fields=["contact_name", "contact_phone", "contact_email"],
+                value_transforms={
+                    "contact_phone": [helpers.hyperlinked_phone_number],
+                    "contact_email": [helpers.hyperlinked_email],
+                },
+                footer_content_template_path="dcim/footer_convert_to_contact_or_team_record.html",
+            ),
+            object_detail.StatsPanel(
+                weight=100,
+                label="Stats",
+                section=SectionChoices.RIGHT_HALF,
+                filter_name="location",
+                related_models=[
+                    Rack,
+                    Device,
+                    Prefix,
+                    VLAN,
+                    (Circuit, "circuit_terminations__location__in"),
+                    (VirtualMachine, "cluster__location__in"),
+                ],
+            ),
+            LocationRackGroupsPanel(
+                label="Rack Groups",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                body_wrapper_template_path="components/panel/body_wrapper_generic_table.html",
+            ),
+            LocationImageAttachmentsTablePanel(
+                weight=300,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Images",
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="location",
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_title="Children",
+                table_class=tables.LocationTable,
+                table_attribute="children",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                hide_hierarchy_ui=True,
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         if instance is None:
             return super().get_extra_context(request, instance)
+
         # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
         # ensure it is only performed once rather than as a subquery for each of the different count stats.
         related_locations = list(
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
-        prefix_count_queryset = Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        vlan_count_queryset = VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations)
-        circuit_count_queryset = Circuit.objects.restrict(request.user, "view").filter(
-            circuit_terminations__location__in=related_locations
-        )
-        # When there is more than one location, the models that can be assigned to more then one location at the same
-        # time need to be queried with `distinct`. We are avoiding `distinct` when this is not the case, as it incurs
-        # a performance penalty.
-        if len(related_locations) > 1:
-            prefix_count_queryset = prefix_count_queryset.distinct()
-            vlan_count_queryset = vlan_count_queryset.distinct()
-            circuit_count_queryset = circuit_count_queryset.distinct()
-        stats = {
-            "prefix_count": prefix_count_queryset.count(),
-            "vlan_count": vlan_count_queryset.count(),
-            "circuit_count": circuit_count_queryset.count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(cluster__location__in=related_locations)
-            .count(),
-        }
+
         rack_groups = (
             RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
             .restrict(request.user, "view")
             .filter(location__in=related_locations)
         )
-        children = (
-            Location.objects.restrict(request.user, "view")
-            # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
-            # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
-            # automatically issue a second query (similar to behavior for
-            # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
-            .without_tree_fields()
-            .filter(parent=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTable(children, hide_hierarchy_ui=True)
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
 
         return {
-            "children_table": children_table,
             "rack_groups": rack_groups,
-            "stats": stats,
-            "contact_association_permission": ["extras.add_contactassociation"],
-            # show the button if any of these fields have non-empty value.
-            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
-            **super().get_extra_context(request, instance),
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
         }
 
 
@@ -2183,34 +2330,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
         """
 
-        class DeviceDynamicGroupsTextPanel(object_detail.BaseTextPanel):
-            """Panel displaying a note about caching of dynamic groups."""
-
-            def __init__(
-                self,
-                *,
-                weight,
-                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
-                label="Dynamic Group caching",
-                **kwargs,
-            ):
-                super().__init__(weight=weight, render_as=render_as, label=label, **kwargs)
-
-            def get_value(self, context):
-                dg_list_url = reverse("extras:dynamicgroup_list")
-                job_run_url = reverse(
-                    "extras:job_run_by_class_path",
-                    kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
-                )
-                return (
-                    "Dynamic group membership is cached for performance reasons, "
-                    "therefore this page may not always be up-to-date.\n\n"
-                    "You can refresh the membership of any specific group by viewing it from the list below or from the "
-                    f"[Dynamic Groups list view]({dg_list_url}).\n\n"
-                    "You can also refresh the membership of **all** groups by running the "
-                    f"[Refresh Dynamic Group Caches job]({job_run_url})."
-                )
-
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             # Remove inline tab definition
@@ -2226,7 +2345,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
                     panels=(
-                        self.DeviceDynamicGroupsTextPanel(weight=100),
+                        object_detail.DynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
                             weight=200,
                             table_class=DynamicGroupTable,
@@ -2313,11 +2432,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
             for powerport in instance.all_power_ports.all():
                 utilization = powerport.get_power_draw()
                 # Table row for each power-port
-                powerfeed = powerport.connected_endpoint
-                if powerfeed is not None and powerfeed.available_power:
-                    available_power = powerfeed.available_power
+                connected_endpoint = powerport.connected_endpoint
+                if isinstance(connected_endpoint, PowerFeed) and connected_endpoint.available_power:
+                    available_power = connected_endpoint.available_power
                     utilization_data = Context(
-                        helpers.utilization_graph_raw_data(utilization["allocated"], powerfeed.available_power)
+                        helpers.utilization_graph_raw_data(utilization["allocated"], connected_endpoint.available_power)
                     )
                     utilization_graph = object_detail.render_component_template(
                         "utilities/templatetags/utilization_graph.html", utilization_data
@@ -2336,13 +2455,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
                 # Indented table row for each leg of a three-phase power-port.
                 for leg in utilization["legs"]:
-                    if powerfeed is not None and powerfeed.available_power:
-                        available_power = powerfeed.available_power / 3
+                    if isinstance(connected_endpoint, PowerFeed) and connected_endpoint.available_power:
+                        available_power = connected_endpoint.available_power / 3
                         utilization_data = Context(
-                            helpers.utilization_graph_raw_data(leg["allocated"], powerfeed.available_power / 3)
-                        )
-                        utilization_graph = object_detail.render_component_template(
-                            "utilities/templatetags/utilization_graph.html", utilization_data
+                            helpers.utilization_graph_raw_data(leg["allocated"], connected_endpoint.available_power / 3)
                         )
                     else:
                         available_power = helpers.HTML_NONE
