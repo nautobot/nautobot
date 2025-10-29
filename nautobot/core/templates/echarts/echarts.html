@@ -6,15 +6,30 @@
 
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize the echarts instance based on the prepared dom
-        var myChart = window.echarts.init(document.getElementById("{{ chart_container_id }}"), null, { renderer: "{{ chart.renderer }}" });
+        setTimeout(() => {
+            // Initialize the echarts instance based on the prepared dom
+            var myChart = window.echarts.init(document.getElementById("{{ chart_container_id }}"), null, { renderer: "{{ chart.renderer }}" });
 
-        // Get config from JSON script
-        var options = JSON.parse(
-            document.getElementById("echarts-config-{{ chart_container_id }}").textContent
-        );
+            // Get config from JSON script
+            var options = JSON.parse(
+                document.getElementById("echarts-config-{{ chart_container_id }}").textContent
+            );
 
-        // Display the chart using the configuration items and data just specified.
-        myChart.setOption(options);
+            // Get current theme
+            var currentTheme = document.documentElement.dataset.bsTheme || 'light';
+
+            // Update colors based on theme
+            if (options.color && Array.isArray(options.color)) {
+                options.color = options.color.map(colorObj => {
+                    if (colorObj && typeof colorObj === 'object') {
+                        return colorObj[currentTheme] || colorObj.light || colorObj;
+                    }
+                    return colorObj;
+                });
+            }
+
+            // Display the chart using the configuration items and data just specified.
+            myChart.setOption(options);
+        });
     });
 </script>

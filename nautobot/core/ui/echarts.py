@@ -5,7 +5,7 @@ from typing import Any, Callable
 from django.db.models import QuerySet
 from django.template import Context
 
-from nautobot.core.ui.choices import EChartsTypeChoices, EChartsTypeTheme
+from nautobot.core.ui.choices import EChartsThemeColors, EChartsTypeChoices
 from nautobot.core.utils.lookup import resolve_attr
 
 
@@ -216,7 +216,7 @@ class EChartsBase:
         x_label="X",
         y_label="Y",
         legend=None,
-        theme=EChartsTypeTheme.DEFAULT,
+        theme_colors=EChartsThemeColors.DEFAULT,
         renderer="canvas",
         show_toolbox=True,
         save_image_options=None,
@@ -245,7 +245,7 @@ class EChartsBase:
                     }
                 You can also hide the legend entirely by setting `"show": False`.
                 More details here: https://echarts.apache.org/handbook/en/concepts/legend.
-            theme (str): Theme for chart (default: EChartsTypeTheme.DEFAULT).
+            theme_colors (str): Color pallete for chart (default: EChartsThemeColors.DEFAULT).
             renderer (str): If the renderer is set to 'canvas' when chart initialized (default), then
                 'png' (default) and 'jpg' are supported. If the renderer is set to 'svg' when chart
                 initialized, then only 'svg' is supported for type. See more details:
@@ -271,7 +271,7 @@ class EChartsBase:
         self.x_label = x_label
         self.y_label = y_label
         self.legend = legend or {}
-        self.theme = theme
+        self.theme_colors = theme_colors
         self.renderer = renderer
         self.show_toolbox = show_toolbox
         self.save_image_options = {"name": self.header or "echart", "show": True, **(save_image_options or {})}
@@ -379,8 +379,8 @@ class EChartsBase:
         return original
 
     def get_theme_colors(self):
-        """Map SCSS palette to echarts theme colors (manual sync)."""
-        return EChartsTypeTheme.COLORS.get(self.theme, EChartsTypeTheme.COLORS[EChartsTypeTheme.DEFAULT])
+        """Map SCSS palette to echarts colors."""
+        return EChartsThemeColors.COLORS.get(self.theme_colors, EChartsThemeColors.COLORS[EChartsThemeColors.DEFAULT])
 
     def get_config(self):
         """Return a dict ready to dump into echarts option JSON."""
