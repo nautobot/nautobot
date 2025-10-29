@@ -833,31 +833,6 @@ def label_list(value, suffix=""):
     )
 
 
-def render_jobresult_status(status):
-    """
-    Render a Bootstrap-style label for a JobResult status.
-
-    Args:
-        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
-
-    Returns:
-        str: Safe HTML string for a styled label with a fixed ID so tests work.
-    """
-    mapping = {
-        "FAILURE": ("danger", "Failed"),
-        "PENDING": ("default", "Pending"),
-        "STARTED": ("warning", "Running"),
-        "SUCCESS": ("success", "Completed"),
-    }
-
-    css_class, text = mapping.get(status, ("default", "N/A"))
-    return format_html(
-        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
-        css_class,
-        text,
-    )
-
-
 def render_jobresult_files(files_manager):
     """
     Render job result files as an HTML <ul> list with download links.
