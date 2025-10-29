@@ -245,7 +245,7 @@ class EChartsBase:
                     }
                 You can also hide the legend entirely by setting `"show": False`.
                 More details here: https://echarts.apache.org/handbook/en/concepts/legend.
-            theme_colors (str): Color pallete for chart (default: EChartsThemeColors.DEFAULT).
+            theme_colors (str): Color palette for chart (default: EChartsThemeColors.DEFAULT).
             renderer (str): If the renderer is set to 'canvas' when chart initialized (default), then
                 'png' (default) and 'jpg' are supported. If the renderer is set to 'svg' when chart
                 initialized, then only 'svg' is supported for type. See more details:
