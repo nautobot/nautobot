@@ -21,7 +21,7 @@ This document describes all new features and changes in Nautobot 3.0.
 
 - Filtering data that supports a `type` filter in the REST API now also supports a corresponding `type` filter in GraphQL. (In Nautobot v2.x and earlier, the filter had to be referenced in GraphQL as `_type` instead.) Filtering by `_type` is still supported where applicable but should be considered deprecated; please update your GraphQL queries accordingly.
 - As a part of adding support for associating a [Device to multiple Clusters](#device-to-multiple-clusters-7203), the Device REST API no longer supports a `cluster` field; the field has been renamed to `clusters` and is now a list of related Clusters rather than a single record. See below for more details.
-- The REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. Pynautobot and Nautobot Ansible users should ensure they are on the latest versions to maintain backwards compatibility. See [Many-to-Many Fields in REST API](#many-to-many-fields-in-rest-api-7459) below for more details.
+- The REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. Pynautobot and Nautobot Ansible users should ensure they are on the latest versions to maintain backwards compatibility. See [Many-to-Many Fields in REST API](#many-to-many-fields-in-rest-api-7456) below for more details.
 
 ## Release Overview
 
@@ -134,7 +134,7 @@ For users of GraphQL, this is also a feature enhancement, as queries using the a
     ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
     ```
 
-#### Many-to-Many Fields in REST API ([#7459](https://github.com/nautobot/nautobot/issues/7459))
+#### Many-to-Many Fields in REST API ([#7456](https://github.com/nautobot/nautobot/issues/7456))
 
 In order to improve performance at scale, the REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. See [Filtering Included Fields](../user-guide/platform-functionality/rest-api/filtering.md#filtering-included-fields) for more details.
 
@@ -197,7 +197,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 ### Changed in v3.0.0a3
 
 - [#4499](https://github.com/nautobot/nautobot/issues/4499) - Device uniqueness enforcement has been moved from database-level constraints to application-level validation via custom validators.
-- [#7459](https://github.com/nautobot/nautobot/issues/7459) - Changed the default behavior of the REST API to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default.
+- [#7456](https://github.com/nautobot/nautobot/issues/7456) - Changed the default behavior of the REST API to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default.
 - [#7722](https://github.com/nautobot/nautobot/issues/7722) - Changed the Data Compliance tab to use a dynamic route pattern.
 - [#7856](https://github.com/nautobot/nautobot/issues/7856) - Stored JobLogEntry counts on JobResult for more efficient display of this information in list views.
 - [#7903](https://github.com/nautobot/nautobot/issues/7903) - Changed how App documentation is handled - it is now served via a dedicated endpoint whose access is restricted to authenticated users, replacing the previous static public serving.
