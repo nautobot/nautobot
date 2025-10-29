@@ -1258,7 +1258,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         context = {
             **super().get_extra_context(request, instance),
             "result": job_result or {},
-            "base_template": "extras/configcontextschema_retrieve.html",
+            "base_template": "extras/gitrepository_retrieve.html",
             "object": instance,
             "active_tab": "result",
             "verbose_name": instance._meta.verbose_name,
