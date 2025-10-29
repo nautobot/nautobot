@@ -26,7 +26,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -2155,6 +2155,31 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def render_jobresult_status(status):
+    """
+    Render a Bootstrap-style label for a JobResult status.
+
+    Args:
+        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "FAILURE": ("danger", "Failed"),
+        "PENDING": ("default", "Pending"),
+        "STARTED": ("warning", "Running"),
+        "SUCCESS": ("success", "Completed"),
+    }
+
+    css_class, text = mapping.get(status, ("default", "N/A"))
+    return format_html(
+        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
+        css_class,
+        text,
+    )
+
+
 class JobResultButton(object_detail.Button):
     """Custom Button that supports callable link_name and hides invalid buttons."""
 
@@ -2184,11 +2209,11 @@ class JobResultUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
-    queryset = JobResult.objects.all()
-    serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
     filterset_form_class = forms.JobResultFilterForm
+    serializer_class = serializers.JobResultSerializer
     table_class = tables.JobResultTable
+    queryset = JobResult.objects.all()
     action_buttons = ()
     breadcrumbs = Breadcrumbs(
         items={
@@ -2238,8 +2263,8 @@ class JobResultUIViewSet(
                     "files",
                 ],
                 value_transforms={
-                    "status": [helpers.render_job_label],
-                    "files": [helpers.render_job_files],
+                    "status": [render_jobresult_status],
+                    "files": [helpers.render_jobresult_files],
                 },
             ),
             object_detail.Panel(
@@ -2253,7 +2278,7 @@ class JobResultUIViewSet(
             JobResultButton(
                 weight=100,
                 label="Re-Run",
-                color=ButtonColorChoices.GREEN,
+                color=ButtonActionColorChoices.RERUN,
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
@@ -2266,7 +2291,7 @@ class JobResultUIViewSet(
             JobResultButton(
                 weight=110,
                 label="Run",
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.RUN,
                 icon="mdi-play",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
@@ -2275,8 +2300,8 @@ class JobResultUIViewSet(
             ),
             JobResultButton(
                 weight=120,
-                label="Export",
-                color=ButtonColorChoices.GREEN,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
                 icon="mdi-database-export",
                 link_name=lambda ctx: (
                     reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"

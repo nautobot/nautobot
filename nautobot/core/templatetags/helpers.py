@@ -833,7 +833,7 @@ def label_list(value, suffix=""):
     )
 
 
-def render_job_label(status):
+def render_jobresult_status(status):
     """
     Render a Bootstrap-style label for a JobResult status.
 
@@ -858,7 +858,7 @@ def render_job_label(status):
     )
 
 
-def render_job_files(files_manager):
+def render_jobresult_files(files_manager):
     """
     Render job result files as an HTML <ul> list with download links.
 

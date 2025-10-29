@@ -195,6 +195,8 @@ class ButtonActionColorChoices(ChoiceSet):
     IMPORT = "primary"
     INFO = "info"
     RENAME = "warning"
+    RERUN = "success"
+    RUN = "primary"
     SUBMIT = "primary"
     SWAP = "primary"
 
@@ -212,6 +214,8 @@ class ButtonActionColorChoices(ChoiceSet):
         (IMPORT, "Import"),
         (INFO, "Info"),
         (RENAME, "Rename"),
+        (RERUN, "Rerun"),
+        (RUN, "Run"),
         (SUBMIT, "Submit"),
         (SWAP, "Swap"),
     )
