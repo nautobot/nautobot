@@ -665,7 +665,6 @@ class AncestorsBreadcrumbs(Breadcrumbs):
     Default behavior:
     - render breadcrumb item with link to the list view
     - dynamically add list of `InstanceBreadcrumbItem` from `ancestors()`
-    - adds standard breadcrumb item with link to the details
     """
 
     def get_items_for_action(

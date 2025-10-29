@@ -35,7 +35,7 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.templatetags.helpers import bettertitle, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     AncestorsBreadcrumbs,
@@ -2106,7 +2106,7 @@ class DeviceComponentPageMixin:
                     view_name_key="device_breadcrumb_url",
                     should_render=lambda c: c["object"].device is not None and c.get("device_breadcrumb_url"),
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
                 ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
                 InstanceBreadcrumbItem(
@@ -2116,7 +2116,7 @@ class DeviceComponentPageMixin:
                     view_name_key="module_breadcrumb_url",
                     should_render=lambda c: c["object"].device is None and c.get("module_breadcrumb_url"),
                     reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
             ]
         }

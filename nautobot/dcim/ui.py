@@ -17,7 +17,7 @@ class RackBreadcrumbs(AncestorsBreadcrumbs):
             ModelBreadcrumbItem(),
             InstanceParentBreadcrumbItem(
                 parent_key="location",
-                label=rack.location.name,
+                label=rack.location.page_title,
             ),
         ]
         if rack.rack_group:
