@@ -1,1 +1,0 @@
-Increased timeout in integration test 'click_navbar_entry' to hopefully reduce spurious CI failures.

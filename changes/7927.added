@@ -1,1 +1,0 @@
-Added simplified dark theme to Swagger (`/api/docs/`) and Redoc (`/api/redoc/`) views, without using Nautobot color palette, utilizing mostly CSS `filter` property.

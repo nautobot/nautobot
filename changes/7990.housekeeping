@@ -1,2 +1,0 @@
-Corrected static-docs test cases to correctly use `StaticLiveServerTestCase` base class.
-Added generated example-app docs to `.gitignore`.
