@@ -1,0 +1,1 @@
+Fixed a regression that removed many-to-many fields from change logs and webhook payloads.
