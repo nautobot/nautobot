@@ -1,2 +1,0 @@
-Corrected missing/incorrect marking of various links and buttons as `disabled` in appropriate contexts.
-Added `aria-disabled="true"` attribute to various disabled links for improved accessibility.

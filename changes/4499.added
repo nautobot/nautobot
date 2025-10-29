@@ -1,2 +1,0 @@
-Added new Constance setting `DEVICE_UNIQUENESS` to configure how Device instances are uniquely identified.
-Introduced a new Device Constraints management view accessible from the Data Validation Engine submenu. This endpoint allows staff users to configure device uniqueness and naming enforcement without accessing the generic Constance admin UI.
