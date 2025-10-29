@@ -2470,9 +2470,9 @@ pre code.hljs {
   display: none !important;
 }
 
-/* Rack elevation dark mode workaround */
+/* Dark mode workaround */
 @include color-mode(dark, true) {
-  .rack_elevation {
+  .invert-in-dark-mode {
     filter: invert(1) hue-rotate(180deg);
   }
 }
