@@ -432,6 +432,7 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
     """
 
     parent_key: str = "parent"
+    parent: Optional[Model] = None
     parent_query_param: Optional[str] = None
     parent_lookup_key: Optional[str] = "pk"
 
@@ -488,8 +489,12 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         return {}
 
     def get_parent_attr(self, instance: Model) -> Optional[Model]:
+        if self.parent:
+            return self.parent
+
         if hasattr(instance, self.parent_key):
             return getattr(instance, self.parent_key) or None
+
         return None
 
 
@@ -510,6 +515,7 @@ class AncestorsInstanceBreadcrumbItem(InstanceBreadcrumbItem):
         ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1"), ("/dcim/locations/<pk>", "Location")
     """
 
+    ancestor_item: Callable[[Model], BaseBreadcrumbItem] = lambda instance: InstanceBreadcrumbItem(instance=instance)
     include_self: bool = False
 
     def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
@@ -526,14 +532,12 @@ class AncestorsInstanceBreadcrumbItem(InstanceBreadcrumbItem):
             if unresolved, and label.
         """
         instance = self.get_instance(context)
-        ancestor_data = asdict(self)
-        del ancestor_data["include_self"]
 
         for ancestor in instance.ancestors():
-            yield from InstanceBreadcrumbItem(**{**ancestor_data, "instance": ancestor}).as_pair(context)
+            yield from self.ancestor_item(ancestor).as_pair(context)
 
         if self.include_self:
-            yield from super().as_pair(context)
+            yield from self.ancestor_item(instance).as_pair(context)
 
 
 class Breadcrumbs:
