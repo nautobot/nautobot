@@ -47,6 +47,7 @@ from nautobot.core.ui.breadcrumbs import (
     InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
+    AncestorsInstanceBreadcrumbItem,
 )
 from nautobot.core.ui.bulk_buttons import (
     BulkDeleteButton,
@@ -249,7 +250,14 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -393,7 +401,14 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(),
+            ]
+        }
+    )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
 
     object_detail_content = object_detail.ObjectDetailContent(
@@ -713,7 +728,21 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
-    breadcrumbs = RackBreadcrumbs()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="location",
+                ),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("rack_group"),
+                    should_render=context_object_attr("rack_group"),
+                    include_self=True,
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -5286,7 +5315,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(),
-                InstanceBreadcrumbItem(instance=context_object_attr("power_panel.location")),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("power_panel.location"), include_self=True
+                ),
                 InstanceBreadcrumbItem(instance=context_object_attr("power_panel")),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("rack"),

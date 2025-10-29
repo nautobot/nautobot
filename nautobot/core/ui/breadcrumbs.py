@@ -1,9 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace, asdict
 import logging
+from itertools import chain
 from operator import attrgetter
-from typing import Any, Callable, Literal, Optional, Protocol, Type, Union
+from typing import Any, Callable, Literal, Optional, Protocol, Type, Union, Iterator
 from urllib.parse import urlencode
 
+from astroid import Instance
 from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse
@@ -153,7 +155,7 @@ class BaseBreadcrumbItem:
             return params
         return {}
 
-    def as_pair(self, context: Context) -> tuple[str, str]:
+    def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
         """
         Construct the (URL, label) pair for the breadcrumb.
 
@@ -163,12 +165,12 @@ class BaseBreadcrumbItem:
             context (Context): Context object used to resolve the breadcrumb parts.
 
         Returns:
-            tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
+            Iterator[tuple[str, Optional[str]]]: A tuple of (URL, label), where URL may be an empty string
             if unresolved, and label.
         """
         url = self.get_url(context) or ""
         label = self.get_label(context)
-        return url, label
+        yield url, label
 
 
 @dataclass
@@ -387,7 +389,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         instance = self.get_instance(context)
         if not instance:
             return ""
-        return getattr(instance, "display", str(instance))
+        return getattr(instance, "page_title", str(instance))
 
     def get_instance(self, context: Context) -> Optional[Model]:
         """
@@ -474,7 +476,7 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         parent = self.get_parent_attr(instance)
         if not instance or not parent:
             return ""
-        return getattr(parent, "display", str(parent))
+        return getattr(parent, "page_title", str(parent))
 
     def get_reverse_query_params(self, parent: Model) -> Optional[dict]:
         if self.parent_lookup_key is None:
@@ -489,6 +491,49 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
         if hasattr(instance, self.parent_key):
             return getattr(instance, self.parent_key) or None
         return None
+
+
+@dataclass
+class AncestorsInstanceBreadcrumbItem(InstanceBreadcrumbItem):
+    """
+    Item class which can render list of ancestors of given instance.
+
+    By default, it won't include itself.
+
+    Attributes:
+        include_self (bool): Whether to include self as last item of ancestors.
+
+    Examples:
+        >>> AncestorsInstanceBreadcrumbItem(instance=location)
+        ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1")
+        >>> AncestorsInstanceBreadcrumbItem(instance=location, include_self=True)
+        ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1"), ("/dcim/locations/<pk>", "Location")
+    """
+
+    include_self: bool = False
+
+    def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
+        """
+        Construct the (URL, label) pair for the breadcrumb with all the instance ancestors.
+
+        Creates separate `InstanceBreadcrumbItem` with copied data from self.
+
+        Args:
+            context (Context): Context object used to resolve the breadcrumb parts.
+
+        Returns:
+            Iterator[tuple[str, Optional[str]]]: A tuple of (URL, label), where URL may be an empty string
+            if unresolved, and label.
+        """
+        instance = self.get_instance(context)
+        ancestor_data = asdict(self)
+        del ancestor_data["include_self"]
+
+        for ancestor in instance.ancestors():
+            yield from InstanceBreadcrumbItem(**{**ancestor_data, "instance": ancestor}).as_pair(context)
+
+        if self.include_self:
+            yield from super().as_pair(context)
 
 
 class Breadcrumbs:
@@ -569,7 +614,8 @@ class Breadcrumbs:
         action = context.get("view_action", "")
         detail = context.get("detail", False)
         items = self.get_items_for_action(self.items, action, detail, context)
-        return [item.as_pair(context) for item in items if item.should_render(context)]
+        items_pairs = [item.as_pair(context) for item in items if item.should_render(context)]
+        return list(chain.from_iterable(items_pairs))
 
     def filter_breadcrumbs_items(self, items: list[tuple[str, str]], context: Context) -> list[tuple[str, str]]:
         """

@@ -196,7 +196,7 @@ class ViewTestCases:
             # but only use the `.name` or `str()`.
             # This check will always pass in the case where the Example App is installed, because of the banner
             # it adds, but can/should/may? fail otherwise.
-            self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
+            self.assertBodyContains(response, escape(getattr(instance, "page_title", str(instance))))
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:
