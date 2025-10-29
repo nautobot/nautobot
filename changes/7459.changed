@@ -1,1 +1,0 @@
-Changed the default behavior of the REST API to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default.

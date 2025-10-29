@@ -1,2 +1,0 @@
-Fixed wrapping on error pages, login page, bulk edit form.
-Fixed col/offset not matching breakpoints - for example offset set for md but col set to lg.

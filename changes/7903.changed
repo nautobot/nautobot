@@ -1,1 +1,0 @@
-Changed how App documentation is handled - it is now served via a dedicated endpoint whose access is restricted to authenticated users, replacing the previous static public serving.
