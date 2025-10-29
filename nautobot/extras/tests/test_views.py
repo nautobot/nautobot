@@ -1066,6 +1066,24 @@ class DynamicGroupTestCase(
         self.assertIn(str(member1.pk), response_body)
         self.assertNotIn(str(member2.pk), response_body)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_static_group(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        static_group = DynamicGroup.objects.create(
+            name="Static Group",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+
+        response = self.client.get(static_group.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Filter</strong>", body)
+        filter_section = body.split("Filter</strong>", 1)[1]
+        filter_section = filter_section.split("Filter Query Logic", 1)[0]
+        self.assertIn('<span class="text-muted">&mdash;</span>', filter_section)
+
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         self.client.logout()
