@@ -1,6 +1,6 @@
 from decimal import Decimal
-from unittest import mock
 import os
+from unittest import mock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -1139,6 +1139,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that Rack uses the default value of 42 when NAUTOBOT_DEFAULT_RACK_HEIGHT is not set."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1161,6 +1162,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that Rack uses custom default height from NAUTOBOT_DEFAULT_RACK_HEIGHT environment variable."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1183,6 +1185,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that minimum rack height of 4 RU works correctly."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1208,6 +1211,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that maximum rack height of 100 RU works correctly."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1233,6 +1237,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that rack height below minimum (< 4 RU) fails validation."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1263,6 +1268,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that rack height above maximum (> 500 RU) fails validation."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 
@@ -1293,6 +1299,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that zero rack height from environment variable raises ValueError immediately."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
 
         # Reloading should raise ValueError when trying to use zero
@@ -1309,6 +1316,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that negative rack height from environment variable raises ValueError immediately."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
 
         # Reloading should raise ValueError when trying to use a negative number
@@ -1325,6 +1333,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that invalid (non-integer) environment variable value raises ValueError."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
 
         # Reloading should raise ValueError when trying to convert "invalid" to int
@@ -1341,6 +1350,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         """Test that explicitly setting u_height overrides the environment variable default."""
         # Need to reload the constants module to pick up the mocked environment
         from importlib import reload
+
         from nautobot.dcim import constants
         reload(constants)
 

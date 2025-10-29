@@ -1,4 +1,5 @@
 import os
+
 from django.db.models import Q
 
 from .choices import InterfaceTypeChoices
