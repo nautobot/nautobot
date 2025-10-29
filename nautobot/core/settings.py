@@ -1154,6 +1154,12 @@ def silk_request_logging_intercept_logic(request):
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
 
 #
+# django-tables2
+#
+
+DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
+
+#
 # Kubernetes settings variables
 #
 
