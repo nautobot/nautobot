@@ -1891,10 +1891,33 @@ class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
             {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
         )
 
+    def test_filter_descendants_accepts_name(self):
+        params = {"descendants": [self.parent_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_returns_none(self):
+        params = {"descendants": [self.unrelated_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerysetEqual(filtered, self.queryset.none())
+
     def test_filter_ancestors_returns_expected_groups(self):
         params = {"ancestors": [self.grandchild_group.pk]}
         filtered = self.filterset(params, self.queryset).qs
         self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_accepts_name(self):
+        params = {"ancestors": [self.grandchild_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_returns_none(self):
+        params = {"ancestors": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerysetEqual(filtered, self.queryset.none())
 
 
 class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
