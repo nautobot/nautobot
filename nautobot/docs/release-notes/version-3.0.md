@@ -139,7 +139,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
-## v3.0.0a3 (2025-10-28)
+## v3.0.0a3 (2025-10-29)
 
 ### Added in v3.0.0a3
 
@@ -237,6 +237,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8044](https://github.com/nautobot/nautobot/issues/8044) - Fixed vertical misalignment of rendered Job Button and Custom Link grouped buttons.
 - [#8046](https://github.com/nautobot/nautobot/issues/8046) - Fixed marking menu item as active when adding to favorite.
 - [#8046](https://github.com/nautobot/nautobot/issues/8046) - Fixed redirect after deleting saved view.
+- [#8050](https://github.com/nautobot/nautobot/issues/8050) - Fixed some tests skipped in v3.
 
 ### Documentation in v3.0.0a3
 
