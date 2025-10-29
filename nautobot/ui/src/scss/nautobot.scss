@@ -2469,3 +2469,13 @@ pre code.hljs {
 .d-none {
   display: none !important;
 }
+
+/*
+ * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
+ *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
+ *   time to get rid of bootstrap-filestyle.
+ */
+.hidden {
+  @extend .d-none;
+}

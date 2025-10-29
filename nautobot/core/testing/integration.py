@@ -110,7 +110,7 @@ class ObjectsListMixin:
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
-            return len(objects_table.find_by_tag("tr"))
+            return len(objects_table.find_by_xpath(".//tr[not(count(td[@colspan])=1)]"))
         except ElementDoesNotExist:
             return 0
 
@@ -238,7 +238,7 @@ class BulkOperationsMixin:
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
         self.assertIn(f"Delete these {expected_count}", button_text)
 
-        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="panel-body"]').text
+        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="card-body"]').text
         self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
