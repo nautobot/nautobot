@@ -280,6 +280,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 ### Documentation in v3.0.0a3
 
 - [#7934](https://github.com/nautobot/nautobot/issues/7934) - Prepare documentation for Version 3.0 release.
+- [#8052](https://github.com/nautobot/nautobot/issues/8052) - Added information to release-note about filter field changes from #1889 and their impacts.
 
 ### Housekeeping in v3.0.0a3
 
