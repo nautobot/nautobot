@@ -1,1 +1,1 @@
-Added an environment variable for default rack size.
+Added Constance config setting `RACK_DEFAULT_U_HEIGHT` to configure the default height (in rack units) for newly created racks.

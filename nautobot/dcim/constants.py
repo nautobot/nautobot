@@ -1,6 +1,6 @@
-import os
-
 from django.db.models import Q
+
+from nautobot.core.utils.config import get_settings_or_config
 
 from .choices import InterfaceTypeChoices
 
@@ -8,21 +8,20 @@ from .choices import InterfaceTypeChoices
 # Racks
 #
 
-# Validate and set the default rack height from environment variable
-_rack_height_env = os.getenv("NAUTOBOT_DEFAULT_RACK_HEIGHT", "42")
-try:
-    RACK_U_HEIGHT_DEFAULT = int(_rack_height_env)
-    if RACK_U_HEIGHT_DEFAULT < 1:
-        raise ValueError(
-            f"NAUTOBOT_DEFAULT_RACK_HEIGHT must be a positive integer (got {RACK_U_HEIGHT_DEFAULT}). "
-            "Rack height must be at least 1 RU."
-        )
-except ValueError as e:
-    if "invalid literal" in str(e):
-        raise ValueError(
-            f"NAUTOBOT_DEFAULT_RACK_HEIGHT must be a valid integer (got '{_rack_height_env}')"
-        ) from e
-    raise
+
+def get_rack_u_height_default():
+    """
+    Get the default rack height from Constance config.
+
+    Returns:
+        int: The configured default rack height, or 42 if not configured.
+    """
+    return get_settings_or_config("RACK_DEFAULT_U_HEIGHT", fallback=42)
+
+
+# For backwards compatibility, provide a callable that can be used as a model field default
+# Note: This is a function, not a constant value, so it will be evaluated dynamically
+RACK_U_HEIGHT_DEFAULT = get_rack_u_height_default
 
 RACK_U_HEIGHT_MAXIMUM = 500
 
