@@ -74,10 +74,14 @@ class EChartsThemeColors(ChoiceSet):
     """
 
     NAUTOBOT = "default"
+    LIGHTER_GREEN_AND_RED_ONLY = "lighter-green-red-only"
 
     DEFAULT = NAUTOBOT
 
-    CHOICES = ((NAUTOBOT, "Default Nautobot Colors"),)
+    CHOICES = (
+        (NAUTOBOT, "Default Nautobot Colors"),
+        (LIGHTER_GREEN_AND_RED_ONLY, "Lighter Green and Red Only"),
+    )
 
     COLORS = {
         NAUTOBOT: [
@@ -102,7 +106,11 @@ class EChartsThemeColors(ChoiceSet):
             UI_COLORS["green-darker"],
             UI_COLORS["red-darker"],
             UI_COLORS["gray-darker"],
-        ]
+        ],
+        LIGHTER_GREEN_AND_RED_ONLY: [
+            UI_COLORS["green-lighter"],
+            UI_COLORS["red-lighter"],
+        ],
     }
 
 
