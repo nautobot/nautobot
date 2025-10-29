@@ -1127,12 +1127,20 @@ class APIViewTestCases:
 
             self.assertIn("actions", data)
 
-            # Grab any field that has choices defined (fields with enums)
+            # Grab any field that has choices defined (fields with enums including child fields with enums)
             field_choices = {}
             if "POST" in data["actions"]:
-                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+                field_choices = {
+                    k
+                    for k, v in data["actions"]["POST"].items()
+                    if "choices" in v or ("child" in v and "choices" in v["child"])
+                }
             elif "PUT" in data["actions"]:
-                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+                field_choices = {
+                    k
+                    for k, v in data["actions"]["PUT"].items()
+                    if "choices" in v or ("child" in v and "choices" in v["child"])
+                }
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 

@@ -136,9 +136,6 @@ def copy_app_data_to_core_data(apps, schema_editor):
             f"""\
 INSERT INTO data_validation_datacompliance (
     id,
-    created,
-    last_updated,
-    _custom_field_data,
     compliance_class_name,
     last_validation_date,
     content_type_id,
@@ -150,9 +147,6 @@ INSERT INTO data_validation_datacompliance (
     message
 ) SELECT
     id,
-    created,
-    last_updated,
-    _custom_field_data,
     compliance_class_name,
     last_validation_date,
     content_type_id,
@@ -274,9 +268,6 @@ def copy_core_data_to_app_data(apps, schema_editor):
             f"""\
 INSERT INTO nautobot_data_validation_engine_datacompliance (
     id,
-    created,
-    last_updated,
-    _custom_field_data,
     compliance_class_name,
     last_validation_date,
     content_type_id,
@@ -288,9 +279,6 @@ INSERT INTO nautobot_data_validation_engine_datacompliance (
     message
 ) SELECT
     id,
-    created,
-    last_updated,
-    _custom_field_data,
     compliance_class_name,
     last_validation_date,
     content_type_id,

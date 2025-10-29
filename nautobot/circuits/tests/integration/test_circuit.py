@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -48,7 +47,6 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         )
         return circuit
 
-    @tag("fix_in_v3")
     def test_circuit_create(self):
         cid = "Circuit-test-abc123"
         description = "My Precious Circuit"
@@ -87,16 +85,15 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         circuit = Circuit.objects.get(cid=cid)
         self.assertIn(self.live_server_url + reverse("circuits:circuit", kwargs={"pk": circuit.pk}), self.browser.url)
 
-        self.assertPanelValue("Circuit", "Circuit ID", cid)
-        self.assertPanelValue("Circuit", "Status", "Active")
-        self.assertPanelValue("Circuit", "Provider", self.provider.name)
-        self.assertPanelValue("Circuit", "Circuit Type", self.circuit_type.name)
-        self.assertPanelValue("Circuit", "Tenant", self.tenant.name)
-        self.assertPanelValue("Circuit", "Date Installed", "Jan. 1, 2025")
-        self.assertPanelValue("Circuit", "Commit Rate (Kbps)", "192")
-        self.assertPanelValue("Circuit", "Description", description)
+        self.assertPanelValue("CIRCUIT", "Circuit ID", cid)
+        self.assertPanelValue("CIRCUIT", "Status", "Active")
+        self.assertPanelValue("CIRCUIT", "Provider", self.provider.name)
+        self.assertPanelValue("CIRCUIT", "Circuit Type", self.circuit_type.name)
+        self.assertPanelValue("CIRCUIT", "Tenant", self.tenant.name)
+        self.assertPanelValue("CIRCUIT", "Date Installed", "Jan. 1, 2025")
+        self.assertPanelValue("CIRCUIT", "Commit Rate (Kbps)", "192")
+        self.assertPanelValue("CIRCUIT", "Description", description)
 
-    @tag("fix_in_v3")
     def test_circuit_create_termination(self):
         circuit = self.create_circuit("Circuit-test-termination")
         sides = ["A", "Z"]
@@ -108,7 +105,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 self.assertIn(details_url, self.browser.url)
 
                 # Find and click add termination button
-                termination_panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "Termination - {side} Side")]'
+                termination_panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "TERMINATION - {side} SIDE")]'
                 self.browser.find_by_xpath(f'{termination_panel_xpath}//a[normalize-space()="Add"]').click()
 
                 port_speed = ord(side)
@@ -129,7 +126,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 self.assertTrue(self.browser.is_text_present(f"Created circuit termination Termination {side}"))
 
                 # Assert that value are properly set
-                panel_label = f"Termination - {side} Side"
+                panel_label = f"TERMINATION - {side} SIDE"
                 self.assertPanelValue(panel_label, "Location", self.location.name)
                 self.assertPanelValue(panel_label, "Speed", port_speed)
                 self.assertPanelValue(panel_label, "Speed", upstream_speed)

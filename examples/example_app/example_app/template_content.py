@@ -238,11 +238,11 @@ class ExampleModelContent(TemplateExtension):
     def right_page(self):
         # You can also just send raw HTML.
         return """
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Example App Right Page</strong>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <span>Check me out! I'll show up after anything defined in the detail view template.</span>
             </div>
         </div>

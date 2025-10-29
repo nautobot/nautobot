@@ -96,7 +96,7 @@ class ObjectsListMixin:
         """
         Click add item button on top of the items table list.
         """
-        self.click_button("#add_button")
+        self.click_button("#add-button")
 
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
@@ -131,7 +131,7 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "{panel_label}")]/following-sibling::div[contains(@class, "collapse")]/table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
@@ -146,7 +146,7 @@ class ObjectDetailsMixin:
         TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
         """
         panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
-        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All']"
+        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All Groups']"
         expand_button = self.browser.find_by_xpath(expand_button_xpath)
         if not expand_button.is_empty():
             expand_button.click()
@@ -376,12 +376,12 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
         if not sidenav_button["aria-expanded"] == "true":
             sidenav_button.click()
-        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
+        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[contains(@class, 'nb-sidenav-link') and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
         child_menu.click()
 
-        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
@@ -457,19 +457,26 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         search_box.first.type(Keys.ENTER)
 
     def click_button(self, query_selector):
-        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        self.browser.is_element_present_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
+        self.browser.execute_script(
+            f"document.querySelector('{query_selector}').scrollIntoView({{ behavior: 'instant', block: 'start' }});"
+        )
         # Scrolling may be asynchronous, wait until it's actually clickable.
         WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
+        btn = self.browser.find_by_css(query_selector)
         btn.click()
 
     def fill_input(self, input_name, input_value):
         """
         Helper function to fill an input field. Solves issue with element could not be scrolled into view for some pages.
         """
-        element = self.browser.find_by_name(input_name, wait_time=5)
-        self.browser.execute_script("arguments[0].scrollIntoView(true);", element.first._element)
+        self.browser.is_element_present_by_name(input_name, wait_time=5)
+        element = self.browser.find_by_name(input_name)
+        self.browser.execute_script(
+            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", element.first._element
+        )
+        element.is_visible(wait_time=5)
         self.browser.execute_script("arguments[0].focus();", element.first._element)
         self.browser.fill(input_name, input_value)
 

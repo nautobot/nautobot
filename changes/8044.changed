@@ -1,0 +1,2 @@
+Moved "Custom Links" and "Job Buttons" to the left of the "default" action buttons on object detail view "main" tabs.
+Changed default rendering of Component Framework `Button` to only render on the "main" tab of object detail views.

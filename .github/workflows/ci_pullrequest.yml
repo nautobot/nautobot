@@ -62,6 +62,21 @@ jobs:
           python-version: "3.13"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
+  docs:
+    runs-on: "ubuntu-24.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--only dev --only docs"
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+      - name: "Linting: docs build and validation"
+        run: "poetry run invoke build-and-check-docs"
   djhtml:
     runs-on: "ubuntu-24.04"
     env:
@@ -287,6 +302,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -356,6 +372,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -446,6 +463,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -487,6 +505,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -534,6 +553,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -565,6 +585,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"

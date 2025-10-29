@@ -296,8 +296,8 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
 
         # Should have defaults for list and details
-        self.assertEqual(len(breadcrumbs.items["list"]), 2)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["list"]), 0)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
         # Verify adding items
         new_item = BaseBreadcrumbItem()
@@ -306,7 +306,7 @@ class BreadcrumbsTestCase(TestCase):
         self.assertEqual(len(breadcrumbs.items["list"]), 1)
         self.assertEqual(breadcrumbs.items["list"][0], new_item)
 
-        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 1)
         self.assertEqual(breadcrumbs.items["detail"][0], new_item)
 
         self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
@@ -325,7 +325,7 @@ class BreadcrumbsTestCase(TestCase):
 
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""
@@ -355,7 +355,6 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
         expected_items = [
             ("/dcim/location-types/", "Location Types"),
-            (f"/dcim/location-types/{self.location_type.pk}/", str(self.location_type)),
         ]
 
         # Test with an action that doesn't exist but detail=True
@@ -366,13 +365,13 @@ class BreadcrumbsTestCase(TestCase):
         items = breadcrumbs.get_breadcrumbs_items(context)
 
         # Should get 2 items from detail fallback
-        self.assertEqual(len(items), 2)
+        self.assertEqual(len(items), 1)
         self.assertEqual(items, expected_items)
 
     def test_render_method(self):
         """Test the render method."""
         breadcrumbs = Breadcrumbs()
-        context = Context({"view_action": "list", "model": Device})
+        context = Context({"detail": True, "model": Device})
 
         html = breadcrumbs.render(context)
 

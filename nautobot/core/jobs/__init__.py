@@ -22,7 +22,7 @@ from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
-from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
+from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
@@ -440,8 +440,10 @@ def clean_compliance_rules_results_for_instance(instance, excluded_pks):
 class RunRegisteredDataComplianceRules(Job):
     """Run the validate function on all registered DataComplianceRule classes and, optionally, the built-in data validation rules."""
 
-    name = "Run Registered Data Compliance Rules"
-    description = "Runs selected Data Compliance rule classes."
+    class Meta:
+        name = "Run Registered Data Compliance Rules"
+        description = "Runs selected Data Compliance rule classes."
+        has_sensitive_variables = False
 
     selected_data_compliance_rules = MultiChoiceVar(
         choices=get_data_compliance_choices,
@@ -536,6 +538,7 @@ jobs = [
     ImportObjects,
     LogsCleanup,
     RefreshDynamicGroupCaches,
+    RefreshDynamicGroupCacheJobButtonReceiver,
     RunRegisteredDataComplianceRules,
 ]
 register_jobs(*jobs)

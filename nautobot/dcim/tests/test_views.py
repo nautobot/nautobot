@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings, tag
-from django.test.client import RequestFactory
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
@@ -109,7 +108,6 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
-    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -211,8 +209,10 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    # One query for the natural slug, one for `LocationViewSet.get_extra_context`
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
+    # One query for the natural slug, one for `LocationViewSet.get_extra_context`, and additional for distinct (which may be fixable?)
+    # See: https://github.com/nautobot/nautobot/pull/7530#discussion_r2432836062
+    # and https://github.com/nautobot/nautobot/pull/7530#discussion_r2432620239 for additional context
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 3}
 
     @classmethod
     def setUpTestData(cls):
@@ -442,7 +442,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_email, "")
 
     def test_get_extra_context(self):
-        view_set = LocationUIViewSet()
         child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
         parent_location = child_1.parent
         child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
@@ -451,12 +450,24 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
         prefix_1.locations.set([child_1, child_2])
         prefix_2.locations.set([child_1, child_2])
-        request = RequestFactory().get(parent_location.get_absolute_url())
-        request.user = self.user
+
         self.add_permissions("dcim.view_location")
         self.add_permissions("ipam.view_prefix")
-        context = view_set.get_extra_context(request=request, instance=parent_location)
-        self.assertEqual(context["stats"]["prefix_count"], 2)
+
+        url = parent_location.get_absolute_url()
+        context = self.client.get(url).context
+        prefix_count = (
+            Prefix.objects.filter(location__in=parent_location.descendants(include_self=True)).distinct().count()
+        )
+
+        # Ensure that the context contains "stats" and the expected stat for prefix_list
+        self.assertIn("stats", context)
+        found = False
+        for stat in context["stats"].values():
+            if stat[0] == "ipam:prefix_list":
+                self.assertEqual(stat[1], prefix_count)
+                found = True
+        self.assertTrue(found, "ipam:prefix_list stat not found in context['stats']")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
@@ -2186,7 +2197,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Device)])
 
-        devices = (
+        cls.devices = (
             Device.objects.create(
                 name="Device 1",
                 location=locations[0],
@@ -2251,15 +2262,39 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface A1", status=intf_status, role=intf_role),
-            Interface.objects.create(device=devices[0], name="Interface A2", status=intf_status),
-            Interface.objects.create(device=devices[0], name="Interface A3", status=intf_status, role=intf_role),
+            Interface.objects.create(device=cls.devices[0], name="Interface A1", status=intf_status, role=intf_role),
+            Interface.objects.create(device=cls.devices[0], name="Interface A2", status=intf_status),
+            Interface.objects.create(device=cls.devices[0], name="Interface A3", status=intf_status, role=intf_role),
         )
 
-        for device, ipaddress in zip(devices, ipaddresses):
+        for device, ipaddress in zip(cls.devices, ipaddresses):
             RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
             ).validated_save()
+
+        powerports = (
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 1"),
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 2"),
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 3"),
+        )
+        PowerOutlet.objects.create(device=cls.devices[0], name="Power Outlet A")
+
+        powerpanel = PowerPanel.objects.create(location=locations[0], name="Power Panel 1")
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
+        powerfeed = PowerFeed.objects.create(
+            power_panel=powerpanel,
+            name="Power Feed 1",
+            status=pf_status,
+            available_power=1000,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+        )
+
+        status_connected = Status.objects.get(name="Connected")
+
+        Cable.objects.create(termination_a=powerports[0], termination_b=powerfeed, status=status_connected)
+
+        poweroutlet = PowerOutlet.objects.create(device=cls.devices[1], name="Power Outlet 1")
+        Cable.objects.create(termination_a=powerports[1], termination_b=poweroutlet, status=status_connected)
 
         cls.form_data = {
             "device_type": devicetypes[1].pk,
@@ -2408,11 +2443,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_powerports(self):
-        device = Device.objects.first()
-
-        PowerPort.objects.create(device=device, name="Power Port 1")
-        PowerPort.objects.create(device=device, name="Power Port 2")
-        PowerPort.objects.create(device=device, name="Power Port 3")
+        device = self.devices[0]
 
         url = reverse("dcim:device_powerports", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -2593,6 +2624,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device.controller_managed_device_group.validated_save()
 
         url = reverse("dcim:device_wireless", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_vpnendpoints(self):
+        self.add_permissions("vpn.view_vpntunnelendpoint")
+        device = Device.objects.first()
+
+        url = reverse("dcim:device_vpnendpoints", kwargs={"pk": device.pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
@@ -4076,8 +4116,8 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         poweroutlets = (
-            PowerOutlet.objects.create(device=device_2, name="Power Outlet 1", power_port=powerports[0]),
-            PowerOutlet.objects.create(device=device_2, name="Power Outlet 2", power_port=powerports[1]),
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 1"),
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 2"),
         )
 
         powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
@@ -4552,7 +4592,8 @@ class PathTraceViewTestCase(ModelViewTestCase):
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
-        self.assertBodyContains(response, "<h1>Cable Trace for Rear Port Rear Port 1</h1>", html=True)
+        self.assertBodyContains(response, "Rear Port 1")
+        self.assertBodyContains(response, "eth0")
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):

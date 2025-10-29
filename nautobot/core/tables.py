@@ -370,12 +370,17 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         default = kwargs.pop("default", "")
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
-            kwargs["attrs"] = {"td": {"class": "nb-w-0"}}
+            kwargs["attrs"] = {
+                "input": {"class": "form-check-input nb-form-check-input-sm mt-2"},
+                "td": {"class": "nb-w-0"},
+            }
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe(
+            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2" title="Toggle all" />'
+        )
 
 
 class BooleanColumn(django_tables2.Column):
@@ -492,7 +497,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
     """
 
     buttons = ("detail", "changelog", "approve", "deny")
-    attrs = {"td": {"class": "d-print-none text-right text-nowrap"}}
+    attrs = {"td": {"class": "d-print-none text-end text-nowrap"}}
     template_name = "extras/inc/approval_buttons_column.html"
 
     def __init__(

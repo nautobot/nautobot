@@ -10,16 +10,16 @@ from nautobot.extras.models import CustomLink
 
 register = template.Library()
 
-LINK_BUTTON = '<a href="{}"{} class="btn btn-sm btn-{}">{}</a>\n'
+LINK_BUTTON = '<a href="{}"{} class="btn btn-{}">{}</a>\n'
 GROUP_BUTTON = (
-    '<div class="btn-group">\n'
-    '<button type="button" class="btn btn-sm btn-{} dropdown-toggle" data-toggle="dropdown">\n'
-    '{} <span class="caret"></span>\n'
+    '<div class="dropdown d-inline-flex align-middle">\n'
+    '<button type="button" class="btn btn-{} dropdown-toggle" data-bs-toggle="dropdown">\n'
+    '{} <span class="mdi mdi-chevron-down" aria-hidden="true"></span>\n'
     "</button>\n"
-    '<ul class="dropdown-menu pull-right">\n'
+    '<ul class="dropdown-menu float-end">\n'
     "{}</ul></div>\n"
 )
-GROUP_LINK = '<li><a href="{}"{}>{}</a></li>\n'
+GROUP_LINK = '<li><a class="dropdown-item" href="{}"{}>{}</a></li>\n'
 
 
 @register.simple_tag(takes_context=True)
@@ -58,11 +58,11 @@ def custom_links(context, obj):
                     link_rendered = render_jinja2(cl.target_url, link_context)
                     link_target = ' target="_blank"' if cl.new_window else ""
                     template_code += format_html(
-                        LINK_BUTTON, link_rendered, link_target, cl.button_class, text_rendered
+                        LINK_BUTTON, link_rendered, link_target, cl.button_class_css_class, text_rendered
                     )
             except Exception as e:
                 template_code += format_html(
-                    '<a aria-disabled="true" class="btn btn-sm btn-default disabled" title="{}">'
+                    '<a aria-disabled="true" class="btn btn-secondary disabled" title="{}">'
                     '<span class="mdi mdi-alert"></span> {}</a>\n',
                     e,
                     cl.name,
@@ -81,13 +81,13 @@ def custom_links(context, obj):
                     links_rendered += format_html(GROUP_LINK, link_rendered, link_target, text_rendered)
             except Exception as e:
                 links_rendered += format_html(
-                    '<li><a aria-disabled="true" class="disabled" title="{}"><span class="text-secondary">'
+                    '<li><a aria-disabled="true" class="disabled dropdown-item" title="{}"><span class="text-secondary">'
                     '<span class="mdi mdi-alert"></span> {}</span></a></li>',
                     e,
                     cl.name,
                 )
 
         if links_rendered:
-            template_code += format_html(GROUP_BUTTON, links[0].button_class, group, links_rendered)
+            template_code += format_html(GROUP_BUTTON, links[0].button_class_css_class, group, links_rendered)
 
     return template_code

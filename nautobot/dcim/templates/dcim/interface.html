@@ -177,14 +177,15 @@
                     Not connected
                     {% if perms.dcim.add_cable %}
                         <span class="dropdown float-end">
-                            <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {# comment The "fixed" strategy allows the dropdown to break out of the containing card #}
+                            <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
                                 <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-right">
-                                <li><a href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='interface' %}?return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                <li><a href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='front-port' %}?return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                <li><a href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                <li><a href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='interface' %}?return_url={{ object.get_absolute_url }}">Interface</a></li>
+                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='front-port' %}?return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
                             </ul>
                         </span>
                     {% endif %}
@@ -217,6 +218,25 @@
                             <td colspan="3" class="text-secondary">No member interfaces</td>
                         </tr>
                     {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+    {% if object.vpn_tunnel_endpoints_src_int %}
+        <div class="card">
+            <div class="card-header"><strong>VPN Endpoints</strong></div>
+            <table class="table table-hover nb-table-headings card-body">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ object.vpn_tunnel_endpoints_src_int|hyperlinked_object }}</td>
+                        <td>{{ object.vpn_tunnel_endpoints_src_int.role|placeholder }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>

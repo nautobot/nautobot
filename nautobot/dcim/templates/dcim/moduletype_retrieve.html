@@ -4,34 +4,74 @@
 
 {% block extra_buttons %}
     {% if perms.dcim.change_moduletype %}
-        <div class="btn-group">
+        <div class="dropdown d-inline-flex">
             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="module-type-add-components-button">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="mdi mdi-chevron-down"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.dcim.add_consoleporttemplate %}
-                    <li><a href="{% url 'dcim:consoleporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleports">Console Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleports">
+                            <span class="mdi mdi-console" aria-hidden="true"></span> Console Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_consoleserverporttemplate %}
-                    <li><a href="{% url 'dcim:consoleserverporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleserverports">Console Server Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleserverporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleserverports">
+                            <span class="mdi mdi-console-network-outline" aria-hidden="true"></span>Console Server Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_powerporttemplate %}
-                    <li><a href="{% url 'dcim:powerporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=powerports">Power Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:powerporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=powerports">
+                            <span class="mdi mdi-power-plug-outline" aria-hidden="true"></span> Power Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_poweroutlettemplate %}
-                    <li><a href="{% url 'dcim:poweroutlettemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=poweroutlets">Power Outlets</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:poweroutlettemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=poweroutlets">
+                            <span class="mdi mdi-power-socket" aria-hidden="true"></span> Power Outlets
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_interfacetemplate %}
-                    <li><a href="{% url 'dcim:interfacetemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=interfaces">Interfaces</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:interfacetemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=interfaces">
+                            <span class="mdi mdi-ethernet" aria-hidden="true"></span> Interfaces
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_frontporttemplate %}
-                    <li><a href="{% url 'dcim:frontporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=frontports">Front Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:frontporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=frontports">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Front Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_rearporttemplate %}
-                    <li><a href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=rearports">Rear Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=rearports">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Rear Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_modulebaytemplate %}
-                    <li><a href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=modulebays">Module Bays</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=modulebays">
+                            <span class="mdi mdi-tray" aria-hidden="true"></span> Module Bays
+                        </a>
+                    </li>
                 {% endif %}
             </ul>
         </div>

@@ -21,6 +21,8 @@ If `Recurring custom` is chosen, you can schedule the recurrence in the `Crontab
 
 If the job requires no approval, it will then be added to the queue of scheduled jobs or run immediately. Otherwise, the job will be added to the approval dashboard where it can be approved by users in the group(s) identified by the relevant approval workflow.
 
+Once a job has been scheduled, the schedule can be deleted by navigating to `Jobs > Scheduled Jobs`, selecting the schedule name and clicking the `Delete` button. You can also select multiple schedules and click the `Delete Selected` button to delete them all at once.
+
 ### Scheduling via the API
 
 Jobs can also be scheduled via the REST API. The endpoint used for this is the regular job endpoint; specifying the optional `schedule` parameter will act just as scheduling in the UI.
@@ -39,6 +41,8 @@ For custom interval, a `crontab` parameter must be added.
 `start_time` becomes optional when `interval` is set to `custom`.
 
 `--data '{"schedule": {"name": "test", "interval": "custom", "start_time": "2030-01-01T01:00:00.000Z", "crontab": "*/15 * * * *"}}'`
+
+You may delete a scheduled job via the API by issuing a `DELETE` request to the `/api/extras/scheduled-jobs/<uuid>/` endpoint, or by issuing a `DELETE` request to the `/api/extras/scheduled-jobs/` endpoint with a list of UUIDs of the scheduled jobs to be deleted.
 
 ## Job Approvals
 

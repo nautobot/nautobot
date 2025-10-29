@@ -11,7 +11,7 @@ Here's a list of what's changed:
 | v2.x                                  | v3.0                                                                                              |
 |---------------------------------------|---------------------------------------------------------------------------------------------------|
 | `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
-| `accordion-toggle-all`                | *removed*, refer to [Toggle All (Collapse All / Expand All)](#toggle-all-collapse-all-expand-all) |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups (Collapse All Groups / Expand All Groups)](#toggle-all-groups-collapse-all-groups-expand-all-groups) |
 | `banner-bottom`                       | `nb-banner-bottom`                                                                                |
 | `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
 | `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
@@ -235,14 +235,14 @@ After:
 </span>
 ```
 
-## Toggle All (Collapse All / Expand All)
+## Toggle All Groups (Collapse All Groups / Expand All Groups)
 
-To extend the basic Bootstrap 5 Accordion and Collapse components functionality, Nautobot delivers a Toggle All (Collapse all / Expand all) button implementation. Although Bootstrap 5 is shipped with a feature to toggle multiple collapsibles with a single button, it treats controlled elements individually rather than collectively, by inverting their current state and not by forcing them to collapse or expand, as we would expect. Depending on desired behavior, you are free to choose between the default Bootstrap 5 or custom Nautobot mechanisms.
+To extend the basic Bootstrap 5 Accordion and Collapse components functionality, Nautobot delivers a Toggle All Groups (Collapse all Groups / Expand all Groups) button implementation. Although Bootstrap 5 is shipped with a feature to toggle multiple collapsibles with a single button, it treats controlled elements individually rather than collectively, by inverting their current state and not by forcing them to collapse or expand, as we would expect. Depending on desired behavior, you are free to choose between the default Bootstrap 5 or custom Nautobot mechanisms.
 
-Most of the logic is already implemented in Nautobot by default and there are just two data attributes that control a Toggle All (Collapse All / Expand All) button:
+Most of the logic is already implemented in Nautobot by default and there are just two data attributes that control a Toggle All Groups (Collapse All Groups / Expand All Groups) button:
 
-1. `data-nb-toggle="collapse-all"` - mandatory, indicates that given button is of Toggle All (Collapse All / Expand All) type.
-2. `data-nb-target="{collapse CSS selector}"` - optional, specifies which collapse elements does the button control; when not explicitly set, target collapse CSS selector falls back to `".collapse"`.
+1. `data-nb-toggle="collapse-all"` - mandatory, indicates that given button is of Toggle All Groups (Collapse All Groups / Expand All Groups) type.
+2. `data-nb-target="{collapse CSS selector}"` - optional, specifies which collapse elements the button controls; when not explicitly set, target collapse CSS selector falls back to `".collapse"`.
 
 ```html
 <button
@@ -252,7 +252,7 @@ Most of the logic is already implemented in Nautobot by default and there are ju
     data-nb-target="#accordion .collapse"
     type="button"
 >
-    Collapse All
+    Collapse All Groups
 </button>
 ```
 
@@ -334,5 +334,5 @@ Nautobot extends Bootstrap utilities with its own subset of CSS classes, propert
 On top of the [Material Design Icons](https://pictogrammers.com/library/mdi/) packaged with Nautobot by default, v3 Nautobot introduces its own small internal custom icon library to be used in nav menu (sidenav).
 
 1. Nautobot icons are standard `.svg` static files located in `nautobot/project-static/nautobot-icons` directory.
-2. Use `icon` attribute to set a `NavMenuTab` icon. It can either be a name from Nautobot icon library or SVG static file URL.
-3. If not explicitly defined, nav menu tab icon falls back to the first letter of its name inside a rounded rectangle.
+2. Use `icon` attribute to set a `NavMenuTab` icon. It can either be a name from `nautobot.apps.NavigationIconChoices`, Nautobot icon library, or SVG static file URL.
+3. If not explicitly defined, nav menu tab icon falls back to the first letter of the app's name inside a rounded rectangle.

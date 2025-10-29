@@ -16,9 +16,11 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
+from django.utils.translation import gettext as _
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -779,7 +781,7 @@ def render_address(address):
             quote_plus(address),
         )
         address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
-        return format_html('<div class="pull-right d-print-none">{}</div>{}', map_link, address)
+        return format_html('<div class="float-end d-print-none">{}</div>{}', map_link, address)
     return HTML_NONE
 
 
@@ -818,7 +820,11 @@ def render_button_class(value):
     """
     if value:
         base = value.split()[0]
-        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+        return format_html(
+            '<button class="btn btn-{}">{}</button>',
+            base.lower() if base.lower() != "default" else "secondary",
+            base.capitalize(),
+        )
     return ""
 
 
@@ -849,6 +855,26 @@ def label_list(value, suffix=""):
         '<span class="badge bg-secondary">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
+
+
+@library.filter()
+@register.filter()
+def format_timezone(time_zone):
+    """
+    Return a human-readable representation of a time zone including:
+      - Time zone name and UTC offset on the first line
+      - Local date and time on the next line (in smaller font)
+    """
+    if not time_zone:
+        return HTML_NONE
+
+    now = datetime.datetime.now(time_zone)
+
+    # Locale-aware formatting (respects USE_L10N + active locale)
+    local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
+
+    result = f"{time_zone} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
+    return format_html(result)
 
 
 #
@@ -919,7 +945,7 @@ def django_querystring(context, query_dict=None, **kwargs):
         {% django_querystring my_query_dict foo=3 %}
     """
     if query_dict is None:
-        query_dict = context.request.GET
+        query_dict = context["request"].GET
     params = query_dict.copy()
     for key, value in kwargs.items():
         if value is None:

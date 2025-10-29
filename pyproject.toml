@@ -39,7 +39,7 @@ celery = "~5.5.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~45.0.7"
+cryptography = "~46.0.3"
 # Fundamental web framework for Nautobot
 Django = "~4.2.25"
 # Adds AJAX capabilities to django-tables2
@@ -57,7 +57,7 @@ django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
 django-constance = "~4.3.2"
 # Permit cross-domain API requests
-django-cors-headers = "~4.7.0"
+django-cors-headers = "~4.9.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
@@ -77,7 +77,7 @@ django-silk = "~5.4.3"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^9.1.1", extras = ["celery"]}
+django-structlog = {version = "~10.0.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.5"
 # Tags
@@ -85,7 +85,7 @@ django-taggit = "~6.1.0"
 # Represent time zones in Django
 django-timezone-field = "~7.1"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.20.0"
+django-tree-queries = "~0.21.2"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
@@ -93,7 +93,7 @@ djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
-emoji = "~2.14.1"
+emoji = "~2.15.0"
 # Git integrations for Python
 GitPython = "~3.1.45"
 # GraphQL support
@@ -123,9 +123,9 @@ nh3 = "~0.3.1"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "^11.0"
+Pillow = "~12.0.0"
 # Custom prometheus metrics
-prometheus-client = "~0.22.1"
+prometheus-client = "~0.23.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.11"
@@ -138,7 +138,7 @@ PyYAML = "~6.0.3"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-social-auth-core = {version = "~4.7.0", optional = true, extras = ["saml"]}
+social-auth-core = {version = "~4.8.1", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
 # NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
 #       that addresses a security vulnerability in social-auth-app-django 5.4.3
@@ -169,13 +169,13 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^37.6.0"
+faker = "^37.11.0"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~2.2.0"
+invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~14.1.0"
+rich = "~14.2.0"
 # Change log management and generation
-towncrier = "~24.8.0"
+towncrier = "~25.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~6.0.0"
 
@@ -189,11 +189,11 @@ markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
-mkdocs-glightbox = "^0.4.0"
+mkdocs-glightbox = "~0.5.1"
 # Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.3.9"
+mkdocs-macros-plugin = "~1.4.0"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.21"
+mkdocs-material = "~9.6.22"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -201,7 +201,7 @@ mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.16.12"
+mkdocstrings-python = "~1.18.2"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -215,7 +215,7 @@ pylint-django = "~2.6.1"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.32"
 # Combination linter and code formatter
-ruff = "~0.12.12"
+ruff = "~0.14.0"
 # YAML linting
 yamllint = "~1.37.1"
 
@@ -223,23 +223,24 @@ yamllint = "~1.37.1"
 # Test code coverage measurement
 coverage = "~7.10.6"
 # Testing of data migrations
-django-test-migrations = "~1.4.0"
+django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.7.2"
 # Integration Tests
 requests = "~2.32.5"
 # Selenium web drivers for live integration testing
-selenium = "~4.34.2"
+selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.1.0"
 # Time travel for testing, used in ScheduledJob tests etc.
-time-machine = "~2.17.0"
+time-machine = "~2.19.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
 nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
+nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -421,6 +422,11 @@ filename = "nautobot/docs/release-notes/version-3.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
+
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking Changes"
+showcontent = true
 
 [[tool.towncrier.type]]
 directory = "security"

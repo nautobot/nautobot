@@ -38,6 +38,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import (
     CustomField,
+    CustomFieldChoice,
     DynamicGroup,
     DynamicGroupMembership,
     Relationship,
@@ -1026,7 +1027,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
     def test_filter_custom_fields(self):
-        """Test that relationships can be used in filters."""
+        """Test that custom fields can be used in filters."""
 
         device = self.devices[0]
 
@@ -1056,6 +1057,41 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertIn(device, dg.members)
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_filter_custom_field_select(self):
+        """Test that select and multiselect type custom fields can be used in filters."""
+        device = self.devices[0]
+
+        cf1 = CustomField.objects.create(
+            label="Onboarding Status",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+        )
+        cf1.content_types.add(self.device_ct)
+        CustomFieldChoice.objects.create(custom_field=cf1, value="Onboarded", weight=100)
+        CustomFieldChoice.objects.create(custom_field=cf1, value="Yet To Be", weight=200)
+
+        cf2 = CustomField.objects.create(
+            label="Features",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+        )
+        cf2.content_types.add(self.device_ct)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="Telnet", weight=100)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="SSH", weight=200)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="NETCONF", weight=300)
+
+        device._custom_field_data = {"onboarding_status": "Onboarded", "features": ["Telnet", "SSH"]}
+        device.validated_save()
+        device.refresh_from_db()
+
+        dg = DynamicGroup(
+            name="select_fields",
+            filter={"cf_onboarding_status": ["Onboarded"], "cf_features": ["Telnet"]},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        self.assertEqual(dg.count, 1)
+        self.assertIn(device, dg.members)
 
     def test_filter_search(self):
         """Test that search (`q` filter) can be used in filters."""
