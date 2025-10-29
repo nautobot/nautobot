@@ -2469,3 +2469,10 @@ pre code.hljs {
 .d-none {
   display: none !important;
 }
+
+/* Rack elevation dark mode workaround */
+@include color-mode(dark, true) {
+  .rack_elevation {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
