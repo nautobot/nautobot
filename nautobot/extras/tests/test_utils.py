@@ -4,7 +4,7 @@ import uuid
 from django.core.cache import cache
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Device, Location, PowerPort
+from nautobot.dcim.models import Cable,Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.models import JobQueue
 from nautobot.extras.registry import registry
@@ -26,7 +26,7 @@ class UtilsTestCase(TestCase):
             self.assertEqual(get_base_template(None, PowerPort), "dcim/powerport.html")
 
         with self.subTest("<model>_retrieve.html is used if present"):
-            self.assertEqual(get_base_template(None, Location), "dcim/location_retrieve.html")
+            self.assertEqual(get_base_template(None, Cable), "dcim/cable_retrieve.html")
 
         with self.subTest("generic/object_retrieve.html is used as a fallback"):
             self.assertEqual(get_base_template(None, Token), "generic/object_retrieve.html")
