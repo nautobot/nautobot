@@ -177,6 +177,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["status", "status__id"],
         ["status", "status__name"],
         ["type"],
+        ["vpn_tunnel_endpoints", "vpn_tunnel_endpoints__id"],
     )
 
     def test_filters_generic(self):

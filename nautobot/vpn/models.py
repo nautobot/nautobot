@@ -520,6 +520,12 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             and (self.source_ipaddress not in self.source_interface.ip_addresses.all())
         ):
             raise ValidationError("Source IP address must be assigned to Source Interface.")
+        if (
+            self.tunnel_interface
+            and self.source_interface
+            and (self.tunnel_interface not in self.source_interface.parent.all_interfaces)
+        ):
+            raise ValidationError("Tunnel Interface and Source Interface must be on the same device")
         return super().clean()
 
     def save(self, *args, **kwargs):

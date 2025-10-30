@@ -25,12 +25,12 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
     name = tables.Column(linkify=True)
     vpn_phase1_policy_count = LinkedCountColumn(
         viewname="vpn:vpnphase1policy_list",
-        verbose_name="VPN Phase 1 Policy",
+        verbose_name="Phase 1 Policies",
         url_params={"vpn_profiles": "pk"},
     )
     vpn_phase2_policy_count = LinkedCountColumn(
         viewname="vpn:vpnphase2policy_list",
-        verbose_name="VPN Phase 2 Policy",
+        verbose_name="Phase 2 Policies",
         url_params={"vpn_profiles": "pk"},
     )
     tenant = TenantColumn()

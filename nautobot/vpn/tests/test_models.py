@@ -3,7 +3,7 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.apps.testing import ModelTestCases
-from nautobot.dcim.models import Interface, Module
+from nautobot.dcim.models import Device, Interface, Module
 from nautobot.ipam.models import IPAddress
 from nautobot.vpn import models
 
@@ -77,7 +77,7 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             with self.assertRaises(ValidationError):
                 endpoint.clean()
 
-        with self.subTest("Test Interface without device."):
+        with self.subTest("Test Interface without device"):
             endpoint = models.VPNTunnelEndpoint(
                 source_interface=Interface(
                     name="Ethernet",
@@ -95,6 +95,20 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             with self.assertRaises(ValidationError):
                 endpoint.clean()
 
+        with self.subTest("Test source_interface and tunnel_interface are assigned to the same device"):
+            source_int = Interface.objects.filter(device__isnull=False).first()
+            tunnel_int = Interface(
+                name="Tunnel0",
+                device=Device.objects.exclude(id=source_int.device.id).first(),
+                status=source_int.status,
+                type="tunnel",
+            )
+            endpoint = models.VPNTunnelEndpoint(
+                device=source_int.device, source_interface=source_int, tunnel_interface=tunnel_int
+            )
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
     def test_name(self):
         """Test dynamic name property."""
         endpoint = models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=False).first()
@@ -103,10 +117,17 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
         endpoint.source_ipaddress = ip
         endpoint.save()
 
-        with self.subTest("Test name contains interface name, device name and IP address."):
+        with self.subTest("Test name contains interface name, device name and IP address"):
             self.assertIn(endpoint.source_interface.name, endpoint.name)
             self.assertIn(endpoint.source_interface.device.name, endpoint.name)
             self.assertIn(endpoint.source_ipaddress.host, endpoint.name)
+
+        with self.subTest("Test name contains interface name and device name"):
+            endpoint = models.VPNTunnelEndpoint.objects.filter(
+                source_interface__isnull=False, source_ipaddress__isnull=True
+            ).first()
+            self.assertIn(endpoint.source_interface.name, endpoint.name)
+            self.assertIn(endpoint.source_interface.device.name, endpoint.name)
 
         with self.subTest("Test name is fqdn"):
             endpoint = (
