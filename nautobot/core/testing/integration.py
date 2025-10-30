@@ -67,12 +67,17 @@ class ObjectsListMixin:
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
         self.browser.execute_script(
-            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
+            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView({ behavior: 'instant', block: 'start' });"
         )
         self.browser.find_by_xpath(
             '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
+        bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
+        bulk_delete_button.is_visible(wait_time=5)
+        self.browser.execute_script(
+            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", bulk_delete_button.first._element
+        )
+        bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
         """
@@ -110,7 +115,7 @@ class ObjectsListMixin:
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
-            return len(objects_table.find_by_tag("tr"))
+            return len(objects_table.find_by_xpath(".//tr[not(count(td[@colspan])=1)]"))
         except ElementDoesNotExist:
             return 0
 
@@ -238,7 +243,7 @@ class BulkOperationsMixin:
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
         self.assertIn(f"Delete these {expected_count}", button_text)
 
-        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="panel-body"]').text
+        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="card-body"]').text
         self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
