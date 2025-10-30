@@ -548,7 +548,7 @@ class ValidateModelData(Job):
     )
     verbose = BooleanVar(default=False, label="Verbose output?")
 
-    def run(self, *, content_types, verbose=False):
+    def run(self, *, content_types, verbose=False):  # pylint:disable=arguments-differ
         for content_type in content_types:
             model = content_type.model_class()
             if model is None:
