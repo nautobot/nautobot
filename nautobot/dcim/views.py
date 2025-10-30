@@ -745,7 +745,9 @@ class RackUIViewSet(NautobotUIViewSet):
                 ),
                 AncestorsInstanceBreadcrumbItem(
                     instance=context_object_attr("rack_group"),
-                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(parent_key="rack_group", parent=ancestor),
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(
+                        parent_key="rack_group", parent=ancestor
+                    ),
                     include_self=True,
                     should_render=context_object_attr("rack_group"),
                 ),
