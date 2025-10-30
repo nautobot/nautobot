@@ -459,7 +459,9 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
             return None
 
         view_name = lookup.get_route_for_model(instance, "list")
-        return self.reverse_view_name(view_name, context, reverse_query_params=self.get_reverse_query_params(related_object))
+        return self.reverse_view_name(
+            view_name, context, reverse_query_params=self.get_reverse_query_params(related_object)
+        )
 
     def get_label(self, context: Context) -> str:
         """
