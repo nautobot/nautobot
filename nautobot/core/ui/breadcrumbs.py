@@ -454,12 +454,12 @@ class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
             Optional[str]: The URL as a string, or None.
         """
         instance = self.get_instance(context)
-        parent = self.get_parent_attr(instance)
-        if not instance or not parent:
+        related_object = self.get_related_object(instance)
+        if not instance or not related_object:
             return None
 
         view_name = lookup.get_route_for_model(instance, "list")
-        return self.reverse_view_name(view_name, context, reverse_query_params=self.get_reverse_query_params(parent))
+        return self.reverse_view_name(view_name, context, reverse_query_params=self.get_reverse_query_params(related_object))
 
     def get_label(self, context: Context) -> str:
         """
