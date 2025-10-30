@@ -14,9 +14,6 @@ DEFAULT_TITLES: dict[str, str] = {
     "bulk_destroy": "Delete {{ total_objs_to_delete }} {{ verbose_name_plural|bettertitle }}?",
     "bulk_rename": "Renaming {{ selected_objects|length }} {{ verbose_name_plural|bettertitle }} on {{ parent_name }}",
     "bulk_update": "Editing {{ objs_count }} {{ verbose_name_plural|bettertitle }}",
-    "changelog": "{{ object.page_title|default:object }} - Change Log",
-    "config_context": "{{ object.page_title|default:object }} - Config Context",
-    "notes": "{{ object.page_title|default:object }} - Notes",
     "approve": "Approve {{ verbose_name|bettertitle }}?",
     "deny": "Deny {{ verbose_name|bettertitle }}?",
 }

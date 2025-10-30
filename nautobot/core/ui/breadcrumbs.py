@@ -12,7 +12,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.utils import get_absolute_url, render_component_template
-from nautobot.core.utils import lookup
+from nautobot.core.utils import deprecation, lookup
 from nautobot.core.utils.lookup import get_model_for_view_name, get_model_from_name
 from nautobot.core.views.utils import get_obj_from_context
 
@@ -707,6 +707,7 @@ class Breadcrumbs:
         return {}
 
 
+@deprecation.class_deprecated("Functionality of this class was moved to the AncestorsInstanceBreadcrumbItem.")
 class AncestorsBreadcrumbs(Breadcrumbs):
     """
     Breadcrumbs class which can render list of ancestors of given instance.

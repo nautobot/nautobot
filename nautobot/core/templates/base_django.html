@@ -26,7 +26,7 @@
             </div>
             <div class="container-fluid mb-12 mt-16">
                 <div class="row">
-                    <div class="col-4">
+                    <div id="page-title" class="col-4">
                         {% with copy_title=False %}
                             {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
                         {% endwith %}

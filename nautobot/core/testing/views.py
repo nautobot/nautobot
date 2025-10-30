@@ -27,6 +27,7 @@ from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
+from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.utils import lookup
 from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
@@ -191,12 +192,10 @@ class ViewTestCases:
             # Try GET with model-level permission
             with CaptureQueriesContext(connection) as capture_queries_context:
                 response = self.client.get(instance.get_absolute_url())
-            # The object's display name or string representation should appear in the response body
-            # TODO: some models (e.g. JobResult) intentionally do NOT display the full `.display` in the detail view,
-            # but only use the `.name` or `str()`.
-            # This check will always pass in the case where the Example App is installed, because of the banner
-            # it adds, but can/should/may? fail otherwise.
-            self.assertBodyContains(response, escape(getattr(instance, "page_title", str(instance))))
+
+            # The object's display name or string representation should appear in the header
+            expected_title = escape(getattr(instance, "page_title", str(instance)))
+            self.assertInHTML(expected_title, extract_page_title(response.content.decode(response.charset)))
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:

@@ -147,6 +147,8 @@ There are 3 main breadcrumb items classes:
 - `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
+- `ParentInstanceBreadcrumbItem` - Useful to create link to the object instance, but filtered by some "parent", eg.: Devices list filtered by location.
+- `AncestorsInstanceBreadcrumbItem` - Generates breadcrumbs items with whole ancestors path of given instance, eg.: for Locations will output all parent Locations.
 
 By default, breadcrumbs class will render only link to the `list_url` if view is `detail=True`.
 Label will be taken from model associated to this path or set to `title` (if in the context).

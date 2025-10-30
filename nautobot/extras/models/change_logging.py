@@ -154,6 +154,10 @@ class ObjectChange(BaseModel):
     def __str__(self):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
+    @property
+    def page_title(self):
+        return f"{self.object_repr} - {self.time.strftime('%Y-%m-%d %H:%M')}"
+
     def save(self, *args, **kwargs):
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
