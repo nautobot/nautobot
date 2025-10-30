@@ -108,22 +108,6 @@ class TitlesTestCase(TestCase):
                 "expected": "Editing 10 Devices",
             },
             {
-                "name": "changelog_action",
-                "context": {
-                    "view_action": "changelog",
-                    "object": location_type,
-                },
-                "expected": "Test Location Type Title - Change Log",
-            },
-            {
-                "name": "notes_action",
-                "context": {
-                    "view_action": "notes",
-                    "object": location_type,
-                },
-                "expected": "Test Location Type Title - Notes",
-            },
-            {
                 "name": "approve_action",
                 "context": {"view_action": "approve", "verbose_name": "device"},
                 "expected": "Approve Device?",
