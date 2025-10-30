@@ -216,7 +216,7 @@ class EChartsBase:
         x_label="X",
         y_label="Y",
         legend=None,
-        theme_colors=EChartsThemeColors.DEFAULT,
+        theme_colors=EChartsThemeColors.NAUTOBOT_COLORS,
         renderer="canvas",
         show_toolbox=True,
         save_image_options=None,
@@ -245,7 +245,8 @@ class EChartsBase:
                     }
                 You can also hide the legend entirely by setting `"show": False`.
                 More details here: https://echarts.apache.org/handbook/en/concepts/legend.
-            theme_colors (str): Color palette for chart (default: EChartsThemeColors.DEFAULT).
+            theme_colors (list[dict[str, str]]): Color palette for chart, each color is {'light': str, 'dark': str}
+                (default: EChartsThemeColors.NAUTOBOT_COLORS).
             renderer (str): If the renderer is set to 'canvas' when chart initialized (default), then
                 'png' (default) and 'jpg' are supported. If the renderer is set to 'svg' when chart
                 initialized, then only 'svg' is supported for type. See more details:
@@ -378,10 +379,6 @@ class EChartsBase:
 
         return original
 
-    def get_theme_colors(self):
-        """Map SCSS palette to echarts colors."""
-        return EChartsThemeColors.COLORS.get(self.theme_colors, EChartsThemeColors.COLORS[EChartsThemeColors.DEFAULT])
-
     def get_config(self):
         """Return a dict ready to dump into echarts option JSON."""
         data = self.get_tranform_data
@@ -393,7 +390,7 @@ class EChartsBase:
             "toolbox": self.strategy.get_toolbox_config(
                 self.show_toolbox, self.save_image_options, self.data_view_options
             ),
-            "color": self.get_theme_colors(),
+            "color": self.theme_colors,
             "legend": self.legend,
         }
         axis_config = self.strategy.get_axis_config(data, self.x_label, self.y_label)

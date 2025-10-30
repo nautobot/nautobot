@@ -67,16 +67,41 @@ class EChartsTypeChoices(ChoiceSet):
 
 
 class EChartsThemeColors(ChoiceSet):
-    """Available chart colors for ECharts.
-
-    Attributes:
-        NAUTOBOT (str): Nautobot default colors
-    """
+    """Available chart colors for ECharts."""
 
     NAUTOBOT = "default"
     LIGHTER_GREEN_AND_RED_ONLY = "lighter-green-red-only"
-
     DEFAULT = NAUTOBOT
+
+    # Color lists - direct access
+    NAUTOBOT_COLORS = [
+        UI_COLORS["blue"],
+        UI_COLORS["purple"],
+        UI_COLORS["turquoise"],
+        UI_COLORS["orange"],
+        UI_COLORS["green"],
+        UI_COLORS["red"],
+        UI_COLORS["gray"],
+        UI_COLORS["blue-lighter"],
+        UI_COLORS["purple-lighter"],
+        UI_COLORS["turquoise-lighter"],
+        UI_COLORS["orange-lighter"],
+        UI_COLORS["green-lighter"],
+        UI_COLORS["red-lighter"],
+        UI_COLORS["gray-lighter"],
+        UI_COLORS["blue-darker"],
+        UI_COLORS["purple-darker"],
+        UI_COLORS["turquoise-darker"],
+        UI_COLORS["orange-darker"],
+        UI_COLORS["green-darker"],
+        UI_COLORS["red-darker"],
+        UI_COLORS["gray-darker"],
+    ]
+
+    LIGHTER_GREEN_RED_COLORS = [
+        UI_COLORS["green-lighter"],
+        UI_COLORS["red-lighter"],
+    ]
 
     CHOICES = (
         (NAUTOBOT, "Default Nautobot Colors"),
@@ -84,33 +109,8 @@ class EChartsThemeColors(ChoiceSet):
     )
 
     COLORS = {
-        NAUTOBOT: [
-            UI_COLORS["blue"],
-            UI_COLORS["purple"],
-            UI_COLORS["turquoise"],
-            UI_COLORS["orange"],
-            UI_COLORS["green"],
-            UI_COLORS["red"],
-            UI_COLORS["gray"],
-            UI_COLORS["blue-lighter"],
-            UI_COLORS["purple-lighter"],
-            UI_COLORS["turquoise-lighter"],
-            UI_COLORS["orange-lighter"],
-            UI_COLORS["green-lighter"],
-            UI_COLORS["red-lighter"],
-            UI_COLORS["gray-lighter"],
-            UI_COLORS["blue-darker"],
-            UI_COLORS["purple-darker"],
-            UI_COLORS["turquoise-darker"],
-            UI_COLORS["orange-darker"],
-            UI_COLORS["green-darker"],
-            UI_COLORS["red-darker"],
-            UI_COLORS["gray-darker"],
-        ],
-        LIGHTER_GREEN_AND_RED_ONLY: [
-            UI_COLORS["green-lighter"],
-            UI_COLORS["red-lighter"],
-        ],
+        NAUTOBOT: NAUTOBOT_COLORS,
+        LIGHTER_GREEN_AND_RED_ONLY: LIGHTER_GREEN_RED_COLORS,
     }
 
 
