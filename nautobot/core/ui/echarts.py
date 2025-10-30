@@ -216,7 +216,7 @@ class EChartsBase:
         x_label="X",
         y_label="Y",
         legend=None,
-        theme_colors=EChartsThemeColors.NAUTOBOT_COLORS,
+        theme_colors=None,
         renderer="canvas",
         show_toolbox=True,
         save_image_options=None,
@@ -272,7 +272,7 @@ class EChartsBase:
         self.x_label = x_label
         self.y_label = y_label
         self.legend = legend or {}
-        self.theme_colors = theme_colors
+        self.theme_colors = theme_colors or EChartsThemeColors.NAUTOBOT_COLORS
         self.renderer = renderer
         self.show_toolbox = show_toolbox
         self.save_image_options = {"name": self.header or "echart", "show": True, **(save_image_options or {})}
