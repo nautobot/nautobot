@@ -2469,3 +2469,10 @@ pre code.hljs {
 .d-none {
   display: none !important;
 }
+
+/* Dark mode workaround */
+@include color-mode(dark, true) {
+  .invert-in-dark-mode {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
