@@ -2,15 +2,6 @@
 {% load helpers %}
 {% load static %}
 
-{% block extra_styles %}
-<!-- Invert the rack elevation in dark mode as a quick fix until we have a proper dark mode svg generation -->
-    <style>
-        [data-theme="dark"] .rack_elevation {
-            filter: invert(1) hue-rotate(180deg);
-        }
-    </style>
-{% endblock %}
-
 {% block extra_buttons %}
     {% if prev_rack %}
         <a href="{% url 'dcim:rack' pk=prev_rack.pk %}" class="btn btn-primary">

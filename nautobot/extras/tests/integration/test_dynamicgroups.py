@@ -1,16 +1,15 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
 
 from . import create_test_device
 
 
-class DynamicGroupTestCase(SeleniumTestCase):
+class DynamicGroupTestCase(SeleniumTestCase, ObjectsListMixin):
     """
     Integration test to check nautobot.extras.models.DynamicGroup add/edit functionality.
     """
@@ -19,7 +18,6 @@ class DynamicGroupTestCase(SeleniumTestCase):
         super().setUp()
         self.login_as_superuser()
 
-    @tag("fix_in_v3")
     def test_create_and_update(self):
         """
         Test initial add and then update of a new DynamicGroup
@@ -32,7 +30,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         self.click_navbar_entry("Organization", "Dynamic Groups")
 
         # Click add button
-        self.browser.find_by_id("add-button").click()
+        self.click_add_item()
 
         # Fill out the form.
         name = "devices-active"
@@ -40,19 +38,22 @@ class DynamicGroupTestCase(SeleniumTestCase):
         self.browser.select("content_type", ct_label)
 
         # Click that "Create" button
-        self.browser.find_by_text("Create").click()
+        self.click_edit_form_create_button()
 
         # Verify form redirect and presence of content.
         self.assertTrue(self.browser.is_text_present(f"Created dynamic group {name}"))
         self.assertTrue(self.browser.is_text_present("Edit"))
 
         # Edit the newly created DynamicGroup (Click that "Edit" button)
-        self.browser.find_by_id("edit-button").click()
+        self.click_button("#edit-button")
 
         # Find the "Status" dynamic multi-select and type into it. Xpath is used
         # to find the next "input" after the "status" select field.
         status_field = self.browser.find_by_name("filter-status").first
         status_input = status_field.find_by_xpath("./following::input[1]").first
+        self.browser.execute_script(
+            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", status_input._element
+        )
         status_input.click()  # Force focus on the input field to bring it on-screen
 
         # Fill in "Status: Active".
@@ -61,7 +62,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         status_input.type(Keys.ENTER)
 
         # Click that "Update" button
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
 
         # Verify form redirect and presence of content.
         self.assertTrue(self.browser.is_text_present(f"Modified dynamic group {name}"))
