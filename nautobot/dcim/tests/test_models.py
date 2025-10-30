@@ -2948,39 +2948,39 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
                 InterfaceTypeChoices.TYPE_LAG,
                 InterfaceSpeedChoices.SPEED_1M,
                 None,
-                "LAG interfaces do not have an operational speed.",
+                "Speed is not applicable to this interface type.",
             ),
             (
                 InterfaceTypeChoices.TYPE_LAG,
                 None,
                 InterfaceDuplexChoices.DUPLEX_FULL,
-                "LAG interfaces do not have duplex settings.",
+                "Duplex is not applicable to this interface type.",
             ),
             # Virtual
             (
                 InterfaceTypeChoices.TYPE_VIRTUAL,
                 InterfaceSpeedChoices.SPEED_1M,
                 None,
-                "Speed is not applicable to virtual or wireless interfaces.",
+                "Speed is not applicable to this interface type.",
             ),
             (
                 InterfaceTypeChoices.TYPE_VIRTUAL,
                 None,
                 InterfaceDuplexChoices.DUPLEX_FULL,
-                "Duplex is not applicable to virtual or wireless interfaces.",
+                "Duplex is not applicable to this interface type.",
             ),
             # Wireless
             (
                 InterfaceTypeChoices.TYPE_80211AC,
                 InterfaceSpeedChoices.SPEED_1M,
                 None,
-                "Speed is not applicable to virtual or wireless interfaces.",
+                "Speed is not applicable to this interface type.",
             ),
             (
                 InterfaceTypeChoices.TYPE_80211AC,
                 None,
                 InterfaceDuplexChoices.DUPLEX_FULL,
-                "Duplex is not applicable to virtual or wireless interfaces.",
+                "Duplex is not applicable to this interface type.",
             ),
             # Copper (negative speed is invalid)
             (InterfaceTypeChoices.TYPE_1GE_FIXED, -100, None, "Ensure this value is greater than or equal to 0."),
@@ -3072,7 +3072,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             iface.type = InterfaceTypeChoices.TYPE_LAG
             with self.assertRaises(ValidationError) as cm:
                 iface.full_clean()
-            self.assertIn("LAG interfaces do not have an operational speed.", str(cm.exception))
+            self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
 
         with self.subTest("duplex"):
             iface = Interface(

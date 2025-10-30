@@ -896,20 +896,14 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         }
 
         # Check settings by interface type
-        if self.is_lag:
-            if self.speed:
-                raise ValidationError({"speed": "LAG interfaces do not have an operational speed."})
-            if self.duplex:
-                raise ValidationError({"duplex": "LAG interfaces do not have duplex settings."})
-        elif self.is_virtual or self.is_wireless:
-            if self.speed:
-                raise ValidationError({"speed": "Speed is not applicable to virtual or wireless interfaces."})
-            if self.duplex:
-                raise ValidationError({"duplex": "Duplex is not applicable to virtual or wireless interfaces."})
-        elif self.type not in copper_twisted_pair_types:
-            # Optical/backplane/etc do not use duplex
-            if self.duplex:
-                raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
+        if self.speed and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
+
+        if self.duplex and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
+
+        if self.duplex and self.type not in copper_twisted_pair_types:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     @property
     def is_connectable(self):
