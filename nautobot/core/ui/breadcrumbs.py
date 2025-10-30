@@ -1,11 +1,10 @@
-from dataclasses import dataclass, replace, asdict
-import logging
+from dataclasses import dataclass
 from itertools import chain
+import logging
 from operator import attrgetter
-from typing import Any, Callable, Literal, Optional, Protocol, Type, Union, Iterator
+from typing import Any, Callable, Iterator, Literal, Optional, Protocol, Type, Union
 from urllib.parse import urlencode
 
-from astroid import Instance
 from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse

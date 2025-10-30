@@ -39,6 +39,7 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import bettertitle, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
+    AncestorsInstanceBreadcrumbItem,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -46,7 +47,6 @@ from nautobot.core.ui.breadcrumbs import (
     InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
-    AncestorsInstanceBreadcrumbItem,
 )
 from nautobot.core.ui.bulk_buttons import (
     BulkDeleteButton,
