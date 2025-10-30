@@ -541,7 +541,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#7658](https://github.com/nautobot/nautobot/issues/7658) - Fixed an intermittent test failure in `nautobot.extras.tests.test_filters.ObjectMetadataTestCase`.
 - [#7659](https://github.com/nautobot/nautobot/issues/7659) - Added UI rebuild and tooling to development Docker Compose for developer convenience.
 - [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated example app to use related manager names.
-- [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated UI_COLORS names to match values in colors.scss.
+- [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated `UI_COLORS` names to match values in colors.scss.
 - [#7739](https://github.com/nautobot/nautobot/issues/7739) - Add `0.3125rem` (`5px`) spacer.
 - [#7773](https://github.com/nautobot/nautobot/issues/7773) - Updated development dependency `coverage` to `~7.10.6`.
 - [#7785](https://github.com/nautobot/nautobot/issues/7785) - Added `invoke` commands and renamed existing `npm` commands for frontend development.

@@ -561,7 +561,7 @@ class ValidateModelData(Job):
 
             try:
                 records = model.objects.restrict(self.user, "view")
-            except AttributeError:
+            except AttributeError:  # Not a RestrictedQuerySet?
                 if self.user.is_superuser:  # i.e., permissions exempt
                     records = model.objects.all()
                 else:
