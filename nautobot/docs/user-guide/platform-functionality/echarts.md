@@ -113,9 +113,9 @@ The `data` argument can be provided in **several formats**:
 
 ### Theme colors
 
-The `theme_colors` parameter controls the color palette used in charts. You can either use predefined color schemes or provide a custom list of colors. Each color must be a dictionary with `'light'` and `'dark'` keys containing hex color codes. Colors can be takend from `UI_COLORS` or defined your own color dictionaries.
+The `theme_colors` parameter controls the color palette used in charts. You can either use predefined color schemes or provide a custom list of colors. Each color must be a dictionary with `'light'` and `'dark'` keys containing hex color codes. Colors can be taken from `UI_COLORS` or you can define your own color dictionaries.
 
-Nautobot provides predefined color schemes through `EChartsThemeColor`s. When creating an ECharts instance, a custom `theme_colors` value can be defined, but it’s optional (by default, `theme_color`s is set to `EChartsThemeColors.NAUTOBOT_COLORS`).
+Nautobot provides predefined color schemes through `EChartsThemeColor`s. When creating an ECharts instance, a custom `theme_colors` value can be defined, but it’s optional (by default, `theme_colors` is set to `EChartsThemeColors.NAUTOBOT_COLORS`).
 
 Available predefined schemes:
 - `NAUTOBOT_COLORS` - Default Nautobot color palette with multiple colors
