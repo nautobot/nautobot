@@ -4,7 +4,7 @@ import uuid
 from django.core.cache import cache
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Cable,Device, PowerPort
+from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.models import JobQueue
 from nautobot.extras.registry import registry
