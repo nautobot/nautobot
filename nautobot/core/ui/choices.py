@@ -74,7 +74,7 @@ class EChartsThemeColors(ChoiceSet):
     DEFAULT = NAUTOBOT
 
     # Color lists - direct access
-    NAUTOBOT_COLORS = [
+    NAUTOBOT_COLORS = (
         UI_COLORS["blue"],
         UI_COLORS["purple"],
         UI_COLORS["turquoise"],
@@ -96,12 +96,12 @@ class EChartsThemeColors(ChoiceSet):
         UI_COLORS["green-darker"],
         UI_COLORS["red-darker"],
         UI_COLORS["gray-darker"],
-    ]
+    )
 
-    LIGHTER_GREEN_RED_COLORS = [
+    LIGHTER_GREEN_RED_COLORS = (
         UI_COLORS["green-lighter"],
         UI_COLORS["red-lighter"],
-    ]
+    )
 
     CHOICES = (
         (NAUTOBOT, "Default Nautobot Colors"),
