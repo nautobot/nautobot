@@ -66,17 +66,13 @@ class ObjectsListMixin:
         """
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
-        self.browser.execute_script(
-            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView({ behavior: 'instant', block: 'start' });"
-        )
+        self.scroll_element_into_view(css='#bulk-action-buttons button[type="submit"]')
         self.browser.find_by_xpath(
             '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
         bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
         bulk_delete_button.is_visible(wait_time=5)
-        self.browser.execute_script(
-            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", bulk_delete_button.first._element
-        )
+        self.scroll_element_into_view(element=bulk_delete_button)
         bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
@@ -418,7 +414,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
-        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
+        self.scroll_element_into_view(css=f"#id_{field_name}")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
@@ -464,9 +460,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def click_button(self, query_selector):
         self.browser.is_element_present_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(
-            f"document.querySelector('{query_selector}').scrollIntoView({{ behavior: 'instant', block: 'start' }});"
-        )
+        self.scroll_element_into_view(css=query_selector)
         # Scrolling may be asynchronous, wait until it's actually clickable.
         WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
         btn = self.browser.find_by_css(query_selector)
@@ -478,9 +472,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         """
         self.browser.is_element_present_by_name(input_name, wait_time=5)
         element = self.browser.find_by_name(input_name)
-        self.browser.execute_script(
-            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", element.first._element
-        )
+        self.scroll_element_into_view(element=element)
         element.is_visible(wait_time=5)
         self.browser.execute_script("arguments[0].focus();", element.first._element)
         self.browser.fill(input_name, input_value)
@@ -490,6 +482,20 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.user.save()
         self.login(self.user.username, self.password)
         self.logged_in = True
+
+    def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
+        """
+        Scroll element into view. Element can be expressed either as Splinter `ElementList`, `ElementAPI`, CSS query selector or XPath.
+        """
+        if css:
+            element = self.browser.find_by_css(css)
+        elif xpath:
+            element = self.browser.find_by_xpath(xpath)
+
+        self.browser.execute_script(
+            f"arguments[0].scrollIntoView({{ behavior: 'instant', block: '{block}' }});",
+            element.first._element if hasattr(element, "__iter__") else element._element,
+        )
 
 
 class BulkOperationsTestCases:

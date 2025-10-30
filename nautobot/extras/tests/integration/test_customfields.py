@@ -304,9 +304,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Visit the device edit page
         self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': device.pk})}")
         # Get the first item selected on the custom field
-        self.browser.execute_script(
-            'document.querySelector(\'label:has(+ * [name="cf_test_selection_field"])\').scrollIntoView({ behavior: "instant" });'
-        )
+        self.scroll_element_into_view(css='label:has(+ * [name="cf_test_selection_field"])')
         self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
         active_web_element = self.browser.driver.switch_to.active_element
         active_web_element.send_keys(Keys.ENTER)

@@ -66,71 +66,51 @@ class EChartsTypeChoices(ChoiceSet):
     )
 
 
-class EChartsTypeTheme(ChoiceSet):
-    """Available chart theme for ECharts.
+class EChartsThemeColors(ChoiceSet):
+    """Available chart colors for ECharts."""
 
-    Attributes:
-        LIGHT (str): Light theme (value: light)
-        DARK (str): Dark theme (value: dark)
-    """
+    NAUTOBOT = "default"
+    LIGHTER_GREEN_AND_RED_ONLY = "lighter-green-red-only"
+    DEFAULT = NAUTOBOT
 
-    LIGHT = "default"
-    DARK = "dark"
+    # Color lists - direct access
+    NAUTOBOT_COLORS = (
+        UI_COLORS["blue"],
+        UI_COLORS["purple"],
+        UI_COLORS["turquoise"],
+        UI_COLORS["orange"],
+        UI_COLORS["green"],
+        UI_COLORS["red"],
+        UI_COLORS["gray"],
+        UI_COLORS["blue-lighter"],
+        UI_COLORS["purple-lighter"],
+        UI_COLORS["turquoise-lighter"],
+        UI_COLORS["orange-lighter"],
+        UI_COLORS["green-lighter"],
+        UI_COLORS["red-lighter"],
+        UI_COLORS["gray-lighter"],
+        UI_COLORS["blue-darker"],
+        UI_COLORS["purple-darker"],
+        UI_COLORS["turquoise-darker"],
+        UI_COLORS["orange-darker"],
+        UI_COLORS["green-darker"],
+        UI_COLORS["red-darker"],
+        UI_COLORS["gray-darker"],
+    )
 
-    DEFAULT = LIGHT
+    LIGHTER_GREEN_RED_COLORS = (
+        UI_COLORS["green-lighter"],
+        UI_COLORS["red-lighter"],
+    )
 
     CHOICES = (
-        (LIGHT, "Default theme"),
-        (DARK, "Dark theme"),
+        (NAUTOBOT, "Default Nautobot Colors"),
+        (LIGHTER_GREEN_AND_RED_ONLY, "Lighter Green and Red Only"),
     )
 
     COLORS = {
-        LIGHT: [
-            UI_COLORS["blue"]["light"],
-            UI_COLORS["purple"]["light"],
-            UI_COLORS["turquoise"]["light"],
-            UI_COLORS["orange"]["light"],
-            UI_COLORS["green"]["light"],
-            UI_COLORS["red"]["light"],
-            UI_COLORS["gray"]["light"],
-            UI_COLORS["blue-lighter"]["light"],
-            UI_COLORS["purple-lighter"]["light"],
-            UI_COLORS["turquoise-lighter"]["light"],
-            UI_COLORS["orange-lighter"]["light"],
-            UI_COLORS["green-lighter"]["light"],
-            UI_COLORS["red-lighter"]["light"],
-            UI_COLORS["gray-lighter"]["light"],
-            UI_COLORS["blue-darker"]["light"],
-            UI_COLORS["purple-darker"]["light"],
-            UI_COLORS["turquoise-darker"]["light"],
-            UI_COLORS["orange-darker"]["light"],
-            UI_COLORS["green-darker"]["light"],
-            UI_COLORS["red-darker"]["light"],
-            UI_COLORS["gray-darker"]["light"],
-        ],
-        DARK: [
-            UI_COLORS["blue"]["dark"],
-            UI_COLORS["purple"]["dark"],
-            UI_COLORS["turquoise"]["dark"],
-            UI_COLORS["orange"]["dark"],
-            UI_COLORS["green"]["dark"],
-            UI_COLORS["red"]["dark"],
-            UI_COLORS["gray"]["dark"],
-            UI_COLORS["blue-lighter"]["dark"],
-            UI_COLORS["purple-lighter"]["dark"],
-            UI_COLORS["turquoise-lighter"]["dark"],
-            UI_COLORS["orange-lighter"]["dark"],
-            UI_COLORS["green-lighter"]["dark"],
-            UI_COLORS["red-lighter"]["dark"],
-            UI_COLORS["gray-lighter"]["dark"],
-            UI_COLORS["blue-darker"]["dark"],
-            UI_COLORS["purple-darker"]["dark"],
-            UI_COLORS["turquoise-darker"]["dark"],
-            UI_COLORS["orange-darker"]["dark"],
-            UI_COLORS["green-darker"]["dark"],
-            UI_COLORS["red-darker"]["dark"],
-            UI_COLORS["gray-darker"]["dark"],
-        ],
+        NAUTOBOT: NAUTOBOT_COLORS,
+        LIGHTER_GREEN_AND_RED_ONLY: LIGHTER_GREEN_RED_COLORS,
     }
 
 
