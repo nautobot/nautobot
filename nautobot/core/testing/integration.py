@@ -74,6 +74,9 @@ class ObjectsListMixin:
         ).click()
         bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
         bulk_delete_button.is_visible(wait_time=5)
+        self.browser.execute_script(
+            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", bulk_delete_button.first._element
+        )
         bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
