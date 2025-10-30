@@ -303,11 +303,6 @@ MODULEBAY_BUTTONS = """
 {% endif %}
 """
 
-PARENT_BAY = """
-{% if record.parent_bay %}
-    {{ record.parent_bay }}
-{% endif %}
-"""
 PARENT_DEVICE = """
 {% load helpers %}
 {% if record.parent_bay %}

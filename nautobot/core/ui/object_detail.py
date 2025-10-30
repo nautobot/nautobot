@@ -755,7 +755,7 @@ class ObjectsTablePanel(Panel):
         footer_buttons=None,
         form_id=None,
         include_paginator=False,
-        extra_params=None,
+        list_url_extra_params=None,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -806,8 +806,8 @@ class ObjectsTablePanel(Panel):
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
             include_paginator (bool, optional): If True, renders a paginator in the panel footer.
-            extra_params (dict, optional): Additional query parameters to include in the `list_route`.
-                Allowing customization beyond the default filter by `related_field_name`.
+            list_url_extra_params (dict, optional): Additional query parameters to include in the `list_route`,
+                allowing customization beyond the default filter by `related_field_name`.
 
         """
         if context_table_key and any(
@@ -856,7 +856,7 @@ class ObjectsTablePanel(Panel):
         self.footer_buttons = footer_buttons
         self.form_id = form_id
         self.include_paginator = include_paginator
-        self.extra_params = extra_params
+        self.list_url_extra_params = list_url_extra_params
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -1009,8 +1009,8 @@ class ObjectsTablePanel(Panel):
                 related_field_name = [related_field_name]
 
             query_params = {field: obj.pk for field in related_field_name}
-            if hasattr(self, "extra_params") and isinstance(self.extra_params, dict):
-                query_params.update(self.extra_params)
+            if isinstance(self.list_url_extra_params, dict):
+                query_params.update(self.list_url_extra_params)
             body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
         else:
             body_content_table_list_url = None

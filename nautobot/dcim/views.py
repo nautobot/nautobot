@@ -20,7 +20,7 @@ from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import iri_to_uri
-from django.utils.html import format_html, format_html_join, mark_safe
+from django.utils.html import format_html, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
@@ -580,12 +580,6 @@ class RackUIViewSet(NautobotUIViewSet):
             if key == "space_utilization" or key == "power_utilization":
                 return self.get_utilization_graph(value)
 
-            if key == "rack_group":
-                if not value:
-                    return helpers.HTML_NONE
-                all_groups = [*list(value.ancestors()), value]
-                return format_html_join(" / ", "{}", ((helpers.hyperlinked_object(group),) for group in all_groups))
-
             if key == "devices":
                 request = context["request"]
                 obj = get_obj_from_context(context)
@@ -713,7 +707,7 @@ class RackUIViewSet(NautobotUIViewSet):
                     "actions",
                 ],
                 include_columns=["parent_device"],
-                extra_params={"position__isnull": True},
+                list_url_extra_params={"position__isnull": True},
             ),
         )
     )

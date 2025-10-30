@@ -55,7 +55,6 @@ from .template_code import (
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
-    PARENT_BAY,
     PARENT_DEVICE,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
@@ -1606,7 +1605,7 @@ class NonRackedDevicesTable(RoleTableMixin, BaseTable):
         text=lambda record: record.device_type.display,
     )
     parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
-    parent_bay = tables.TemplateColumn(template_code=PARENT_BAY, verbose_name="")
+    parent_bay = tables.Column(accessor="parent_bay", verbose_name="")
 
     class Meta(BaseTable.Meta):
         model = Device
