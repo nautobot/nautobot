@@ -51,9 +51,7 @@ class DynamicGroupTestCase(SeleniumTestCase, ObjectsListMixin):
         # to find the next "input" after the "status" select field.
         status_field = self.browser.find_by_name("filter-status").first
         status_input = status_field.find_by_xpath("./following::input[1]").first
-        self.browser.execute_script(
-            "arguments[0].scrollIntoView({ behavior: 'instant', block: 'start' });", status_input._element
-        )
+        self.scroll_element_into_view(element=status_input)
         status_input.click()  # Force focus on the input field to bring it on-screen
 
         # Fill in "Status: Active".
