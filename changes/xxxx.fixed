@@ -1,0 +1,3 @@
+Fixed style of "Profile job execution" and "Ignore singleton lock" checkboxes in Job forms.
+Added exception handler for the case where `nautobot-server refresh_dynamic_group_member_caches` encounters an exception with a specific group(s).
+Fixed rendering of Job `description` in its detail view page.
