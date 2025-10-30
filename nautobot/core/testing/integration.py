@@ -67,12 +67,14 @@ class ObjectsListMixin:
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
         self.browser.execute_script(
-            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
+            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView({ behavior: 'instant', block: 'start' });"
         )
         self.browser.find_by_xpath(
             '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
+        bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
+        bulk_delete_button.is_visible(wait_time=5)
+        bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
         """
