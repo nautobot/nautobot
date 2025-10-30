@@ -1,15 +1,14 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import ComputedField
 
 from . import create_test_device
 
 
-class ComputedFieldsTestCase(SeleniumTestCase):
+class ComputedFieldsTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin):
     """
     Integration test to check nautobot.extras.models.ComputedField.advanced_ui functionality
     and computed fields appearing in an object list
@@ -26,7 +25,6 @@ class ComputedFieldsTestCase(SeleniumTestCase):
             template="{{ obj.name }} is awesome!",
         )
 
-    @tag("fix_in_v3")
     def test_computed_field_advanced_ui(self):
         """
         This test creates a device and a computed field for that device.
@@ -41,7 +39,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # # Check the computed field does NOT appear in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertFalse(self.browser.is_text_present("Device Computed Field"))
         self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # Set the custom_field to only show in the advanced tab
@@ -53,18 +51,20 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.assertFalse(self.browser.is_text_present("Device Computed Field"))
         self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
         # Check the computed field appears in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
+        self.switch_tab("Advanced")
         self.assertTrue(self.browser.is_text_present("Device Computed Field"))
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
 
-    @tag("fix_in_v3")
     def test_computed_field_appears_in_object_list(self):
         """
         This test sets the computed field to be visible on the object list
         and then checks to see if it actually appears there.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/devices/")
-        self.click_button("#table-configure-button")
+        self.click_button("""button[title="Configure table"]""")
+        nb_drawer_open_xpath = "//section[contains(@class, 'nb-drawer') and contains(@class, 'nb-drawer-open')]"
+        self.assertTrue(self.browser.is_element_present_by_xpath(nb_drawer_open_xpath, wait_time=5))
+        self.assertTrue(self.browser.find_by_xpath(nb_drawer_open_xpath).is_visible(wait_time=5))
         select_option = self.browser.find_by_xpath(
             ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
         )
@@ -72,6 +72,5 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         select_option.click()
         self.browser.find_by_xpath(".//input[@value='Save']").click()
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
-        self.browser.find_by_xpath(".//button[@data-original-title='Configure table']").click()
         self.browser.find_by_xpath(".//input[@value='Reset']").click()
         self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))

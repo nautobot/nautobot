@@ -1,5 +1,3 @@
-from django.test import tag
-
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
@@ -24,7 +22,6 @@ class ThemeTestCase(SeleniumTestCase):
         # Validate modal is not visible
         self.assertFalse(theme_modal[0].visible)
 
-    @tag("fix_in_v3")
     def test_modal_rendered(self):
         """Modal should render when selecting the 'theme' button in the footer."""
 
@@ -35,30 +32,34 @@ class ThemeTestCase(SeleniumTestCase):
         self.assertEqual(len(self.browser.find_by_xpath("//div[@class[contains(., 'modal-backdrop')]]")), 1)
 
         # Validate modal is visible
-        theme_modal = self.browser.find_by_xpath("//div[@id[contains(., 'theme_modal')]]")
-        self.assertTrue(theme_modal[0].visible)
+        theme_modal = self.browser.find_by_xpath("//div[@id='theme_modal']")
+        self.assertTrue(theme_modal[0].is_visible(wait_time=5))
 
         # Validate 3 themes available to select
-        self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'modal-body')]]//tbody/tr")), 1
-        )  # 1 row
-
-        columns = self.browser.find_by_xpath("//div[@class[contains(., 'modal-body')]]//tbody/tr/td")
+        columns = self.browser.find_by_xpath("//div[@class[contains(., 'modal-body')]]//dl/dt")
         self.assertEqual(len(columns), 3)  # 3 columns (light, dark, system)
 
         # Validate 3 modes in order are light, dark, and system
-        self.assertIn("light", columns[0].html)
-        self.assertIn("dark", columns[1].html)
-        self.assertIn("system", columns[2].html)
+        self.assertIn("Light", columns[0].html)
+        self.assertIn("Dark", columns[1].html)
+        self.assertIn("System", columns[2].html)
 
         # Validate only System theme is selected by default
-        system_theme = self.browser.find_by_xpath(".//td[@id='td-light-theme']")
-        self.assertFalse(system_theme[0].has_class("active-theme"))
-        system_theme = self.browser.find_by_xpath(".//td[@id='td-dark-theme']")
-        self.assertFalse(system_theme[0].has_class("active-theme"))
-        system_theme = self.browser.find_by_xpath(".//td[@id='td-system-theme']")
-        self.assertTrue(system_theme[0].has_class("active-theme"))
+        light_theme = self.browser.find_by_xpath(".//dd/button[@data-nb-theme='light']")
+        self.assertFalse(light_theme[0].has_class("border"))
+        self.assertFalse(light_theme[0].has_class("border-primary"))
+        dark_theme = self.browser.find_by_xpath(".//dd/button[@data-nb-theme='dark']")
+        self.assertFalse(dark_theme[0].has_class("border"))
+        self.assertFalse(dark_theme[0].has_class("border-primary"))
+        system_theme = self.browser.find_by_xpath(".//dd/button[@data-nb-theme='system']")
+        self.assertTrue(system_theme[0].has_class("border"))
+        self.assertTrue(system_theme[0].has_class("border-primary"))
+
+        # Why is it required to click the cancel button twice? I honestly don't know, but for some reason Selenium seems
+        # to have troubles here. The first press only focuses the cancel button, and only after clicking it for the
+        # second time, the modal closes successfully.
+        self.browser.find_by_xpath(".//button[@id='dismiss-modal-theme']").click()
+        self.browser.find_by_xpath(".//button[@id='dismiss-modal-theme']").click()
 
         # Validate Modal closes when cancel button clicked
-        self.browser.find_by_xpath(".//button[@id='dismiss-modal-theme']").click()
-        self.assertFalse(theme_modal[0].visible)
+        self.assertTrue(theme_modal[0].is_not_visible(wait_time=5))

@@ -1,4 +1,3 @@
-from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -10,7 +9,6 @@ class ControllerTestCase(SeleniumTestCase):
     Perform set of Controller tests using Selenium.
     """
 
-    @tag("fix_in_v3")
     def test_controller_bulk_edit(self):
         """
         This test goes through the process of creating a Controller and performing bulk edit.
@@ -55,9 +53,8 @@ class ControllerTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(f"//button[@formaction='{bulk_edit_url}']").click()
 
         # Submit bulk edit form without any changes
-        self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
+        self.assertTrue(self.browser.is_element_present_by_xpath("//button[@name='_apply']", wait_time=5))
+        self.browser.find_by_xpath("//button[@name='_apply']").click()
 
         job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
-        self.assertEqual(
-            self.browser.url, self.live_server_url + reverse("extras:jobresult", args=[job_result.pk]) + "?tab=main"
-        )
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:jobresult", args=[job_result.pk]))
