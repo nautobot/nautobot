@@ -14,6 +14,7 @@ from nautobot.core.ui.breadcrumbs import (
     ViewNameBreadcrumbItem,
 )
 from nautobot.core.ui.choices import (
+    EChartsThemeColors,
     EChartsTypeChoices,
     LayoutChoices,
     NavigationIconChoices,
@@ -80,6 +81,7 @@ __all__ = (
     "DropdownButton",
     "EChartsBase",
     "EChartsPanel",
+    "EChartsThemeColors",
     "EChartsTypeChoices",
     "GroupedKeyValueTablePanel",
     "HomePageBase",

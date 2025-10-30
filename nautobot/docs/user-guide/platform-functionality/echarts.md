@@ -111,6 +111,55 @@ The `data` argument can be provided in **several formats**:
     - Here, the dataset is generated dynamically for the current `Tenant` object by using a callable with `context`.
     - This approach is recommended when chart data should be tied to the specific object being rendered in the detail view.
 
+### Theme colors
+
+The `theme_colors` parameter controls the color palette used in charts. You can either use predefined color schemes or provide a custom list of colors. Each color must be a dictionary with `'light'` and `'dark'` keys containing hex color codes. Colors can be taken from `UI_COLORS` or you can define your own color dictionaries.
+
+Nautobot provides predefined color schemes through `EChartsThemeColor`s. When creating an ECharts instance, a custom `theme_colors` value can be defined, but it’s optional (by default, `theme_colors` is set to `EChartsThemeColors.NAUTOBOT_COLORS`).
+
+Available predefined schemes:
+- `NAUTOBOT_COLORS` - Default Nautobot color palette with multiple colors
+- `LIGHTER_GREEN_RED_COLORS` - Lighter shades of green and red only
+
+```no-highlight
+chart = EChartsBase(
+        chart_type=EChartsTypeChoices.BAR,
+        theme_colors=EChartsThemeColors.LIGHTER_GREEN_RED_COLORS,
+        header="Compliance per Feature",
+        description="Example chart",
+        data={
+            "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+            "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+        },
+    )
+```
+
+To use your own theme colors, there are two options:
+- Add a custom theme colors to `EChartsThemeColors`.
+- Pass a custom color list directly without modifying `EChartsThemeColors`.
+
+```no-highlight
+chart = EChartsBase(
+        chart_type=EChartsTypeChoices.BAR,
+        theme_colors=[
+            {
+                "light": "#007dff",
+                "dark": "#339dff",
+            },
+            {
+                "light": "#e01f1f",
+                "dark": "#ff4c4c",
+            },
+        ],
+        header="Compliance per Feature",
+        description="Example chart",
+        data={
+            "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+            "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+        },
+    )
+```
+
 ### Additional Options
 
 Each chart comes with two default toolbox icons:

@@ -6,7 +6,7 @@ import zoneinfo
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import override_settings, tag
+from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
@@ -1293,7 +1293,6 @@ class ModuleTypeTestCase(
             "comments": "changed comment",
         }
 
-    @tag("fix_in_v3")
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
         self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype")
@@ -1322,11 +1321,11 @@ class ModuleTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 

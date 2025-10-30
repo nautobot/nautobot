@@ -1,4 +1,3 @@
-from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -9,7 +8,6 @@ class CreateDeviceTestCase(SeleniumTestCase):
     Create a device and all pre-requisite objects through the UI.
     """
 
-    @tag("fix_in_v3")
     def test_create_device(self):
         """
         This test goes through the process of creating a device in the UI. All pre-requisite objects are created:
