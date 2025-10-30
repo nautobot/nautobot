@@ -1,5 +1,5 @@
 <div style="margin-left: -30px">
-    <object data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation"></object>
+    <object data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation invert-in-dark-mode"></object>
 </div>
 <div class="text-center text-small">
     <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation_save_svg_link" download="rack_{{ face }}_{{ object }}.svg">

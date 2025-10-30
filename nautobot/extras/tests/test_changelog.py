@@ -542,13 +542,35 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()
 
+    def test_m2m_fields_not_excluded(self):
+        """Ensure that m2m fields are included in object changes, even if exclude_m2m is the default in the REST API."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test m2m locationtype")
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+
+        object_changes = get_changes_for_model(location_type)
+        self.assertEqual(object_changes.count(), 2)
+
+        snapshots = object_changes.first().get_snapshots()
+        self.assertIsNotNone(snapshots["differences"]["removed"])
+        self.assertIsNotNone(snapshots["differences"]["added"])
+        self.assertIn("content_types", snapshots["differences"]["removed"])
+        self.assertIn("content_types", snapshots["differences"]["added"])
+        self.assertEqual(
+            len(snapshots["differences"]["added"]["content_types"]),
+            ContentType.objects.filter(app_label="dcim").count(),
+        )
+
     def test_opt_out(self):
         """Hidden static group associations can "opt out" of change logging."""
         dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
         # Force reassignment of all cached memberships:
         members = list(dg.members)
-        dg._set_members([])
-        dg._set_members(members)
+        with context_managers.web_request_context(self.user):
+            dg._set_members([])
+            dg._set_members(members)
 
         for sga in dg.static_group_associations(manager="all_objects").all():
             self.assertIsNone(get_changes_for_model(sga).first())
