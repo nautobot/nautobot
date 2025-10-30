@@ -1212,7 +1212,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         error_msg = str(cm.exception)
         self.assertTrue(
             "Ensure this value is greater than or equal to 1" in error_msg or "u_height" in error_msg,
-            f"Expected validation error for u_height, got: {error_msg}"
+            f"Expected validation error for u_height, got: {error_msg}",
         )
 
     @override_config(RACK_DEFAULT_U_HEIGHT=501)
@@ -1234,7 +1234,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         error_msg = str(cm.exception)
         self.assertTrue(
             "Ensure this value is less than or equal to 500" in error_msg or "u_height" in error_msg,
-            f"Expected validation error for u_height, got: {error_msg}"
+            f"Expected validation error for u_height, got: {error_msg}",
         )
 
     @override_config(RACK_DEFAULT_U_HEIGHT=24)
