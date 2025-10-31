@@ -24,6 +24,23 @@ This document describes all new features and changes in Nautobot 3.0.
 
 ## Release Overview
 
+### Breaking Changes
+
+#### Removed Python Code
+
+Many previously deprecated classes have been fully removed now (see full table below). The most notable removal is the original `PluginConfig` class, which was replaced by `NautobotAppConfig` in v1.5.2. If your app still imports and inherits from `PluginConfig`, you should migrate to using `NautobotAppConfig` before upgrading to Nautobot 3.0.
+
+To assist with identifying any remaining instances of deprecated code in your codebase, new rules have been added to [`pylint-nautobot`](https://docs.nautobot.com/projects/pylint-nautobot/en/latest/) in version v0.4.3+ that will flag any code that still imports and inherits from any of the deprecated classes.
+
+??? info "Full table of code removals"
+    {data-table user-guide/administration/upgrading/from-v2/tables/v3-code-removals.yaml}
+
+#### Removed HTML Templates
+
+Many legacy HTML templates have been removed. The majority of the removed templates are model specific such as `circuits/circuit.html` or `dcim/device/base.html` and have been superseded by generic templates such as `generic/object_retrieve.html`.
+
+In order to ease the transition from these deprecated templates for app developers, we have included a migration script in Nautobot v2.4.21+ that will recursively parse through a directory's html files and replace any extends directives (`{% extends ... %}`) that reference a deprecated template with the replacement template. This script does not require Nautobot to be running and it can be run with the command `nautobot-migrate-deprecated-templates <path> [--dry-run]`. For more details, including a full table of deprecated templates and their replacements, see [Deprecated Templates](../development/apps/migration/code-updates.md#deprecated-templates).
+
 ### Added
 
 #### UI Updates
@@ -113,19 +130,6 @@ Buttons were removed from the NavBar as our research indicated they were infrequ
 #### Job Approval Process
 
 The Job Approval process was removed and replaced by Workflow Approvals.
-
-#### Removed Python Code
-
-Many previously deprecated classes have been fully removed now (see full table below). The most notable removal is the original `PluginConfig` class, which was replaced by `NautobotAppConfig` in v1.5.2. If your app still imports and inherits from `PluginConfig`, you should migrate to using `NautobotAppConfig` before upgrading to Nautobot 3.0.
-
-??? info "Full table of code removals"
-    {data-table user-guide/administration/upgrading/from-v2/tables/v3-code-removals.yaml}
-
-#### Removed HTML Templates
-
-Many legacy HTML templates have been removed. The majority of the removed templates are model specific such as `circuits/circuit.html` or `dcim/device/base.html` and have been superseded by generic templates such as `generic/object_retrieve.html`.
-
-In order to ease the transition from these deprecated templates for app developers, we have included a migration script in Nautobot v2.4.21+ that will recursively parse through a directory's html files and replace any extends directives (`{% extends ... %}`) that reference a deprecated template with the replacement template. This script does not require Nautobot to be running and it can be run with the command `nautobot-migrate-deprecated-templates <path> [--dry-run]`. For more details, including a full table of deprecated templates and their replacements, see [Deprecated Templates](../development/apps/migration/code-updates.md#deprecated-templates).
 
 ### Dependencies
 
