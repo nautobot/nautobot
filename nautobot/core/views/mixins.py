@@ -732,7 +732,11 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
                     except TemplateDoesNotExist:
                         # Try a different detail view template format
                         template_name = f"{app_label}/{model_opts.model_name}.html"
-                        select_template([template_name])
+                        try:
+                            select_template([template_name])
+                        except TemplateDoesNotExist:
+                            # Catch-all fallback to just object_retrieve.html
+                            template_name = "generic/object_retrieve.html"
         return template_name
 
     def get_form(self, *args, **kwargs):
