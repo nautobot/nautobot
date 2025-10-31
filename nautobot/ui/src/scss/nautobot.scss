@@ -1403,6 +1403,11 @@ textarea {
   }
 }
 
+/* Alerts */
+.alert:is(.alert-primary, .alert-info) a {
+  text-decoration: underline;
+}
+
 /* Progress bars */
 .progress {
   td & {
