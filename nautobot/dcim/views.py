@@ -5816,7 +5816,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=700,
                 tab_id="wireless_networks",
-                url_name="dcim:controller_wirelessnetworks",
+                url_name="dcim:controller_wireless_networks",
                 label="Wireless Networks",
                 related_object_attribute="wireless_network_assignments",
                 panels=(
@@ -5840,12 +5840,12 @@ class ControllerUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         url_path="wireless-networks",
-        url_name="wirelessnetworks",
+        url_name="wireless_networks",
         methods=["get"],
         custom_view_base_action="view",
         custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
     )
-    def wirelessnetworks(self, request, *args, **kwargs):
+    def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
 
