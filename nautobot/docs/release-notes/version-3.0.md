@@ -27,6 +27,14 @@ This document describes all new features and changes in Nautobot 3.0.
 
 ### Breaking Changes
 
+#### Many-to-Many Fields in REST API ([#7456](https://github.com/nautobot/nautobot/issues/7456))
+
+In order to improve performance at scale, the REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. See [Filtering Included Fields](../user-guide/platform-functionality/rest-api/filtering.md#filtering-included-fields) for more details.
+
+Pynautobot users should ensure they add `exclude_m2m=False` to an individual request (`nb.dcim.devices.all(exclude_m2m=False)`) or (in pynautobot v3.0.0+) set the default for all requests (`import pynautobot; nb = pynautobot.api(url, token, exclude_m2m=False)`) to maintain prior behavior.
+
+Nautobot Ansible users (using v6.0.0+ and pynautobot v3.0.0+) should see no change required when using module or inventory plugins. When using a lookup plugin, however, they will need to use the `api_filters` parameter to include M2M fields. For example: `api_filters='exclude_m2m=False'`.
+
 #### Removed Python Code
 
 Many previously deprecated classes have been fully removed now (see full table below). The most notable removal is the original `PluginConfig` class, which was replaced by `NautobotAppConfig` in v1.5.2. If your app still imports and inherits from `PluginConfig`, you should migrate to using `NautobotAppConfig` before upgrading to Nautobot 3.0.
@@ -150,14 +158,6 @@ For users of GraphQL, this is also a feature enhancement, as queries using the a
     extras.DynamicGroup
     ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
     ```
-
-#### Many-to-Many Fields in REST API ([#7456](https://github.com/nautobot/nautobot/issues/7456))
-
-In order to improve performance at scale, the REST API now defaults to excluding many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default. Any code that relies on including many-to-many fields in the REST API response must explicitly request them by specifying the `exclude_m2m=False` query parameter. See [Filtering Included Fields](../user-guide/platform-functionality/rest-api/filtering.md#filtering-included-fields) for more details.
-
-Pynautobot users should ensure they add `exclude_m2m=False` to an individual request (`nb.dcim.devices.all(exclude_m2m=False)`) or (in pynautobot v3.0.0+) set the default for all requests (`import pynautobot; nb = pynautobot.api(url, token, exclude_m2m=False)`) to maintain prior behavior.
-
-Nautobot Ansible users (using v6.0.0+ and pynautobot v3.0.0+) should see no change required when using module or inventory plugins. When using a lookup plugin, however, they will need to use the `api_filters` parameter to include M2M fields. For example: `api_filters='exclude_m2m=False'`.
 
 ### Removed
 
