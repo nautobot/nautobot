@@ -28,6 +28,7 @@ from nautobot.core.forms import (
     JSONArrayFormField,
     MultipleContentTypeField,
     NullableDateField,
+    NumberWithSelect,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -3518,7 +3519,9 @@ class InterfaceBulkEditForm(
         label="VRF",
         required=False,
     )
-    speed = forms.IntegerField(required=False, label="Speed (Kbps)")
+    speed = forms.IntegerField(
+        required=False, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )

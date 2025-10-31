@@ -4122,7 +4122,6 @@ class InterfaceBulkEditView(generic.BulkEditView):
     filterset = filters.InterfaceFilterSet
     table = tables.InterfaceTable
     form = forms.InterfaceBulkEditForm
-    template_name = "dcim/interface_bulk_edit.html"
 
 
 class InterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):
