@@ -4098,7 +4098,6 @@ class InterfaceCreateView(generic.ComponentCreateView):
     queryset = Interface.objects.all()
     form = forms.InterfaceCreateForm
     model_form = forms.InterfaceForm
-    template_name = "dcim/interface_create.html"
 
 
 class InterfaceEditView(generic.ObjectEditView):

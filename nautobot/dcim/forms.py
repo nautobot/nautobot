@@ -3166,7 +3166,9 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         },
         help_text="Assigned LAG interface",
     )
-    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
@@ -3314,7 +3316,9 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         },
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
-    speed = forms.IntegerField(required=False)
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
     )
@@ -3520,7 +3524,7 @@ class InterfaceBulkEditForm(
         required=False,
     )
     speed = forms.IntegerField(
-        required=False, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
     )
     duplex = forms.ChoiceField(
         choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
