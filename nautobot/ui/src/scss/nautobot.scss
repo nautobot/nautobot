@@ -921,6 +921,10 @@ $table-variants: (
   white-space: nowrap;
 }
 
+table.attr-table td:nth-child(1) {
+  width: 25%;
+}
+
 /* Buttons */
 .btn {
   --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
