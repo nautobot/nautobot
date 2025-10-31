@@ -1486,65 +1486,68 @@ class ModuleTypeUIViewSet(
         return super().get_required_permission()
 
     def get_extra_context(self, request, instance):
-        if not instance:
-            return {}
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
 
-        instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
+            # Component tables
+            consoleport_table = tables.ConsolePortTemplateTable(
+                ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            consoleserverport_table = tables.ConsoleServerPortTemplateTable(
+                ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            powerport_table = tables.PowerPortTemplateTable(
+                PowerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            poweroutlet_table = tables.PowerOutletTemplateTable(
+                PowerOutletTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            interface_table = tables.InterfaceTemplateTable(
+                list(InterfaceTemplate.objects.restrict(request.user, "view").filter(module_type=instance)),
+                orderable=False,
+            )
+            front_port_table = tables.FrontPortTemplateTable(
+                FrontPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            rear_port_table = tables.RearPortTemplateTable(
+                RearPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            modulebay_table = tables.ModuleBayTemplateTable(
+                ModuleBayTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+                orderable=False,
+            )
+            if request.user.has_perm("dcim.change_moduletype"):
+                consoleport_table.columns.show("pk")
+                consoleserverport_table.columns.show("pk")
+                powerport_table.columns.show("pk")
+                poweroutlet_table.columns.show("pk")
+                interface_table.columns.show("pk")
+                front_port_table.columns.show("pk")
+                rear_port_table.columns.show("pk")
+                modulebay_table.columns.show("pk")
 
-        # Component tables
-        consoleport_table = tables.ConsolePortTemplateTable(
-            ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        consoleserverport_table = tables.ConsoleServerPortTemplateTable(
-            ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        powerport_table = tables.PowerPortTemplateTable(
-            PowerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        poweroutlet_table = tables.PowerOutletTemplateTable(
-            PowerOutletTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        interface_table = tables.InterfaceTemplateTable(
-            list(InterfaceTemplate.objects.restrict(request.user, "view").filter(module_type=instance)),
-            orderable=False,
-        )
-        front_port_table = tables.FrontPortTemplateTable(
-            FrontPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        rear_port_table = tables.RearPortTemplateTable(
-            RearPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        modulebay_table = tables.ModuleBayTemplateTable(
-            ModuleBayTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
-            orderable=False,
-        )
-        if request.user.has_perm("dcim.change_moduletype"):
-            consoleport_table.columns.show("pk")
-            consoleserverport_table.columns.show("pk")
-            powerport_table.columns.show("pk")
-            poweroutlet_table.columns.show("pk")
-            interface_table.columns.show("pk")
-            front_port_table.columns.show("pk")
-            rear_port_table.columns.show("pk")
-            modulebay_table.columns.show("pk")
+            context.update(
+                {
+                    "instance_count": instance_count,
+                    "consoleport_table": consoleport_table,
+                    "consoleserverport_table": consoleserverport_table,
+                    "powerport_table": powerport_table,
+                    "poweroutlet_table": poweroutlet_table,
+                    "interface_table": interface_table,
+                    "front_port_table": front_port_table,
+                    "rear_port_table": rear_port_table,
+                    "modulebay_table": modulebay_table,
+                }
+            )
 
-        return {
-            "instance_count": instance_count,
-            "consoleport_table": consoleport_table,
-            "consoleserverport_table": consoleserverport_table,
-            "powerport_table": powerport_table,
-            "poweroutlet_table": poweroutlet_table,
-            "interface_table": interface_table,
-            "front_port_table": front_port_table,
-            "rear_port_table": rear_port_table,
-            "modulebay_table": modulebay_table,
-        }
+        return context
 
     @action(
         detail=False,
@@ -2308,7 +2311,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.detail:  # TODO: change to self.action == "retrieve" as a part of addressing NAUTOBOT-1051
+        if self.action == "retrieve":
             queryset = queryset.select_related(
                 "cluster__cluster_group",
                 "controller_managed_device_group__controller",
@@ -3068,7 +3071,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         extra_context = super().get_extra_context(request, instance)
 
-        if self.detail:  # TODO: change to `if self.action == "retrieve"` as a part of addressing NAUTOBOT-1051
+        if self.action == "retrieve":
             # VirtualChassis members
             if instance.virtual_chassis is not None:
                 vc_members = (
