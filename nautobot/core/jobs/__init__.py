@@ -538,6 +538,9 @@ class ValidateModelData(Job):
         description = "Run `full_clean()` against all records of a given type(s) to check for data validity."
         has_sensitive_variables = False
         read_only = True
+        # Validating large amounts of data may take substantial processing time
+        soft_time_limit = 1800
+        time_limit = 2000
 
     content_types = MultiObjectVar(
         model=ContentType,
