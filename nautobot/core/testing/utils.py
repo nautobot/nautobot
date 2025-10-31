@@ -90,6 +90,20 @@ def extract_page_body(content):
         return content
 
 
+def extract_page_title(content):
+    """
+    Given raw HTML content from an HTTP response, extract the page title section only.
+
+    <div id="page-title" ...>...</header>
+    """
+    try:
+        return re.findall(
+            r"<div class=\"col-4\" id=\"page-title\">(.*?)(?=<\/header)", content, flags=(re.MULTILINE | re.DOTALL)
+        )[0]
+    except IndexError:
+        return content
+
+
 @contextmanager
 def disable_warnings(logger_name):
     """

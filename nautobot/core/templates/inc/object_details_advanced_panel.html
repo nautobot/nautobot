@@ -68,13 +68,13 @@
                     {% if object.created %}
                         <tr>
                             <td>Created</td>
-                            <td>{{ object.created }}</td>
+                            <td><span data-bs-toggle="tooltip" title="Created at">{{ object.created }}</span></td>
                         </tr>
                     {% endif %}
                     {% if object.last_updated %}
                         <tr>
                             <td>Updated</td>
-                            <td>{{ object.last_updated }}</td>
+                            <td><span data-bs-toggle="tooltip" title="Last updated">{{ object.last_updated }}</span></td>
                         </tr>
                     {% endif %}
                     <tr>

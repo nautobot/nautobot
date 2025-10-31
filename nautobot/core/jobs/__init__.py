@@ -43,6 +43,7 @@ from nautobot.extras.jobs import (
     FileVar,
     Job,
     MultiChoiceVar,
+    MultiObjectVar,
     ObjectVar,
     RunJobTaskFailed,
     StringVar,
@@ -529,6 +530,60 @@ class RunRegisteredDataComplianceRules(Job):
                         clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[result.pk])
 
 
+class ValidateModelData(Job):
+    """Clean and validate data in all records of a given content type(s)."""
+
+    class Meta:
+        name = "Validate Model Data"
+        description = "Run `full_clean()` against all records of a given type(s) to check for data validity."
+        has_sensitive_variables = False
+        read_only = True
+        # Validating large amounts of data may take substantial processing time
+        soft_time_limit = 1800
+        time_limit = 2000
+
+    content_types = MultiObjectVar(
+        model=ContentType,
+        description="Type(s) of objects to validate.",
+        label="Content Types",
+        query_params={"can_view": True},
+        required=True,
+    )
+    verbose = BooleanVar(default=False, label="Verbose output?")
+
+    def run(self, *, content_types, verbose=False):  # pylint:disable=arguments-differ
+        for content_type in content_types:
+            model = content_type.model_class()
+            if model is None:
+                self.fail(
+                    "Couldn't locate Python model for content-type %s.%s",
+                    content_type.app_label,
+                    content_type.model,
+                )
+                continue
+
+            try:
+                records = model.objects.restrict(self.user, "view")
+            except AttributeError:  # Not a RestrictedQuerySet?
+                if self.user.is_superuser:  # i.e., permissions exempt
+                    records = model.objects.all()
+                else:
+                    self.fail("Unable to apply access permissions to %s.%s", content_type.app_label, content_type.model)
+
+            if not records.exists():
+                self.logger.warning("No %s found", model._meta.verbose_name_plural)
+                continue
+
+            self.logger.info("Validating %d %s", records.count(), model._meta.verbose_name_plural)
+            for record in records.iterator():
+                try:
+                    record.full_clean()
+                    if verbose:
+                        self.logger.success("Validated successfully", extra={"object": record})
+                except ValidationError as err:
+                    self.fail("Validation error: `%s`", err, extra={"object": record})
+
+
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
@@ -540,5 +595,6 @@ jobs = [
     RefreshDynamicGroupCaches,
     RefreshDynamicGroupCacheJobButtonReceiver,
     RunRegisteredDataComplianceRules,
+    ValidateModelData,
 ]
 register_jobs(*jobs)

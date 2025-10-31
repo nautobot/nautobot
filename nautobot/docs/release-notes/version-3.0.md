@@ -9,7 +9,7 @@ This document describes all new features and changes in Nautobot 3.0.
 - Job approval permissions have been updated in the UI and API. Approvers must now be granted the `extras.change_approvalworkflowstage` and `extras.view_approvalworkflowstage` permissions, replacing the previous requirement for `extras.approve_job`. This change aligns with updates to the approval workflow implementation and permissions model.
 - The `approval_required` field from `extras.Job` model has been removed. This is a breaking change for any custom Jobs or applications that reference this field. This functionality has been replaced by a new approval workflow system. For more information on how the new approach works, see [approval workflow documentation](../user-guide/platform-functionality/approval-workflow.md)
     - If you're upgrading from Nautobot 2.x, a management command, `nautobot-server check_job_approval_status` is available in 2.x to help identify jobs and scheduled jobs that still have `approval_required=True`. Running this command prior to upgrading can help you detect and address these cases by either clearing scheduled jobs or defining approval workflows for Jobs.
-- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` before and after the upgrade to identify any impacted Dynamic Groups.
+- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups.
 
 ### Job Authors & App Developers
 
@@ -125,7 +125,7 @@ For users of GraphQL, this is also a feature enhancement, as queries using the a
     {"rear_port_template": ["74aac78c-fabb-468c-a036-26c46c56f27a"]}
     ```
 
-    You can identify impacted Dynamic Groups by running the `nautobot-server validate_models extras.dynamicgroup` management command; in the above case, the invalid group filter would be reported as below:
+    You can identify impacted Dynamic Groups by running the `nautobot-server validate_models extras.dynamicgroup` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
 
     ```no-highlight
     # nautobot-server validate_models extras.dynamicgroup
@@ -541,7 +541,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#7658](https://github.com/nautobot/nautobot/issues/7658) - Fixed an intermittent test failure in `nautobot.extras.tests.test_filters.ObjectMetadataTestCase`.
 - [#7659](https://github.com/nautobot/nautobot/issues/7659) - Added UI rebuild and tooling to development Docker Compose for developer convenience.
 - [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated example app to use related manager names.
-- [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated UI_COLORS names to match values in colors.scss.
+- [#7726](https://github.com/nautobot/nautobot/issues/7726) - Updated `UI_COLORS` names to match values in colors.scss.
 - [#7739](https://github.com/nautobot/nautobot/issues/7739) - Add `0.3125rem` (`5px`) spacer.
 - [#7773](https://github.com/nautobot/nautobot/issues/7773) - Updated development dependency `coverage` to `~7.10.6`.
 - [#7785](https://github.com/nautobot/nautobot/issues/7785) - Added `invoke` commands and renamed existing `npm` commands for frontend development.

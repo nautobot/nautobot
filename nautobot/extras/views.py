@@ -2139,13 +2139,17 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
                 fields=["grouping", "name", "description", "enabled"],
+                value_transforms={
+                    "description": [helpers.render_markdown],
+                },
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobResultTable,
-                table_title="JobResults",
+                table_title="Job Results",
                 table_filter=["job_model"],
+                exclude_columns=["name", "job_model"],
             ),
             jobs_ui.JobObjectFieldsPanel(
                 weight=100,

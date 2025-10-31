@@ -907,6 +907,12 @@ $table-variants: (
 
     color: var(--#{$prefix}table-color);
     border-color: var(--#{$prefix}table-border-color);
+
+    @if $color == "primary" or $color == "info" {
+      a {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
@@ -1399,6 +1405,11 @@ textarea {
     vertical-align: top;
     width: 1.5rem; /* 24px */
   }
+}
+
+/* Alerts */
+.alert:is(.alert-primary, .alert-info) a {
+  text-decoration: underline;
 }
 
 /* Progress bars */

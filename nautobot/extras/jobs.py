@@ -468,6 +468,7 @@ class BaseJob:
             label="Profile job execution",
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
+        form.fields["_profile"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -484,6 +485,7 @@ class BaseJob:
                 label="Ignore singleton lock",
                 help_text="Allow this singleton job to run even when another instance is already running",
             )
+            form.fields["_ignore_singleton_lock"].widget.attrs["class"] = "form-check-input"
 
         if job_model is not None:
             job_queue_queryset = JobQueue.objects.filter(jobs=job_model)

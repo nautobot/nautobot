@@ -16,7 +16,7 @@ from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, FrontPortTemplate, Location, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.models import (
@@ -35,7 +35,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, User
 
 
 class ExportObjectListTest(TransactionTestCase):
@@ -1252,10 +1252,8 @@ class BulkDeleteTestCase(TransactionTestCase):
 
 
 class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
-    def setUp(self):
-        super().setUp()
-        self.job_module = "nautobot.core.jobs.groups"
-        self.job_name = "RefreshDynamicGroupCacheJobButtonReceiver"
+    job_module = "nautobot.core.jobs.groups"
+    job_name = "RefreshDynamicGroupCacheJobButtonReceiver"
 
     def test_successful_cache_refresh(self):
         LocationType.objects.create(name="DG Test LT 1")
@@ -1322,3 +1320,72 @@ class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
             log_fail.message,
             "The members of this Dynamic Group are statically defined and do not need to be recalculated.",
         )
+
+
+class ValidateModelDataTestCase(TransactionTestCase):
+    job_module = "nautobot.core.jobs"
+    job_name = "ValidateModelData"
+
+    def test_successful_validation(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(Status).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+
+    def test_failure_on_invalid_dg(self):
+        dg = DynamicGroup(
+            name="Legacy rear_port_template filter",
+            filter={"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"},
+            content_type=ContentType.objects.get_for_model(FrontPortTemplate),
+        )
+        dg.save(update_cached_members=False)
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(DynamicGroup).pk],
+            verbose=False,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertIn("Enter a list of values", log_fail.message)
+
+    def test_warning_without_permission(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_types=[ContentType.objects.get_for_model(Status).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        log_warn = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+        self.assertEqual("No statuses found", log_warn.message)
+        self.assertIsNone(
+            JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS, message="Validated successfully"
+            ).first()
+        )
+
+    def test_no_restrict_superuser(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(User).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+
+    def test_no_restrict_non_superuser(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_types=[ContentType.objects.get_for_model(User).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertIn("Unable to apply access permissions to users.user", log_fail.message)
