@@ -30,7 +30,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -2103,6 +2103,24 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
                 related_object_attribute="result",
             ),
         ),
+        extra_buttons=(
+            object_detail.Button(
+                weight=100,
+                color=ButtonActionColorChoices.INFO,
+                link_name="extras:gitrepository_dryrun",
+                label="Dry-Run",
+                icon="mdi-book-refresh",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+            object_detail.Button(
+                weight=200,
+                color=ButtonColorChoices.BLUE,
+                link_name="extras:gitrepository_sync",
+                label="Sync",
+                icon="mdi-source-branch-sync",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance=None):
@@ -2162,7 +2180,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
-        methods=["post"],
+        methods=["get"],
         url_path="sync",
         url_name="sync",
         custom_view_base_action="change",
@@ -2173,7 +2191,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
-        methods=["post"],
+        methods=["get"],
         url_path="dry-run",
         url_name="dryrun",
         custom_view_base_action="change",
