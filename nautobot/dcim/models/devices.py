@@ -393,6 +393,10 @@ class DeviceType(PrimaryModel):
         return f"{self.manufacturer.name} {self.model}"
 
     @property
+    def page_title(self):
+        return str(self)
+
+    @property
     def is_parent_device(self):
         return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
 
