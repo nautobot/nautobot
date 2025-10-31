@@ -485,25 +485,31 @@ class LocationUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance):
-        if instance is None:
-            return super().get_extra_context(request, instance)
+        context = super().get_extra_context(request, instance)
 
-        # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
-        # ensure it is only performed once rather than as a subquery for each of the different count stats.
-        related_locations = list(
-            instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-        )
+        if self.action == "retrieve":
+            # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
+            # ensure it is only performed once rather than as a subquery for each of the different count stats.
+            related_locations = list(
+                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+            )
 
-        rack_groups = (
-            RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
-            .restrict(request.user, "view")
-            .filter(location__in=related_locations)
-        )
+            rack_groups = (
+                RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
+                .restrict(request.user, "view")
+                .filter(location__in=related_locations)
+            )
 
-        return {
-            "rack_groups": rack_groups,
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-        }
+            context.update(
+                {
+                    "rack_groups": rack_groups,
+                    "rack_count": Rack.objects.restrict(request.user, "view")
+                    .filter(location__in=related_locations)
+                    .count(),
+                }
+            )
+
+        return context
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
