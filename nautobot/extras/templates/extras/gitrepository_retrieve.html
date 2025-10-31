@@ -1,22 +1,2 @@
 {% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-
-{% block extra_buttons %}
-    {% if perms.extras.change_gitrepository %}
-        <form class="form-inline" style="display: inline-block"
-              method="post" action="{% url 'extras:gitrepository_dryrun' pk=object.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-info">
-                <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
-            </button>
-        </form>
-        <form class="form-inline" style="display: inline-block"
-              method="post" action="{% url 'extras:gitrepository_sync' pk=object.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary">
-                <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
-            </button>
-        </form>
-    {% endif %}
-{% endblock extra_buttons %}
-
+{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
