@@ -2473,34 +2473,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         Override base ObjectDetailContent to render dynamic-groups table as a separate view/tab instead of inline.
         """
 
-        class DeviceDynamicGroupsTextPanel(object_detail.BaseTextPanel):
-            """Panel displaying a note about caching of dynamic groups."""
-
-            def __init__(
-                self,
-                *,
-                weight,
-                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
-                label="Dynamic Group caching",
-                **kwargs,
-            ):
-                super().__init__(weight=weight, render_as=render_as, label=label, **kwargs)
-
-            def get_value(self, context):
-                dg_list_url = reverse("extras:dynamicgroup_list")
-                job_run_url = reverse(
-                    "extras:job_run_by_class_path",
-                    kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
-                )
-                return (
-                    "Dynamic group membership is cached for performance reasons, "
-                    "therefore this page may not always be up-to-date.\n\n"
-                    "You can refresh the membership of any specific group by viewing it from the list below or from the "
-                    f"[Dynamic Groups list view]({dg_list_url}).\n\n"
-                    "You can also refresh the membership of **all** groups by running the "
-                    f"[Refresh Dynamic Group Caches job]({job_run_url})."
-                )
-
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             # Remove inline tab definition
@@ -2516,7 +2488,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
                     panels=(
-                        self.DeviceDynamicGroupsTextPanel(weight=100),
+                        object_detail.DynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
                             weight=200,
                             table_class=DynamicGroupTable,
@@ -5988,7 +5960,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=700,
                 tab_id="wireless_networks",
-                url_name="dcim:controller_wirelessnetworks",
+                url_name="dcim:controller_wireless_networks",
                 label="Wireless Networks",
                 related_object_attribute="wireless_network_assignments",
                 panels=(
@@ -6012,12 +5984,12 @@ class ControllerUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         url_path="wireless-networks",
-        url_name="wirelessnetworks",
+        url_name="wireless_networks",
         methods=["get"],
         custom_view_base_action="view",
         custom_view_additional_permissions=["wireless.view_controllermanageddevicegroupwirelessnetworkassignment"],
     )
-    def wirelessnetworks(self, request, *args, **kwargs):
+    def wireless_networks(self, request, *args, **kwargs):
         return Response({})
 
 
