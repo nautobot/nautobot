@@ -532,6 +532,7 @@ class Panel(Component):
         self,
         *,
         label="",
+        css_class="default",
         section=SectionChoices.FULL_WIDTH,
         body_id=None,
         body_content_template_path=None,
@@ -546,6 +547,7 @@ class Panel(Component):
 
         Args:
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
+            css_class (str): Panel variant to render as, e.g. "default", "warning", "info".
             section (str): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
@@ -557,6 +559,7 @@ class Panel(Component):
                 (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
         """
         self.label = label
+        self.css_class = css_class
         self.section = section
         self.body_id = body_id
         self.body_content_template_path = body_content_template_path
@@ -583,6 +586,7 @@ class Panel(Component):
                 self.template_path,
                 context,
                 label=self.render_label(context),
+                css_class=self.css_class,
                 header_extra_content=self.render_header_extra_content(context),
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
@@ -2040,6 +2044,36 @@ class _ObjectDetailContactsTab(Tab):
         )
 
 
+class DynamicGroupsTextPanel(BaseTextPanel):
+    """Panel displaying a note about caching of dynamic groups."""
+
+    def __init__(
+        self,
+        *,
+        weight,
+        render_as=BaseTextPanel.RenderOptions.MARKDOWN,
+        label="Dynamic Group caching",
+        css_class="warning",
+        **kwargs,
+    ):
+        super().__init__(weight=weight, render_as=render_as, label=label, css_class=css_class, **kwargs)
+
+    def get_value(self, context):
+        dg_list_url = reverse("extras:dynamicgroup_list")
+        job_run_url = reverse(
+            "extras:job_run_by_class_path",
+            kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
+        )
+        return (
+            "Dynamic group membership is cached for performance reasons, "
+            "therefore this page may not always be up-to-date.\n\n"
+            "You can refresh the membership of any specific group by accessing it from the list below or from the "
+            f'[Dynamic Groups list view]({dg_list_url}) and clicking the "Refresh Members" button.\n\n'
+            "You can also refresh the membership of **all** groups by running the "
+            f"[Refresh Dynamic Group Caches job]({job_run_url})."
+        )
+
+
 @dataclass
 class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
@@ -2056,8 +2090,9 @@ class _ObjectDetailGroupsTab(Tab):
     ):
         if panels is None:
             panels = (
+                DynamicGroupsTextPanel(weight=100),
                 ObjectsTablePanel(
-                    weight=100,
+                    weight=200,
                     table_class=DynamicGroupTable,
                     table_attribute="dynamic_groups",
                     exclude_columns=["content_type"],
