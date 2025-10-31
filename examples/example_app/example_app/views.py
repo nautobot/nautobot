@@ -175,6 +175,24 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - PIE",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.PIE,
+                    "theme_colors": [
+                        {  # blue-lighter
+                            "light": "#8cc5ff",
+                            "dark": "#a3d3ff",
+                        },
+                        {  # green-lighter
+                            "light": "#99d89f",
+                            "dark": "#a1e8a9",
+                        },
+                        {  # orange-lighter
+                            "light": "#f1c28f",
+                            "dark": "#ffd1a3",
+                        },
+                        {  # red-lighter
+                            "light": "#f19a9a",
+                            "dark": "#ffaeae",
+                        },
+                    ],
                     "header": "Number of device - group by device type (Pie)",
                     "description": "Example pie chart from EChartsBase",
                     "data": {
@@ -188,8 +206,9 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - BAR",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.BAR,
+                    "theme_colors": ui.EChartsThemeColors.LIGHTER_GREEN_RED_COLORS,
                     "header": "Compliance per Feature",
-                    "description": "Example bar chart from EChartsBase",
+                    "description": "Example bar chart from EChartsBase with LIGHTER_GREEN_AND_RED_ONLY theme colors",
                     "data": {
                         "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
                         "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},

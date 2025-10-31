@@ -1,1 +1,0 @@
-Fixed DeviceUniquenessValidator by using `get_settings_or_config` instead of `getattr`.

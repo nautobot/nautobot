@@ -69,7 +69,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         filter_button.click()
 
         # assert the filter drawer has appeared
-        self.assertTrue(filter_drawer.visible)
+        self.assertTrue(filter_drawer.is_visible(wait_time=10))
 
         # start typing a parent into select2
         location_type = LocationType.objects.filter(parent__isnull=True).first()
@@ -170,9 +170,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
         # Open the filter drawer, configure filter and apply filter
         self.browser.find_by_id("id__filterbtn").click()
-        self.browser.execute_script(
-            f"document.querySelector('[name={text_field_name}]').scrollIntoView({{ behavior: 'instant', block: 'end' }})"
-        )
+        self.scroll_element_into_view(css=f"[name={text_field_name}]", block="end")
         self.change_field_value(text_field_name, "example-text")
         self.change_field_value(integer_field_name, 4356)
         self.change_field_value(select_field_name, "SingleSelect Option A", field_type="select")
@@ -188,9 +186,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
         # Assert on update of field in Default Filter the update is replicated on Advanced Filter
         self.browser.find_by_xpath("//a[@href='#default-filter']").click()  # Go back to Basic tab
-        self.browser.execute_script(
-            f"document.querySelector('[name={text_field_name}]').scrollIntoView({{ behavior: 'instant', block: 'end' }})"
-        )
+        self.scroll_element_into_view(css=f"[name={text_field_name}]", block="end")
         self.change_field_value(text_field_name, "test new")
         self.change_field_value(integer_field_name, 1111)
         self.change_field_value(select_field_name, "SingleSelect Option B", field_type="select")
@@ -260,9 +256,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         )
         dynamic_filter_add_button.click()
         self.browser.find_by_xpath("//a[@href='#default-filter']").click()
-        self.browser.execute_script(
-            f"document.querySelector('[name={text_field_name}]').scrollIntoView({{ behavior: 'instant', block: 'end' }})"
-        )
+        self.scroll_element_into_view(css=f"[name={text_field_name}]", block="end")
         self.assertEqual(self.browser.find_by_name(text_field_name)[0].value, "test new update")
         self.assertEqual(self.browser.find_by_name(integer_field_name)[0].value, "8888")
         custom_select_values = self.browser.find_by_name(select_field_name)[0].find_by_tag("option")
@@ -325,7 +319,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(apply_btn_xpath).click()
         filter_drawer = self.browser.find_by_id("FilterForm_drawer", wait_time=10)
         # Drawer is kept open
-        self.assertTrue(filter_drawer.visible)
+        self.assertTrue(filter_drawer.is_visible(wait_time=10))
         # Assert the choice is applied
         self.browser.find_by_xpath(
             f"//span[@class='badge' and @data-nb-value='{tag_object.name}' and contains(text(),{tag_object.name})]"

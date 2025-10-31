@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
@@ -99,8 +98,6 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present(f"{cf_label} failed validation"))
         self.assertTrue(self.browser.is_text_present("Custom field choices can only be assigned to selection fields"))
 
-    # This became flaky in CI; skipping for now.
-    @tag("fix_in_v3")
     def test_create_type_select_with_choices_adding_dynamic_row(self):
         """Test pass create type=select adding w/ dynamic row."""
         choices = ["choice1", "choice2"]
@@ -114,6 +111,10 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
 
             # And 6 after clicking "Add another..."
             self.click_button(".add-row")
+            # Before proceeding with further assertions and interactions, wait for the 6th row to appear in the DOM.
+            self.browser.is_element_present_by_css(
+                "#custom-field-choices .formset_row-custom_field_choices:nth-of-type(6)", wait_time=5
+            )
             rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
             self.fill_input("custom_field_choices-5-value", "choice3")
@@ -159,7 +160,6 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
 
-    @tag("fix_in_v3")
     def test_update_type_select_create_delete_choices(self):
         """
         Test edit existing field, deleting first choice, adding a new row and saving that as a new choice.
@@ -180,7 +180,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
 
         # Fill the new row, save it, assert correctness.
         self.fill_input("custom_field_choices-5-value", "new_choice")  # Fill the last row
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
         self.assertTrue(self.browser.is_text_present("new_choice"))
@@ -254,7 +254,6 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Confirm the JSON data is visible
         self.assertTrue(self.browser.is_text_present("Test JSON Value"))
 
-    @tag("fix_in_v3")
     def test_json_type_with_invalid_json(self):
         """
         This test creates a custom field with a type of "json".
@@ -276,7 +275,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         active_web_element = self.browser.driver.switch_to.active_element
         # Type invalid JSON data into the form
         active_web_element.send_keys('{test_json_key: "Test Invalid JSON Value"}')
-        self.browser.find_by_xpath(".//button[contains(text(), 'Update')]").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
         self.assertTrue(self.browser.is_text_present("Enter a valid JSON"))
 
     def test_saving_object_after_its_custom_field_deleted(self):
@@ -305,9 +304,7 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Visit the device edit page
         self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_edit', kwargs={'pk': device.pk})}")
         # Get the first item selected on the custom field
-        self.browser.execute_script(
-            'document.querySelector(\'label:has(+ * [name="cf_test_selection_field"])\').scrollIntoView({ behavior: "instant" });'
-        )
+        self.scroll_element_into_view(css='label:has(+ * [name="cf_test_selection_field"])')
         self.browser.find_by_xpath(".//label[contains(text(), 'Device Selection Field')]").click()
         active_web_element = self.browser.driver.switch_to.active_element
         active_web_element.send_keys(Keys.ENTER)

@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 
 from nautobot.core.testing.integration import (
     BulkOperationsTestCases,
@@ -8,7 +7,6 @@ from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.models import Status
 
 
-@tag("fix_in_v3")
 class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):
     """
     Test locations bulk edit / delete operations.

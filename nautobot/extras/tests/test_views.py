@@ -3328,7 +3328,8 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            content,
         )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -4592,7 +4593,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
             "remove_content_types": [device_ct.pk],
         }
 
-    @tag("fix_in_v3")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_view_with_content_types(self):
         """
@@ -4611,13 +4611,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
-                        self.assertInHTML(
-                            f'<strong>{result}</strong><div class="float-end d-print-none">',
-                            response_body,
-                        )
-                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertInHTML(f"<strong>{result}</strong>", response_body)
+                        # ContactAssociationTable related to this role instances in the main tab should not be there.
                         self.assertNotIn(
-                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover nb-table-headings">\n',
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n\n\n    <table class="table table-hover nb-table-headings">',
                             response_body,
                         )
                     else:

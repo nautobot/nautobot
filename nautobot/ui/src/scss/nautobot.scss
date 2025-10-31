@@ -907,6 +907,12 @@ $table-variants: (
 
     color: var(--#{$prefix}table-color);
     border-color: var(--#{$prefix}table-border-color);
+
+    @if $color == "primary" or $color == "info" {
+      a {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
@@ -1395,6 +1401,11 @@ textarea {
     vertical-align: top;
     width: 1.5rem; /* 24px */
   }
+}
+
+/* Alerts */
+.alert:is(.alert-primary, .alert-info) a {
+  text-decoration: underline;
 }
 
 /* Progress bars */
@@ -2468,4 +2479,21 @@ pre code.hljs {
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
 .d-none {
   display: none !important;
+}
+
+/* Dark mode workaround */
+@include color-mode(dark, true) {
+  .invert-in-dark-mode {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+/*
+ * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
+ *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
+ *   time to get rid of bootstrap-filestyle.
+ */
+.hidden {
+  @extend .d-none;
 }

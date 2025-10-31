@@ -1,3 +1,0 @@
-Removed database-level uniqueness constraints on Device (`location`, `tenant`, `name`).
-Removed Constance setting `DEVICE_NAME_AS_NATURAL_KEY`.
-

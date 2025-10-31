@@ -4,6 +4,7 @@ from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
 from nautobot.core.ui.breadcrumbs import (
     AncestorsBreadcrumbs,
+    AncestorsInstanceBreadcrumbItem,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -13,6 +14,7 @@ from nautobot.core.ui.breadcrumbs import (
     ViewNameBreadcrumbItem,
 )
 from nautobot.core.ui.choices import (
+    EChartsThemeColors,
     EChartsTypeChoices,
     LayoutChoices,
     NavigationIconChoices,
@@ -65,6 +67,7 @@ from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
     "AncestorsBreadcrumbs",
+    "AncestorsInstanceBreadcrumbItem",
     "Banner",
     "BannerClassChoices",
     "BaseBreadcrumbItem",
@@ -78,6 +81,7 @@ __all__ = (
     "DropdownButton",
     "EChartsBase",
     "EChartsPanel",
+    "EChartsThemeColors",
     "EChartsTypeChoices",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
