@@ -911,7 +911,15 @@ class JobButtonViewSet(NotesViewSetMixin, ModelViewSet):
 #
 
 
-class ScheduledJobViewSet(ReadOnlyModelViewSet):
+class ScheduledJobViewSet(
+    # DRF mixins:
+    # note no CreateModelMixin or UpdateModelMixin
+    mixins.DestroyModelMixin,
+    # Nautobot mixins:
+    BulkDestroyModelMixin,
+    # Base class
+    ReadOnlyModelViewSet,
+):
     """
     Retrieve a list of scheduled jobs
     """
