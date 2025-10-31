@@ -907,6 +907,12 @@ $table-variants: (
 
     color: var(--#{$prefix}table-color);
     border-color: var(--#{$prefix}table-border-color);
+
+    @if $color == "primary" or $color == "info" {
+      a {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
