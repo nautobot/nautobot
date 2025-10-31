@@ -1,42 +1,42 @@
 <div class="input-group">
     {% include 'django/forms/widgets/number.html' %}
     {% if widget.choices %}
-    <span class="input-group-btn">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-right">
-            {% for value, label in widget.choices %}
-            <li><a href="#" target="{{ widget.name }}" data="{{ value }}" class="set_value">{{ label }}</a></li>
-            {% endfor %}
-        </ul>
-    </span>
+        <span class="input-group-btn">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-right">
+                {% for value, label in widget.choices %}
+                    <li><a href="#" target="{{ widget.name }}" data="{{ value }}" class="set_value">{{ label }}</a></li>
+                {% endfor %}
+            </ul>
+        </span>
     {% endif %}
 </div>
 
 {% if widget.choices %}
-<script type="text/javascript">
-(function() {
-    if (window.__nbNumberWithSelectWidgetBound) return;
-    window.__nbNumberWithSelectWidgetBound = true;
-    function bindNumberWithSelectHandler() {
-        document.addEventListener("click", function(e) {
-            if (e.target && e.target.classList.contains("set_value")) {
-                e.preventDefault();
-                var target = e.target.getAttribute("target");
-                var value = e.target.getAttribute("data");
-                var input = document.getElementById("id_" + target);
-                if (input) {
-                    input.value = value;
-                }
+    <script type="text/javascript">
+        (function() {
+            if (window.__nbNumberWithSelectWidgetBound) return;
+            window.__nbNumberWithSelectWidgetBound = true;
+            function bindNumberWithSelectHandler() {
+                document.addEventListener("click", function(e) {
+                    if (e.target && e.target.classList.contains("set_value")) {
+                        e.preventDefault();
+                        var target = e.target.getAttribute("target");
+                        var value = e.target.getAttribute("data");
+                        var input = document.getElementById("id_" + target);
+                        if (input) {
+                            input.value = value;
+                        }
+                    }
+                });
             }
-        });
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bindNumberWithSelectHandler);
-    } else {
-        bindNumberWithSelectHandler();
-    }
-})();
-</script>
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindNumberWithSelectHandler);
+            } else {
+                bindNumberWithSelectHandler();
+            }
+        })();
+    </script>
 {% endif %}
