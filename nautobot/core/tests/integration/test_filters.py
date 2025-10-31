@@ -69,7 +69,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         filter_button.click()
 
         # assert the filter drawer has appeared
-        self.assertTrue(filter_drawer.visible)
+        self.assertTrue(filter_drawer.is_visible(wait_time=10))
 
         # start typing a parent into select2
         location_type = LocationType.objects.filter(parent__isnull=True).first()
@@ -319,7 +319,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(apply_btn_xpath).click()
         filter_drawer = self.browser.find_by_id("FilterForm_drawer", wait_time=10)
         # Drawer is kept open
-        self.assertTrue(filter_drawer.visible)
+        self.assertTrue(filter_drawer.is_visible(wait_time=10))
         # Assert the choice is applied
         self.browser.find_by_xpath(
             f"//span[@class='badge' and @data-nb-value='{tag_object.name}' and contains(text(),{tag_object.name})]"

@@ -81,7 +81,7 @@ const initializeSelect2 = (context, selector, options) =>
   [...getElement(context).querySelectorAll(selector)].forEach((element) =>
     $(element).select2({
       allowClear: true,
-      placeholder: element.getAttribute('placeholder') || '---------',
+      placeholder: '---------',
       selectionCssClass: 'select2--small',
       theme: 'bootstrap-5',
       width: 'off',
