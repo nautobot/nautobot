@@ -27,6 +27,7 @@ from nautobot.core.forms import (
     form_from_model,
     JSONArrayFormField,
     MultipleContentTypeField,
+    MultiValueCharInput,
     NullableDateField,
     NumberWithSelect,
     NumericArrayField,
@@ -3134,7 +3135,7 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
-    speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=StaticSelect2Multiple())
+    speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mac_address = forms.CharField(required=False, label="MAC address")
