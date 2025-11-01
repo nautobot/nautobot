@@ -726,6 +726,101 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
         first_status = Status.objects.get_for_model(Interface).first()
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
 
+    def test_speed_disallowed_for_lag_virtual_wireless(self):
+        """speed must be None for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SpeedGuard 1000")
+
+        for if_type in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.subTest(if_type=if_type):
+                with self.assertRaises(ValidationError) as cm:
+                    InterfaceTemplate(
+                        device_type=device_type,
+                        name=f"bad-{if_type}",
+                        type=if_type,
+                        speed=InterfaceSpeedChoices.SPEED_1G,
+                    ).full_clean()
+                    self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+
+    def test_duplex_disallowed_for_lag_virtual_wireless(self):
+        """duplex must be blank for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="DuplexGuard 1000")
+
+        for itype in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.assertRaises(ValidationError):
+                InterfaceTemplate(
+                    device_type=device_type,
+                    name=f"bad-{itype}",
+                    type=itype,
+                    duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+                ).full_clean()
+
+    def test_duplex_disallowed_for_non_base_t(self):
+        """duplex must be blank for non-BASE-T physical types (e.g., SFP)."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SfpGuard 1000")
+
+        with self.assertRaises(ValidationError) as cm:
+            InterfaceTemplate(
+                device_type=device_type,
+                name="sfp0",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            ).full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+    def test_duplex_and_speed_allowed_for_base_t(self):
+        """BASE-T physical types accept duplex and speed values."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="CopperOK 1000")
+
+        tmpl = InterfaceTemplate(
+            device_type=device_type,
+            name="eth0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        tmpl.full_clean()  # should not raise
+
+    def test_instantiation_propagates_speed_and_duplex(self):
+        """Interface created from template inherits speed and duplex."""
+        statuses = Status.objects.get_for_model(Device)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Propagate 2000")
+
+        InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="EthX",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=False,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=statuses[0],
+            name="Device-Prop",
+            location=location,
+        )
+
+        iface = device.interfaces.get(name="EthX")
+        self.assertEqual(iface.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(iface.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
 
 class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
     model = InterfaceRedundancyGroup

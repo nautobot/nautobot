@@ -32,6 +32,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
@@ -885,15 +886,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         self._validate_speed_and_duplex()
 
     def _validate_speed_and_duplex(self):
-        """Validate operational speed (Kbps) and duplex based on interface type."""
-        copper_twisted_pair_types = {
-            InterfaceTypeChoices.TYPE_100ME_FIXED,
-            InterfaceTypeChoices.TYPE_1GE_FIXED,
-            InterfaceTypeChoices.TYPE_2GE_FIXED,
-            InterfaceTypeChoices.TYPE_5GE_FIXED,
-            InterfaceTypeChoices.TYPE_10GE_FIXED,
-            InterfaceTypeChoices.TYPE_100ME_T1,
-        }
+        """Validate speed (Kbps) and duplex based on interface type."""
 
         # Check settings by interface type
         if self.speed and any([self.is_lag, self.is_virtual, self.is_wireless]):
@@ -902,7 +895,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         if self.duplex and any([self.is_lag, self.is_virtual, self.is_wireless]):
             raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
 
-        if self.duplex and self.type not in copper_twisted_pair_types:
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
             raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     @property

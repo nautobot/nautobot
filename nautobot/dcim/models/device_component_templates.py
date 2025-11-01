@@ -11,6 +11,7 @@ from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, NaturalOr
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
@@ -18,7 +19,13 @@ from nautobot.dcim.choices import (
     PowerPortTypeChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
+from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+    VIRTUAL_IFACE_TYPES,
+    WIRELESS_IFACE_TYPES,
+)
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ContactMixin,
@@ -349,6 +356,29 @@ class InterfaceTemplate(ModularComponentTemplateModel):
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
+    speed = models.PositiveIntegerField(null=True, blank=True, help_text="Speed (Kbps)")
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
+
+    def clean(self):
+        super().clean()
+        self._validate_speed_and_duplex()
+
+    def _validate_speed_and_duplex(self):
+        """Validate speed (Kbps) and duplex based on interface type."""
+
+        is_lag = self.type == InterfaceTypeChoices.TYPE_LAG
+        is_virtual = self.type in VIRTUAL_IFACE_TYPES
+        is_wireless = self.type in WIRELESS_IFACE_TYPES
+
+        # Check settings by interface type
+        if self.speed and any([is_lag, is_virtual, is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
+
+        if self.duplex and any([is_lag, is_virtual, is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
+
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     def instantiate(self, device, module=None):
         try:
@@ -361,6 +391,8 @@ class InterfaceTemplate(ModularComponentTemplateModel):
             module=module,
             type=self.type,
             mgmt_only=self.mgmt_only,
+            speed=self.speed,
+            duplex=self.duplex,
             status=status,
         )
 

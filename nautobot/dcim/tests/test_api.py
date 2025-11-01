@@ -1178,6 +1178,7 @@ class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins
 
 class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
+    choices_fields = ["duplex", "type"]
     modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
@@ -1200,6 +1201,62 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
                 "type": "1000base-t",
             },
         ]
+
+    def test_create_base_t_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Eth1",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        obj = InterfaceTemplate.objects.get(pk=response.data["id"])  # type: ignore[index]
+        self.assertEqual(obj.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(obj.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    def test_create_sfp_with_duplex_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "SFP1",
+            "type": InterfaceTypeChoices.TYPE_1GE_SFP,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("duplex", response.data)
+
+    def test_create_lag_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Port-Channel1",
+            "type": InterfaceTypeChoices.TYPE_LAG,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
+
+    def test_create_virtual_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "V0",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
 
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):

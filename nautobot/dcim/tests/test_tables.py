@@ -1,8 +1,9 @@
 from django.test import TestCase
 
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Interface, InterfaceTemplate, Location, LocationType, Manufacturer
 from nautobot.dcim.tables.devices import DeviceModuleInterfaceTable, InterfaceTable
+from nautobot.dcim.tables.devicetypes import InterfaceTemplateTable
 from nautobot.extras.models import Role, Status
 
 
@@ -43,10 +44,10 @@ class InterfaceTableRenderMixin:
         queryset = Interface.objects.filter(pk=interface.pk)
         table = self.table_class(queryset)  # pylint: disable=not-callable
         bound_row = table.rows[0]
-        rendered_value = bound_row.get_cell("speed")
+        rendered_speed = bound_row.get_cell("speed")
         rendered_duplex = bound_row.get_cell("duplex")
 
-        self.assertEqual(rendered_value, "1 Gbps")
+        self.assertEqual(rendered_speed, "1 Gbps")
         self.assertEqual(rendered_duplex, "Full")
 
     def test_render_speed_duplex_with_none(self):
@@ -63,10 +64,10 @@ class InterfaceTableRenderMixin:
         queryset = Interface.objects.filter(pk=interface.pk)
         table = self.table_class(queryset)  # pylint: disable=not-callable
         bound_row = table.rows[0]
-        rendered_value = bound_row.get_cell("speed")
+        rendered_speed = bound_row.get_cell("speed")
         rendered_duplex = bound_row.get_cell("duplex")
 
-        self.assertEqual(rendered_value, emdash)
+        self.assertEqual(rendered_speed, emdash)
         self.assertEqual(rendered_duplex, emdash)
 
     def test_render_speed_various(self):
@@ -85,9 +86,9 @@ class InterfaceTableRenderMixin:
                 queryset = Interface.objects.filter(pk=interface.pk)
                 table = self.table_class(queryset)  # pylint: disable=not-callable
                 bound_row = table.rows[0]
-                rendered_value = bound_row.get_cell("speed")
+                rendered_speed = bound_row.get_cell("speed")
 
-                self.assertEqual(rendered_value, expected_output)
+                self.assertEqual(rendered_speed, expected_output)
 
     def test_render_duplex_various(self):
         """Test that the table correctly renders various duplex values."""
@@ -119,3 +120,41 @@ class DeviceModuleInterfaceTableTestCase(InterfaceTableRenderMixin, TestCase):
     """Test cases for DeviceModuleInterfaceTable."""
 
     table_class = DeviceModuleInterfaceTable
+
+
+class InterfaceTemplateTableTestCase(TestCase):
+    """Render tests for InterfaceTemplateTable speed/duplex columns."""
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.create(name="Test Manuf Tmpl")
+        cls.device_type = DeviceType.objects.create(manufacturer=manufacturer, model="DT-Tmpl")
+
+    def test_render_speed_duplex_with_value(self):
+        interface_template = InterfaceTemplate.objects.create(
+            device_type=self.device_type,
+            name="tmpl-eth0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        table = InterfaceTemplateTable(InterfaceTemplate.objects.filter(pk=interface_template.pk))
+        bound_row = table.rows[0]
+        rendered_speed = bound_row.get_cell("speed")  # pylint: disable=no-member
+        rendered_duplex = bound_row.get_cell("duplex")  # pylint: disable=no-member
+        self.assertEqual(rendered_speed, "1 Gbps")
+        self.assertEqual(rendered_duplex, "Full")
+
+    def test_render_speed_duplex_with_none(self):
+        emdash = "\u2014"
+        interface_template = InterfaceTemplate.objects.create(
+            device_type=self.device_type,
+            name="tmpl-eth1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        table = InterfaceTemplateTable(InterfaceTemplate.objects.filter(pk=interface_template.pk))
+        bound_row = table.rows[0]
+        rendered_speed = bound_row.get_cell("speed")  # pylint: disable=no-member
+        rendered_duplex = bound_row.get_cell("duplex")  # pylint: disable=no-member
+        self.assertEqual(rendered_speed, emdash)
+        self.assertEqual(rendered_duplex, emdash)
