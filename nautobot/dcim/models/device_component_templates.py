@@ -356,7 +356,7 @@ class InterfaceTemplate(ModularComponentTemplateModel):
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
-    speed = models.PositiveIntegerField(null=True, blank=True, help_text="Speed (Kbps)")
+    speed = models.PositiveIntegerField(null=True, blank=True)
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
 
     def clean(self):
