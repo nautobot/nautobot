@@ -7,7 +7,7 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-right">
                 {% for value, label in widget.choices %}
-                    <li><a href="#" target="{{ widget.name }}" data="{{ value }}" class="set_value">{{ label }}</a></li>
+                    <li><a href="#" data-name="{{ widget.name }}" data-value="{{ value }}" class="set_value">{{ label }}</a></li>
                 {% endfor %}
             </ul>
         </span>
@@ -21,14 +21,16 @@
             window.__nbNumberWithSelectWidgetBound = true;
             function bindNumberWithSelectHandler() {
                 document.addEventListener("click", function(e) {
-                    if (e.target && e.target.classList.contains("set_value")) {
-                        e.preventDefault();
-                        var target = e.target.getAttribute("target");
-                        var value = e.target.getAttribute("data");
-                        var input = document.getElementById("id_" + target);
-                        if (input) {
-                            input.value = value;
-                        }
+                    if (!e.target) return;
+                    var link = e.target.closest && e.target.closest("a.set_value");
+                    if (!link) return;
+                    e.preventDefault();
+                    var container = link.closest(".input-group");
+                    var name = link.getAttribute("data-name");
+                    var value = link.getAttribute("data-value");
+                    var input = container && name ? container.querySelector('input[name="' + name + '"]') : null;
+                    if (input) {
+                        input.value = value;
                     }
                 });
             }
