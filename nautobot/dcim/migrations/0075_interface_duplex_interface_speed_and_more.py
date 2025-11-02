@@ -4,30 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0074_alter_rack_u_height'),
+        ("dcim", "0074_alter_rack_u_height"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='interface',
-            name='duplex',
-            field=models.CharField(blank=True, default='', max_length=10),
+            model_name="interface",
+            name="duplex",
+            field=models.CharField(blank=True, default="", max_length=10),
         ),
         migrations.AddField(
-            model_name='interface',
-            name='speed',
+            model_name="interface",
+            name="speed",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='interfacetemplate',
-            name='duplex',
-            field=models.CharField(blank=True, default='', max_length=10),
+            model_name="interfacetemplate",
+            name="duplex",
+            field=models.CharField(blank=True, default="", max_length=10),
         ),
         migrations.AddField(
-            model_name='interfacetemplate',
-            name='speed',
+            model_name="interfacetemplate",
+            name="speed",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
     ]
