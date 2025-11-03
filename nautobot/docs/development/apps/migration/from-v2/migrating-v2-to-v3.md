@@ -14,7 +14,7 @@ Most migrations outside of the UI updates are minimal. However, for completeness
 ## UI Migrations
 
 !!! tip
-    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize --dry-run` against your custom app without any fixes suggested and do not have any html inside of any Python files.
+    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run` against your custom app without any fixes suggested and do not have any HTML inside of any Python files.
 
 Nautobot v3.0 introduces many modernizations and improvements to building user interfaces. Although we did our best to make the migration as smooth as possible for app developers, we were not able to avoid some of the **breaking changes**. Below is a list of guides explaining how to upgrade respective UI parts.
 
@@ -26,7 +26,7 @@ Overall, there are three pillars of v3.0 UI:
 
 Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize`.
 
-Two common use cases to have html embedded within Python include `views.py`, `template_content.py`, `templatetags.py` and `tables.py`.
+Some common use cases to have HTML embedded within Python include `views.py`, `template_content.py`, `templatetags.py` and `tables.py`.
 
 ## Template Migrations
 
@@ -34,7 +34,7 @@ Two common use cases to have html embedded within Python include `views.py`, `te
     You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-deprecated-templates <path> --dry-run` against your custom app without any fixes suggested.
 
 !!! tip
-    You can adjust this in Nautobot 2.x.
+    You can adjust this in Nautobot 2.x prior to upgrading.
 
 In Nautobot 3.0 we have migrated many no longer used templates. These templates all have direct replacements that can be changed with the single command `nautobot-migrate-deprecated-templates`.
 
@@ -44,13 +44,13 @@ In Nautobot 3.0 we have migrated many no longer used templates. These templates 
     You can safely skip this section if you do not have any custom apps or can run `pylint --disable=all --enable=nb-deprecated-class --load-plugins=pylint_nautobot --rcfile=/dev/null <path>` against your custom app without any fixes suggested.
 
 !!! tip
-    You can adjust this in Nautobot 2.x.
+    You can adjust this in Nautobot 2.x prior to upgrading.
 
 In Nautobot 3.0 we have migrated many no longer used classes. Every one of these classes has a direct replacement and is provided in the output to the replacement of it.
 
 ```bash
 ************* Module nautobot_example_app.custom_validators.py
-nautobot_example_app/custom_validators.py.py:17:0: E4293: Class nautobot.extras.plugins.PluginCustomValidator is deprecated. Use nautobot.extras.plugins.CustomValidator instead. (nb-deprecated-class)
+nautobot_example_app/custom_validators.py.py:17:0: E4293: Class nautobot.extras.plugins.PluginCustomValidator is deprecated. Use nautobot.apps.models.CustomValidator instead. (nb-deprecated-class)
 ```
 
 From:
@@ -64,7 +64,7 @@ class RelationshipAssociationCustomValidator(PluginCustomValidator):
 To:
 
 ```python
-from nautobot.extras.plugins import CustomValidator
+from nautobot.apps.models import CustomValidator
 
 class RelationshipAssociationCustomValidator(CustomValidator):
 ```
