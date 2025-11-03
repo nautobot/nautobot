@@ -127,11 +127,9 @@ class PowerFeedDetailTable(StatusTableMixin, BaseTable):
     name = tables.LinkColumn(verbose_name="Feed")
     power_panel = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
-    get_utilization = tables.TemplateColumn(
-        template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization"
-    )
+    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization")
 
     class Meta(BaseTable.Meta):
         model = PowerFeed
-        fields = ("power_panel", "name", "status", "type", "get_utilization")
-        default_columns = ("power_panel", "name", "status", "type", "get_utilization")
+        fields = ("power_panel", "name", "status", "type", "utilization")
+        default_columns = ("power_panel", "name", "status", "type", "utilization")

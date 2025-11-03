@@ -1601,14 +1601,12 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class NonRackedDevicesTable(RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
-    device_type = tables.LinkColumn(
-        viewname="dcim:devicetype",
-        args=[Accessor("device_type__pk")],
+    device_type = tables.Column(
+        linkify=True,
         verbose_name="Type",
-        text=lambda record: record.device_type.display,
     )
     parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
-    parent_bay = tables.Column(accessor="parent_bay", verbose_name="")
+    parent_bay = tables.Column()
 
     class Meta(BaseTable.Meta):
         model = Device

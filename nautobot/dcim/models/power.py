@@ -20,6 +20,7 @@ from nautobot.dcim.constants import (
     POWERFEED_MAX_UTILIZATION_DEFAULT,
     POWERFEED_VOLTAGE_DEFAULT,
 )
+from nautobot.dcim.models.device_components import PowerPort
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 
@@ -341,9 +342,9 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
 
     @property
-    def get_utilization(self):
+    def utilization(self):
         power_port = getattr(self, "connected_endpoint", None)
-        if not power_port or not hasattr(power_port, "get_power_draw"):
+        if not isinstance(power_port, PowerPort):
             return None
         utilization = power_port.get_power_draw()
         if not utilization or "allocated" not in utilization:
