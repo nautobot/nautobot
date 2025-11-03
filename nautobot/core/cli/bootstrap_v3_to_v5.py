@@ -647,7 +647,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 # --- File Processing ---
 
 
-def fix_html_files_in_directory(directory: str, resize=False) -> None:
+def fix_html_files_in_directory(directory: str, resize=False, dry_run=False) -> None:
     """
     Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
     and overwrites each file with the fixed content. If resize is True, it will only change the
@@ -715,9 +715,12 @@ def fix_html_files_in_directory(directory: str, resize=False) -> None:
 
                 fixed_content, stats = convert_bootstrap_classes(content, file_path=file_path)
 
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(fixed_content)
-                logger.info("Fixed: %s", file_path)
+                if dry_run:
+                    logger.info("Would fix: %s", file_path)
+                else:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        f.write(fixed_content)
+                    logger.info("Fixed: %s", file_path)
 
                 if any(stats.values()):
                     print(f"→ {os.path.relpath(file_path, directory)}: ", end="")
@@ -766,10 +769,16 @@ def main():
         action="store_true",
         help="Change column breakpoints to be one level higher, such as 'col-xs-*' to 'col-sm-*'",
     )
+    parser.add_argument(
+        "-d",
+        "--dry-run",
+        action="store_true",
+        help="Show which files would be modified without making any changes.",
+    )
     parser.add_argument("path", type=str, help="Path to directory in which to recursively fix all .html files.")
     args = parser.parse_args()
 
-    fix_html_files_in_directory(args.path, resize=args.resize)
+    fix_html_files_in_directory(args.path, resize=args.resize, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
