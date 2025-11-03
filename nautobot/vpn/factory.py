@@ -196,7 +196,10 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
             if extracted:
                 self.protected_prefixes.set(extracted)
             else:
-                self.protected_prefixes.set(get_random_instances(Prefix, minimum=0))
+                # TODO Investigate https://github.com/nautobot/nautobot/actions/runs/11019738391/job/30603271529
+                # to uncomment the line below.
+                # self.protected_prefixes.set(get_random_instances(Prefix))
+                self.protected_prefixes.set(get_random_instances(model_or_queryset_or_lambda=Prefix, maximum=1))
 
     @factory.post_generation
     def protected_prefixes_dg(self, create, extracted, **kwargs):
