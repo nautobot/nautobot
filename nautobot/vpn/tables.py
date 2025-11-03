@@ -5,6 +5,7 @@ import django_tables2 as tables
 
 from nautobot.apps.tables import (
     BaseTable,
+    BooleanColumn,
     ButtonsColumn,
     LinkedCountColumn,
     RoleTableMixin,
@@ -36,6 +37,8 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")
+    keepalive_enabled = BooleanColumn()
+    nat_traversal = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
