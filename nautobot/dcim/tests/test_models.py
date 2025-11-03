@@ -744,7 +744,7 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
                         type=if_type,
                         speed=InterfaceSpeedChoices.SPEED_1G,
                     ).full_clean()
-                    self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+                self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
 
     def test_duplex_disallowed_for_lag_virtual_wireless(self):
         """duplex must be blank for LAG, virtual, and wireless templates."""
