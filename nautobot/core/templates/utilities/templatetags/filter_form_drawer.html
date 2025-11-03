@@ -124,6 +124,31 @@
                     dynamicFilterForm: document.querySelector('#dynamic-filter-form'),
                 });
 
+                const prepopulateFilterSelectsFromURL = (() => {
+                    const { defaultFilterForm } = getFilterForms();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    // Only target Select2 controls inside the default filter form.
+                    [...defaultFilterForm.querySelectorAll('select.nautobot-select2-multi-value-char')].forEach((el) => {
+                        const name = el.getAttribute('name');
+                        if (!name) { return; }
+                        const values = urlParams.getAll(name);
+                        if (!values.length) { return; }
+                        values.forEach((val) => {
+                            let found = Array.prototype.find.call(el.options, (opt) => {
+                                return String(opt.value) === String(val);
+                            });
+                            if (found) {
+                                found.selected = true;
+                            } else {
+                                el.add(new Option(val, val, true, true));
+                            }
+                        });
+                        if (window.jQuery && $(el).data('select2')) {
+                            $(el).trigger('change');
+                        }
+                    });
+                })();
+
                 /**
                  * Synchronize given `filter` value from default to dynamic filter form.
                  * @param {string} name - Filter name.
