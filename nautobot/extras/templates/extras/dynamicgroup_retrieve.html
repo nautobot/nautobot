@@ -1,2 +1,36 @@
 {% extends 'generic/object_retrieve.html' %}
-{% comment %}3.0 TODO: remove this template, which only exists for backward compatibility with 2.4 and earlier{% endcomment %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
+        <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab">
+            Members {% badge object.count %}
+        </a>
+    </li>
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "members" %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                {% if members_list_url %}
+                    <div class="alert alert-success" role="alert">
+                        You can bulk-add and bulk-remove members of this group from the <a href="{{ members_list_url }}">{{ members_verbose_name_plural|bettertitle }} list view</a>.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        Dynamic group membership is cached for performance reasons, therefore this listing may not always
+                        be up-to-date.<br>You can refresh the membership of this group asynchronously by clicking the
+                        "Refresh Members" button above.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Dynamic Group members' %}
+            </div>
+        </div>
+    </div>
+{% endblock extra_tab_content %}
+
