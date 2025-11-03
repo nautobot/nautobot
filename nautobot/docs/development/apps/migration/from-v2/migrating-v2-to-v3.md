@@ -3,7 +3,7 @@
 Most migrations outside of the UI updates are minimal. However, for completeness, we will review the UI changes and several niche changes that may affect your app. As a high level, you can safely skip these steps if you:
 
 - Do not have any custom apps
-- Do have custom apps and can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize --dry-run` with no changes and do not have any html in Python files.
+- Do have custom apps and can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run` with no changes and do not have any HTML in Python files.
 - Do have custom apps and can run `nautobot-migrate-deprecated-templates <path> --dry-run` with no changes.
 - Do have custom apps and can run `pylint --disable=all --enable=nb-deprecated-class --load-plugins=pylint_nautobot --rcfile=/dev/null <path>` with no errors.
 - Do have custom apps and do not have a reference to `DataComplianceRule` or `ComplianceError` in your code.
