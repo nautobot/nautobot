@@ -1,12 +1,10 @@
 {% load ajax_table %}
-<div class="panel-default">
-    <div class="panel-heading">
-        <strong>Logs</strong>
-        <div class="pull-right noprint">
-            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
-        </div>
+<div class="panel-heading">
+    <strong>Logs</strong>
+    <div class="pull-right noprint">
+        <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
     </div>
-    {% if result and result.pk %}
-        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
-    {% endif %}
 </div>
+{% if result and result.pk %}
+    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+{% endif %}
