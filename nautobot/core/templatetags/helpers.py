@@ -833,43 +833,6 @@ def label_list(value, suffix=""):
     )
 
 
-def render_jobresult_files(files_manager):
-    """
-    Render job result files as an HTML <ul> list with download links.
-
-    Args:
-        files_manager (RelatedManager): JobResult.files manager.
-
-    Returns:
-        str: Safe HTML string containing <ul> with file links,
-             or an empty string if no files exist.
-    """
-    if not files_manager or not files_manager.exists():
-        return ""
-
-    links = []
-    for file_proxy in files_manager.all():
-        if not file_proxy.file:
-            continue
-
-        # Pick URL depending on storage backend
-        if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage":
-            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
-        else:
-            href = file_proxy.file.url
-
-        links.append(
-            format_html(
-                '<li><a href="{}" download="{}">{}</a></li>',
-                href,
-                file_proxy.name,
-                file_proxy.name,
-            )
-        )
-
-    return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
-
-
 @library.filter()
 @register.filter()
 def format_timezone(time_zone):
