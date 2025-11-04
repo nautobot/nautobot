@@ -11,7 +11,9 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     DeviceFaceChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
@@ -2253,6 +2255,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("name",),
         ("parent_interface", "parent_interface__id"),
         ("parent_interface", "parent_interface__name"),
+        ("speed",),
+        ("duplex",),
         ("role", "role__id"),
         ("role", "role__name"),
         ("status", "status__id"),
@@ -2332,6 +2336,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             mtu=100,
             status=interface_statuses[0],
             untagged_vlan=vlans[0],
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
         )
 
         Interface.objects.filter(pk=cabled_interfaces[1].pk).update(
@@ -2341,6 +2347,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             mtu=200,
             status=interface_statuses[3],
             untagged_vlan=vlans[1],
+            speed=InterfaceSpeedChoices.SPEED_10G,
+            duplex=InterfaceDuplexChoices.DUPLEX_HALF,
         )
 
         Interface.objects.filter(pk=cabled_interfaces[2].pk).update(
@@ -2353,6 +2361,16 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
 
         for interface in cabled_interfaces:
             interface.refresh_from_db()
+
+        # Additional optical interface for speed filtering (no duplex)
+        Interface.objects.create(
+            device=devices[2],
+            name="Filter Optical IF",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=interface_statuses[0],
+            speed=InterfaceSpeedChoices.SPEED_10G,
+            duplex="",
+        )
 
         cable_statuses = Status.objects.get_for_model(Cable)
         connected_status = cable_statuses.get(name="Connected")
@@ -2548,6 +2566,20 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_speed_multi(self):
+        params = {"speed": [InterfaceSpeedChoices.SPEED_1G, InterfaceSpeedChoices.SPEED_10G]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(speed__in=params["speed"]),
+        )
+
+    def test_speed_and_duplex(self):
+        params = {"speed": [InterfaceSpeedChoices.SPEED_10G], "duplex": [InterfaceDuplexChoices.DUPLEX_HALF]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(speed__in=params["speed"], duplex__in=params["duplex"]),
+        )
 
     def test_device_with_common_vc(self):
         """Assert only interfaces belonging to devices with common VC are returned"""
