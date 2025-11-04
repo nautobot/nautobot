@@ -402,7 +402,8 @@ class EChartsBase:
 
         # Handle combined charts
         if self.combined_with:
-            combined_series = self.combined_with.strategy.get_series_config(self.combined_with.data)
+            data = self.combined_with.get_tranform_data(context=context)
+            combined_series = self.combined_with.strategy.get_series_config(data)
             config["series"].extend(combined_series)
 
         return config
