@@ -432,7 +432,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
-                    ui.PrefixChildTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="prefix_table",
@@ -449,7 +449,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="all_ips",
                 url_name="ipam:prefix_ipaddresses",
                 panels=[
-                    ui.IPAddressTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="ip_table",

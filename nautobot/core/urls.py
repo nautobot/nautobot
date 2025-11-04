@@ -91,15 +91,14 @@ urlpatterns = [
 
 
 if settings.DEBUG:
-    try:
-        import debug_toolbar
+    urlpatterns += [path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview")]
 
-        urlpatterns += [
-            path("__debug__/", include(debug_toolbar.urls)),
-            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
-        ]
-    except ImportError:
-        pass
+
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()
+
 
 if settings.METRICS_ENABLED:
     if settings.METRICS_AUTHENTICATED:

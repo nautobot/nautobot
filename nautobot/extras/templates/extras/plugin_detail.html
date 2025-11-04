@@ -83,11 +83,11 @@
                     <table class="table table-hover panel-body attr-table">
                         <tr>
                             <td>Min Nautobot Version</td>
-                            <td>v{{ object.min_version | placeholder }}</td>
+                            <td>{% if object.min_version %}v{{ object.min_version }}{% else %}{{ None|placeholder }}{% endif %}</td>
                         </tr>
                         <tr>
                             <td>Max Nautobot Version</td>
-                            <td>v{{ object.max_version | placeholder }}</td>
+                            <td>{% if object.max_version %}v{{ object.max_version }}{% else %}{{ None|placeholder }}{% endif %}</td>
                         </tr>
                     </table>
                 </div>

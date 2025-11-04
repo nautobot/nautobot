@@ -30,6 +30,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
@@ -1836,6 +1837,68 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "label": "new test label",
             "description": "new test description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_base_t_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "Eth-View-1",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": 1_000_000,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_create": True,
+        }
+        response = self.client.post(url, data)
+
+        # Successful create redirects (JobResult or object list)
+        self.assertIn(response.status_code, (302, 303))
+        interface_template = InterfaceTemplate.objects.get(name="Eth-View-1")
+        self.assertEqual(interface_template.speed, 1_000_000)
+        self.assertEqual(interface_template.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_sfp_with_duplex_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "SFP-View-1",
+            "type": InterfaceTypeChoices.TYPE_1GE_SFP,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_create": True,
+        }
+        response = self.client.post(url, data)
+        # Form error returns 200 with field error displayed
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "Et[1-2]",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": 1_000_000,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_apply": True,
+        }
+        response = self.client.post(url, data)
+        self.assertIn(response.status_code, (302, 303))
+        objs = InterfaceTemplate.objects.filter(name__in=["Et1", "Et2"]).order_by("name")
+        self.assertEqual(objs.count(), 2)
+        for obj in objs:
+            self.assertEqual(obj.speed, 1_000_000)
+            self.assertEqual(obj.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
 
 
 class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):

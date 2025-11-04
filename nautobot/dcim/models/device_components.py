@@ -19,6 +19,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
@@ -31,6 +32,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
@@ -743,6 +745,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
+    # Operational attributes (distinct from interface type capabilities)
+    speed = models.PositiveIntegerField(null=True, blank=True)
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
@@ -876,6 +881,22 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                             )
                         }
                     )
+
+        # Speed/Duplex validation
+        self._validate_speed_and_duplex()
+
+    def _validate_speed_and_duplex(self):
+        """Validate speed (Kbps) and duplex based on interface type."""
+
+        # Check settings by interface type
+        if self.speed and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
+
+        if self.duplex and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
+
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     @property
     def is_connectable(self):
