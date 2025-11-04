@@ -1683,7 +1683,7 @@ body {
     }
 
     img {
-      height: 1.875rem; /* 30px */
+      height: 2rem; /* 32px */
     }
   }
 
@@ -1903,7 +1903,7 @@ body {
     @include fade-in;
     @include transition($transition-base);
     right: -0.8125rem; /* -13px */
-    top: 1.375rem; /* 22px */
+    top: 1.4375rem; /* 23px */
 
     &::before { /* Chevron icon */
       @include chevron(1rem, $navy-0); /* 16px */
