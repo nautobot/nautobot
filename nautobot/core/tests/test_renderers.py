@@ -1,7 +1,8 @@
+from unittest.mock import patch
+
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from rest_framework.response import Response
-from unittest.mock import patch
 
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
 from nautobot.core.testing import TestCase
