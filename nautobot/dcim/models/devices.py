@@ -1954,10 +1954,19 @@ class Module(PrimaryModel):
     def display(self):
         if self.location:
             return f"{self!s} at location {self.location}"
-        elif self.parent_module_bay.parent_device is not None:
+        if self.parent_module_bay.parent_device is not None:
             return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
-        else:
-            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
+
+        return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
+
+    @property
+    def page_title(self):
+        if self.location:
+            return f"{self.module_type!s} at location {self.location}"
+        if self.parent_module_bay.parent_device is not None:
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
+
+        return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.module_type!s}"
 
     @property
     def device(self):
