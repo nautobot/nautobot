@@ -308,6 +308,6 @@ PARENT_DEVICE = """
 {% if record.parent_bay %}
     {{ record.parent_bay.device|hyperlinked_object }}
 {% else %}
-    &mdash;
+    {{ None|placeholder }}
 {% endif %}
 """
