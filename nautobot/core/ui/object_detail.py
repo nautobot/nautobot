@@ -1765,7 +1765,7 @@ class StatsPanel(Panel):
                 value = [related_object_list_url, related_object_count, related_object_title]
                 stats[related_object_model_class] = value
                 related_object_model_filterset = get_filterset_for_model(related_object_model_class)
-                if self.filter_name not in related_object_model_filterset.get_filters():
+                if self.filter_name not in related_object_model_filterset.base_filters:
                     raise FieldDoesNotExist(
                         f"{self.filter_name} is not a valid filter field for {related_object_model_class_meta.verbose_name}"
                     )
