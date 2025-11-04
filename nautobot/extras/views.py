@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 from typing import Optional
 from urllib.parse import parse_qs
@@ -3529,7 +3530,7 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
-                value_transforms={"additional_headers": [helpers.pre_tag]},
+                value_transforms={"additional_headers": [partial(helpers.pre_tag, format_empty_value=False)]},
             ),
             object_detail.ObjectFieldsPanel(
                 label="Security",

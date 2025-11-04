@@ -126,23 +126,29 @@ def placeholder(value):
 
 @library.filter()
 @register.filter()
-def pre_tag(value):
+def pre_tag(value, format_empty_value=True):
     """Render a value within `<pre></pre>` tags to enable formatting.
 
     Args:
         value (any): Input value, can be any variable.
+        format_empty_value (bool): Whether format empty value or render placeholder.
 
     Returns:
-        (str): Value wrapped in `<pre></pre>` tags.
+        (str): Value wrapped in `<pre></pre>` tags or placeholder if None or format_empty_values=False and empty
 
     Example:
         >>> pre_tag("")
         '<pre></pre>'
         >>> pre_tag("hello")
         '<pre>hello</pre>'
+        >>> pre_tag("", format_empty_value=False)
+        '<span class="text-secondary">&mdash;</span>'
     """
-    if value is not None:
+    if format_empty_value and value is not None:
         return format_html("<pre>{}</pre>", value)
+    elif value:
+        return format_html("<pre>{}</pre>", value)
+
     return HTML_NONE
 
 
