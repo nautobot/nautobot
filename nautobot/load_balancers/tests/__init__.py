@@ -5,6 +5,7 @@ import datetime
 from django.contrib.contenttypes.models import ContentType
 from django.db import DEFAULT_DB_ALIAS
 from django.utils.timezone import make_aware
+
 from nautobot.cloud.models import CloudResourceType, CloudService
 from nautobot.dcim.models import (
     Device,
@@ -17,9 +18,8 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.load_balancers import choices, models
 from nautobot.tenancy.models import Tenant, TenantGroup
-
-from nautobot_load_balancer_models import choices, models
 
 
 # pylint: disable=too-many-statements
@@ -465,7 +465,7 @@ def generate_test_data(db=DEFAULT_DB_ALIAS):  # pylint: disable=invalid-name
 
 # pylint: disable=too-few-public-methods
 class LoadBalancerModelsTestCaseMixin:
-    """Base test case for the nautobot_load_balancer_models app."""
+    """Base test case for load_balancers."""
 
     @classmethod
     def setUpTestData(cls):  # pylint: disable=invalid-name

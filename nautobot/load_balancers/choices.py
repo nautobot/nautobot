@@ -1,6 +1,6 @@
 """Custom choices for the Load Balancer models."""
 
-from nautobot.apps.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
 class SourceNATTypeChoices(ChoiceSet):

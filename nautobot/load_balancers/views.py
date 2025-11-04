@@ -1,16 +1,15 @@
 """Views for nautobot_load_balancer_models."""
 
-from nautobot.apps.ui import (
+from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
     SectionChoices,
     StatsPanel,
 )
-from nautobot.apps.views import NautobotUIViewSet
-
-from nautobot_load_balancer_models import filters, forms, models, tables
-from nautobot_load_balancer_models.api import serializers
+from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.load_balancers import filters, forms, models, tables
+from nautobot.load_balancers.api import serializers
 
 
 class VirtualServerUIViewSet(NautobotUIViewSet):

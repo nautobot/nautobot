@@ -1,28 +1,30 @@
 """Forms for nautobot_load_balancer_models."""
 
 from django import forms
-from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-from nautobot.apps.forms import (
+
+from nautobot.cloud.models import CloudService
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms import (
+    add_blank_choice,
     BulkEditNullBooleanSelect,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    StaticSelect2,
+    TagFilterField,
+)
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis
+from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
-    StaticSelect2,
     StatusModelBulkEditFormMixin,
-    TagFilterField,
     TagsBulkEditFormMixin,
-    add_blank_choice,
 )
-from nautobot.cloud.models import CloudService
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis
 from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.load_balancers import choices, models
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-
-from nautobot_load_balancer_models import choices, models
 
 
 class VirtualServerForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors

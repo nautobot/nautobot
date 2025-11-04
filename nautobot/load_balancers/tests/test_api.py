@@ -3,10 +3,10 @@
 import datetime
 
 from django.utils.timezone import make_aware
-from nautobot.apps.testing import APIViewTestCases
 
-from nautobot_load_balancer_models import choices, models
-from nautobot_load_balancer_models.tests import LoadBalancerModelsTestCaseMixin
+from nautobot.core.testing.api import APIViewTestCases
+from nautobot.load_balancers import choices, models
+from nautobot.load_balancers.tests import LoadBalancerModelsTestCaseMixin
 
 
 # pylint: disable=too-many-ancestors, no-member

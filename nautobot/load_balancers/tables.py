@@ -1,18 +1,18 @@
 """Tables for nautobot_load_balancer_models."""
 
 import django_tables2 as tables
-from nautobot.apps.tables import (
+
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
     LinkedCountColumn,
-    StatusTableMixin,
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.load_balancers import models
 from nautobot.tenancy.tables import TenantColumn
-
-from nautobot_load_balancer_models import models
 
 
 class VirtualServerTable(BaseTable):
@@ -33,12 +33,12 @@ class VirtualServerTable(BaseTable):
     tenant = TenantColumn()
     health_check_monitor = tables.Column(linkify=True)
     certificate_profiles_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:certificateprofile_list",
+        viewname="load_balancers:certificateprofile_list",
         verbose_name="Certificate Profiles",
         url_params={"certificate_profiles": "name"},
     )
     actions = ButtonsColumn(models.VirtualServer)
-    tags = TagColumn(url_name="plugins:nautobot_load_balancer_models:virtualserver_list")
+    tags = TagColumn(url_name="load_balancers:virtualserver_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -88,13 +88,13 @@ class LoadBalancerPoolTable(BaseTable):
     name = tables.Column(linkify=True)
     virtual_server = tables.Column(linkify=True)
     load_balancer_pool_member_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:loadbalancerpoolmember_list",
+        viewname="load_balancers:loadbalancerpoolmember_list",
         url_params={"load_balancer_pool": "name"},
         verbose_name="Load Balancer Pool Members",
     )
     tenant = TenantColumn()
     actions = ButtonsColumn(models.LoadBalancerPool)
-    tags = TagColumn(url_name="plugins:nautobot_load_balancer_models:loadbalancerpool_list")
+    tags = TagColumn(url_name="load_balancers:loadbalancerpool_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -130,13 +130,13 @@ class LoadBalancerPoolMemberTable(StatusTableMixin, BaseTable):
     health_check_monitor = tables.Column(linkify=True)
     ssl_offload = BooleanColumn()
     certificate_profiles_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:certificateprofile_list",
+        viewname="load_balancers:certificateprofile_list",
         verbose_name="Certificate Profiles",
         url_params={"certificate_profiles": "name"},
     )
     tenant = TenantColumn()
     actions = ButtonsColumn(models.LoadBalancerPoolMember)
-    tags = TagColumn(url_name="plugins:nautobot_load_balancer_models:loadbalancerpoolmember_list")
+    tags = TagColumn(url_name="load_balancers:loadbalancerpoolmember_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -173,22 +173,22 @@ class HealthCheckMonitorTable(BaseTable):
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
     virtual_server_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:virtualserver_list",
+        viewname="load_balancers:virtualserver_list",
         url_params={"health_check_monitor": "name"},
         verbose_name="Virtual Servers",
     )
     load_balancer_pool_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:loadbalancerpool_list",
+        viewname="load_balancers:loadbalancerpool_list",
         url_params={"health_check_monitor": "name"},
         verbose_name="Pools",
     )
     load_balancer_pool_member_count = LinkedCountColumn(
-        viewname="plugins:nautobot_load_balancer_models:loadbalancerpoolmember_list",
+        viewname="load_balancers:loadbalancerpoolmember_list",
         url_params={"health_check_monitor": "name"},
         verbose_name="Load Balancer Pool Members",
     )
     actions = ButtonsColumn(models.HealthCheckMonitor)
-    tags = TagColumn(url_name="plugins:nautobot_load_balancer_models:healthcheckmonitor_list")
+    tags = TagColumn(url_name="load_balancers:healthcheckmonitor_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -227,7 +227,7 @@ class CertificateProfileTable(BaseTable):
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.CertificateProfile)
-    tags = TagColumn(url_name="plugins:nautobot_load_balancer_models:certificateprofile_list")
+    tags = TagColumn(url_name="load_balancers:certificateprofile_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

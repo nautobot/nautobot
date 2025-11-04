@@ -3,11 +3,12 @@
 import uuid
 
 import django.core.serializers.json
+from django.db import migrations, models
 import django.db.models.deletion
+
 import nautobot.core.models.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
-from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -133,7 +134,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="load_balancer_pools",
-                        to="nautobot_load_balancer_models.healthcheckmonitor",
+                        to="load_balancers.healthcheckmonitor",
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
@@ -233,7 +234,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="virtual_server_assignments",
-                        to="nautobot_load_balancer_models.certificateprofile",
+                        to="load_balancers.certificateprofile",
                     ),
                 ),
                 (
@@ -241,7 +242,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="certificate_profile_assignments",
-                        to="nautobot_load_balancer_models.virtualserver",
+                        to="load_balancers.virtualserver",
                     ),
                 ),
             ],
@@ -256,8 +257,8 @@ class Migration(migrations.Migration):
             field=models.ManyToManyField(
                 blank=True,
                 related_name="virtual_servers",
-                through="nautobot_load_balancer_models.VirtualServerCertificateProfileAssignment",
-                to="nautobot_load_balancer_models.certificateprofile",
+                through="load_balancers.VirtualServerCertificateProfileAssignment",
+                to="load_balancers.certificateprofile",
             ),
         ),
         migrations.AddField(
@@ -301,7 +302,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="virtual_servers",
-                to="nautobot_load_balancer_models.healthcheckmonitor",
+                to="load_balancers.healthcheckmonitor",
             ),
         ),
         migrations.AddField(
@@ -312,7 +313,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="virtual_servers",
-                to="nautobot_load_balancer_models.loadbalancerpool",
+                to="load_balancers.loadbalancerpool",
             ),
         ),
         migrations.AddField(
@@ -374,7 +375,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="load_balancer_pool_member_assignments",
-                        to="nautobot_load_balancer_models.certificateprofile",
+                        to="load_balancers.certificateprofile",
                     ),
                 ),
                 (
@@ -382,7 +383,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="certificate_profile_assignments",
-                        to="nautobot_load_balancer_models.loadbalancerpoolmember",
+                        to="load_balancers.loadbalancerpoolmember",
                     ),
                 ),
             ],
@@ -397,8 +398,8 @@ class Migration(migrations.Migration):
             field=models.ManyToManyField(
                 blank=True,
                 related_name="load_balancer_pool_members",
-                through="nautobot_load_balancer_models.LoadBalancerPoolMemberCertificateProfileAssignment",
-                to="nautobot_load_balancer_models.certificateprofile",
+                through="load_balancers.LoadBalancerPoolMemberCertificateProfileAssignment",
+                to="load_balancers.certificateprofile",
             ),
         ),
         migrations.AddField(
@@ -409,7 +410,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="load_balancer_pool_members",
-                to="nautobot_load_balancer_models.healthcheckmonitor",
+                to="load_balancers.healthcheckmonitor",
             ),
         ),
         migrations.AddField(
@@ -427,7 +428,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="load_balancer_pool_members",
-                to="nautobot_load_balancer_models.loadbalancerpool",
+                to="load_balancers.loadbalancerpool",
             ),
         ),
         migrations.AddField(

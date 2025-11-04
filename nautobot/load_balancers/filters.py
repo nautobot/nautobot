@@ -1,21 +1,20 @@
 """Filtering for nautobot_load_balancer_models."""
 
 import django_filters
-from nautobot.apps.filters import (
+
+from nautobot.cloud.models import CloudService
+from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueDateTimeFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
-    NautobotFilterSet,
     SearchFilter,
-    StatusModelFilterSetMixin,
-    TenancyModelFilterSetMixin,
 )
-from nautobot.cloud.models import CloudService
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis
+from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.ipam.models import IPAddress, Prefix
-
-from nautobot_load_balancer_models import models
+from nautobot.load_balancers import models
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 
 class VirtualServerFilterSet(NameSearchFilterSet, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors

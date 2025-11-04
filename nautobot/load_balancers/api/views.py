@@ -1,9 +1,8 @@
 """API views for nautobot_load_balancer_models."""
 
-from nautobot.apps.api import ModelViewSet, NautobotModelViewSet
-
-from nautobot_load_balancer_models import filters, models
-from nautobot_load_balancer_models.api import serializers
+from nautobot.extras.api.views import ModelViewSet, NautobotModelViewSet
+from nautobot.load_balancers import filters, models
+from nautobot.load_balancers.api import serializers
 
 
 class VirtualServerViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors

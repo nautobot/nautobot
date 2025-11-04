@@ -3,8 +3,8 @@
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
 
-from nautobot_load_balancer_models import models
-from nautobot_load_balancer_models.tests import generate_test_data
+from nautobot.load_balancers import models
+from nautobot.load_balancers.tests import generate_test_data
 
 
 class Command(BaseCommand):
@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     help = __doc__
 
-    def add_arguments(self, parser):  # noqa: D102
+    def add_arguments(self, parser):
         parser.add_argument(
             "--database",
             default=DEFAULT_DB_ALIAS,

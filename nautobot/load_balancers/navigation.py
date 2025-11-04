@@ -1,73 +1,75 @@
 """Menu items."""
 
-from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Load Balancers",
-        weight=450,
+        icon=NavigationIconChoices.LOAD_BALANCERS,
+        weight=NavigationWeightChoices.LOAD_BALANCERS,
         groups=(
             NavMenuGroup(
                 name="Load Balancers",
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:nautobot_load_balancer_models:virtualserver_list",
+                        link="load_balancers:virtualserver_list",
                         name="Virtual Servers",
                         weight=100,
-                        permissions=["nautobot_load_balancer_models.view_virtualserver"],
+                        permissions=["load_balancers.view_virtualserver"],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:nautobot_load_balancer_models:virtualserver_add",
-                                permissions=["nautobot_load_balancer_models.add_virtualserver"],
+                                link="load_balancers:virtualserver_add",
+                                permissions=["load_balancers.add_virtualserver"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="plugins:nautobot_load_balancer_models:loadbalancerpool_list",
+                        link="load_balancers:loadbalancerpool_list",
                         name="Pools",
                         weight=200,
-                        permissions=["nautobot_load_balancer_models.view_loadbalancerpool"],
+                        permissions=["load_balancers.view_loadbalancerpool"],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:nautobot_load_balancer_models:loadbalancerpool_add",
-                                permissions=["nautobot_load_balancer_models.add_loadbalancerpool"],
+                                link="load_balancers:loadbalancerpool_add",
+                                permissions=["load_balancers.add_loadbalancerpool"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="plugins:nautobot_load_balancer_models:loadbalancerpoolmember_list",
+                        link="load_balancers:loadbalancerpoolmember_list",
                         name="Pool Members",
                         weight=300,
-                        permissions=["nautobot_load_balancer_models.view_loadbalancerpoolmember"],
+                        permissions=["load_balancers.view_loadbalancerpoolmember"],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:nautobot_load_balancer_models:loadbalancerpoolmember_add",
-                                permissions=["nautobot_load_balancer_models.add_loadbalancerpoolmember"],
+                                link="load_balancers:loadbalancerpoolmember_add",
+                                permissions=["load_balancers.add_loadbalancerpoolmember"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="plugins:nautobot_load_balancer_models:healthcheckmonitor_list",
+                        link="load_balancers:healthcheckmonitor_list",
                         name="Health Check Monitors",
                         weight=400,
-                        permissions=["nautobot_load_balancer_models.view_healthcheckmonitor"],
+                        permissions=["load_balancers.view_healthcheckmonitor"],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:nautobot_load_balancer_models:healthcheckmonitor_add",
-                                permissions=["nautobot_load_balancer_models.add_healthcheckmonitor"],
+                                link="load_balancers:healthcheckmonitor_add",
+                                permissions=["load_balancers.add_healthcheckmonitor"],
                             ),
                         ),
                     ),
                     NavMenuItem(
-                        link="plugins:nautobot_load_balancer_models:certificateprofile_list",
+                        link="load_balancers:certificateprofile_list",
                         name="Certificate Profiles",
                         weight=500,
-                        permissions=["nautobot_load_balancer_models.view_certificateprofile"],
+                        permissions=["load_balancers.view_certificateprofile"],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:nautobot_load_balancer_models:certificateprofile_add",
-                                permissions=["nautobot_load_balancer_models.add_certificateprofile"],
+                                link="load_balancers:certificateprofile_add",
+                                permissions=["load_balancers.add_certificateprofile"],
                             ),
                         ),
                     ),

@@ -1,9 +1,8 @@
 """Test virtualserver forms."""
 
-from nautobot.apps.testing import FormTestCases
-
-from nautobot_load_balancer_models import choices, forms
-from nautobot_load_balancer_models.tests import LoadBalancerModelsTestCaseMixin
+from nautobot.core.testing.forms import FormTestCases
+from nautobot.load_balancers import choices, forms
+from nautobot.load_balancers.tests import LoadBalancerModelsTestCaseMixin
 
 
 # pylint: disable=no-member

@@ -1,10 +1,13 @@
 """Models for Load Balancer Models."""
 
 from django.db import models
-from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-from nautobot.apps.models import BaseModel, PrimaryModel, StatusField, extras_features
 
-from nautobot_load_balancer_models import choices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseModel
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.models import StatusField
+from nautobot.extras.utils import extras_features
+from nautobot.load_balancers import choices
 
 
 @extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
@@ -73,14 +76,14 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         related_name="virtual_servers",
     )
     load_balancer_pool = models.ForeignKey(
-        to="nautobot_load_balancer_models.LoadBalancerPool",
+        to="load_balancers.LoadBalancerPool",
         on_delete=models.PROTECT,
         blank=True,
         null=True,
         related_name="virtual_servers",
     )
     health_check_monitor = models.ForeignKey(
-        to="nautobot_load_balancer_models.HealthCheckMonitor",
+        to="load_balancers.HealthCheckMonitor",
         related_name="virtual_servers",
         verbose_name="Health Check Monitor",
         on_delete=models.PROTECT,
@@ -88,11 +91,11 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=True,
     )
     certificate_profiles = models.ManyToManyField(
-        to="nautobot_load_balancer_models.CertificateProfile",
+        to="load_balancers.CertificateProfile",
         related_name="virtual_servers",
         verbose_name="Certificate Profile",
         blank=True,
-        through="nautobot_load_balancer_models.VirtualServerCertificateProfileAssignment",
+        through="load_balancers.VirtualServerCertificateProfileAssignment",
     )
 
     clone_fields = [
@@ -141,7 +144,7 @@ class LoadBalancerPool(PrimaryModel):  # pylint: disable=too-many-ancestors
         choices=choices.LoadBalancingAlgorithmChoices,
     )
     health_check_monitor = models.ForeignKey(
-        to="nautobot_load_balancer_models.HealthCheckMonitor",
+        to="load_balancers.HealthCheckMonitor",
         related_name="load_balancer_pools",
         verbose_name="Health Check Monitor",
         on_delete=models.PROTECT,
@@ -179,7 +182,7 @@ class LoadBalancerPool(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """LoadBalancerPoolMember model for nautobot_load_balancer_models."""
+    """LoadBalancerPoolMember model for load_balancers."""
 
     label = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -193,7 +196,7 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
         verbose_name="IP Address",
     )
     load_balancer_pool = models.ForeignKey(
-        to="nautobot_load_balancer_models.LoadBalancerPool",
+        to="load_balancers.LoadBalancerPool",
         related_name="load_balancer_pool_members",
         on_delete=models.PROTECT,
     )
@@ -203,7 +206,7 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
         verbose_name="SSL Offload",
     )
     health_check_monitor = models.ForeignKey(
-        to="nautobot_load_balancer_models.HealthCheckMonitor",
+        to="load_balancers.HealthCheckMonitor",
         related_name="load_balancer_pool_members",
         verbose_name="Health Check Monitor",
         on_delete=models.PROTECT,
@@ -211,11 +214,11 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
         null=True,
     )
     certificate_profiles = models.ManyToManyField(
-        to="nautobot_load_balancer_models.CertificateProfile",
+        to="load_balancers.CertificateProfile",
         related_name="load_balancer_pool_members",
         verbose_name="Certificate Profile",
         blank=True,
-        through="nautobot_load_balancer_models.LoadBalancerPoolMemberCertificateProfileAssignment",
+        through="load_balancers.LoadBalancerPoolMemberCertificateProfileAssignment",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -253,7 +256,7 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
 
 @extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
 class HealthCheckMonitor(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """HealthCheckMonitor model for nautobot_load_balancer_models."""
+    """HealthCheckMonitor model for load_balancers."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     interval = models.PositiveIntegerField(blank=True, null=True)
@@ -293,7 +296,7 @@ class HealthCheckMonitor(PrimaryModel):  # pylint: disable=too-many-ancestors
     "webhooks",
 )
 class CertificateProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
-    """CertificateProfile model for nautobot_load_balancer_models."""
+    """CertificateProfile model for load_balancers."""
 
     name = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -363,15 +366,15 @@ class CertificateProfile(PrimaryModel):  # pylint: disable=too-many-ancestors
     "graphql",
 )
 class VirtualServerCertificateProfileAssignment(BaseModel):  # pylint: disable=too-many-ancestors
-    """VirtualServerCertificateProfileAssignment model for nautobot_load_balancer_models."""
+    """VirtualServerCertificateProfileAssignment model for load_balancers."""
 
     virtual_server = models.ForeignKey(
-        to="nautobot_load_balancer_models.VirtualServer",
+        to="load_balancers.VirtualServer",
         on_delete=models.CASCADE,
         related_name="certificate_profile_assignments",
     )
     certificate_profile = models.ForeignKey(
-        to="nautobot_load_balancer_models.CertificateProfile",
+        to="load_balancers.CertificateProfile",
         on_delete=models.CASCADE,
         related_name="virtual_server_assignments",
     )
@@ -395,15 +398,15 @@ class VirtualServerCertificateProfileAssignment(BaseModel):  # pylint: disable=t
     "graphql",
 )
 class LoadBalancerPoolMemberCertificateProfileAssignment(BaseModel):  # pylint: disable=too-many-ancestors
-    """LoadBalancerPoolMemberCertificateProfileAssignment model for nautobot_load_balancer_models."""
+    """LoadBalancerPoolMemberCertificateProfileAssignment model for load_balancers."""
 
     load_balancer_pool_member = models.ForeignKey(
-        to="nautobot_load_balancer_models.LoadBalancerPoolMember",
+        to="load_balancers.LoadBalancerPoolMember",
         on_delete=models.CASCADE,
         related_name="certificate_profile_assignments",
     )
     certificate_profile = models.ForeignKey(
-        to="nautobot_load_balancer_models.CertificateProfile",
+        to="load_balancers.CertificateProfile",
         on_delete=models.CASCADE,
         related_name="load_balancer_pool_member_assignments",
     )

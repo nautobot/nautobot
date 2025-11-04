@@ -1,1 +1,1 @@
-"""REST API module for nautobot_load_balancer_models app."""
+"""REST API module for load_balancers app."""

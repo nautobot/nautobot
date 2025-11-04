@@ -1,8 +1,8 @@
 """API serializers for nautobot_load_balancer_models."""
 
-from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin, ValidatedModelSerializer
-
-from nautobot_load_balancer_models import models
+from nautobot.core.api import NautobotModelSerializer, ValidatedModelSerializer
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.load_balancers import models
 
 
 class VirtualServerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors

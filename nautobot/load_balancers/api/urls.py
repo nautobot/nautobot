@@ -1,11 +1,11 @@
 """Django API urlpatterns declaration for nautobot_load_balancer_models app."""
 
-from nautobot.apps.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 
-from nautobot_load_balancer_models.api import views
+from . import views
 
-app_name = "nautobot_load_balancer_models-api"
-router = OrderedDefaultRouter()
+router = OrderedDefaultRouter(view_name="Load Balancers")
+
 router.register("certificate-profiles", views.CertificateProfileViewSet)
 router.register("health-check-monitors", views.HealthCheckMonitorViewSet)
 router.register("load-balancer-pool-members", views.LoadBalancerPoolMemberViewSet)
@@ -19,5 +19,5 @@ router.register(
     "virtual-server-certificate-profile-assignments", views.VirtualServerCertificateProfileAssignmentViewSet
 )
 
-
+app_name = "load_balancers-api"
 urlpatterns = router.urls

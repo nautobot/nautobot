@@ -1,15 +1,13 @@
 """Test VirtualServer Filter."""
 
-from nautobot.apps.testing import FilterTestCases
-
-from nautobot_load_balancer_models import filters, models
-from nautobot_load_balancer_models.tests import LoadBalancerModelsTestCaseMixin
+from nautobot.core.testing.filters import FilterTestCases
+from nautobot.load_balancers import filters, models
+from nautobot.load_balancers.tests import LoadBalancerModelsTestCaseMixin
 
 
 # pylint: disable=too-many-ancestors
 class VirtualServerFilterTestCase(
     LoadBalancerModelsTestCaseMixin,
-    FilterTestCases.NameOnlyFilterTestCase,
     FilterTestCases.TenancyFilterTestCaseMixin,
     FilterTestCases.FilterTestCase,
 ):
@@ -42,7 +40,6 @@ class VirtualServerFilterTestCase(
 
 class LoadBalancerPoolFilterTestCase(
     LoadBalancerModelsTestCaseMixin,
-    FilterTestCases.NameOnlyFilterTestCase,
     FilterTestCases.FilterTestCase,
     FilterTestCases.TenancyFilterTestCaseMixin,
 ):

@@ -1,11 +1,11 @@
 """Test VirtualServer."""
 
 from django.db.utils import IntegrityError
-from nautobot.apps.testing import ModelTestCases
-from nautobot.ipam.models import IPAddress
 
-from nautobot_load_balancer_models import choices, models
-from nautobot_load_balancer_models.tests import LoadBalancerModelsTestCaseMixin
+from nautobot.core.testing.models import ModelTestCases
+from nautobot.ipam.models import IPAddress
+from nautobot.load_balancers import choices, models
+from nautobot.load_balancers.tests import LoadBalancerModelsTestCaseMixin
 
 
 # pylint: disable=no-member
