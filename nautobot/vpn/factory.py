@@ -174,11 +174,15 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
         None,
     )
     source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("word"))
-    tunnel_interface = factory.Maybe(
-        "has_source_interface",
-        random_instance(lambda: Interface.objects.filter(type="tunnel", vpn_tunnel_endpoints_tunnel__isnull=True)),
-        None,
-    )
+
+    @factory.lazy_attribute
+    def tunnel_interface(self):
+        """Filter tunnel interfaces on the same device as source_interface."""
+        if self.has_source_interface:
+            qs = Interface.objects.filter(type="tunnel", device=self.source_interface.device)
+            return factory.random.randgen.choice(qs) if qs.exists() else None
+        return None
+
     has_profile = NautobotBoolIterator()
     vpn_profile = factory.Maybe("has_profile", random_instance(models.VPNProfile), None)
     has_role = NautobotBoolIterator()
