@@ -2098,18 +2098,23 @@ class ScheduledJobUIViewSet(
     action_buttons = ()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         if instance is None:
-            return super().get_extra_context(request, instance)
+            return context
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 labels[name] = field.label or pretty_name(name)
-        return {
-            "labels": labels,
-            "job_class_found": (job_class is not None),
-        }
+        context.update(
+            {
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+            }
+        )
+
+        return context
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
