@@ -1272,6 +1272,18 @@ textarea {
   }
 }
 
+.card-body {
+  .nav-tabs {
+    margin-inline: $card-spacer-x * -1;
+  }
+
+  .tab-content {
+    > .tab-pane {
+      padding-block-start: $card-spacer-y;
+    }
+  }
+}
+
 .card-header {
   position: relative;
   text-transform: uppercase;

@@ -47,7 +47,7 @@ def reverse_migrate_device_uniqueness_setting(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0078_remove_device_location_tenant_name_uniqueness"),
+        ("dcim", "0079_remove_device_location_tenant_name_uniqueness"),
         ("constance", "0003_drop_pickle"),
     ]
 
