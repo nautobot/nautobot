@@ -1,0 +1,1 @@
+Fixed issue where device components added via table footer button did not return to the same page.

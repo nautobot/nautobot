@@ -292,13 +292,64 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
   });
 };
 
-const initializeMultiValueChar = (context, dropdownParent = null) =>
+const initializeMultiValueChar = (context, dropdownParent = null) => {
   initializeSelect2(context, '.nautobot-select2-multi-value-char', {
     dropdownParent,
     language: { noResults: () => 'Type something to add it as an option' },
     multiple: true,
     tags: true,
+    tokenSeparators: [',', ' '],
   });
+
+  // Ensure pressing Enter in the Select2 search adds the current token instead of submitting the form
+  [...getElement(context).querySelectorAll('.nautobot-select2-multi-value-char')].forEach((element) => {
+    $(element).on('select2:open', () => {
+      const container = document.querySelector('.select2-container--open');
+      if (!container) {
+        return;
+      }
+      const search = container.querySelector('input.select2-search__field');
+      if (!search) {
+        return;
+      }
+
+      // Avoid stacking multiple handlers
+      if (search.getAttribute('data-enter-binds')) {
+        return;
+      }
+      search.setAttribute('data-enter-binds', '1');
+
+      search.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const val = search.value.trim();
+          if (!val) {
+            return;
+          }
+          const sel = $(element).get(0);
+          // If option doesn't exist, create it; otherwise select it
+          const found = Array.prototype.find.call(sel.options, (opt) => String(opt.value) === String(val));
+          if (found) {
+            found.selected = true;
+          } else {
+            sel.add(new Option(val, val, true, true));
+          }
+          // Clear the search box and notify Select2
+          search.value = '';
+          $(element).trigger('change');
+          // Close the dropdown so it doesn't linger after add
+          try {
+            $(element).select2('close');
+            // eslint-disable-next-line no-unused-vars
+          } catch (exception) {
+            // Intentional no-op
+          }
+        }
+      });
+    });
+  });
+};
 
 const initializeStaticChoiceSelection = (context, dropdownParent = null) =>
   initializeSelect2(context, '.nautobot-select2-static', { dropdownParent });
