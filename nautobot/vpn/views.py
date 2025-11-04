@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.extras.tables import DynamicGroupTable
 from nautobot.ipam.tables import PrefixTable
@@ -42,10 +43,10 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                     "keepalive_interval",
                     "keepalive_retries",
                     "nat_traversal",
-                    "extra_options",
                     "secrets_group",
                     "role",
                     "tenant",
+                    "extra_options",
                 ],
             ),
             ObjectsTablePanel(
@@ -54,6 +55,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 table_filter="vpn_profile",
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
+                show_table_config_button=False,
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -61,6 +63,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 table_filter="vpn_profile",
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
+                show_table_config_button=False,
             ),
         ],
         extra_tabs=[
@@ -233,6 +236,11 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
                     "authentication_method",
                     "tenant",
                 ],
+                value_transforms={
+                    "encryption_algorithm": [helpers.label_list],
+                    "integrity_algorithm": [helpers.label_list],
+                    "dh_group": [helpers.label_list],
+                },
             ),
         ],
     )
@@ -264,6 +272,11 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
                     "lifetime",
                     "tenant",
                 ],
+                value_transforms={
+                    "encryption_algorithm": [helpers.label_list],
+                    "integrity_algorithm": [helpers.label_list],
+                    "pfs_group": [helpers.label_list],
+                },
             ),
         ],
     )
@@ -415,23 +428,63 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                 ],
                 add_button_route=None,
             ),
-            ObjectsTablePanel(
-                weight=100,
-                table_title="Protected Prefixes",
-                table_class=PrefixTable,
-                table_filter="vpn_tunnel_endpoints",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=[],
-                add_button_route=None,
+        ],
+        extra_tabs=[
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 100,
+                tab_id="protected_prefixes",
+                label="Protected Prefixes",
+                url_name="vpn:vpntunnelendpoint_protectedprefixes",
+                related_object_attribute="protected_prefixes",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=PrefixTable,
+                        table_filter="vpn_tunnel_endpoints",
+                        tab_id="protected_prefixes",
+                        include_paginator=True,
+                    ),
+                ),
             ),
-            ObjectsTablePanel(
-                weight=200,
-                table_title="Protected Prefixes from Dynamic Group",
-                table_class=DynamicGroupTable,
-                table_filter="vpn_tunnel_endpoints",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=[],
-                add_button_route=None,
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
+                tab_id="protected_dynamic_groups",
+                label="Protected Prefixes from Dynamic Group",
+                url_name="vpn:vpntunnelendpoint_protecteddynamicgroups",
+                related_object_attribute="protected_prefixes_dg",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=DynamicGroupTable,
+                        table_filter="vpn_tunnel_endpoints",
+                        tab_id="protected_dynamic_groups",
+                        include_paginator=True,
+                    ),
+                ),
             ),
         ],
     )
+
+    @action(
+        detail=True,
+        url_path="protected-prefixes",
+        url_name="protectedprefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
+    def protected_prefixes(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="protected-dynamic-groups",
+        url_name="protecteddynamicgroups",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_dynamicgroup"],
+    )
+    def protected_dynamic_groups(self, request, *args, **kwargs):
+        return Response({})

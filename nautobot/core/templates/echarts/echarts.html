@@ -21,6 +21,8 @@
             // Display the chart using the configuration items and data just specified.
             myChart.setOption({
                 ...options,
+                // Enable dark mode if the current theme is dark
+                darkMode: currentTheme === 'dark',
                 // Update colors based on theme
                 color: Array.isArray(options.color)
                     ? options.color.map((colorObj) => colorObj?.[currentTheme] || colorObj?.light || colorObj)

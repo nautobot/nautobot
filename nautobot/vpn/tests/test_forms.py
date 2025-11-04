@@ -275,7 +275,6 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
         """Test specifying all fields."""
         interfaces = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True)
         data = {
-            "device": interfaces[0].device,
             "source_interface": interfaces[0],
             "vpn_profile": models.VPNProfile.objects.first(),
             "protected_prefixes": [Prefix.objects.first()],
@@ -288,7 +287,7 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
     def test_specifying_required_fields_success(self):
         """Test specifying only required fields."""
 
-        data = {"source_fqdn": "To Cloud"}
+        data = {"source_fqdn": "cloud.com"}
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())

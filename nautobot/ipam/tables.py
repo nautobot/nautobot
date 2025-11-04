@@ -379,6 +379,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
+    tunnel_endpoints_count = LinkedCountColumn(
+        viewname="vpn:vpntunnelendpoint_list",
+        url_params={"protected_prefixes": "pk"},
+        verbose_name="VPN Tunnel Endpoints",
+    )
     actions = ButtonsColumn(Prefix)
 
     class Meta(BaseTable.Meta):
@@ -394,6 +399,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "tenant",
             "location_count",
             "cloud_networks_count",
+            "tunnel_endpoints_count",
             "vlan",
             "role",
             "rir",

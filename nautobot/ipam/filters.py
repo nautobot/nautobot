@@ -295,6 +295,10 @@ class PrefixFilterSet(
         to_field_name="pk",
         label="VPN Tunnel Endpoint ID",
     )
+    vpn_tunnel_endpoints_name_contains = django_filters.CharFilter(
+        method="filter_vpntunnelendpoint_name_contains",
+        label="VPN Tunnel Endpoint Name Contains",
+    )
 
     class Meta:
         model = Prefix
@@ -357,6 +361,9 @@ class PrefixFilterSet(
             return queryset.none
         params = self.generate_query_filter_present_in_vrf(value)
         return queryset.filter(params).distinct()
+
+    def filter_vpntunnelendpoint_name_contains(self, queryset, name, value):
+        return queryset.filter(vpn_tunnel_endpoints__name__contains=value)
 
 
 class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
