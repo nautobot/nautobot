@@ -1,0 +1,1 @@
+Fixed unintended dependency on `django-debug-toolbar` when enabling the `theme-preview/` view.
