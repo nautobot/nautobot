@@ -74,7 +74,7 @@ The Navigation Bar has been redesigned for greater efficiency and usability. It 
 
 #### VPN Models
 
-Nautobot 3.0 adds a [`VPN`](../user-guide/core-data-model/vpn.md) data model to support modeling Virtual Private Networks (VPNs), including reusable profiles, policies, and tunnel endpoints. These models enable you to define IKE (Phase 1) and IPSec (Phase 2) policy parameters, manage tunnel endpoints, and associate VPNs with roles and secrets. Additionally, VPNs may optionally be associated with tenants so that administrators can indicate ownership of related model instances.
+Nautobot 3.0 adds a [`VPN`](../user-guide/core-data-model/vpn/vpn.md) data model to support modeling Virtual Private Networks (VPNs), including reusable profiles, policies, and tunnel endpoints. These models enable you to define IKE (Phase 1) and IPSec (Phase 2) policy parameters, manage tunnel endpoints, and associate VPNs with roles and secrets. Additionally, VPNs may optionally be associated with tenants so that administrators can indicate ownership of related model instances.
 
 Key Use Cases include:
 

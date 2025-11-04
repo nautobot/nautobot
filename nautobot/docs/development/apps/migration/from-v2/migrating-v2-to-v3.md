@@ -9,7 +9,7 @@ Most migrations outside of the UI updates are minimal. However, for completeness
 - Do have custom apps and do not have a reference to `DataComplianceRule` or `ComplianceError` in your code.
 - Do have custom apps and do not have a reference to `execute_query` or `execute_saved_query` in your code.
 - Can run `nautobot-server validate_models extras.dynamicgroup` with no output.
-- Do not use the API (minor change if using pynautobot required to keep same behavior).
+- Do not use the REST API (minor change if using pynautobot required to keep same behavior).
 
 ## UI Migrations
 
@@ -102,7 +102,7 @@ There is no effect on REST API or GraphQL queries, as this is additive in those 
 ## Many-to-Many Fields in REST API
 
 !!! tip
-    You can safely skip this section if you do not use the API and only a minor modification needed if pynautobot user.
+    You can safely skip this section if you do not use the REST API and only a minor modification needed if pynautobot user.
 
 !!! tip
     You can adjust this in Nautobot 2.x.
