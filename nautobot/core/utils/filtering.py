@@ -107,6 +107,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         BOOLEAN_CHOICES,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
+        MultiValueCharInput,
         StaticSelect2,
         StaticSelect2Multiple,
     )
@@ -127,7 +128,16 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
-        form_field = forms.IntegerField()
+        # If "choices" are passed, then when 'exact' is used in an Advanced
+        # Filter, render a dropdown of choices instead of a free integer input
+        if field.lookup_expr == "exact" and getattr(field, "choices", None):
+            # Use a multi-value widget that allows both preset choices and free-form entries
+            form_field = forms.MultipleChoiceField(
+                choices=field.choices,
+                widget=MultiValueCharInput,
+            )
+        else:
+            form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         if getattr(field, "prefers_id", False):
             to_field_name = "id"

@@ -1,0 +1,1 @@
+Fixed incorrect logic in `nautobot.virtualization.tests.test_models.VMInterfaceTestCase` that could lead to test failures.

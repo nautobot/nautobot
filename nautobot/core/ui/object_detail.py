@@ -42,7 +42,7 @@ from nautobot.core.templatetags.helpers import (
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.echarts import EChartsBase
 from nautobot.core.ui.utils import render_component_template
-from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model, get_view_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
@@ -904,7 +904,12 @@ class ObjectsTablePanel(Panel):
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
-            return_url += f"?tab={self.tab_id}"
+            try:
+                # Check to see if the this is a NautobotUIViewset action
+                view = get_view_for_model(obj._meta.model)
+                return_url += getattr(view, self.tab_id).url_path + "/"
+            except AttributeError:
+                return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route is not None:
             add_permissions = self.add_permissions

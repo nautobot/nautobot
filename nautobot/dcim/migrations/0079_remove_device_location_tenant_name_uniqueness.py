@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0077_remove_device_cluster"),
+        ("dcim", "0078_remove_device_cluster"),
     ]
 
     operations = [
