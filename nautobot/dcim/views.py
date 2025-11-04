@@ -805,9 +805,6 @@ class RackElevationListView(generic.ObjectListView):
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
     view_titles = Titles(titles={"list": "Rack Elevation"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:rack_elevation_list", label="Rack Elevation")]}
-    )
 
     def extra_context(self):
         racks = self.queryset
@@ -2291,32 +2288,43 @@ class DeviceComponentPageMixin:
     - Console Port assigned to the device: Devices / <Device name and link to details> / Console Ports (dcim/devices/<id>/console-ports/) / <Console Port name>
     """
 
-    breadcrumbs = Breadcrumbs(
-        items={
-            "detail": [
-                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
-                ),
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        device_breadcrumbs = [
+            ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
+            InstanceBreadcrumbItem(
+                instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
+            ),
+        ]
+        module_breadcrumbs = [
+            ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
+            InstanceBreadcrumbItem(
+                instance=lambda c: c["object"].module, should_render=lambda c: c["object"].device is None
+            ),
+        ]
+        if device_breadcrumb_url := getattr(cls, "device_breadcrumb_url", None):
+            device_breadcrumbs.append(
                 ViewNameBreadcrumbItem(
-                    view_name_key="device_breadcrumb_url",
-                    should_render=lambda c: c["object"].device is not None and c.get("device_breadcrumb_url"),
+                    view_name=device_breadcrumb_url,
+                    should_render=lambda c: c["object"].device is not None,
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
                     label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
-                ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].module, should_render=lambda c: c["object"].device is None
-                ),
+            )
+
+        if module_breadcrumb_url := getattr(cls, "module_breadcrumb_url", None):
+            module_breadcrumbs.append(
                 ViewNameBreadcrumbItem(
-                    view_name_key="module_breadcrumb_url",
-                    should_render=lambda c: c["object"].device is None and c.get("module_breadcrumb_url"),
+                    view_name=module_breadcrumb_url,
+                    should_render=lambda c: c["object"].device is None,
                     reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
                     label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
-            ]
-        }
-    )
+            )
+
+        cls.breadcrumbs = Breadcrumbs(items={"detail": [*device_breadcrumbs, *module_breadcrumbs]})
+
     view_titles = Titles(
         titles={
             "detail": "{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}"
@@ -3855,11 +3863,13 @@ class ConsolePortListView(generic.ObjectListView):
 
 class ConsolePortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsolePort.objects.all()
+    device_breadcrumb_url = "dcim:device_consoleports"
+    module_breadcrumb_url = "dcim:module_consoleports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_consoleports",
-            "module_breadcrumb_url": "dcim:module_consoleports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -3921,11 +3931,13 @@ class ConsoleServerPortListView(generic.ObjectListView):
 
 class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsoleServerPort.objects.all()
+    device_breadcrumb_url = "dcim:device_consoleserverports"
+    module_breadcrumb_url = "dcim:module_consoleserverports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_consoleserverports",
-            "module_breadcrumb_url": "dcim:module_consoleserverports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -3987,11 +3999,13 @@ class PowerPortListView(generic.ObjectListView):
 
 class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerPort.objects.all()
+    device_breadcrumb_url = "dcim:device_powerports"
+    module_breadcrumb_url = "dcim:module_powerports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_powerports",
-            "module_breadcrumb_url": "dcim:module_powerports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4053,11 +4067,13 @@ class PowerOutletListView(generic.ObjectListView):
 
 class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerOutlet.objects.all()
+    device_breadcrumb_url = "dcim:device_poweroutlets"
+    module_breadcrumb_url = "dcim:module_poweroutlets"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_poweroutlets",
-            "module_breadcrumb_url": "dcim:module_poweroutlets",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4122,6 +4138,8 @@ class InterfaceView(
     generic.ObjectView,
 ):
     queryset = Interface.objects.all()
+    device_breadcrumb_url = "dcim:device_interfaces"
+    module_breadcrumb_url = "dcim:module_interfaces"
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
@@ -4162,8 +4180,8 @@ class InterfaceView(
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
-            "device_breadcrumb_url": "dcim:device_interfaces",
-            "module_breadcrumb_url": "dcim:module_interfaces",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
@@ -4252,11 +4270,13 @@ class FrontPortListView(generic.ObjectListView):
 
 class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = FrontPort.objects.all()
+    device_breadcrumb_url = "dcim:device_frontports"
+    module_breadcrumb_url = "dcim:module_frontports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_frontports",
-            "module_breadcrumb_url": "dcim:module_frontports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4318,11 +4338,13 @@ class RearPortListView(generic.ObjectListView):
 
 class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = RearPort.objects.all()
+    device_breadcrumb_url = "dcim:device_rearports"
+    module_breadcrumb_url = "dcim:module_rearports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_rearports",
-            "module_breadcrumb_url": "dcim:module_rearports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4384,9 +4406,13 @@ class DeviceBayListView(generic.ObjectListView):
 
 class DeviceBayView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = DeviceBay.objects.all()
+    device_breadcrumb_url = "dcim:device_devicebays"
 
     def get_extra_context(self, request, instance):
-        return {"device_breadcrumb_url": "dcim:device_devicebays", **super().get_extra_context(request, instance)}
+        return {
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            **super().get_extra_context(request, instance),
+        }
 
 
 class DeviceBayCreateView(generic.ComponentCreateView):
@@ -4621,6 +4647,7 @@ class InventoryItemListView(generic.ObjectListView):
 
 class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
+    device_breadcrumb_url = "dcim:device_inventory"
 
     def get_extra_context(self, request, instance):
         # Software images
@@ -4630,7 +4657,7 @@ class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
             software_version_images = []
 
         return {
-            "device_breadcrumb_url": "dcim:device_inventory",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
             "software_version_images": software_version_images,
             **super().get_extra_context(request, instance),
         }
@@ -4820,6 +4847,7 @@ class PathTraceView(generic.ObjectView):
 
     additional_permissions = ["dcim.view_cable"]
     template_name = "dcim/cable_trace.html"
+    view_titles = Titles(titles={"detail": "Cable Trace for {{ object }}"})
 
     def dispatch(self, request, *args, **kwargs):
         model = kwargs.pop("model")
@@ -4856,6 +4884,7 @@ class PathTraceView(generic.ObjectView):
             "path": path,
             "related_paths": related_paths,
             "total_length": path.get_total_length() if path else None,
+            "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
 
@@ -5830,6 +5859,14 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("platform")),
+            ]
+        }
+    )
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
