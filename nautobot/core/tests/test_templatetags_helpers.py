@@ -197,7 +197,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_humanize_speed(self):
         self.assertEqual(helpers.humanize_speed(1544), "1.544 Mbps")
         self.assertEqual(helpers.humanize_speed(100000), "100 Mbps")
+        self.assertEqual(helpers.humanize_speed(2500000), "2.5 Gbps")
         self.assertEqual(helpers.humanize_speed(10000000), "10 Gbps")
+        self.assertEqual(helpers.humanize_speed(100000000), "100 Gbps")
+        self.assertEqual(helpers.humanize_speed(1000000000), "1 Tbps")
+        self.assertEqual(helpers.humanize_speed(1600000000), "1.6 Tbps")
+        self.assertEqual(helpers.humanize_speed(10000000000), "10 Tbps")
+        self.assertEqual(helpers.humanize_speed(100000000000), "100 Tbps")
 
     def test_tzoffset(self):
         self.assertTrue(callable(helpers.tzoffset))
