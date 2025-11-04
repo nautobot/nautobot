@@ -407,6 +407,7 @@ nav:
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
+          - Load Balancers: "user-guide/feature-guides/load-balancers.md"
           - Relationships: "user-guide/feature-guides/relationships.md"
           - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
           - Wireless Networks and Controllers: "user-guide/feature-guides/wireless-networks-and-controllers.md"
@@ -506,6 +507,13 @@ nav:
               - VLAN: "user-guide/core-data-model/ipam/vlan.md"
               - VLAN Group: "user-guide/core-data-model/ipam/vlangroup.md"
               - VRF: "user-guide/core-data-model/ipam/vrf.md"
+          - Load Balancers:
+              - "user-guide/core-data-model/load-balancers/index.md"
+              - Certificate Profile: "user-guide/core-data-model/load-balancers/certificateprofile.md"
+              - Health Check Monitor: "user-guide/core-data-model/load-balancers/healthcheckmonitor.md"
+              - Load Balancer Pool: "user-guide/core-data-model/load-balancers/loadbalancerpool.md"
+              - Load Balancer Pool Member: "user-guide/core-data-model/load-balancers/loadbalancerpoolmember.md"
+              - Virtual Server: "user-guide/core-data-model/load-balancers/virtualserver.md"
           - Tenancy:
               - Tenant: "user-guide/core-data-model/tenancy/tenant.md"
               - Tenant Group: "user-guide/core-data-model/tenancy/tenantgroup.md"
@@ -725,7 +733,6 @@ nav:
       - Network to Code App Docs:
           - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
           - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
-          - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
           - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
           - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
           - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
