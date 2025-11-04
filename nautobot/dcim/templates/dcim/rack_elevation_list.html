@@ -40,7 +40,7 @@
                         <div class="text-center">
                             <strong>{{ rack|hyperlinked_object }}</strong>
                             {% if rack.role %}
-                                <br /><small class="label" style="color: {{ rack.role.color|fgcolor }}; background-color: #{{ rack.role.color }}">{{ rack.role }}</small>
+                                <br /><small class="badge" style="color: {{ rack.role.color|fgcolor }}; background-color: #{{ rack.role.color }}">{{ rack.role }}</small>
                             {% endif %}
                             {% if rack.facility_id %}
                                 <br /><small class="text-secondary">{{ rack.facility_id }}</small>

@@ -699,7 +699,7 @@ class Breadcrumbs:
         Provide additional data to include in the rendering context, based on the configuration of this component.
 
         Context updated here will be applied to resolving url and labels.
-        Please ote that you can't override `breadcrumb_items` here because items are generated after this method call.
+        Please note that you can't override `breadcrumb_items` here because items are generated after this method call.
 
         Args:
             context (Context): The current context passed to `render()`.

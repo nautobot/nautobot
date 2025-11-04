@@ -351,7 +351,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 ModelBreadcrumbItem(
                     model=Prefix,
                     reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
-                    label_key="verbose_name_plural",
+                    label_type="plural",
                 ),
             ]
         }
