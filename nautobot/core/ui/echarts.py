@@ -280,7 +280,7 @@ class EChartsBase:
         self.permission = permission
         self.combined_with = combined_with
 
-    def get_tranform_data(self, context: Context | None = None) -> dict[str, Any]:
+    def get_transform_data(self, context: Context | None = None) -> dict[str, Any]:
         """Get the chart data in ECharts format, ready for rendering."""
         if context and callable(self._data):
             resolved_data = self._data(context)
@@ -378,7 +378,7 @@ class EChartsBase:
 
     def get_config(self, context: Context | None = None):
         """Return a dict ready to dump into echarts option JSON."""
-        data = self.get_tranform_data(context=context)
+        data = self.get_transform_data(context=context)
 
         # Base configuration
         config = {
@@ -402,7 +402,7 @@ class EChartsBase:
 
         # Handle combined charts
         if self.combined_with:
-            data = self.combined_with.get_tranform_data(context=context)
+            data = self.combined_with.get_transform_data(context=context)
             combined_series = self.combined_with.strategy.get_series_config(data)
             config["series"].extend(combined_series)
 
