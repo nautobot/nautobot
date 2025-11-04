@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
         ("extras", "0130_jobresult_generate_log_entry_counts"),
         ("ipam", "0053_alter_vrfdeviceassignment_options_and_more"),
-        ("dcim", "0079_device_name_data_migration"),
+        ("dcim", "0080_device_name_data_migration"),
     ]
 
     operations = [

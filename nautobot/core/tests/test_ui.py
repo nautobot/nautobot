@@ -32,7 +32,9 @@ from nautobot.core.ui.object_detail import (
     SectionChoices,
 )
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
+from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
+from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
 
 
@@ -491,6 +493,52 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         tab_ids = [t.tab_id for t in content.tabs]
         self.default_tabs_id.append("services")
         self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_tab_id_url_as_action(self):
+        """
+        Test that when you create a panel with a tab_id that matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"/dcim/devices/{device_info.pk}/interfaces/"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
+
+    def test_tab_id_url_as_param(self):
+        """
+        Test that when you create a panel with a tab_id that does NOT matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces-not-exist",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"&return_url=/dcim/devices/{device_info.pk}/?tab=interfaces-not-exist"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
 
     def test_extra_tab_panel_context(self):
         """
