@@ -9,6 +9,20 @@
 <link rel="stylesheet"
       href="{% static 'dist/css/materialdesignicons.css' %}"
       onerror="window.location='{% url 'media_failure' %}?filename=dist/css/materialdesignicons.css'">
+{% with cookie_theme=request.COOKIES|get_item:'theme' %}
+    {% if not cookie_theme or cookie_theme == 'light' %}
+        <link rel="stylesheet"
+              href="{% static 'dist/css/github.min.css' %}"
+              onerror="window.location='{% url 'media_failure' %}?filename=dist/css/github.min.css'"
+              {% if not cookie_theme %}media="not (prefers-color-scheme: dark)"{% endif %}>
+    {% endif %}
+    {% if not cookie_theme or cookie_theme == 'dark' %}
+        <link rel="stylesheet"
+              href="{% static 'dist/css/github-dark.min.css' %}"
+              onerror="window.location='{% url 'media_failure' %}?filename=dist/css/github-dark.min.css'"
+              {% if not cookie_theme %}media="(prefers-color-scheme: dark)"{% endif %}>
+    {% endif %}
+{% endwith %}
 {% if settings.BRANDING_FILEPATHS.css %}
     <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' None %}">
 {% endif %}

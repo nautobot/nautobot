@@ -2,6 +2,7 @@
 
 import path from 'node:path';
 import autoprefixer from 'autoprefixer';
+import CopyPlugin from 'copy-webpack-plugin';
 import miniCssExtractPlugin from 'mini-css-extract-plugin'
 
 const __dirname = import.meta.dirname;
@@ -24,6 +25,18 @@ export default [
             }
         },
         plugins: [
+            new CopyPlugin({
+                patterns: [
+                    {
+                        from: path.resolve(__dirname, 'node_modules', 'highlight.js', 'styles', 'github.min.css'),
+                        to: path.resolve(__dirname, '..', 'project-static', 'dist', 'css'),
+                    },
+                    {
+                        from: path.resolve(__dirname, 'node_modules', 'highlight.js', 'styles', 'github-dark.min.css'),
+                        to: path.resolve(__dirname, '..', 'project-static', 'dist', 'css'),
+                    },
+                ],
+            }),
             new miniCssExtractPlugin(
                 {
                     filename: 'css/[name].css'
