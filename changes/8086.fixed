@@ -1,0 +1,1 @@
+Fixed StatsPanel causing traceback when it includes a filter_extension.
