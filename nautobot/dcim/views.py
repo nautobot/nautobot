@@ -811,7 +811,7 @@ class RackUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=300,
-                table_class=tables.PowerFeedDetailTable,
+                table_class=tables.PowerFeedUtilizationTable,
                 table_filter="rack",
                 add_button_route=None,
             ),
@@ -829,9 +829,12 @@ class RackUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=500,
-                table_class=tables.RackReservationDetailTable,
+                table_class=tables.RackReservationTable,
                 table_filter="rack",
-                include_columns=["tenant"],
+                exclude_columns=["pk", "reservation", "location", "rack"],
+                include_columns=[
+                    "created",
+                ],
             ),
             object_detail.Panel(
                 section=SectionChoices.RIGHT_HALF,

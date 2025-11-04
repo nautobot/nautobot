@@ -14,8 +14,8 @@ from .devices import CableTerminationTable
 from .template_code import UTILIZATION_GRAPH
 
 __all__ = (
-    "PowerFeedDetailTable",
     "PowerFeedTable",
+    "PowerFeedUtilizationTable",
     "PowerPanelTable",
 )
 
@@ -123,7 +123,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
         )
 
 
-class PowerFeedDetailTable(StatusTableMixin, BaseTable):
+class PowerFeedUtilizationTable(StatusTableMixin, BaseTable):
     name = tables.LinkColumn(verbose_name="Feed")
     power_panel = tables.Column(linkify=True)
     type = ChoiceFieldColumn()

@@ -857,6 +857,10 @@ class ObjectsTablePanel(Panel):
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
+        if isinstance(self.table_filter, list) and not related_field_name:
+            raise ValueError("You must provide a `related_field_name` when specifying `table_filter` as a list.")
+        if related_field_name and not isinstance(related_field_name, str):
+            raise ValueError("`related_field_name` must be a string.")
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
         self.tab_id = tab_id
@@ -882,7 +886,12 @@ class ObjectsTablePanel(Panel):
         obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
-        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
+        if self.related_field_name:
+            related_field_name = self.related_field_name
+        elif isinstance(self.table_filter, str):
+            related_field_name = self.table_filter
+        else:
+            related_field_name = obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
             return_url += f"?tab={self.tab_id}"
@@ -1011,11 +1020,7 @@ class ObjectsTablePanel(Panel):
             list_route = None
 
         if list_route:
-            # Normalize to a list for safe processing
-            if isinstance(related_field_name, str):
-                related_field_name = [related_field_name]
-
-            query_params = {field: obj.pk for field in related_field_name}
+            query_params = {related_field_name: obj.pk}
             if isinstance(self.list_url_extra_params, dict):
                 query_params.update(self.list_url_extra_params)
             body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
