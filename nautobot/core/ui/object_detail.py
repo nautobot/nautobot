@@ -863,7 +863,7 @@ class ObjectsTablePanel(Panel):
         self.footer_buttons = footer_buttons
         self.form_id = form_id
         self.include_paginator = include_paginator
-        self.list_url_extra_params = list_url_extra_params
+        self.list_url_extra_params = list_url_extra_params or {}
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
