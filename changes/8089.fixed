@@ -1,0 +1,2 @@
+Fixed ECharts text in dark mode.
+Fixed ECharts with dynamic data. ECharts data is not overwritten by resolved data.
