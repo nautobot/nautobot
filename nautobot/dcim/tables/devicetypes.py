@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -270,6 +271,8 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
 
 class InterfaceTemplateTable(ComponentTemplateTable):
     mgmt_only = BooleanColumn(verbose_name="Management Only")
+    speed = tables.Column(verbose_name="Speed", accessor="speed", orderable=True)
+    duplex = tables.Column(verbose_name="Duplex", accessor="duplex", orderable=True)
     actions = ButtonsColumn(
         model=InterfaceTemplate,
         buttons=("edit", "delete"),
@@ -278,8 +281,12 @@ class InterfaceTemplateTable(ComponentTemplateTable):
 
     class Meta(BaseTable.Meta):
         model = InterfaceTemplate
-        fields = ("pk", "name", "label", "mgmt_only", "type", "description", "actions")
+        fields = ("pk", "name", "label", "mgmt_only", "type", "speed", "duplex", "description", "actions")
+        default_columns = ("pk", "name", "label", "mgmt_only", "type", "speed", "description", "actions")
         empty_text = "None"
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class FrontPortTemplateTable(ComponentTemplateTable):
