@@ -150,9 +150,9 @@ class GraphQLTestCase(TestCase):
 
         with self.subTest("interface speed/duplex fields on device query"):
             query = "query { devices { name interfaces { name speed duplex } } }"
-            resp = execute_query(query, user=self.user).to_dict()
-            self.assertFalse(resp["data"].get("error"))
-            interfaces = [i for d in resp["data"]["devices"] if d["name"] == self.device.name for i in d["interfaces"]]
+            resp = execute_query(query, user=self.user)
+            self.assertFalse(resp.errors)
+            interfaces = [i for d in resp.data["devices"] if d["name"] == self.device.name for i in d["interfaces"]]
             eth2 = next(i for i in interfaces if i["name"] == "eth2")
             eth3 = next(i for i in interfaces if i["name"] == "eth3")
             self.assertEqual(eth2["speed"], InterfaceSpeedChoices.SPEED_1G)
@@ -162,15 +162,15 @@ class GraphQLTestCase(TestCase):
 
         with self.subTest("interfaces root filter by speed and duplex"):
             query = f"query {{ interfaces(speed: {InterfaceSpeedChoices.SPEED_1G}) {{ name }} }}"
-            resp = execute_query(query, user=self.user).to_dict()
-            self.assertFalse(resp["data"].get("error"))
-            names = {i["name"] for i in resp["data"]["interfaces"]}
+            resp = execute_query(query, user=self.user)
+            self.assertFalse(resp.errors)
+            names = {i["name"] for i in resp.data["interfaces"]}
             self.assertIn("eth2", names)
             self.assertNotIn("eth3", names)
 
             query = 'query { interfaces(duplex: ["full"]) { name } }'
-            resp = execute_query(query, user=self.user).to_dict()
-            self.assertFalse(resp["data"].get("error"))
-            names = {i["name"] for i in resp["data"]["interfaces"]}
+            resp = execute_query(query, user=self.user)
+            self.assertFalse(resp.errors)
+            names = {i["name"] for i in resp.data["interfaces"]}
             self.assertIn("eth2", names)
             self.assertNotIn("eth3", names)
