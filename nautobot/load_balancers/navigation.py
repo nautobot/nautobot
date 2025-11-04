@@ -27,7 +27,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="load_balancers:loadbalancerpool_list",
-                        name="Pools",
+                        name="Load Balancer Pools",
                         weight=200,
                         permissions=["load_balancers.view_loadbalancerpool"],
                         buttons=(
@@ -39,7 +39,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="load_balancers:loadbalancerpoolmember_list",
-                        name="Pool Members",
+                        name="Load Balancer Pool Members",
                         weight=300,
                         permissions=["load_balancers.view_loadbalancerpoolmember"],
                         buttons=(

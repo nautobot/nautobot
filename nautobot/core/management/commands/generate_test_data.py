@@ -338,9 +338,9 @@ class Command(BaseCommand):
         _create_batch(WirelessNetworksWithMembersFactory, 5, description="with members")
         # make sure we have some supported data rates that have null relationships to make filter tests happy
         _create_batch(SupportedDataRateFactory, 10, description="without any associated objects")
-        _create_batch(VPNPhase1PolicyFactory, 10)
-        _create_batch(VPNPhase2PolicyFactory, 10)
-        _create_batch(VPNProfileFactory, 20)
+        _create_batch(VPNPhase1PolicyFactory, 20)
+        _create_batch(VPNPhase2PolicyFactory, 20)
+        _create_batch(VPNProfileFactory, 30)
         _create_batch(VPNFactory, 10)
         _create_batch(VPNTunnelEndpointFactory, 20)
         _create_batch(VPNTunnelFactory, 10)

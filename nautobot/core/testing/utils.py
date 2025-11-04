@@ -141,15 +141,15 @@ def generate_random_device_asset_tag_of_specified_size(size):
 def get_expected_menu_item_name(view_model) -> str:
     """Return the expected menu item name for a given model."""
     name_map = {
-        "VM Interfaces": "Interfaces",
-        "Object Changes": "Change Log",
+        "Approval Workflow Definitions": "Workflow Definitions",
+        "Approval Workflow Stages": "Approval Dashboard",
         "Controller Managed Device Groups": "Device Groups",
+        "Object Changes": "Change Log",
         "Min Max Validation Rules": "Min/Max Rules",
         "Regular Expression Validation Rules": "Regex Rules",
         "Required Validation Rules": "Required Rules",
         "Unique Validation Rules": "Unique Rules",
-        "Approval Workflow Definitions": "Workflow Definitions",
-        "Approval Workflow Stages": "Approval Dashboard",
+        "VM Interfaces": "Interfaces",
     }
 
     expected = bettertitle(view_model._meta.verbose_name_plural)
