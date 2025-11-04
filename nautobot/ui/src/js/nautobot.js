@@ -109,4 +109,20 @@ document.addEventListener('DOMContentLoaded', () => {
     event.detail.path = isFavorite ? element.dataset.deleteUrl : element.dataset.addUrl;
   };
   window.setRequestUrl = setRequestUrl;
+
+  // Remove the blur after clicking the footer links that are opening mostly in the new tab
+  // Keeping focus on those items is what keeps the tooltip as well
+  document.querySelectorAll('a[data-bs-toggle="tooltip"], div[data-bs-toggle="tooltip"] > a').forEach((el) => {
+    el.addEventListener('click', () => {
+      el.blur();
+    });
+  });
+
+  // When modal is being closed, bootstrap automatically restore the focus on the element that was triggering the modal
+  // As a result, after modal close tooltip was triggered as well
+  document.addEventListener('hidden.bs.modal', () => {
+    document.querySelectorAll('[data-bs-toggle="tooltip"] > a').forEach((el) => {
+      el.blur();
+    });
+  });
 });

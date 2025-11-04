@@ -66,13 +66,14 @@ class ObjectsListMixin:
         """
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
-        self.browser.execute_script(
-            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
-        )
+        self.scroll_element_into_view(css='#bulk-action-buttons button[type="submit"]')
         self.browser.find_by_xpath(
             '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
+        bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
+        bulk_delete_button.is_visible(wait_time=5)
+        self.scroll_element_into_view(element=bulk_delete_button)
+        bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
         """
@@ -96,7 +97,7 @@ class ObjectsListMixin:
         """
         Click add item button on top of the items table list.
         """
-        self.click_button("#add_button")
+        self.click_button("#add-button")
 
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
@@ -110,7 +111,7 @@ class ObjectsListMixin:
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
-            return len(objects_table.find_by_tag("tr"))
+            return len(objects_table.find_by_xpath(".//tr[not(count(td[@colspan])=1)]"))
         except ElementDoesNotExist:
             return 0
 
@@ -131,7 +132,7 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "{panel_label}")]/following-sibling::div[contains(@class, "collapse")]/table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
@@ -146,7 +147,7 @@ class ObjectDetailsMixin:
         TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
         """
         panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
-        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All']"
+        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All Groups']"
         expand_button = self.browser.find_by_xpath(expand_button_xpath)
         if not expand_button.is_empty():
             expand_button.click()
@@ -238,7 +239,7 @@ class BulkOperationsMixin:
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
         self.assertIn(f"Delete these {expected_count}", button_text)
 
-        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="panel-body"]').text
+        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="card-body"]').text
         self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
@@ -376,12 +377,12 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
         if not sidenav_button["aria-expanded"] == "true":
             sidenav_button.click()
-        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{child_menu_name}']"
+        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[contains(@class, 'nb-sidenav-link') and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
         child_menu.click()
 
-        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
@@ -413,7 +414,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
-        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
+        self.scroll_element_into_view(css=f"#id_{field_name}")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
@@ -457,19 +458,22 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         search_box.first.type(Keys.ENTER)
 
     def click_button(self, query_selector):
-        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        self.browser.is_element_present_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView(true)")
+        self.scroll_element_into_view(css=query_selector)
         # Scrolling may be asynchronous, wait until it's actually clickable.
         WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
+        btn = self.browser.find_by_css(query_selector)
         btn.click()
 
     def fill_input(self, input_name, input_value):
         """
         Helper function to fill an input field. Solves issue with element could not be scrolled into view for some pages.
         """
-        element = self.browser.find_by_name(input_name, wait_time=5)
-        self.browser.execute_script("arguments[0].scrollIntoView(true);", element.first._element)
+        self.browser.is_element_present_by_name(input_name, wait_time=5)
+        element = self.browser.find_by_name(input_name)
+        self.scroll_element_into_view(element=element)
+        element.is_visible(wait_time=5)
         self.browser.execute_script("arguments[0].focus();", element.first._element)
         self.browser.fill(input_name, input_value)
 
@@ -478,6 +482,20 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.user.save()
         self.login(self.user.username, self.password)
         self.logged_in = True
+
+    def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
+        """
+        Scroll element into view. Element can be expressed either as Splinter `ElementList`, `ElementAPI`, CSS query selector or XPath.
+        """
+        if css:
+            element = self.browser.find_by_css(css)
+        elif xpath:
+            element = self.browser.find_by_xpath(xpath)
+
+        self.browser.execute_script(
+            f"arguments[0].scrollIntoView({{ behavior: 'instant', block: '{block}' }});",
+            element.first._element if hasattr(element, "__iter__") else element._element,
+        )
 
 
 class BulkOperationsTestCases:

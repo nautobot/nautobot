@@ -2,8 +2,6 @@
 {% load helpers %}
 {% load static %}
 
-{% block title %}{{ object }} - Change Log{% endblock %}
-
 {% block content %}
     <div class="row">
         <div class="col-lg-5">
@@ -83,7 +81,7 @@
             <div class="card">
                 <div class="card-header">
                     <strong>Difference</strong>
-                    <div class="btn-group btn-group-xs float-end d-print-none">
+                    <div class="btn-group btn-group-sm float-end d-print-none" role="group">
                         {% if prev_change %}
                             <a href="{% url 'extras:objectchange' pk=prev_change.pk %}" class="btn btn-secondary">
                                 <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous

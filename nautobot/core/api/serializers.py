@@ -104,7 +104,7 @@ class OptInFieldsMixin:
             # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
             # don't get included in the response.
             # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
-            exclude_m2m = params.get("exclude_m2m")
+            exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
             if exclude_m2m is None or is_truthy(exclude_m2m):
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):

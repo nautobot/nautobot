@@ -147,10 +147,16 @@ There are 3 main breadcrumb items classes:
 - `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
+- `ParentInstanceBreadcrumbItem` - Useful to create link to the object instance, but filtered by some "parent", eg.: Devices list filtered by location.
+- `AncestorsInstanceBreadcrumbItem` - Generates breadcrumbs items with whole ancestors path of given instance, eg.: for Locations will output all parent Locations.
 
-By default, breadcrumbs class will add to the breadcrumbs path following items:
-- link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
-- link to view the `object` details at the end - built-in behavior
+By default, breadcrumbs class will render only link to the `list_url` if view is `detail=True`.
+Label will be taken from model associated to this path or set to `title` (if in the context).
+
++/- 3.0.0 "Default breadcrumbs have changed"
+    In Nautobot 2.x, all breadcrumbs defaulted to including the `list_url` at the beginning, and "detail" breadcrumbs additionally appended the
+    object in question to the end of the breadcrumbs by default. This was decided to be redundant information and so the behavior was changed in
+    v3.0.0 to the current behavior. Any views or templates using custom breadcrumbs should also be updated accordingly.
 
 ```python
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
@@ -172,7 +178,6 @@ It will generate:
 ```html
 <ol class="breadcrumb">
     <li><a href="/dcim/devices">Devices</a></li>
-    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
 </ol>
 ```
 
@@ -201,7 +206,6 @@ It will generate:
 <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li><a href="/dcim/locations">Locations</a></li>
-    <li><a href="/dcim/devices/<uuid>">Device name</a></li>
 </ol>
 ```
 

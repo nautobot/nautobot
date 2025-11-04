@@ -1,1 +1,0 @@
-Device uniqueness enforcement has been moved from database-level constraints to application-level validation via custom validators.

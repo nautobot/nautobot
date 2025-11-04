@@ -102,7 +102,7 @@ TREE_LINK = """
 
 POWERFEED_CABLE = """
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>
-<a href="{% url 'dcim:powerfeed_trace' pk=record.pk %}" class="btn btn-primary btn-xs" title="Trace">
+<a href="{% url 'dcim:powerfeed_trace' pk=record.pk %}" class="btn btn-primary btn-sm" title="Trace">
     <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
 </a>
 """

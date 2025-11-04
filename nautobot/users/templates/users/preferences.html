@@ -13,7 +13,11 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th><input type="checkbox" class="toggle" title="Toggle all"></th>
+                                        <th>
+                                            <input class="form-check-input nb-form-check-input-sm mt-2 toggle"
+                                                   title="Toggle all"
+                                                   type="checkbox">
+                                        </th>
                                         <th>Preference</th>
                                         <th>Value</th>
                                     </tr>
@@ -21,7 +25,12 @@
                                 <tbody>
                                     {% for key, value in preferences.items %}
                                         <tr>
-                                            <td class="nb-w-0"><input type="checkbox" name="pk" value="{{ key }}"></td>
+                                            <td class="nb-w-0">
+                                                <input class="form-check-input nb-form-check-input-sm mt-2"
+                                                       name="pk"
+                                                       type="checkbox"
+                                                       value="{{ key }}">
+                                            </td>
                                             <td><samp>{{ key }}</samp></td>
                                             <td><samp>{{ value }}</samp></td>
                                         </tr>

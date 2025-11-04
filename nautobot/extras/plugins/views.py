@@ -141,11 +141,6 @@ class InstalledAppDetailView(GenericView):
         items={
             "*": [
                 ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps"),
-                ViewNameBreadcrumbItem(
-                    view_name="apps:app_detail",
-                    reverse_kwargs=lambda context: {"app": context["app_data"]["package"]},
-                    label=lambda context: context["app_data"]["name"],
-                ),
             ]
         }
     )

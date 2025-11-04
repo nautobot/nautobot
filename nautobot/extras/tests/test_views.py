@@ -3328,7 +3328,8 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            content,
         )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -3766,14 +3767,12 @@ class JobButtonRenderingTestCase(TestCase):
 
         self.location_type = LocationType.objects.get(name="Campus")
 
-    @tag("fix_in_v3")
     def test_view_object_with_job_button(self):
         """Ensure that the job button is rendered."""
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertBodyContains(response, f"JobButton {self.location_type.name}")
         self.assertBodyContains(response, "Click me!")
 
-    @tag("fix_in_v3")
     def test_task_queue_hidden_input_is_present(self):
         """
         Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
@@ -3801,7 +3800,6 @@ class JobButtonRenderingTestCase(TestCase):
             f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
-    @tag("fix_in_v3")
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
         self.job_button_1.text = '<script>alert("Hello world!")</script>'
@@ -3821,7 +3819,6 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
-    @tag("fix_in_v3")
     def test_view_object_with_unsafe_name(self):
         """Ensure that JobButton names can't be used as a vector for XSS."""
         self.job_button_1.text = "JobButton {{ obj"
@@ -3833,7 +3830,6 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
-    @tag("fix_in_v3")
     def test_render_constrained_run_permissions(self):
         obj_perm = ObjectPermission(
             name="Test permission",
@@ -3852,8 +3848,9 @@ class JobButtonRenderingTestCase(TestCase):
                 NO_CONFIRM_BUTTON.format(
                     button_id=self.job_button_1.pk,
                     button_text=f"JobButton {self.location_type.name}",
-                    button_class=self.job_button_1.button_class,
+                    button_class=self.job_button_1.button_class_css_class,
                     disabled="",
+                    menu_item="",
                 ),
                 content,
             )
@@ -3861,8 +3858,9 @@ class JobButtonRenderingTestCase(TestCase):
                 NO_CONFIRM_BUTTON.format(
                     button_id=self.job_button_2.pk,
                     button_text="Click me!",
-                    button_class=self.job_button_2.button_class,
+                    button_class=self.job_button_2.button_class_css_class,
                     disabled="disabled",
+                    menu_item="",
                 ),
                 content,
             )
@@ -3883,6 +3881,7 @@ class JobButtonRenderingTestCase(TestCase):
                     button_text=f"JobButton {self.location_type.name}",
                     button_class="link",
                     disabled="",
+                    menu_item="dropdown-item",
                 )
                 + "</li>",
                 content,
@@ -3894,6 +3893,7 @@ class JobButtonRenderingTestCase(TestCase):
                     button_text="Click me!",
                     button_class="link",
                     disabled="disabled",
+                    menu_item="dropdown-item",
                 )
                 + "</li>",
                 content,
@@ -4593,7 +4593,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
             "remove_content_types": [device_ct.pk],
         }
 
-    @tag("fix_in_v3")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_view_with_content_types(self):
         """
@@ -4612,13 +4611,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
-                        self.assertInHTML(
-                            f'<strong>{result}</strong><div class="float-end d-print-none">',
-                            response_body,
-                        )
-                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertInHTML(f"<strong>{result}</strong>", response_body)
+                        # ContactAssociationTable related to this role instances in the main tab should not be there.
                         self.assertNotIn(
-                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover nb-table-headings">\n',
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n\n\n    <table class="table table-hover nb-table-headings">',
                             response_body,
                         )
                     else:

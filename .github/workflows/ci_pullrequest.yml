@@ -62,6 +62,21 @@ jobs:
           python-version: "3.13"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
+  docs:
+    runs-on: "ubuntu-24.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--only dev --only docs"
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+      - name: "Linting: docs build and validation"
+        run: "poetry run invoke build-and-check-docs"
   djhtml:
     runs-on: "ubuntu-24.04"
     env:
@@ -283,10 +298,11 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.10"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel -e fix_in_v3"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -332,7 +348,7 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage --exclude-tag fix_in_v3"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
       - name: "Generate coverage comment"
         if: >
           contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
@@ -356,6 +372,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -398,7 +415,7 @@ jobs:
   #         poetry-version: "1.8.5"
   #         python-version: "3.13"
   #     - name: "Run unittest"
-  #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-parallel -e fix_in_v3"
+  #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-parallel"
   #   needs:
   #     - "check-migrations"
   #     - "check-schema"
@@ -446,6 +463,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -487,6 +505,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -530,10 +549,11 @@ jobs:
           python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb -e fix_in_v3"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"
@@ -565,6 +585,7 @@ jobs:
     needs:
       - "check-migrations"
       - "check-schema"
+      - "docs"
       - "hadolint"
       - "markdownlint"
       - "ruff"

@@ -1,6 +1,5 @@
 import uuid
 
-from django.test import tag
 from django.urls import reverse
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
@@ -14,7 +13,6 @@ from nautobot.dcim.models import Controller, Device
 from nautobot.extras.tests.integration import create_test_device
 
 
-@tag("fix_in_v3")
 class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):
     """
     Test devices bulk edit / delete operations.
@@ -92,6 +90,6 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
                 lambda d: d.find_element(By.ID, "select2-id_device_type-container")
                 .find_element(By.CLASS_NAME, "select2-selection__placeholder")
                 .text.strip()
-                == "None"
+                == "---------"
             )
         )

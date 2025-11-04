@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
@@ -19,7 +18,6 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         super().setUp()
         self.login_as_superuser()
 
-    @tag("fix_in_v3")
     def test_relationship_advanced_ui(self):
         """
         This test creates a device and a relationship for that device.

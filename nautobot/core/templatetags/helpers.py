@@ -16,9 +16,11 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
+from django.utils.translation import gettext as _
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -855,6 +857,26 @@ def label_list(value, suffix=""):
     )
 
 
+@library.filter()
+@register.filter()
+def format_timezone(time_zone):
+    """
+    Return a human-readable representation of a time zone including:
+      - Time zone name and UTC offset on the first line
+      - Local date and time on the next line (in smaller font)
+    """
+    if not time_zone:
+        return HTML_NONE
+
+    now = datetime.datetime.now(time_zone)
+
+    # Locale-aware formatting (respects USE_L10N + active locale)
+    local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
+
+    result = f"{time_zone} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
+    return format_html(result)
+
+
 #
 # Tags
 #
@@ -923,7 +945,7 @@ def django_querystring(context, query_dict=None, **kwargs):
         {% django_querystring my_query_dict foo=3 %}
     """
     if query_dict is None:
-        query_dict = context.request.GET
+        query_dict = context["request"].GET
     params = query_dict.copy()
     for key, value in kwargs.items():
         if value is None:

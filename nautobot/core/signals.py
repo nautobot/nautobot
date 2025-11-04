@@ -67,10 +67,21 @@ def invalidate_max_depth_cache(sender, **kwargs):
 
     Note that this signal is connected in `TreeModel.__init_subclass__()` so as to only apply to those models.
     """
-    from nautobot.core.models.tree_queries import TreeManager
+    from nautobot.core.models.tree_queries import TreeManager, TreeNode
 
     if not isinstance(sender.objects, TreeManager):
         return
+
+    # If the instance is a TreeNode, and it has siblings, skip invalidating the cache.
+    instance = kwargs.get("instance", None)
+    if isinstance(instance, TreeNode):
+        try:
+            parent = getattr(instance, "parent", None)
+        except instance.DoesNotExist:
+            parent = None
+        if parent and getattr(parent, "children", None) and parent.children.count() > 1:
+            # TreeNode has siblings, depth can't change
+            return
 
     with contextlib.suppress(redis.exceptions.ConnectionError):
         cache.delete(sender.objects.max_depth_cache_key)

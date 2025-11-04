@@ -1,0 +1,14 @@
+{% load perms %}
+{% load helpers %}
+{% if perms.dcim.contact_association %}
+    {% if object.contact_name or object.contact_phone or object.contact_email %}
+        {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+            <div class="float-end d-print-none">
+                <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{ return_url }}" class="btn btn-primary btn-sm">
+                    <span class="mdi mdi-account-edit" aria-hidden="true"></span>
+                    Convert to contact/team record
+                </a>
+            </div>
+        {% endwith %}
+    {% endif %}
+{% endif %}

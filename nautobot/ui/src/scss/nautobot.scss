@@ -758,12 +758,6 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
-@mixin nb-firefox-only {
-  @supports (-moz-appearance: none) {
-    @content;
-  }
-}
-
 /* Links */
 a,
 button {
@@ -913,12 +907,22 @@ $table-variants: (
 
     color: var(--#{$prefix}table-color);
     border-color: var(--#{$prefix}table-border-color);
+
+    @if $color == "primary" or $color == "info" {
+      a {
+        text-decoration: underline;
+      }
+    }
   }
 }
 
 .nb-table-headings th {
   background-color: var(--#{$prefix}tertiary-bg);
   white-space: nowrap;
+}
+
+table.attr-table td:nth-child(1) {
+  width: 25%;
 }
 
 /* Buttons */
@@ -1124,6 +1128,11 @@ textarea {
       color: $input-disabled-color;
     }
   }
+}
+
+.nb-form-check-input-sm {
+  height: 1rem; /* 16px */
+  width: 1rem; /* 16px */
 }
 
 .form-text {
@@ -1396,6 +1405,11 @@ textarea {
     vertical-align: top;
     width: 1.5rem; /* 24px */
   }
+}
+
+/* Alerts */
+.alert:is(.alert-primary, .alert-info) a {
+  text-decoration: underline;
 }
 
 /* Progress bars */
@@ -1679,19 +1693,20 @@ body {
     min-width: $sidenav-link-width;
 
     /*
-     * FIXME(norbert-mieczkowski-codilime): remove this Firefox hack when it fixes its bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     * FIXME(norbert-mieczkowski-codilime): remove this hack when browsers fix their bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     *   Bug has already been observed in Firefox and Safari, Chrome is confirmed to be _clean_.
      *   Workaround based on: https://www.answeroverflow.com/m/1353731321620598945.
      */
-    @include nb-firefox-only {
-      flex-direction: row;
-      padding-block: map.get($spacers, 0);
-      padding-inline: map.get($spacers, 20);
-      writing-mode: vertical-lr;
+    /* hack */
+    flex-direction: row;
+    padding-block: map.get($spacers, 0);
+    padding-inline: map.get($spacers, 20);
+    writing-mode: vertical-lr;
 
-      > * {
-        writing-mode: horizontal-tb;
-      }
+    > * {
+      writing-mode: horizontal-tb;
     }
+    /* endhack */
   }
 
   .nb-sidenav-link {
@@ -2463,4 +2478,26 @@ pre code.hljs {
 
 .nb-lg-max-width {
   max-width: 960px;
+}
+
+/* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
+.d-none {
+  display: none !important;
+}
+
+/* Dark mode workaround */
+@include color-mode(dark, true) {
+  .invert-in-dark-mode {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+/*
+ * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
+ *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
+ *   time to get rid of bootstrap-filestyle.
+ */
+.hidden {
+  @extend .d-none;
 }

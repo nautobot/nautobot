@@ -162,6 +162,8 @@ class NautobotTestRunner(DiscoverRunner):
                             db_command = [*command, "--database", alias]
                             call_command(*db_command)
 
+                        call_command("post_upgrade")
+
                     if self.parallel > 1:
                         for index in range(self.parallel):
                             with time_keeper.timed(f"  Cloning '{alias}'"):

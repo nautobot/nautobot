@@ -1,6 +1,6 @@
-<div class="card">
+<div class="card{% if css_class %} border-{{ css_class }}{% endif %}">
     {% if label.strip or header_extra_content.strip %}
-        <div class="card-header">
+        <div class="card-header{% if css_class %} bg-{{ css_class }}-subtle border-{{ css_class }}{% endif %}">
             {% if label %}
                 <strong>{{ label }}</strong>
             {% endif %}
@@ -12,7 +12,7 @@
     {% endif %}
     {{ body }}
     {% if footer_content.strip %}
-        <div class="card-footer">
+        <div class="card-footer{% if css_class %} bg-{{ css_class }}-subtle border-{{ css_class }}{% endif %}">
             {{ footer_content }}
         </div>
     {% endif %}
