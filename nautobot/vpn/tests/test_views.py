@@ -1,11 +1,12 @@
 """Unit tests for vpn views."""
 
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.apps.testing import ViewTestCases
 from nautobot.dcim.models import Interface
-from nautobot.extras.models import Status
+from nautobot.extras.models import DynamicGroup, Status
 from nautobot.ipam.models import Prefix
 from nautobot.vpn import choices, models
 
@@ -266,16 +267,34 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         interfaces = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True)
 
         cls.form_data = {
-            "device": interfaces.first().device.pk,
             "source_interface": interfaces.first().pk,
             "vpn_profile": models.VPNProfile.objects.first().pk,
             "protected_prefixes": [Prefix.objects.first().pk],
         }
 
         cls.update_data = {
-            "device": interfaces.last().device.pk,
             "source_interface": interfaces.last().pk,
             "protected_prefixes": [Prefix.objects.last().pk],
         }
 
         cls.bulk_edit_data = {"vpn_profile": models.VPNProfile.objects.last().pk}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_protected_prefixes(self):
+        self.add_permissions("ipam.view_prefix")
+        endpoint = models.VPNTunnelEndpoint.objects.filter(protected_prefixes__isnull=False).first()
+
+        url = reverse("vpn:vpntunnelendpoint_protectedprefixes", kwargs={"pk": endpoint.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_protected_dynamic_groups(self):
+        self.add_permissions("extras.view_dynamicgroup")
+        endpoint = models.VPNTunnelEndpoint.objects.filter(protected_prefixes_dg__isnull=True).first()
+        dg_ct = ContentType.objects.get_for_model(DynamicGroup)
+        endpoint.protected_prefixes_dg.add(DynamicGroup.objects.create(name="DG for Prefixes", content_type=dg_ct))
+
+        url = reverse("vpn:vpntunnelendpoint_protecteddynamicgroups", kwargs={"pk": endpoint.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)

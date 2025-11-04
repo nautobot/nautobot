@@ -318,24 +318,19 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "device": interfaces[0].device.pk,
                 "source_interface": interfaces[0].pk,
                 "vpn_profile": models.VPNProfile.objects.first().pk,
             },
             {
-                "device": interfaces[1].device.pk,
                 "source_interface": interfaces[1].pk,
                 "vpn_profile": models.VPNProfile.objects.first().pk,
             },
             {
-                "device": interfaces[2].device.pk,
                 "source_interface": interfaces[2].pk,
                 "vpn_profile": models.VPNProfile.objects.first().pk,
             },
         ]
 
         cls.update_data = {
-            "device": interfaces[2].device.pk,
-            "source_interface": interfaces[2].pk,
             "vpn_profile": models.VPNProfile.objects.last().pk,
         }
