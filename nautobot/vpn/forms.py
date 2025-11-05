@@ -446,6 +446,7 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
         required=False,
         label="Protected Prefixes Dynamic Group",
         to_field_name="name",
+        query_params={"content_type": "ipam.prefix"},
         help_text="Protected Prefixes behind the tunnel endpoint.",
     )
 
