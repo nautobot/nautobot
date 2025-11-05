@@ -33,39 +33,39 @@ erDiagram
 
 
     "nautobot_vpn_models.VPNProfile"[VPNProfile] {
-        VPNPhase1Policy vpn_phase1_policy FK "Phase 1 Policy"
-        VPNPhase2Policy vpn_phase2_policy FK "Phase 2 Policy"
-        string name UK "Name"
-        string description "Description"
-        boolean keepalive_enabled "Keepalive enabled"
-        integer keepalive_interval "Keepalive interval"
-        integer keepalive_retries "Keepalive retries"
-        boolean nat_traversal "NAT traversal"
-        json extra_options "Extra options"
-        SecretsGroup secrets_group FK
-        Role role FK "Role"
+        VPNPhase1Policy vpn_phase1_policy
+        VPNPhase2Policy vpn_phase2_policy
+        string name
+        string description
+        boolean keepalive_enabled
+        integer keepalive_interval
+        integer keepalive_retries
+        boolean nat_traversal
+        json extra_options
+        SecretsGroup secrets_group
+        Role role
     }
 
     "nautobot_vpn_models.VPNPhase1Policy"[VPNPhase1Policy] {
-        string name UK "Name"
-        string description "Description"
-        choices ike_version "IKEv1, IKEv2"
-        boolean aggressive_mode "Use aggressive mode"
-        choices encryption_algorithm "AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES"
-        choices integrity_algorithm "SHA512, SHA384, SHA256, SHA1, MD5"
-        choices dh_group "Diffie-Hellman group"
-        integer lifetime_seconds "Lifetime in seconds"
-        integer lifetime_kb "Lifetime in kiolbytes"
-        choices authentication_method "PSK, RSA, ECDSA, Certificate"
+        string name
+        string description
+        choices ike_version
+        boolean aggressive_mode
+        choices encryption_algorithm
+        choices integrity_algorithm
+        choices dh_group
+        integer lifetime_seconds
+        integer lifetime_kb
+        choices authentication_method
     }
 
     "nautobot_vpn_models.VPNPhase2Policy"[VPNPhase2Policy] {
-        string name UK "Name"
-        string description "Description"
-        choices encryption_algorithm "AES-256-GCM, AES-256-CBC, AES-192-GCM, AES-192-CBC, AES-128-GCM, AES-128-CBC, 3DES, DES"
-        choices integrity_algorithm "SHA512, SHA384, SHA256, SHA1, MD5"
-        choices pfs_group "Perfect Forward Secrecy group"
-        integer lifetime "Lifetime in seconds"
+        string name
+        string description
+        choices encryption_algorithm
+        choices integrity_algorithm
+        choices pfs_group
+        integer lifetime
     }
 
     "nautobot_vpn_models.VPNProfile" }o--o{ "nautobot_vpn_models.VPNPhase1Policy" : "may have"
@@ -93,40 +93,40 @@ erDiagram
     "extras.ContactAssociations"[ContactAssociations] {}
 
     "nautobot_vpn_models.VPN"[VPN] {
-        VPNProfile vpn_profile FK "VPN Profile"
-        string name UK "Name"
-        string description "Description"
-        string vpn_id "VPN ID"
-        Tenant tenant FK "Tenant"
-        Role role FK "Role"
-        ContactAssociations contact_associations FK "Contact Associations"
+        VPNProfile vpn_profile
+        string name
+        string description
+        string vpn_id
+        Tenant tenant
+        Role role
+        ContactAssociations contact_associations
     }
 
     "nautobot_vpn_models.VPNTunnel"[VPNTunnel] {
-        VPNProfile vpn_profile FK "VPN Profile"
-        VPN vpn FK,UK "VPN"
-        string name UK "Name"
-        string description "Description"
-        string tunnel_id "Tunnel ID"
-        choices encapsulation "IPsec - Transport, IPsec - Tunnel, IP-in-IP, GRE, WireGuard, L2TP, PPTP, OpenVPN, EoIP"
-        Tenant tenant FK "Tenant"
-        Status status FK "Status"
-        Role role FK "Role"
-        ContactAssociations contact_associations FK "Contact Associations"
+        VPNProfile vpn_profile
+        VPN vpn
+        string name
+        string description
+        string tunnel_id
+        choices encapsulation
+        Tenant tenant
+        Status status
+        Role role
+        ContactAssociations contact_associations
     }
 
     "nautobot_vpn_models.VPNTunnelEndpoint"[VPNTunnelEndpoint] {
-        VPNProfile vpn_profile FK "VPN Profile"
-        VPNTunnel vpn_tunnel FK,UK "VPN Tunnel"
-        IPAddress source_ipaddress FK,UK "Source IP Address"
-        Interface source_interface FK "Source Interface"
-        IPAddress destination_ipaddress FK "Destination IP Address"
-        string destination_fqdn "Destination FQDN"
-        Interface tunnel_interface FK "Tunnel Interface"
-        DynamicGroup protected_prefixes_dg FK "Protected Prefixes in Dynamic Groups"
-        Prefix protected_prefixes FK "Protected Prefixes"
-        Role role FK "Role"
-        ContactAssociations contact_associations FK "Contact Associations"
+        VPNProfile vpn_profile
+        VPNTunnel vpn_tunnel
+        IPAddress source_ipaddress
+        Interface source_interface
+        IPAddress destination_ipaddress
+        string destination_fqdn
+        Interface tunnel_interface
+        DynamicGroup protected_prefixes_dg
+        Prefix protected_prefixes
+        Role role
+        ContactAssociations contact_associations
     }
 
     "nautobot_vpn_models.VPN" }o--o| "tenancy.Tenant" : "may have"

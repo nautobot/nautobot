@@ -191,6 +191,19 @@ function initializeFormActionClick(context){
 function initializeBulkEditNullification(context){
     this_context = $(context);
     this_context.find('input:checkbox[name=_nullify]').click(function() {
+        var $field = $('#id_' + this.value);
+
+        // If this is a NumberWithSelect (input-group + caret menu), don't hide the
+        // field. Some other fields (e.g.Interface: LAG, Bridge) currently do nothing
+        // when _nullify is checked, so this is consistent.
+        var $group = $field.closest('.input-group');
+        var isNumberWithSelect = $group.length &&
+            $group.find('.input-group-btn .dropdown-menu a.set_value').length > 0;
+        if (isNumberWithSelect) {
+            return; // no UI change; _nullify still submitted
+        }
+
+        // Existing behavior for other fields
         $('#id_' + this.value).toggle('disabled');
     });
 }

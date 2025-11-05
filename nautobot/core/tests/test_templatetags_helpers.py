@@ -63,6 +63,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.pre_tag(None), '<span class="text-secondary">&mdash;</span>')
         self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
         self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
+        self.assertEqual(helpers.pre_tag("", format_empty_value=False), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag([], format_empty_value=False), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag("something", format_empty_value=False), "<pre>something</pre>")
 
     def test_add_html_id(self):
         # Case where what we have isn't actually a HTML element but just a bare string
@@ -194,7 +197,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_humanize_speed(self):
         self.assertEqual(helpers.humanize_speed(1544), "1.544 Mbps")
         self.assertEqual(helpers.humanize_speed(100000), "100 Mbps")
+        self.assertEqual(helpers.humanize_speed(2500000), "2.5 Gbps")
         self.assertEqual(helpers.humanize_speed(10000000), "10 Gbps")
+        self.assertEqual(helpers.humanize_speed(100000000), "100 Gbps")
+        self.assertEqual(helpers.humanize_speed(1000000000), "1 Tbps")
+        self.assertEqual(helpers.humanize_speed(1600000000), "1.6 Tbps")
+        self.assertEqual(helpers.humanize_speed(10000000000), "10 Tbps")
+        self.assertEqual(helpers.humanize_speed(100000000000), "100 Tbps")
 
     def test_tzoffset(self):
         self.assertTrue(callable(helpers.tzoffset))

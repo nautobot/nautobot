@@ -4,7 +4,6 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
-from typing import Any
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -43,7 +42,7 @@ from nautobot.core.templatetags.helpers import (
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.echarts import EChartsBase
 from nautobot.core.ui.utils import render_component_template
-from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model, get_view_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
@@ -905,7 +904,12 @@ class ObjectsTablePanel(Panel):
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
-            return_url += f"?tab={self.tab_id}"
+            try:
+                # Check to see if the this is a NautobotUIViewset action
+                view = get_view_for_model(obj._meta.model)
+                return_url += getattr(view, self.tab_id).url_path + "/"
+            except AttributeError:
+                return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route is not None:
             add_permissions = self.add_permissions
@@ -1316,24 +1320,6 @@ class EChartsPanel(Panel, EChartsBase):
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, body_id=self.body_id, **kwargs)
         EChartsBase.__init__(self, **chart_kwargs)
 
-    def get_data(self, context: Context) -> dict[str, Any] | None:
-        """Get the data for chart.
-
-        Args:
-            context (Context): The template or request context.
-
-        Returns:
-            dict[str, Any] | None:
-                - A dictionary in internal chart format, e.g.:
-                    {"x": [...], "series": [{"name": str, "data": [...]}]}
-                - A nested dictionary of series, e.g.:
-                    {"Series1": {"x1": val1, "x2": val2}, ...}
-                - `None` if no data is set.
-        """
-        if callable(self.data):
-            return self.data(context)  # pylint: disable=not-callable
-        return self.data
-
     def should_render(self, context: Context):
         """Determine if the panel should be rendered."""
         if not super().should_render(context):
@@ -1349,8 +1335,7 @@ class EChartsPanel(Panel, EChartsBase):
 
     def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
-        self.data = self.get_data(context)
-        chart_config = self.get_config()
+        chart_config = self.get_config(context=context)
         return {
             **super().get_extra_context(context),
             "chart": self,
@@ -1765,7 +1750,7 @@ class StatsPanel(Panel):
                 value = [related_object_list_url, related_object_count, related_object_title]
                 stats[related_object_model_class] = value
                 related_object_model_filterset = get_filterset_for_model(related_object_model_class)
-                if self.filter_name not in related_object_model_filterset.get_filters():
+                if self.filter_name not in related_object_model_filterset.base_filters:
                     raise FieldDoesNotExist(
                         f"{self.filter_name} is not a valid filter field for {related_object_model_class_meta.verbose_name}"
                     )

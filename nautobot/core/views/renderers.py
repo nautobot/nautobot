@@ -15,7 +15,7 @@ from nautobot.core.forms import (
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -227,7 +227,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset_class.get_filters()
+                        filterset_filters = view.filterset_class.base_filters
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -324,7 +324,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     "action_buttons": valid_actions,
                     "list_url": list_url,
                     "saved_views": saved_views,
-                    "title": bettertitle(model._meta.verbose_name_plural),
                 }
             )
         elif view.action in ["create", "update"]:

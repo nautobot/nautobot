@@ -32,7 +32,9 @@ from nautobot.core.ui.object_detail import (
     SectionChoices,
 )
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
+from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
+from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
 
 
@@ -355,9 +357,80 @@ class EChartsBaseTests(TestCase):
         self.assertEqual(config["series"][0]["name"], "S1")
         self.assertEqual(config["series"][1]["name"], "S2")
 
-    def test_get_config_with_callable_data(self):
-        chart = EChartsBase(data=lambda: self.data_normalized)
-        config = chart.get_config()
+    def test_get_config_combined_charts_with_complex_data(self):
+        chart2 = EChartsBase(
+            chart_type=EChartsTypeChoices.LINE,
+            data={
+                "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            },
+        )
+        chart1 = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data={
+                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+            },
+            combined_with=chart2,
+        )
+        config = chart1.get_config()
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0], {"name": "Compliant", "type": "bar", "data": [5, 12, 8]})
+        self.assertEqual(config["series"][1], {"name": "Non Compliant", "type": "bar", "data": [10, 20, 15]})
+        self.assertEqual(
+            config["series"][2],
+            {"name": "Compliant", "type": "line", "data": [5, 12, 8], "smooth": False, "lineStyle": {}},
+        )
+        self.assertEqual(
+            config["series"][3],
+            {"name": "Non Compliant", "type": "line", "data": [10, 20, 15], "smooth": False, "lineStyle": {}},
+        )
+
+    def test_get_config_with_context_callable_and_combined_chart(self):
+        def main_data(ctx):
+            return {
+                "Compliant": {"aaa1": ctx.get("aaa1_count", 0), "dns1": 13, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            }
+
+        def combined_data(ctx):
+            return {
+                "Compliant": {"aaa": 5, "dns": ctx.get("dns_count", 0), "ntp1": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp1": 15},
+            }
+
+        ctx = Context({"aaa1_count": 5, "dns_count": 12})
+        combined_chart = EChartsBase(chart_type=EChartsTypeChoices.LINE, data=combined_data)
+        main_chart = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data=main_data,
+            combined_with=combined_chart,
+        )
+        config = main_chart.get_config(context=ctx)
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0]["data"][0], 5)  # aaa1_count
+        self.assertEqual(config["series"][2]["data"][1], 12)  # dns_count
+
+    def test_get_config_with_context_callable(self):
+        def dynamic_data(ctx):
+            return {"data": {"Devices": ctx.get("device_count", 0)}}
+
+        ctx = Context({"device_count": 42})
+        chart = EChartsBase(chart_type=EChartsTypeChoices.PIE, data=dynamic_data)
+        config = chart.get_config(context=ctx)
+        # check that after getting config data doesn't change it's still dynami_data function
+        self.assertEqual(chart.data, dynamic_data)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 42)
+        ctx = Context({"device_count": 45})
+        config = chart.get_config(context=ctx)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 45)
+
+    def test_get_config_with_context_ignored_when_data_is_not_callable(self):
+        ctx = Context({"some": "value"})
+        chart = EChartsBase(data=self.data_normalized)
+        config = chart.get_config(context=ctx)
         self.assertEqual(config["series"][0]["data"], [1, 2])
 
 
@@ -491,6 +564,52 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         tab_ids = [t.tab_id for t in content.tabs]
         self.default_tabs_id.append("services")
         self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_tab_id_url_as_action(self):
+        """
+        Test that when you create a panel with a tab_id that matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"/dcim/devices/{device_info.pk}/interfaces/"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
+
+    def test_tab_id_url_as_param(self):
+        """
+        Test that when you create a panel with a tab_id that does NOT matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces-not-exist",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"&return_url=/dcim/devices/{device_info.pk}/?tab=interfaces-not-exist"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
 
     def test_extra_tab_panel_context(self):
         """

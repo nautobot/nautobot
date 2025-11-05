@@ -1,0 +1,1 @@
+Changed the `humanize_speed` template filter to now return a decimalized value instead of finding an integer value (e.g. 2.5 Gbps instead of 2500 Mbps).

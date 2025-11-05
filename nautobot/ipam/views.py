@@ -351,7 +351,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 ModelBreadcrumbItem(
                     model=Prefix,
                     reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
-                    label_key="verbose_name_plural",
+                    label_type="plural",
                 ),
             ]
         }
@@ -429,7 +429,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=300,
                 table_class=VPNTunnelEndpointTable,
                 table_attribute="vpn_tunnel_endpoints",
-                table_title="VPN Tunnel Endpoints",
+                table_title="VPN Tunnel Endpoints Protecting Prefix",
                 exclude_columns=[
                     "vpn_profile",
                     "destination_ipaddress",

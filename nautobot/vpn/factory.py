@@ -8,9 +8,9 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.ipam.models import Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.vpn import choices, models
 
@@ -163,24 +163,26 @@ class VPNTunnelFactory(PrimaryModelFactory):
 class VPNTunnelEndpointFactory(PrimaryModelFactory):
     class Meta:
         model = models.VPNTunnelEndpoint
-        exclude = ("has_device", "has_profile", "has_role", "has_tenant")
+        exclude = ("has_source_interface", "has_profile", "has_role", "has_tenant")
 
-    has_device = NautobotBoolIterator()
-    device = factory.Maybe("has_device", random_instance(Device), None)
+    has_source_interface = NautobotBoolIterator()
     source_interface = factory.Maybe(
-        "has_device",
+        "has_source_interface",
         random_instance(
             lambda: Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True, device__isnull=False)
         ),
         None,
     )
-    source_ipaddress = factory.Maybe("has_device", random_instance(IPAddress), None)
-    source_fqdn = factory.Maybe("has_device", "", factory.Faker("word"))
-    tunnel_interface = factory.Maybe(
-        "has_device",
-        random_instance(lambda: Interface.objects.filter(type="tunnel", vpn_tunnel_endpoints_tunnel__isnull=True)),
-        None,
-    )
+    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("word"))
+
+    @factory.lazy_attribute
+    def tunnel_interface(self):
+        """Filter tunnel interfaces on the same device as source_interface."""
+        if self.has_source_interface:
+            qs = Interface.objects.filter(type="tunnel", device=self.source_interface.device)
+            return factory.random.randgen.choice(qs) if qs.exists() else None
+        return None
+
     has_profile = NautobotBoolIterator()
     vpn_profile = factory.Maybe("has_profile", random_instance(models.VPNProfile), None)
     has_role = NautobotBoolIterator()
@@ -198,7 +200,10 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
             if extracted:
                 self.protected_prefixes.set(extracted)
             else:
-                self.protected_prefixes.set(get_random_instances(Prefix, minimum=0))
+                # TODO Investigate https://github.com/nautobot/nautobot/actions/runs/11019738391/job/30603271529
+                # to uncomment the line below.
+                # self.protected_prefixes.set(get_random_instances(Prefix))
+                self.protected_prefixes.set(get_random_instances(model_or_queryset_or_lambda=Prefix, maximum=1))
 
     @factory.post_generation
     def protected_prefixes_dg(self, create, extracted, **kwargs):

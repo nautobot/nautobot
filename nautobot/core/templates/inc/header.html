@@ -1,4 +1,5 @@
 {% load helpers %}
+{% load static %}
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
@@ -72,4 +73,13 @@
             </ul>
         </div>
     </div>
+{% else %}
+    {% url settings.LOGIN_URL as login_url %}
+    {% if request.path != login_url %}
+        <div class="col-4 offset-4 text-end">
+            <a class="btn btn-primary" href="{{ login_url }}?next={{ request.get_full_path | urlencode }}">
+                <span aria-hidden="true" class="mdi mdi-login me-4"></span>Log in
+            </a>
+        </div>
+    {% endif %}
 {% endif %}

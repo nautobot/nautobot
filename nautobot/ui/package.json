@@ -23,7 +23,7 @@
     "graphiql": "2.4.7",
     "graphql": "16.10.0",
     "graphql-ws": "5.13.1",
-    "highlight.js": "11.9.0",
+    "highlight.js": "^11.11.1",
     "htmx.org": "^2.0.6",
     "jquery": "^3.7.1",
     "jquery-ui": "^1.14.1",
@@ -38,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "autoprefixer": "^10.4.20",
+    "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^7.1.2",
     "eslint": "^9.32.0",
     "eslint-plugin-import": "^2.32.0",
