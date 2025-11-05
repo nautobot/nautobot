@@ -129,9 +129,9 @@
             {% render_components object_detail_content.tabs %}
         {% else %}
             <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
-                <div class="align-items-center d-flex flex-wrap mb-16">
+                <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
                     {% include 'inc/created_updated.html' %}
-                    <div class="flex-grow-0 flex-shrink-0 d-print-none">
+                    <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
                         {% custom_links object %}
                         {% job_buttons object %}
                         {% block buttons %}
