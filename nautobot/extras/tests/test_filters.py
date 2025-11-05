@@ -641,9 +641,21 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         )
 
         device_types = (
-            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer, device_family=cls.device_families[0],),
-            DeviceType.objects.create(model="Device Type 2", manufacturer=manufacturer, device_family=cls.device_families[1],),
-            DeviceType.objects.create(model="Device Type 3", manufacturer=manufacturer, device_family=cls.device_families[2],),
+            DeviceType.objects.create(
+                model="Device Type 1",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[0],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 2",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[1],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 3",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[2],
+            ),
         )
         cls.device_types = device_types
 
