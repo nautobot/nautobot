@@ -309,6 +309,7 @@ class FormButton(Button):
         self,
         form_id: str,
         link_name: str,
+        render_on_tab_id="__all__",
         template_path="components/button/formbutton.html",
         **kwargs,
     ):
@@ -330,7 +331,7 @@ class FormButton(Button):
         if not self.form_id:
             raise ValueError("FormButton requires 'form_id' to be set in ObjectsTablePanel.")
 
-        super().__init__(link_name=link_name, template_path=template_path, **kwargs)
+        super().__init__(link_name=link_name, render_on_tab_id=render_on_tab_id, template_path=template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {
