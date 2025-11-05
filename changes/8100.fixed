@@ -1,0 +1,1 @@
+Fixed tables when boolean field should use BooleanColumn.
