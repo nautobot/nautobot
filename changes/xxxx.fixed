@@ -1,0 +1,3 @@
+Fixed missing/broken "Data Compliance" tab on Secret views.
+Added missing Data Compliance support to GraphQLQuery and Note models.
+Fixed Data Compliance URL patterns from `data_compliance` to `data-compliance`

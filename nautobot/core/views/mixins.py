@@ -1540,6 +1540,6 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     UI Mixin for a DataCompliance to show up for a given object.
     """
 
-    @drf_action(detail=True)
+    @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
