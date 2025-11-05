@@ -174,7 +174,7 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
         ),
         None,
     )
-    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("word"))
+    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("hostname"))
 
     @factory.lazy_attribute
     def tunnel_interface(self):
