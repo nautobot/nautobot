@@ -150,6 +150,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(cluster_groups=OuterRef("clusters__cluster_group")) | Q(cluster_groups=None)), Q.AND)
         else:
             location_query_string = "cluster__location"
+            base_query.add(Q(device_types=None), Q.AND)
+            base_query.add(Q(device_families=None), Q.AND)
+            base_query.add(Q(device_redundancy_groups=None), Q.AND)
             # For virtual machines, handle cluster as ForeignKey relationship
             base_query.add((Q(clusters=OuterRef("cluster")) | Q(clusters=None)), Q.AND)
             base_query.add((Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None)), Q.AND)
