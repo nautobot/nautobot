@@ -393,17 +393,19 @@ def humanize_speed(speed):
         1544 => "1.544 Mbps"
         100000 => "100 Mbps"
         10000000 => "10 Gbps"
+        1000000000 => "1 Tbps"
+        1600000000 => "1.6 Tbps"
+        10000000000 => "10 Tbps"
     """
     if not speed:
         return ""
-    if speed >= 1000000000 and speed % 1000000000 == 0:
-        return f"{int(speed / 1000000000)} Tbps"
-    elif speed >= 1000000 and speed % 1000000 == 0:
-        return f"{int(speed / 1000000)} Gbps"
-    elif speed >= 1000 and speed % 1000 == 0:
-        return f"{int(speed / 1000)} Mbps"
+
+    if speed >= 1000000000:
+        return f"{speed / 1000000000:g} Tbps"
+    elif speed >= 1000000:
+        return f"{speed / 1000000:g} Gbps"
     elif speed >= 1000:
-        return f"{float(speed) / 1000} Mbps"
+        return f"{speed / 1000:g} Mbps"
     else:
         return f"{speed} Kbps"
 

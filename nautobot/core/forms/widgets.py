@@ -6,7 +6,7 @@ from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
 
-from nautobot.core import choices
+from nautobot.core import choices as core_choices
 from nautobot.core.forms import utils
 
 __all__ = (
@@ -19,6 +19,7 @@ __all__ = (
     "ContentTypeSelect",
     "DatePicker",
     "DateTimePicker",
+    "NumberWithSelect",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugWidget",
@@ -68,7 +69,7 @@ class ColorSelect(forms.Select):
     option_template_name = "widgets/colorselect_option.html"
 
     def __init__(self, *args, **kwargs):
-        kwargs["choices"] = utils.add_blank_choice(choices.ColorChoices)
+        kwargs["choices"] = utils.add_blank_choice(core_choices.ColorChoices)
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-color-picker"
 
@@ -282,3 +283,21 @@ class ClearableFileInput(forms.ClearableFileInput):
 
     class Media:
         js = ["bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js"]
+
+
+class NumberWithSelect(forms.NumberInput):
+    template_name = "widgets/number_input_with_choices.html"
+
+    def __init__(self, choices=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if choices is None:
+            self.choices = []
+        elif hasattr(choices, "CHOICES"):
+            self.choices = core_choices.unpack_grouped_choices(choices.CHOICES)
+        else:
+            self.choices = core_choices.unpack_grouped_choices(choices)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["choices"] = self.choices
+        return context
