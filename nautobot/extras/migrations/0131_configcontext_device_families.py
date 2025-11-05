@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0074_alter_rack_u_height"),
-        ("extras", "0125_jobresult_date_started"),
+        ("extras", "0130_jobresult_generate_log_entry_counts"),
     ]
 
     operations = [
