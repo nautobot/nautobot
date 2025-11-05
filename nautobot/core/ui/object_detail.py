@@ -2189,7 +2189,7 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
             if obj.get_data_compliance_url() is not None:
                 return True
             logger.warning("Missing data-compliance URL for %r", obj)
-            return False
+        return False
 
 
 class DynamicGroupsTextPanel(BaseTextPanel):
