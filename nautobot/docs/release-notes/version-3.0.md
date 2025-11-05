@@ -60,17 +60,21 @@ Removed support for branding configuration options of `header_bullet`, `nav_bull
 
 Nautobot 3.0 introduces a refreshed user interface, building on the migration from Bootstrap 3 to Bootstrap 5 with several major enhancements:
 
-#### Search
+##### Search
 
 The search experience has been completely reimagined. A single, always-available search bar is now present throughout the application, accessible via `Ctrl+K` or `Command+K`. Advanced search syntax, such as `in:<model name>`, allows you to target specific models directly. The search results page now provides clearer visibility into active search parameters and makes it easy to distinguish between basic and advanced queries.
 
-#### Saved Views
+##### Saved Views
 
 Saved Views have been improved to display their type more prominently, making it easier to identify when a Saved View is active and to understand the filters or configurations being applied. This streamlines workflows and reduces confusion when working with complex data sets.
 
-#### Navigation Bar
+##### Navigation Bar
 
 The Navigation Bar has been redesigned for greater efficiency and usability. It now features support for marking items as favorites, incorporates intuitive icons, and uses a modern flyout design to maximize space and accessibility. Navigation is more consolidated, helping users quickly find and access key areas of Nautobot.
+
+#### Load Balancer Models
+
+TODO: Fill in
 
 #### VPN Models
 
@@ -87,7 +91,7 @@ Key Use Cases include:
 
 Device Uniqueness is now less restrictive. Current behavior of `Location + Tenant + Name` is maintained in migration, but now in addition you can configure to `Device name must be globally unique` and `No enforced uniqueness` as well as you can set `Device name required (cannot be blank or null)`.
 
-#### Approval Workflow
+#### Approval Workflows
 
 [Approval Workflows](../user-guide/platform-functionality/approval-workflow.md) allows for a multi-stage review and approval of processes before making changes, running or creating specific objects in the system. They are defined in advance and attached to specific models based on certain constraints. Use cases include:
 

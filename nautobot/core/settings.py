@@ -413,6 +413,7 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        "VirtualServerProtocolChoices": "nautobot.load_balancers.choices.ProtocolChoices",
         # These choice enums need to be overridden because they get assigned to the `mode` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
@@ -566,8 +567,9 @@ INSTALLED_APPS = [
     "nautobot.cloud",
     "nautobot.data_validation",
     "nautobot.dcim",
-    "nautobot.ipam",
     "nautobot.extras",
+    "nautobot.ipam",
+    "nautobot.load_balancers",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",

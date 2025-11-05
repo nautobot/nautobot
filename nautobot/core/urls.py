@@ -42,6 +42,7 @@ urlpatterns = [
     path("dcim/", include("nautobot.dcim.urls")),
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),
+    path("load-balancers/", include("nautobot.load_balancers.urls")),
     path("tenancy/", include("nautobot.tenancy.urls")),
     # TODO: deprecate this url and use users
     path("user/", include("nautobot.users.urls")),
