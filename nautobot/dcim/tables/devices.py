@@ -1305,6 +1305,7 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
+    interface__enabled = BooleanColumn()
     interface_redundancy_group = tables.Column(linkify=True, verbose_name="Group Name")
     interface_redundancy_group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
     interface_redundancy_group__protocol_group_id = tables.Column(verbose_name="Group ID")
