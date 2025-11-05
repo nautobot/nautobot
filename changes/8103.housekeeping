@@ -1,0 +1,1 @@
+Fixed bootstrap v3 to v5 script silently failing on invalid paths.
