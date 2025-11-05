@@ -1041,12 +1041,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
-    "header_bullet": os.getenv(
-        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-    ),  # bullet image used for various view headers
-    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
+    # "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    # "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
