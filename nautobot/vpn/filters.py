@@ -193,6 +193,7 @@ class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "source_fqdn": "icontains",
+            "device__name": "icontains",
         }
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
