@@ -124,31 +124,6 @@
                     dynamicFilterForm: document.querySelector('#dynamic-filter-form'),
                 });
 
-                const prepopulateFilterSelectsFromURL = (() => {
-                    const { defaultFilterForm } = getFilterForms();
-                    const urlParams = new URLSearchParams(window.location.search);
-                    // Only target Select2 controls inside the default filter form.
-                    [...defaultFilterForm.querySelectorAll('select.nautobot-select2-multi-value-char')].forEach((el) => {
-                        const name = el.getAttribute('name');
-                        if (!name) { return; }
-                        const values = urlParams.getAll(name);
-                        if (!values.length) { return; }
-                        values.forEach((val) => {
-                            let found = Array.prototype.find.call(el.options, (opt) => {
-                                return String(opt.value) === String(val);
-                            });
-                            if (found) {
-                                found.selected = true;
-                            } else {
-                                el.add(new Option(val, val, true, true));
-                            }
-                        });
-                        if (window.jQuery && $(el).data('select2')) {
-                            $(el).trigger('change');
-                        }
-                    });
-                })();
-
                 /**
                  * Synchronize given `filter` value from default to dynamic filter form.
                  * @param {string} name - Filter name.
@@ -259,8 +234,8 @@
                      */
                     const badgesToRemove =
                         action === 'add'
-                        ? existing.filter((badge) => value.some((item) => badge.getAttribute('data-nb-value') === item.value))
-                        : existing;
+                            ? existing.filter((badge) => value.some((item) => badge.getAttribute('data-nb-value') === item.value))
+                            : existing;
                     badgesToRemove.forEach((item) => children.removeChild(item));
 
                     value.forEach(({ text, value }) => {
@@ -314,10 +289,10 @@
                         const type = dynamicFilterForm.querySelector('[name$="lookup_type"]');
                         const value = [...dynamicFilterForm.querySelectorAll('.nb-form-group')]
                             .pop()
-                        ?.querySelector('input, select, textarea');
+                            ?.querySelector('input, select, textarea');
 
                         const isMissing = (control) =>
-                        control?.selectedOptions ? control.selectedOptions.length === 0 : !control?.value;
+                            control?.selectedOptions ? control.selectedOptions.length === 0 : !control?.value;
                         if (isMissing(field) || isMissing(type) || isMissing(value)) {
                             // Return early if selected filter is not complete (i.e. is missing lookup field, type or value).
                             return;
@@ -329,15 +304,15 @@
                         const text = /\(\w+\)/.test(suffix) ? `${label} ${suffix}` : label;
                         const values =
                             value?.getAttribute('multiple') !== null
-                            ? [...value.selectedOptions].map((option) => ({ text: option.innerText.trim(), value: option.value }))
-                            : [{ text: value?.value, value: value?.value }];
+                                ? [...value.selectedOptions].map((option) => ({ text: option.innerText.trim(), value: option.value }))
+                                : [{ text: value?.value, value: value?.value }];
 
                         // If field exists in default filter form and is a single value input, use `'set'` action.
                         const action =
                             defaultFilterForm.querySelector(`[name="${name}"]`) &&
-                        (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA')
-                            ? 'set'
-                            : 'add';
+                            (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA')
+                                ? 'set'
+                                : 'add';
                         manageDynamicFilter({ action, name, text, value: values });
 
                         syncDynamicToDefault(name);
@@ -352,7 +327,7 @@
                          */
                         const shouldRemoveGroup =
                             badge?.classList.contains('nb-multi-badge') ||
-                        (!badge?.previousElementSibling && !badge?.nextElementSibling);
+                            (!badge?.previousElementSibling && !badge?.nextElementSibling);
                         shouldRemoveGroup ? badge?.closest('.nb-multi-badge')?.remove() : badge?.remove();
 
                         syncDynamicToDefault(badge?.querySelector('input[type="hidden"]')?.getAttribute('name'));
@@ -376,7 +351,7 @@
                         const field_name = event.target.value;
                         const value = [...event.target.form.querySelectorAll('.nb-form-group')]
                             .pop()
-                        ?.querySelector('input, select, textarea');
+                            ?.querySelector('input, select, textarea');
 
                         if (field_name) {
                             const replacement = await (async () => {
@@ -425,7 +400,7 @@
                     if (isLookupField || isLookupType) {
                         const value = [...event.target.form.querySelectorAll('.nb-form-group')]
                             .pop()
-                        ?.querySelector('input, select, textarea');
+                            ?.querySelector('input, select, textarea');
 
                         if (value.tagName === 'SELECT') {
                             $(value).val(null).trigger('change');
@@ -459,6 +434,14 @@
                         event.preventDefault();
 
                         const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
+
+                        /*
+                         * Just before the form submission automatically add filter selected in "Advanced" tab (if any)
+                         * which hasn't been manually applied for whatever reason (usually forgetfulness, speed, etc.).
+                         * This is a requested UX flavor.
+                         */
+                        const add = dynamicFilterForm.querySelector('button.nb-dynamic-filter-add');
+                        add.click();
 
                         // Remove all field names which are not applied filters container descendants.
                         [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
