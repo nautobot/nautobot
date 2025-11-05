@@ -669,6 +669,9 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False) -> 
     # Breakpoints that are not xs do not count as failures in djlint, so we keep a separate counter
     resizing_other = 0
 
+    if not os.path.exists(directory):
+        raise FileNotFoundError(directory)
+
     if os.path.isfile(directory):
         only_filename = os.path.basename(directory)
         directory = os.path.dirname(directory)
