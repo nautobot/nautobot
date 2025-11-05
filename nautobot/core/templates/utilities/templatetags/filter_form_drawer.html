@@ -234,8 +234,8 @@
                      */
                     const badgesToRemove =
                         action === 'add'
-                            ? existing.filter((badge) => value.some((item) => badge.getAttribute('data-nb-value') === item.value))
-                            : existing;
+                        ? existing.filter((badge) => value.some((item) => badge.getAttribute('data-nb-value') === item.value))
+                        : existing;
                     badgesToRemove.forEach((item) => children.removeChild(item));
 
                     value.forEach(({ text, value }) => {
@@ -289,10 +289,10 @@
                         const type = dynamicFilterForm.querySelector('[name$="lookup_type"]');
                         const value = [...dynamicFilterForm.querySelectorAll('.nb-form-group')]
                             .pop()
-                            ?.querySelector('input, select, textarea');
+                        ?.querySelector('input, select, textarea');
 
                         const isMissing = (control) =>
-                            control?.selectedOptions ? control.selectedOptions.length === 0 : !control?.value;
+                        control?.selectedOptions ? control.selectedOptions.length === 0 : !control?.value;
                         if (isMissing(field) || isMissing(type) || isMissing(value)) {
                             // Return early if selected filter is not complete (i.e. is missing lookup field, type or value).
                             return;
@@ -304,15 +304,15 @@
                         const text = /\(\w+\)/.test(suffix) ? `${label} ${suffix}` : label;
                         const values =
                             value?.getAttribute('multiple') !== null
-                                ? [...value.selectedOptions].map((option) => ({ text: option.innerText.trim(), value: option.value }))
-                                : [{ text: value?.value, value: value?.value }];
+                            ? [...value.selectedOptions].map((option) => ({ text: option.innerText.trim(), value: option.value }))
+                            : [{ text: value?.value, value: value?.value }];
 
                         // If field exists in default filter form and is a single value input, use `'set'` action.
                         const action =
                             defaultFilterForm.querySelector(`[name="${name}"]`) &&
-                            (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA')
-                                ? 'set'
-                                : 'add';
+                        (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA')
+                            ? 'set'
+                            : 'add';
                         manageDynamicFilter({ action, name, text, value: values });
 
                         syncDynamicToDefault(name);
@@ -327,7 +327,7 @@
                          */
                         const shouldRemoveGroup =
                             badge?.classList.contains('nb-multi-badge') ||
-                            (!badge?.previousElementSibling && !badge?.nextElementSibling);
+                        (!badge?.previousElementSibling && !badge?.nextElementSibling);
                         shouldRemoveGroup ? badge?.closest('.nb-multi-badge')?.remove() : badge?.remove();
 
                         syncDynamicToDefault(badge?.querySelector('input[type="hidden"]')?.getAttribute('name'));
@@ -351,7 +351,7 @@
                         const field_name = event.target.value;
                         const value = [...event.target.form.querySelectorAll('.nb-form-group')]
                             .pop()
-                            ?.querySelector('input, select, textarea');
+                        ?.querySelector('input, select, textarea');
 
                         if (field_name) {
                             const replacement = await (async () => {
@@ -400,7 +400,7 @@
                     if (isLookupField || isLookupType) {
                         const value = [...event.target.form.querySelectorAll('.nb-form-group')]
                             .pop()
-                            ?.querySelector('input, select, textarea');
+                        ?.querySelector('input, select, textarea');
 
                         if (value.tagName === 'SELECT') {
                             $(value).val(null).trigger('change');
