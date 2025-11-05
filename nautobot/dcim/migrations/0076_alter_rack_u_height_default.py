@@ -8,7 +8,7 @@ import nautobot.dcim.constants
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0074_alter_rack_u_height"),
+        ("dcim", "0075_interface_duplex_interface_speed_and_more"),
     ]
 
     operations = [
