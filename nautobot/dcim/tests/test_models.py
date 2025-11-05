@@ -1202,11 +1202,9 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             status=self.status,
         )
-        rack.save()
-
-        # Validation should fail when clean() is called
+        # Validation should fail when full_clean() is called (which includes field validators)
         with self.assertRaises(ValidationError) as cm:
-            rack.clean()
+            rack.full_clean()
 
         # Check that the error message mentions the minimum value (validator requires >= 1)
         error_msg = str(cm.exception)
@@ -1224,11 +1222,10 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location1,
             status=self.status,
         )
-        rack.save()
 
-        # Validation should fail when clean() is called
+        # Validation should fail when full_clean() is called (which includes field validators)
         with self.assertRaises(ValidationError) as cm:
-            rack.clean()
+            rack.full_clean()
 
         # Check that the error message mentions the maximum value (validator requires <= 500)
         error_msg = str(cm.exception)

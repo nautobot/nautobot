@@ -40,6 +40,6 @@ Here are the typical instances required for the power utilization of a rack to b
 
 The total power utilization for a rack is calculated as the sum of all allocated draw (from power ports of devices either directly connected to a power feed or connected to a power outlet of a device that is connected to a power feed) divided by the Total Power (Amps × Volts × Max Utilization %) for all power feeds.
 
-## Rack Height Organizational Setting
+## Rack Height Configuration
 
-By default Nautobot sets the rack height to 42 units. This can be changed with the environment variable `NAUTOBOT_DEFAULT_RACK_HEIGHT`. This needs to be a positive integer value.
+By default, Nautobot sets the rack height to 42 rack units (U) for newly created racks. This default can be customized via the `RACK_DEFAULT_U_HEIGHT` setting in the Constance configuration (accessible via **Admin → Constance → Config** in the "Rack Elevation Rendering" section). The value must be a positive integer between 1 and 500.
