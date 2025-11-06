@@ -1,0 +1,1 @@
+Changed `Device.device_redundancy_group_priority` and `InterfaceRedundancyGroupAssociation.priority` from `PositiveSmallIntegerField` to `PositiveIntegerField` to allow a wider range of values.

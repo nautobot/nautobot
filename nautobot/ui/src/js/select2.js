@@ -298,7 +298,7 @@ const initializeMultiValueChar = (context, dropdownParent = null) => {
     language: { noResults: () => 'Type something to add it as an option' },
     multiple: true,
     tags: true,
-    tokenSeparators: [',', ' '],
+    tokenSeparators: [','],
   });
 
   // Ensure pressing Enter in the Select2 search adds the current token instead of submitting the form

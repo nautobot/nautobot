@@ -31,7 +31,13 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
+from nautobot.extras.models.mixins import (
+    ContactMixin,
+    DataComplianceModelMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -687,6 +693,7 @@ class FileProxy(BaseModel):
 class GraphQLQuery(
     ChangeLoggedModel,
     ContactMixin,
+    DataComplianceModelMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
@@ -827,7 +834,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Note(ChangeLoggedModel, BaseModel):
+class Note(ChangeLoggedModel, DataComplianceModelMixin, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
