@@ -935,8 +935,8 @@ class DeviceFilterSet(
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
-        to_field_name="devices",
-        label="VRFs (ID or name)",
+        to_field_name="rd",
+        label="VRFs (ID or RD)",
     )
 
     def filter_ip_addresses(self, queryset, name, value):

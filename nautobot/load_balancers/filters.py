@@ -167,9 +167,9 @@ class CertificateProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet)
     )
     expiration_date = MultiValueDateTimeFilter()
     load_balancer_pool_members = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="certificate_profiles",
+        to_field_name="ip_address__host",
         queryset=models.LoadBalancerPoolMember.objects.all(),
-        label="Load Balancer Pool Members",
+        label="Load Balancer Pool Members (ID or host string)",
     )
     virtual_servers = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VirtualServer.objects.all(),
