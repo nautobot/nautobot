@@ -768,6 +768,7 @@ class ObjectsTablePanel(Panel):
         select_related_fields=None,
         prefetch_related_fields=None,
         order_by_fields=None,
+        # TODO: Is `table_title` redundant with the base Panel's `label`?
         table_title=None,
         max_display_count=None,
         paginate=True,
