@@ -1471,6 +1471,11 @@ class SecretFilterSet(
             "name": "icontains",
         },
     )
+    secrets_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Groups (ID or name)",
+        to_field_name="name",
+    )
     # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
     # classes, not database models.
     # provider = django_filters.MultipleChoiceFilter(choices=..., null_value=None)

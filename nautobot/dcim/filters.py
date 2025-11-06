@@ -105,7 +105,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, VRF
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -932,6 +932,11 @@ class DeviceFilterSet(
         queryset=Controller.objects.all(),
         to_field_name="name",
         label="Controller (name or ID)",
+    )
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VRF.objects.all(),
+        to_field_name="devices",
+        label="VRFs (ID or name)",
     )
 
     def filter_ip_addresses(self, queryset, name, value):

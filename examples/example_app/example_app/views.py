@@ -116,6 +116,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=100,
                 context_table_key="dynamic_table",
                 max_display_count=3,
+                enable_related_link=False,
             ),
             # A table of non-object data with staticly defined columns
             ui.DataTablePanel(

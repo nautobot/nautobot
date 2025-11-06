@@ -22,7 +22,7 @@ from nautobot.extras.filters import (
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
-from nautobot.ipam.models import IPAddress, Service, VLAN
+from nautobot.ipam.models import IPAddress, Service, VLAN, VRF
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -224,6 +224,11 @@ class VirtualMachineFilterSet(
         distinct=True,
     )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VRF.objects.all(),
+        to_field_name="virtual_machines",
+        label="VRFs (ID or name)",
+    )
 
     def filter_ip_addresses(self, queryset, name, value):
         pk_values = set(item for item in value if is_uuid(item))

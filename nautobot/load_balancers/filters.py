@@ -166,6 +166,15 @@ class CertificateProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet)
         }
     )
     expiration_date = MultiValueDateTimeFilter()
+    load_balancer_pool_members = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="certificate_profiles",
+        queryset=models.LoadBalancerPoolMember.objects.all(),
+        label="Load Balancer Pool Members",
+    )
+    virtual_servers = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VirtualServer.objects.all(),
+        label="Virtual Servers",
+    )
 
     class Meta:
         """Meta attributes for filter."""

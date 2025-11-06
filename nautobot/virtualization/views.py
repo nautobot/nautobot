@@ -191,6 +191,8 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="virtual_machine",
                 exclude_columns=["related_object_type", "related_object_name"],
+                related_list_url="ipam:vrf_list",
+                related_field_name="virtual_machines",
             ),
             object_detail.ObjectFieldsPanel(
                 weight=200,

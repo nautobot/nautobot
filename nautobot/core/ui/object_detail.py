@@ -778,6 +778,8 @@ class ObjectsTablePanel(Panel):
         add_permissions=None,
         hide_hierarchy_ui=False,
         related_field_name=None,
+        related_list_url=None,
+        enable_related_link=True,
         enable_bulk_actions=False,
         tab_id=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
@@ -829,6 +831,11 @@ class ObjectsTablePanel(Panel):
             hide_hierarchy_ui (bool, optional): Don't display hierarchy-based indentation of tree models in this table
             related_field_name (str, optional): The name of the filter/form field for the related model that links back
                 to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
+            related_list_url (str, optional): The URL used to generate the list button URL for the related model.
+                If not provided, the default table's model `list` route is used.
+                This can be useful when the related model is a many-to-many relationship with a custom through table.
+            enable_related_link (bool, optional): If True, the badge on the related model will be a link to the related model list view.
+                When False, the badge will still show the count of the related model, but will not be a link.
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
             tab_id (str, optional): The ID of the tab this panel belongs to. Used to append to a `return_url` when
@@ -879,6 +886,8 @@ class ObjectsTablePanel(Panel):
         self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
+        self.related_list_url = related_list_url
+        self.enable_related_link = enable_related_link
         self.enable_bulk_actions = enable_bulk_actions
         self.tab_id = tab_id
         self.footer_buttons = footer_buttons
@@ -1039,22 +1048,26 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
-        list_url = getattr(self.table_class, "list_url", None)
-        if not list_url:
-            list_url = get_route_for_model(body_content_table_model, "list")
-
-        try:
-            list_route = reverse(list_url)
-        except NoReverseMatch:
-            list_route = None
-
-        if list_route:
-            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
-        else:
-            body_content_table_list_url = None
-
+        body_content_table_list_url = None
         body_content_table_add_url = self._get_table_add_url(context)
         body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
+
+        if self.header_extra_content_template_path and self.enable_related_link:
+            list_url = self.related_list_url or getattr(self.table_class, "list_url", None)
+            if not list_url:
+                list_url = get_route_for_model(body_content_table_model, "list")
+
+            try:
+                list_route = reverse(list_url)
+            except NoReverseMatch:
+                logger.warning(
+                    f"Unable to determine a valid list URL for ObjectsTablePanel `{body_content_table_verbose_name_plural}` related to `{body_content_table_model.__name__}` with `{list_url}`."
+                    " If the related object is using a through table, consider setting the `related_list_url` parameter or disabling the related link via 'enable_related_link=False'."
+                )
+                list_route = None
+
+            if list_route:
+                body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
 
         return {
             "body_content_table": body_content_table,
@@ -2130,8 +2143,8 @@ class _ObjectDetailContactsTab(Tab):
                     max_display_count=100,  # since there isn't a separate list view for ContactAssociations!
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
-                    header_extra_content_template_path=None,
-                    label="Contacts/Teams",
+                    enable_related_link=False,
+                    table_title="Contacts/Teams",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -2171,9 +2184,8 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
                     table_class=DataComplianceTable,
                     table_attribute="associated_data_compliance",
                     related_field_name="object_id",
-                    label="Data Compliance",
+                    table_title="Data Compliance",
                     add_button_route=None,
-                    header_extra_content_template_path=None,
                     include_paginator=True,
                 ),
             )
@@ -2293,8 +2305,7 @@ class _ObjectDetailMetadataTab(Tab):
                     exclude_columns=["assigned_object"],
                     add_button_route=None,
                     related_field_name="assigned_object_id",
-                    header_extra_content_template_path=None,
-                    label="Object Metadata",
+                    table_title="Object Metadata",
                 ),
             )
         super().__init__(

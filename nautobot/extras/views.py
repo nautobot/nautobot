@@ -327,6 +327,7 @@ class ApprovalWorkflowUIViewSet(
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow"],
                 add_button_route=None,
+                enable_related_link=False,
             ),
         ],
     )
@@ -413,6 +414,7 @@ class ApprovalWorkflowStageUIViewSet(
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["approval_workflow_stage"],
                 table_title="Responses",
+                enable_related_link=False,
             ),
         ],
     )
@@ -968,6 +970,7 @@ class ContactUIViewSet(NautobotUIViewSet):
                 table_filter="contact",
                 table_title="Contact For",
                 add_button_route=None,
+                enable_related_link=False,
             ),
         ),
     )
@@ -2149,7 +2152,7 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobResultTable,
                 table_title="Job Results",
-                table_filter=["job_model"],
+                table_filter="job_model",
                 exclude_columns=["name", "job_model"],
             ),
             jobs_ui.JobObjectFieldsPanel(
@@ -3336,7 +3339,8 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 table_class=tables.SecretsGroupAssociationTable,
                 table_filter="secrets_group",
-                related_field_name="secrets_group",
+                related_field_name="secrets_groups",
+                related_list_url="extras:secret_list",
                 table_title="Secrets",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
@@ -3442,6 +3446,7 @@ class TagUIViewSet(NautobotUIViewSet):
                 select_related_fields=["content_type"],
                 prefetch_related_fields=["content_object"],
                 include_paginator=True,
+                enable_related_link=False,
             ),
         ),
     )
@@ -3498,6 +3503,7 @@ class TeamUIViewSet(NautobotUIViewSet):
                 table_filter="team",
                 table_title="Contact For",
                 add_button_route=None,
+                enable_related_link=False,
             ),
         )
     )
