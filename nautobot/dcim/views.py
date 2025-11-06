@@ -1476,6 +1476,7 @@ class ModuleTypeUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    # ObjectDataComplianceViewMixin,  # TODO: enable once converted to UI framework
     ObjectChangeLogViewMixin,
     ObjectNotesViewMixin,
 ):

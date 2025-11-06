@@ -61,6 +61,7 @@ from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
+    ObjectDataComplianceViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -1758,6 +1759,7 @@ class GraphQLQueryUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
+    ObjectDataComplianceViewMixin,
     ObjectNotesViewMixin,
 ):
     filterset_form_class = forms.GraphQLQueryFilterForm
@@ -2929,7 +2931,12 @@ class ObjectMetadataUIViewSet(
 
 
 class NoteUIViewSet(
-    ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectDetailViewMixin, ObjectEditViewMixin, ObjectListViewMixin
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDataComplianceViewMixin,
 ):
     filterset_class = filters.NoteFilterSet
     filterset_form_class = forms.NoteFilterForm
@@ -3256,6 +3263,7 @@ class SecretUIViewSet(
     ObjectBulkDestroyViewMixin,
     # no ObjectBulkUpdateViewMixin here yet
     ObjectChangeLogViewMixin,
+    ObjectDataComplianceViewMixin,
     ObjectNotesViewMixin,
 ):
     queryset = Secret.objects.all()
