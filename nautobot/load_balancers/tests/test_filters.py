@@ -126,5 +126,9 @@ class CertificateProfileFilterTestCase(
         ("key_file_path",),
         ("expiration_date",),
         ("cipher",),
+        ("load_balancer_pool_members", "load_balancer_pool_members__id"),
+        ("load_balancer_pool_members", "load_balancer_pool_members__ip_address__host"),
+        ("virtual_servers", "virtual_servers__id"),
+        ("virtual_servers", "virtual_servers__name"),
     )
     tenancy_related_name = "certificate_profiles"
