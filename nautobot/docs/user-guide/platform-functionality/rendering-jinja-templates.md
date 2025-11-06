@@ -4,6 +4,13 @@
 
 Nautobot provides a built-in [Jinja2](https://jinja.palletsprojects.com/) templating engine that can be used to render templates using Nautobot data. This is useful for generating configuration files, reports, or any other text-based output that can be generated from a template. Nautobot uses Jinja2 to render text for multiple features such as [Job Buttons](./jobs/jobbutton.md), [Custom Links](./customlink.md), [Webhooks](./webhook.md), [External Integrations](./externalintegration.md), and more. It's also used by some Nautobot Apps, for example [Golden Config](https://docs.nautobot.com/projects/golden-config/en/latest/) uses Jinja2 to render configuration templates.
 
+To assist with developing and testing Jinja templates, Nautobot provides the capability to render an arbitrary template via the REST API and the UI. Two context modes are supported:
+
+1. In JSON mode, you can provide a JSON data structure defining the context for the template. This is useful for testing templates with arbitrary data.
+2. In object mode, you can provide any single Nautobot object (that you have access permissions for) as the context for the template. The Django representation of that object will be provided to the template as `obj` and will function similarly to the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
+
+Whether rendering Jinja templates through the REST API endpoint or the UI, the template will have access to all [Django-provided Jinja2 filters](https://docs.djangoproject.com/en/4.2/ref/templates/builtins/#built-in-filter-reference), [Nautobot-specific filters](./template-filters.md), [App-provided Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md), and any other [custom filters](https://docs.djangoproject.com/en/4.2/howto/custom-template-tags/#writing-custom-template-filters) that have been registered in the Django Jinja2 environment.
+
 ## REST API
 
 It's possible to render Jinja2 templates via the Nautobot REST API. You can use the `POST /api/core/render-jinja-template/` endpoint to render a template using Nautobot's Jinja2 environment.
@@ -29,13 +36,11 @@ When using object mode, the request body should include the template content, th
 }
 ```
 
+The content type can be specified in the REST API either as a string (for example, `"dcim.device"`) or as the integer ID of the content-type, (for example, `3`).
+
 ## UI
 
-There is also a UI for rendering Jinja2 templates in the Nautobot web interface. You can access it by navigating to `/render-jinja-template/` or by clicking the "Jinja Renderer" link in the footer of any Nautobot page. The UI provides a form where you can enter the template content and choose between two context modes.
-
-In JSON mode, the UI allows you to provide custom JSON data as context for your template. This is useful for testing templates with arbitrary data. In object mode, the UI allows you to select a specific Nautobot object (by content type and UUID) to use as the template context. This is useful for testing templates against real objects in your Nautobot database, such as devices, locations, circuits, etc. The context is available for use in the template via the `obj` keyword and functions similarly to the [Computed Field Template Context](./computedfield.md#computed-field-template-context).
-
-All [built-in Jinja2 filters](./template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md).
+There is also a UI for rendering Jinja2 templates in the Nautobot web interface. You can access it by navigating to `/render-jinja-template/` or by clicking the "Jinja Renderer" link in the footer of any Nautobot page. The UI provides a form where you can enter the template content and choose between the two context modes.
 
 ### Quick Access from Object Views
 
@@ -52,29 +57,6 @@ This will open the Jinja renderer with the object pre-selected:
 If a template fails to render, the reason for the failure will be displayed in "Rendered Template" section of the UI:
 
 ![Image of error message due to a syntax error in a user-supplied template](../../img/jinja_syntax_error_ui.png)
-
-## Conditional Rendering
-
-Only links which render with non-empty text are included on the page. You can employ conditional Jinja2 logic to control the conditions under which a link gets rendered.
-
-For example, if you only want to display a link for active devices, you could set the link text to
-
-```jinja2
-{% if obj.status.name == 'Active' %}View NMS{% endif %}
-```
-
-The link will not appear when viewing a device with any status other than "active."
-
-As another example, if you wanted to show only devices belonging to a certain manufacturer, you could do something like this:
-
-```jinja2
-{% if obj.device_type.manufacturer.name == 'Cisco' %}View NMS{% endif %}
-```
-
-The link will only appear when viewing a device with a manufacturer name of "Cisco."
-
-!!! note
-    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 ## Examples
 
@@ -112,29 +94,3 @@ Test custom link URL generation with real object data:
 ```jinja2
 https://monitoring.example.com/devices/{{ obj.name | lower | replace(' ', '-') }}
 ```
-
-### REST API with Object Context
-
-The REST API also supports object-based context by providing `object_uuid` and either `content_type` or `content_type_id` instead of `context`:
-
-#### content_type string
-
-```json
-{
-  "template_code": "Device {{ obj.name }} is located in {{ obj.location.name }}",
-  "content_type": "dcim.device",
-  "object_uuid": "123e4567-e89b-12d3-a456-426614174000"
-}
-```
-
-#### content_type_id
-
-```json
-{
-  "template_code": "Device {{ obj.name }} is located in {{ obj.location.name }}",
-  "content_type": 3,
-  "object_uuid": "123e4567-e89b-12d3-a456-426614174000"
-}
-```
-
-When rendering Jinja templates through the REST API endpoint or UI, the template will have access to all [Django-provided Jinja2 filters](https://docs.djangoproject.com/en/4.2/ref/templates/builtins/#built-in-filter-reference), [Nautobot-specific filters](./template-filters.md), and any [custom filters](https://docs.djangoproject.com/en/4.2/howto/custom-template-tags/#writing-custom-template-filters) that have been registered in the Django Jinja2 environment.
