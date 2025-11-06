@@ -4,6 +4,7 @@
 
 - Major UI refresh: Bootstrap 5 migration, new navigation, and global search
 - Approval Workflow system for multi-stage job and change approvals
+- Load Balancer Models
 - VPN Models
 - Device Uniqueness Updates
 - Data Validation Engine integrated into core

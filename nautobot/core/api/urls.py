@@ -48,6 +48,7 @@ urlpatterns = [
     path("dcim/", include("nautobot.dcim.api.urls")),
     path("extras/", include("nautobot.extras.api.urls")),
     path("ipam/", include("nautobot.ipam.api.urls")),
+    path("load-balancers/", include("nautobot.load_balancers.api.urls")),
     path("tenancy/", include("nautobot.tenancy.api.urls")),
     path("users/", include("nautobot.users.api.urls")),
     path("virtualization/", include("nautobot.virtualization.api.urls")),

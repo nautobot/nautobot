@@ -459,6 +459,10 @@ class APIRootView(AuthenticatedAPIRootView):
                         reverse("ipam-api:api-root", request=request, format=format),
                     ),
                     (
+                        "load-balancers",
+                        reverse("load_balancers-api:api-root", request=request, format=format),
+                    ),
+                    (
                         "plugins",
                         reverse("plugins-api:api-root", request=request, format=format),
                     ),

@@ -1161,6 +1161,7 @@ class JobTable(BaseTable):
 
 class JobHookTable(BaseTable):
     pk = ToggleColumn()
+    enabled = BooleanColumn()
     name = tables.Column(linkify=True)
     content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
     job = tables.Column(linkify=True)
