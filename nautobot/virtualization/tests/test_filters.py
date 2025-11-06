@@ -447,7 +447,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
-        
+
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="1:1"),
             VRF.objects.create(name="VRF 2", rd="1:2"),

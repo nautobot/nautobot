@@ -2173,7 +2173,9 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
         secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1",),
+            SecretsGroup.objects.create(
+                name="Secrets Group 1",
+            ),
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
         secrets_groups[0].secrets.set([secrets[0]])
