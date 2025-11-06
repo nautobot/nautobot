@@ -328,3 +328,46 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(
             "//a[@href='#advanced-filter']//span[contains(@class,'nb-btn-indicator') and contains(text(),'Some of the applied filters can only be viewed in Advanced')]"
         )
+
+    def test_selected_advanced_filter_automatic_application(self):
+        """Assert that selected advanced filter is still used even if not manually applied by user."""
+        # Go to the location list view
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:location_list')}")
+
+        # Open the filter drawer
+        self.browser.find_by_id("id__filterbtn").click()
+        # Go to advanced Tab
+        self.browser.find_by_xpath("//a[@href='#advanced-filter']").click()
+
+        # Click on the first column lookup field and select ASN
+        lookup_field_container = self.browser.find_by_id("select2-id_form-0-lookup_field-container")
+        self.assertTrue(lookup_field_container.is_visible(wait_time=10))
+        lookup_field_container.click()
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_form-0-lookup_field-results']/li[contains(@class,'select2-results__option') "
+            "and contains(text(),'ASN')]"
+        ).click()
+
+        # Click on the second column lookup type and select exact
+        self.browser.find_by_id("select2-id_form-0-lookup_type-container").click()
+        self.browser.find_by_xpath(
+            "//ul[@id='select2-id_form-0-lookup_type-results']/li[contains(@class,'select2-results__option') "
+            "and contains(text(),'exact')]"
+        ).click()
+
+        # Fill ASN input value with "65001"
+        self.browser.find_by_xpath("//input[@id='id_for_asn']").fill("65001")
+
+        # Click "Apply Specified" button
+        self.browser.find_by_xpath("//form[@id='dynamic-filter-form']//button[@type='submit']").click()
+
+        # Wait for filters button indicator to appear, meaning that the page was reloaded and selected filters applied.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(
+                "//button[@id='id__filterbtn']//span[@class='nb-btn-indicator']", wait_time=10
+            )
+        )
+
+        # Assert that the filter has been successfully applied to the URL, despite not being previously added to the
+        # selected filters list with "Add Filter" button.
+        self.assertEqual(self.browser.url, f"{self.live_server_url}{reverse('dcim:location_list')}" + "?asn=65001")
