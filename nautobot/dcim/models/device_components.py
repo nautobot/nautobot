@@ -1031,7 +1031,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         related_name="interface_redundancy_group_associations",
     )
-    priority = models.PositiveSmallIntegerField()
+    priority = models.PositiveIntegerField()
     is_metadata_associable_model = False
 
     class Meta:
