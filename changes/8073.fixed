@@ -1,0 +1,1 @@
+Added missing call to `super().get_extra_context()` in `LocationUIViewSet`, `ModuleTypeUIViewSet`.

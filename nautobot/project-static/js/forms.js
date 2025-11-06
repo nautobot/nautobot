@@ -223,6 +223,19 @@ function initializeFormActionClick(context){
 function initializeBulkEditNullification(context){
     this_context = $(context);
     this_context.find('input:checkbox[name=_nullify]').click(function() {
+        var $field = $('#id_' + this.value);
+
+        // If this is a NumberWithSelect (input-group + caret menu), don't hide the
+        // field. Some other fields (e.g.Interface: LAG, Bridge) currently do nothing
+        // when _nullify is checked, so this is consistent.
+        var $group = $field.closest('.input-group');
+        var isNumberWithSelect = $group.length &&
+            $group.find('.input-group-btn .dropdown-menu a.set_value').length > 0;
+        if (isNumberWithSelect) {
+            return; // no UI change; _nullify still submitted
+        }
+
+        // Existing behavior for other fields
         $('#id_' + this.value).toggle('disabled');
     });
 }
@@ -590,19 +603,57 @@ function initializeVLANModeSelection(context){
 
 function initializeMultiValueChar(context, dropdownParent=null){
     this_context = $(context);
-    this_context.find('.nautobot-select2-multi-value-char').select2({
-        allowClear: true,
-        tags: true,
-        theme: "bootstrap",
-        placeholder: "---------",
-        multiple: true,
-        dropdownParent: dropdownParent,
-        width: "off",
-        "language": {
-            "noResults": function(){
-                return "Type something to add it as an option";
-            }
-        },
+    this_context.find('.nautobot-select2-multi-value-char').each(function(){
+        var $el = $(this);
+        $el.select2({
+            allowClear: true,
+            tags: true,
+            theme: "bootstrap",
+            placeholder: "---------",
+            multiple: true,
+            dropdownParent: dropdownParent,
+            width: "off",
+            tokenSeparators: [',', ' '],
+            "language": {
+                "noResults": function(){
+                    return "Type something to add it as an option";
+                }
+            },
+        });
+
+        // Ensure pressing Enter in the Select2 search adds the current token instead of submitting the form
+        $el.on('select2:open', function(){
+            const container = document.querySelector('.select2-container--open');
+            if (!container) return;
+            const search = container.querySelector('input.select2-search__field');
+            if (!search) return;
+
+            // Avoid stacking multiple handlers
+            if (search.getAttribute('data-enter-binds')) return;
+            search.setAttribute('data-enter-binds', '1');
+
+            search.addEventListener('keydown', function(e){
+                if (e.key === 'Enter'){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const val = this.value.trim();
+                    if (!val) return;
+                    const sel = $el.get(0);
+                    // If option doesn't exist, create it; otherwise select it
+                    let found = Array.prototype.find.call(sel.options, function(opt){ return String(opt.value) === String(val); });
+                    if (!found) {
+                        sel.add(new Option(val, val, true, true));
+                    } else {
+                        found.selected = true;
+                    }
+                    // Clear the search box and notify Select2
+                    this.value = '';
+                    $($el).trigger('change');
+                    // Close the dropdown so it doesn't linger after add
+                    try { $el.select2('close'); } catch (e) {}
+                }
+            });
+        });
     });
 }
 
@@ -714,7 +765,34 @@ function initializeDynamicFilterForm(context){
         lookup_type_value = $(this).find(".lookup_type-select").val();
         lookup_value = $(this).find(".lookup_value-input");
         lookup_value.attr("name", lookup_type_value);
-    })
+    });
+
+    // Pre-populate filter selects (default + advanced) from current URL query params,
+    // including free-form values that are not part of the preset choices.
+    (function prepopulateFilterSelectsFromURL(){
+        const urlParams = new URLSearchParams(window.location.search);
+        // Only target Select2 tag controls inside the filter UI (default sidebar and advanced modal).
+        // Avoids touching unrelated Select2 tagging fields elsewhere on the page (e.g., tags inputs).
+        const selector = '#default-filter form select.nautobot-select2-multi-value-char, #advanced-filter select.nautobot-select2-multi-value-char';
+        this_context.find(selector).each(function(){
+            const sel = this;
+            const name = sel.getAttribute('name');
+            if (!name) { return; }
+            const values = urlParams.getAll(name);
+            if (!values.length) { return; }
+            values.forEach(function(v){
+                let found = Array.prototype.find.call(sel.options, function(opt){ return String(opt.value) === String(v); });
+                if (!found) {
+                    sel.add(new Option(v, v, true, true));
+                } else {
+                    found.selected = true;
+                }
+            });
+            if (window.jQuery && $(sel).data('select2')) {
+                $(sel).trigger('change');
+            }
+        });
+    })();
 
     // Remove applied filters
     this_context.find(".remove-filter-param").on("click", function(){

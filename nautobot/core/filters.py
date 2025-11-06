@@ -91,6 +91,10 @@ class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.Mul
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
+    def __init__(self, *args, choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.choices = list(choices) if choices is not None else None
+
 
 class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""

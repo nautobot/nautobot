@@ -16,7 +16,9 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
@@ -723,6 +725,101 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
         )
         first_status = Status.objects.get_for_model(Interface).first()
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
+
+    def test_speed_disallowed_for_lag_virtual_wireless(self):
+        """speed must be None for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SpeedGuard 1000")
+
+        for if_type in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.subTest(if_type=if_type):
+                with self.assertRaises(ValidationError) as cm:
+                    InterfaceTemplate(
+                        device_type=device_type,
+                        name=f"bad-{if_type}",
+                        type=if_type,
+                        speed=InterfaceSpeedChoices.SPEED_1G,
+                    ).full_clean()
+                self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+
+    def test_duplex_disallowed_for_lag_virtual_wireless(self):
+        """duplex must be blank for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="DuplexGuard 1000")
+
+        for itype in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.assertRaises(ValidationError):
+                InterfaceTemplate(
+                    device_type=device_type,
+                    name=f"bad-{itype}",
+                    type=itype,
+                    duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+                ).full_clean()
+
+    def test_duplex_disallowed_for_non_base_t(self):
+        """duplex must be blank for non-BASE-T physical types (e.g., SFP)."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SfpGuard 1000")
+
+        with self.assertRaises(ValidationError) as cm:
+            InterfaceTemplate(
+                device_type=device_type,
+                name="sfp0",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            ).full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+    def test_duplex_and_speed_allowed_for_base_t(self):
+        """BASE-T physical types accept duplex and speed values."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="CopperOK 1000")
+
+        tmpl = InterfaceTemplate(
+            device_type=device_type,
+            name="eth0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        tmpl.full_clean()  # should not raise
+
+    def test_instantiation_propagates_speed_and_duplex(self):
+        """Interface created from template inherits speed and duplex."""
+        statuses = Status.objects.get_for_model(Device)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Propagate 2000")
+
+        InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="EthX",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=False,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=statuses[0],
+            name="Device-Prop",
+            location=location,
+        )
+
+        iface = device.interfaces.get(name="EthX")
+        self.assertEqual(iface.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(iface.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
 
 
 class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
@@ -2695,6 +2792,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
         )
         status = Status.objects.get_for_model(Device).first()
+        cls.intf_status = Status.objects.get_for_model(Interface).first()
         cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
@@ -2923,6 +3021,173 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(count, 0)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
+
+    def _assert_invalid_speed_duplex(self, if_type, speed=None, duplex="", expected_error=""):
+        iface = Interface(
+            device=self.device,
+            name=f"test-{if_type}",
+            type=if_type,
+            status=self.intf_status,
+            speed=speed,
+            duplex=duplex,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn(expected_error, str(cm.exception))
+
+    def test_disallowed_speed_and_duplex_matrix(self):
+        """Test that interface types with no speed or duplex disallow those settings."""
+        test_cases = [
+            # LAG
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Virtual
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Wireless
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Copper (negative speed is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, -100, None, "Ensure this value is greater than or equal to 0."),
+            # Copper (speed as a string is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, "100 Mbps", None, "value must be an integer."),
+            # Copper (invalid duplex is invalid)
+            (
+                InterfaceTypeChoices.TYPE_1GE_FIXED,
+                InterfaceSpeedChoices.SPEED_1M,
+                "invalid",
+                "Value 'invalid' is not a valid choice.",
+            ),
+            # Optical (no duplex allowed)
+            (
+                InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                InterfaceSpeedChoices.SPEED_1M,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is only applicable to copper twisted-pair interfaces.",
+            ),
+        ]
+        for if_type, speed, duplex, expected_error in test_cases:
+            with self.subTest(f"{if_type} with speed={speed} and duplex={duplex}"):
+                self._assert_invalid_speed_duplex(if_type, speed, duplex, expected_error)
+
+    def test_copper_allows_duplex_and_non_negative_speed(self):
+        """Test that copper interfaces allow duplex and non-negative speed."""
+        iface = Interface(
+            device=self.device,
+            name="eth1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,  # 1000BASE-T
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        # Should not raise
+        iface.full_clean()
+
+        iface.speed = 0
+        iface.full_clean()
+
+    def test_lag_allows_no_speed_or_duplex(self):
+        """Test that LAG interfaces pass validation when speed and duplex are not set."""
+        iface = Interface(
+            device=self.device,
+            name="Port-Channel1",
+            type=InterfaceTypeChoices.TYPE_LAG,
+            status=self.intf_status,
+        )
+        # Should not raise when speed and duplex are not set
+        iface.full_clean()
+
+    def test_optical_disallows_duplex_allows_speed(self):
+        """Test that optical interfaces do not allow duplex and allow positive speed."""
+        # Duplex set should error
+        iface_bad = Interface(
+            device=self.device,
+            name="xe0",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface_bad.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        # Speed positive should pass
+        iface_ok = Interface(
+            device=self.device,
+            name="xe1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_10G,
+        )
+        iface_ok.full_clean()
+
+    def test_changing_copper_interface_with_speed_and_duplex_to_optical_fails(self):
+        """Test that changing a copper interface with speed and duplex to an optical interface fails."""
+
+        with self.subTest("speed"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                speed=InterfaceSpeedChoices.SPEED_1G,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_LAG
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+
+        with self.subTest("duplex"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
 
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

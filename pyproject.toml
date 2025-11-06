@@ -40,7 +40,7 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~46.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.25"
+Django = "~4.2.26"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -54,7 +54,7 @@ django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.3.2"
+django-constance = "~4.3.3"
 # Permit cross-domain API requests
 django-cors-headers = "~4.9.0"
 # Store files in the database for background tasks
@@ -120,7 +120,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.3.1"
+nh3 = "~0.3.2"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -190,11 +190,11 @@ markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
-mkdocs-glightbox = "~0.5.1"
+mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.4.0"
+mkdocs-macros-plugin = "~1.4.1"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.22"
+mkdocs-material = "~9.6.23"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -214,9 +214,9 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.32"
+pymarkdownlnt = "~0.9.33"
 # Combination linter and code formatter
-ruff = "~0.14.0"
+ruff = "~0.14.3"
 # YAML linting
 yamllint = "~1.37.1"
 
