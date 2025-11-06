@@ -6,9 +6,13 @@ This section provides an overview of the data models included in Nautobot to des
 
 Models include Virtual Servers, Load Balancer Pools, Load Balancer Pool Members, Health Check Monitors, and SSL Certificate Profiles. Several of these models integrate with other parts of Nautobot core, including IPAM (for VIPs and pool member IPs), DCIM (for device and chassis assignment), Cloud (for service mapping), and Tenancy (for tenant ownership).
 
+The models were built with traditional enterprise vendor implementations in mind, such as F5, Citrix NetScaler, A10 Networks, VMware Avi Load Balancer, and Fortinet.
+
+You are encouraged to leverage the [load balancer feature guide](../../feature-guides/load-balancers.md) for a practical approach at building the data model and configurations.
+
 ## Order of Operations
 
-When setting up objects using the Load Balancer data models, it's helpful to follow this recommended order:
+When configuring objects with the Load Balancer data models, follow this recommended order (as outlined in the [Quick Walkthrough](../../feature-guides/load-balancers.md#quick-walkthrough)):
 
 1. [IP Addresses](../ipam/ipaddress.md)
 2. Health Check Monitors
@@ -26,8 +30,8 @@ This order ensures all necessary relationships and prerequisites are in place as
 | [Virtual Server](virtualserver.md)            | Represents a front-end VIP and port combination that distributes traffic to a backend pool. |
 | [Load Balancer Pool](loadbalancerpool.md)     | A group of backend servers (Pool Members) serving traffic for a Virtual Server. |
 | [Load Balancer Pool Member](loadbalancerpoolmember.md)    | An individual backend node within a Load Balancer Pool. |
-| [Health Check Monitor](healthcheckmonitor.md) | Monitors the health of Pool Members and Pools to determine availability. |
 | [Certificate Profile](certificateprofile.md)  | Stores metadata for SSL/TLS certificates used by Virtual Servers or Pool Members. |
+| [Health Check Monitor](healthcheckmonitor.md) | Monitors the health of Pool Members and Pools to determine availability. |
 
 ## Entity Relationship Diagram
 
@@ -146,6 +150,26 @@ erDiagram
     "load_balancers.HealthCheckMonitor" }o--o| "tenancy.Tenant" : has
     "load_balancers.CertificateProfile" }o--o| "tenancy.Tenant" : has
 ```
+
+## Vendor Data Mappings
+
+This table will help you map to specific vendor terminology.
+
+| Nautobot Model              | F5                        | Citrix NetScaler         | A10 Networks           | VMware Avi Load Balancer      | Fortinet (FortiADC)      |
+|-----------------------------|---------------------------|--------------------------|------------------------|-------------------------------|--------------------------|
+| **VirtualServer**           | Virtual Server            | Virtual Server           | Virtual Server         | Virtual Service               | Virtual Server           |
+| **LoadBalancerPool**        | Pool                      | Service Group            | Service Group / Pool   | Pool                          | Server Pool              |
+| **LoadBalancerPoolMember**  | Pool Member / Node        | Service / Server         | Server                 | Pool Member                   | Pool Member / Real Server|
+| **HealthCheckMonitor**      | Monitor                   | Monitor                  | Health Monitor         | Health Monitor                | Health Check             |
+| **CertificateProfile**      | SSL Profile / Certificate | SSL Profile / Certificate| SSL Template / Cert    | SSL Profile / Certificate     | SSL Profile / Certificate|
+
+Additional details:
+
+- _F5:_ "Pool Member" is a node+port; "Node" is just an IP. SSL Profiles are used for certificates.
+- _Citrix NetScaler:_ "Service Group" is a group of "Services" (servers). SSL Profiles are also used.
+- _A10 Networks:_ "Service Group" is a pool; "Server" is a backend. SSL Templates manage certificates.
+- _VMware Avi Load Balancer:_ "Virtual Service" is the frontend; "Pool" is the backend group; "Pool Member" is a server. SSL Profiles are used.
+- _Fortinet:_ "Virtual Server" is the frontend; "Server Pool" is the backend group; "Real Server" is a pool member. SSL Profiles are used.
 
 ## Vendor-Specific Configuration with Custom Fields
 
