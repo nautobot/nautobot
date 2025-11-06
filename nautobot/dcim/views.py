@@ -4604,23 +4604,11 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                     instance=context_object_attr("parent_device"),
                     should_render=context_object_attr("parent_device"),
                 ),
-                ViewNameBreadcrumbItem(
-                    view_name_key="device_breadcrumb_url",
-                    should_render=lambda c: c["object"].parent_device and c.get("device_breadcrumb_url"),
-                    reverse_kwargs=lambda c: {"pk": c["object"].parent_device.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
-                ),
                 # Breadcrumb path if ModuleBay is linked with module
                 ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].parent_device is None),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module"),
                     should_render=lambda c: c["object"].parent_device is None,
-                ),
-                ViewNameBreadcrumbItem(
-                    view_name_key="module_breadcrumb_url",
-                    should_render=lambda c: c["object"].parent_device is None and c.get("module_breadcrumb_url"),
-                    reverse_kwargs=lambda c: {"pk": c["object"].parent_module.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
                 ),
             ]
         }
@@ -5011,15 +4999,6 @@ class ConsoleConnectionsListView(ConnectionsListView):
     template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Console Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:console_connections_list", label="Console Connections")]}
-    )
-
-    def extra_context(self):
-        return {
-            "title": "Console Connections",
-            "list_url": "dcim:console_connections_list",
-        }
 
 
 class PowerConnectionsListView(ConnectionsListView):
@@ -5030,15 +5009,6 @@ class PowerConnectionsListView(ConnectionsListView):
     template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Power Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:power_connections_list", label="Power Connections")]}
-    )
-
-    def extra_context(self):
-        return {
-            "title": "Power Connections",
-            "list_url": "dcim:power_connections_list",
-        }
 
 
 class InterfaceConnectionsListView(ConnectionsListView):
@@ -5049,11 +5019,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
     template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Interface Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={
-            "list": [ViewNameBreadcrumbItem(view_name="dcim:interface_connections_list", label="Interface Connections")]
-        }
-    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -5078,12 +5043,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
             self.queryset = qs
 
         return self.queryset
-
-    def extra_context(self):
-        return {
-            "title": "Interface Connections",
-            "list_url": "dcim:interface_connections_list",
-        }
 
 
 #

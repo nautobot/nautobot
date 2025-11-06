@@ -174,13 +174,6 @@ class DataComplianceUIViewSet(  # pylint: disable=W0223
 class DeviceConstraintsView(GenericView):
     template_name = "data_validation/device_constraints.html"
     view_titles = Titles(titles={"*": "Device Constraints"})
-    breadcrumbs = Breadcrumbs(
-        items={
-            "*": [
-                ViewNameBreadcrumbItem(view_name="data_validation:device-constraints", label="Device Constraints"),
-            ],
-        },
-    )
 
     def get(self, request):
         form = forms.DeviceConstraintsForm(user=request.user)
@@ -190,7 +183,6 @@ class DeviceConstraintsView(GenericView):
             {
                 "form": form,
                 "view_titles": self.get_view_titles(),
-                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 
