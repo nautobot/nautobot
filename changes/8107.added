@@ -1,0 +1,5 @@
+Added the `vrfs` filter to Devices and VirtualMachines.
+Added the `secrets_groups` filter to Secrets.
+Added the `ancestors` filter to Prefixes.
+Added the `services` filter to IPAddresses.
+Added the `load_balancer_pool_members` and `virtual_servers` filters to CertificateProfiles.
