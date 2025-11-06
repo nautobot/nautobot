@@ -413,6 +413,7 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        "VirtualServerProtocolChoices": "nautobot.load_balancers.choices.ProtocolChoices",
         # These choice enums need to be overridden because they get assigned to the `mode` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
@@ -566,8 +567,9 @@ INSTALLED_APPS = [
     "nautobot.cloud",
     "nautobot.data_validation",
     "nautobot.dcim",
-    "nautobot.ipam",
     "nautobot.extras",
+    "nautobot.ipam",
+    "nautobot.load_balancers",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
@@ -1041,12 +1043,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
-    "header_bullet": os.getenv(
-        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-    ),  # bullet image used for various view headers
-    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
+    # "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    # "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"

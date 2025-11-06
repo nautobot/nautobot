@@ -50,33 +50,48 @@ Many legacy HTML templates have been removed. The majority of the removed templa
 
 In order to ease the transition from these deprecated templates for app developers, we have included a migration script in Nautobot v2.4.21+ that will recursively parse through a directory's html files and replace any extends directives (`{% extends ... %}`) that reference a deprecated template with the replacement template. This script does not require Nautobot to be running and it can be run with the command `nautobot-migrate-deprecated-templates <path> [--dry-run]`. For more details, including a full table of deprecated templates and their replacements, see [Deprecated Templates](../development/apps/migration/code-updates.md#deprecated-templates).
 
+#### Removed Branding Options
+
+Removed support for branding configuration options of `header_bullet`, `nav_bullet`, `javascript`, and `css`. Bullets are no longer used at all in the 3.0 design.
+
 ### Added
 
 #### UI Updates
 
 Nautobot 3.0 introduces a refreshed user interface, building on the migration from Bootstrap 3 to Bootstrap 5 with several major enhancements:
 
-#### Search
+##### Search
 
 The search experience has been completely reimagined. A single, always-available search bar is now present throughout the application, accessible via `Ctrl+K` or `Command+K`. Advanced search syntax, such as `in:<model name>`, allows you to target specific models directly. The search results page now provides clearer visibility into active search parameters and makes it easy to distinguish between basic and advanced queries.
 
-#### Saved Views
+##### Saved Views
 
 Saved Views have been improved to display their type more prominently, making it easier to identify when a Saved View is active and to understand the filters or configurations being applied. This streamlines workflows and reduces confusion when working with complex data sets.
 
-#### Navigation Bar
+##### Navigation Bar
 
 The Navigation Bar has been redesigned for greater efficiency and usability. It now features support for marking items as favorites, incorporates intuitive icons, and uses a modern flyout design to maximize space and accessibility. Navigation is more consolidated, helping users quickly find and access key areas of Nautobot.
 
-#### VPN Models
+#### Load Balancer Models
 
 TODO: Fill in
+
+#### VPN Models
+
+Nautobot 3.0 adds a [`VPN`](../user-guide/core-data-model/vpn/vpn.md) data model to support modeling Virtual Private Networks (VPNs), including reusable profiles, policies, and tunnel endpoints. These models enable you to define IKE (Phase 1) and IPSec (Phase 2) policy parameters, manage tunnel endpoints, and associate VPNs with roles and secrets. Additionally, VPNs may optionally be associated with tenants so that administrators can indicate ownership of related model instances.
+
+Key Use Cases include:
+
+- Site-to-site IPSec VPN tunnel (transport mode)
+- Site-to-site IPSec VPN tunnel (tunnel mode)
+- Single hub-and-spoke VPN
+- Multiple hub-and-spoke VPNs
 
 #### Device Uniqueness Flexibility
 
-TODO: Fill in
+Device Uniqueness is now less restrictive. Current behavior of `Location + Tenant + Name` is maintained in migration, but now in addition you can configure to `Device name must be globally unique` and `No enforced uniqueness` as well as you can set `Device name required (cannot be blank or null)`.
 
-#### Approval Workflow
+#### Approval Workflows
 
 [Approval Workflows](../user-guide/platform-functionality/approval-workflow.md) allows for a multi-stage review and approval of processes before making changes, running or creating specific objects in the system. They are defined in advance and attached to specific models based on certain constraints. Use cases include:
 

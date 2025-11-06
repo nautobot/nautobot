@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 import factory
 import faker
 
@@ -173,7 +174,7 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
         ),
         None,
     )
-    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("word"))
+    source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("hostname"))
 
     @factory.lazy_attribute
     def tunnel_interface(self):
@@ -211,4 +212,8 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
             if extracted:
                 self.protected_prefixes_dg.set(extracted)
             else:
-                self.protected_prefixes_dg.set(get_random_instances(DynamicGroup, minimum=0))
+                self.protected_prefixes_dg.set(
+                    get_random_instances(
+                        DynamicGroup.objects.filter(content_type=ContentType.objects.get_for_model(Prefix)), minimum=0
+                    )
+                )

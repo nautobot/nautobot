@@ -162,22 +162,17 @@ properties:
     type: "string"
   BRANDING_FILEPATHS:
     default:
-      css: null
       favicon: null
-      header_bullet: null
       icon_16: null
       icon_32: null
       icon_180: null
       icon_192: null
       icon_mask: null
-      javascript: null
       logo: null
-      nav_bullet: null
     description: >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
       custom branding of your Nautobot instance.
-      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
-      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
+      Each of the assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
       If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
     details: |-
@@ -186,22 +181,15 @@ properties:
 
       +++ 2.2.4
           The `css` and `javascript` assets were added as options.
+
+      --- 3.0.0
+          The `header_bullet`, `nav_bullet`, `javascript`, and `css` assets were removed.
     properties:
-      css:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global CSS file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
-      header_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for various view headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
         default: null
@@ -227,21 +215,11 @@ properties:
         default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
-      javascript:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global JavaScript file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
-      nav_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for nav menu headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
     version_added: "1.2.0"
   BRANDING_PREPENDED_FILENAME:

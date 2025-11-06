@@ -515,7 +515,9 @@ def get_docs_url(model):
 
     Example:
         >>> get_docs_url(location_instance)
-        "static/docs/models/dcim/location.html"
+        "static/docs/user-guide/core-data-model/dcim/location.html"
+        >>> get_docs_url(virtual_server_instance)
+        "static/docs/user-guide/core-data-model/load-balancers/virtualserver.html"
         >>> get_docs_url(example_model)
         "/docs/example-app/models/examplemodel.html"
     """
@@ -540,7 +542,9 @@ def get_docs_url(model):
     elif model._meta.app_label == "extras":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
     else:
-        path = f"docs/user-guide/core-data-model/{model._meta.app_label}/{model._meta.model_name}.html"
+        path = (
+            f"docs/user-guide/core-data-model/{model._meta.app_label.replace('_', '-')}/{model._meta.model_name}.html"
+        )
 
     # Check to see if documentation exists in any of the static paths.
     if find(path):
