@@ -778,7 +778,7 @@ class ObjectsTablePanel(Panel):
         add_permissions=None,
         hide_hierarchy_ui=False,
         related_field_name=None,
-        related_list_url=None,
+        related_list_url_name=None,
         enable_related_link=True,
         enable_bulk_actions=False,
         tab_id=None,
@@ -831,7 +831,7 @@ class ObjectsTablePanel(Panel):
             hide_hierarchy_ui (bool, optional): Don't display hierarchy-based indentation of tree models in this table
             related_field_name (str, optional): The name of the filter/form field for the related model that links back
                 to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
-            related_list_url (str, optional): The URL used to generate the list button URL for the related model.
+            related_list_url_name (str, optional): The URL used to generate the list button URL for the related model.
                 If not provided, the default table's model `list` route is used.
                 This can be useful when the related model is a many-to-many relationship with a custom through table.
             enable_related_link (bool, optional): If True, the badge on the related model will be a link to the related model list view.
@@ -886,7 +886,7 @@ class ObjectsTablePanel(Panel):
         self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
-        self.related_list_url = related_list_url
+        self.related_list_url_name = related_list_url_name
         self.enable_related_link = enable_related_link
         self.enable_bulk_actions = enable_bulk_actions
         self.tab_id = tab_id
@@ -1055,7 +1055,7 @@ class ObjectsTablePanel(Panel):
         # If `header_extra_content_template_path` is not set,
         # we don't render the badge in the header nor the link
         if self.header_extra_content_template_path and self.enable_related_link:
-            list_url = self.related_list_url or getattr(self.table_class, "list_url", None)
+            list_url = self.related_list_url_name or getattr(self.table_class, "list_url", None)
             if not list_url:
                 list_url = get_route_for_model(body_content_table_model, "list")
 
@@ -1065,7 +1065,7 @@ class ObjectsTablePanel(Panel):
                 logger.warning(
                     f"Unable to determine a valid list URL for ObjectsTablePanel `{table_title}`"
                     f" related to `{body_content_table_model.__name__}` with `{list_url}`."
-                    " If the related object is using a through table, consider setting the `related_list_url`"
+                    " If the related object is using a through table, consider setting the `related_list_url_name`"
                     " parameter or disabling the related link via 'enable_related_link=False'."
                 )
                 list_route = None

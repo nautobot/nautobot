@@ -413,7 +413,7 @@ class ViewTestCases:
                         errors.append(
                             (
                                 f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link does not exist."
-                                " Please ensure the related model has a list view, or override with a custom list URL via 'related_list_url=app:model_list'."
+                                " Please ensure the related model has a list view, or override with a custom list URL via 'related_list_url_name=app:model_list'."
                                 " If the link should not be enabled, you must explicitly set 'enable_related_link=False' on the ObjectsTablePanel."
                             )
                         )

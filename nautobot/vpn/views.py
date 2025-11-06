@@ -56,7 +56,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
-                related_list_url="vpn:vpnphase1policy_list",
+                related_list_url_name="vpn:vpnphase1policy_list",
                 related_field_name="vpn_profiles",
             ),
             ObjectsTablePanel(
@@ -66,7 +66,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
-                related_list_url="vpn:vpnphase2policy_list",
+                related_list_url_name="vpn:vpnphase2policy_list",
                 related_field_name="vpn_profiles",
             ),
         ],

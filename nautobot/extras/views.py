@@ -3340,7 +3340,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
                 table_class=tables.SecretsGroupAssociationTable,
                 table_filter="secrets_group",
                 related_field_name="secrets_groups",
-                related_list_url="extras:secret_list",
+                related_list_url_name="extras:secret_list",
                 table_title="Secrets",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,

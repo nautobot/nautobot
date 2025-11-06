@@ -2769,7 +2769,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
-                related_list_url="ipam:vrf_list",
+                related_list_url_name="ipam:vrf_list",
                 show_table_config_button=False,
             ),
             object_detail.ObjectsTablePanel(
@@ -5619,7 +5619,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 order_by_fields=["priority"],
                 table_title="Interfaces",
                 related_field_name="interface_redundancy_groups",
-                related_list_url="dcim:interface_list",
+                related_list_url_name="dcim:interface_list",
                 include_columns=[
                     "interface__device",
                     "interface",
