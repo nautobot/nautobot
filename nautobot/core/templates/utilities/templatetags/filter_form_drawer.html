@@ -460,6 +460,14 @@
 
                         const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
 
+                        /*
+                         * Just before the form submission automatically add filter selected in "Advanced" tab (if any)
+                         * which hasn't been manually applied for whatever reason (usually forgetfulness, speed, etc.).
+                         * This is a requested UX flavor.
+                         */
+                        const add = dynamicFilterForm.querySelector('button.nb-dynamic-filter-add');
+                        add.click();
+
                         // Remove all field names which are not applied filters container descendants.
                         [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
                             field.closest('.nb-dynamic-filter-items') ? undefined : field.removeAttribute('name'),
