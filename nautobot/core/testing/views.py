@@ -406,6 +406,8 @@ class ViewTestCases:
                     list_url = extra_context.get("body_content_table_list_url")
                     table_title = panel.label or extra_context.get("body_content_table_verbose_name_plural")
                     if not list_url:
+                        # If `header_extra_content_template_path` is not set,
+                        # we don't render the badge in the header nor the link
                         if not panel.header_extra_content_template_path or not panel.enable_related_link:
                             continue
                         errors.append(

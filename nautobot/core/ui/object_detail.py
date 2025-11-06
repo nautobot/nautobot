@@ -1052,6 +1052,8 @@ class ObjectsTablePanel(Panel):
         body_content_table_add_url = self._get_table_add_url(context)
         body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
 
+        # If `header_extra_content_template_path` is not set,
+        # we don't render the badge in the header nor the link
         if self.header_extra_content_template_path and self.enable_related_link:
             list_url = self.related_list_url or getattr(self.table_class, "list_url", None)
             if not list_url:
