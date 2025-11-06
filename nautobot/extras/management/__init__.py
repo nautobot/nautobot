@@ -10,6 +10,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.extras import choices as extras_choices
 from nautobot.ipam import choices as ipam_choices
+from nautobot.load_balancers import choices as load_balancer_choices
 from nautobot.virtualization import choices as vm_choices
 from nautobot.vpn import choices as vpn_choices
 
@@ -35,6 +36,7 @@ STATUS_CHOICESET_MAP = {
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
     "ipam.VRF": ipam_choices.VRFStatusChoices,
+    "load_balancers.LoadBalancerPoolMember": load_balancer_choices.LoadBalancerPoolMemberStatusChoices,
     "virtualization.VirtualMachine": vm_choices.VirtualMachineStatusChoices,
     "virtualization.VMInterface": vm_choices.VMInterfaceStatusChoices,
     "vpn.VPNTunnel": vpn_choices.VPNTunnelStatusChoices,
