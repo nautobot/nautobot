@@ -41,15 +41,15 @@
 
 {% block object-tools %}
     {% block search %}{% search_form cl %}{% endblock %}
-        {% block object-tools-items %}
-            {% if has_add_permission %}
-                {% url cl.opts|admin_urlname:'add' as add_url %}
-                <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> {% blocktrans with cl.opts.verbose_name|bettertitle as name %}Add {{ name }}{% endblocktrans %}
-                </a>
-                </li>
-            {% endif %}
-        {% endblock %}
+    {% block object-tools-items %}
+        {% if has_add_permission %}
+            {% url cl.opts|admin_urlname:'add' as add_url %}
+            <a role="button" href="{% add_preserved_filters add_url is_popup %}" class="btn btn-primary">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> {% blocktrans with cl.opts.verbose_name|bettertitle as name %}Add {{ name }}{% endblocktrans %}
+            </a>
+            </li>
+        {% endif %}
+    {% endblock %}
 {% endblock %}
 
 {% block content %}
