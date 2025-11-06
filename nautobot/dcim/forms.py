@@ -537,7 +537,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         # Set initial value for u_height from Constance config when creating a new rack
         if not self.instance.present_in_database and not kwargs.get("data"):
             # Only set initial if this is a new form (not submitted data)
-            config_default = get_settings_or_config("RACK_DEFAULT_U_HEIGHT", fallback=42)
+            config_default = get_settings_or_config("RACK_DEFAULT_U_HEIGHT", fallback=RACK_U_HEIGHT_DEFAULT)
             self.fields["u_height"].initial = config_default
             # Override the form's initial dict to ensure it displays the Constance config value
             # (unconditionally set it, even if already present from model default)

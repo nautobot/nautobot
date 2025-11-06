@@ -337,14 +337,11 @@ class RackTestCase(TestCase):
 
     def test_rack_form_initial_u_height_default(self):
         """Test that RackForm sets initial u_height from default Constance config (42)."""
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        status = Status.objects.get(name="Active")
-
         # Create a new form (not bound to an instance)
         form = RackForm()
 
         # The initial value should be 42 (default Constance config)
-        self.assertEqual(form.fields["u_height"].initial, 42)
+        self.assertEqual(form.fields["u_height"].initial, RACK_U_HEIGHT_DEFAULT)
 
     @override_config(RACK_DEFAULT_U_HEIGHT=48)
     def test_rack_form_initial_u_height_custom(self):

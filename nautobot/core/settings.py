@@ -823,7 +823,7 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
-        default=42,
+        default=RACK_U_HEIGHT_DEFAULT,
         help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
         field_type=int,
     ),
