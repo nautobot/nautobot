@@ -1050,7 +1050,7 @@ class ObjectsTablePanel(Panel):
 
         body_content_table_list_url = None
         body_content_table_add_url = self._get_table_add_url(context)
-        body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
+        table_title = self.table_title or body_content_table_model._meta.verbose_name_plural
 
         # If `header_extra_content_template_path` is not set,
         # we don't render the badge in the header nor the link
@@ -1063,8 +1063,10 @@ class ObjectsTablePanel(Panel):
                 list_route = reverse(list_url)
             except NoReverseMatch:
                 logger.warning(
-                    f"Unable to determine a valid list URL for ObjectsTablePanel `{body_content_table_verbose_name_plural}` related to `{body_content_table_model.__name__}` with `{list_url}`."
-                    " If the related object is using a through table, consider setting the `related_list_url` parameter or disabling the related link via 'enable_related_link=False'."
+                    f"Unable to determine a valid list URL for ObjectsTablePanel `{table_title}`"
+                    f" related to `{body_content_table_model.__name__}` with `{list_url}`."
+                    " If the related object is using a through table, consider setting the `related_list_url`"
+                    " parameter or disabling the related link via 'enable_related_link=False'."
                 )
                 list_route = None
 
@@ -1076,7 +1078,7 @@ class ObjectsTablePanel(Panel):
             "body_content_table_add_url": body_content_table_add_url,
             "body_content_table_list_url": body_content_table_list_url,
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
-            "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
+            "body_content_table_verbose_name_plural": table_title,
             "footer_buttons": self.footer_buttons,
             "form_id": self.form_id,
             "more_queryset_count": more_queryset_count,
