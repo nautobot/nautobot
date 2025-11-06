@@ -391,6 +391,7 @@ class ViewTestCases:
             model_name = self.model._meta.model_name
 
             response = self.client.get(instance.get_absolute_url())
+            self.assertHttpStatus(response, 200)
             context = response.context
             if not context.get("object_detail_content"):
                 self.skipTest("Model is not using UIViewSet")
