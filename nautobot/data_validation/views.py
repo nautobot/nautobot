@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect, render
 
-from nautobot.apps.ui import Breadcrumbs, Titles, ViewNameBreadcrumbItem
+from nautobot.apps.ui import Titles
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
