@@ -3495,6 +3495,30 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleSerializer
     table_class = tables.ModuleTable
     component_model = None
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_module_bay.parent_device"),
+                    should_render=lambda c: c["object"].parent_module_bay is not None
+                    and c["object"].parent_module_bay.parent_device is not None,
+                ),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_module_bay.parent_module"),
+                    should_render=lambda c: c["object"].parent_module_bay is not None
+                    and c["object"].parent_module_bay.parent_module is not None,
+                ),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent_module_bay")),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("location"),
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(parent_key="location", parent=ancestor),
+                    include_self=True,
+                    should_render=lambda c: c["object"].location is not None,
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
