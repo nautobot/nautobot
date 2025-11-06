@@ -2164,6 +2164,8 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
         ("created",),
         ("last_updated",),
         ("name",),
+        ("secrets_groups", "secrets_groups__id"),
+        ("secrets_groups", "secrets_groups__name"),
         ("tags", "tags__id"),
         ("tags", "tags__name"),
     )
@@ -2191,6 +2193,15 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
             secret.validated_save()
         secrets[0].tags.set(Tag.objects.get_for_model(Secret))
         secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
+
+        secrets_groups = (
+            SecretsGroup.objects.create(
+                name="Secrets Group 1",
+            ),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
+        secrets_groups[0].secrets.set([secrets[0]])
+        secrets_groups[1].secrets.set([secrets[1]])
 
     def test_provider(self):
         params = {"provider": ["environment-variable"]}

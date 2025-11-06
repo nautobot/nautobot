@@ -56,6 +56,8 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
+                related_list_url_name="vpn:vpnphase1policy_list",
+                related_field_name="vpn_profiles",
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -64,6 +66,8 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
+                related_list_url_name="vpn:vpnphase2policy_list",
+                related_field_name="vpn_profiles",
             ),
         ],
         extra_tabs=[
@@ -463,6 +467,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                         table_filter="vpn_tunnel_endpoints",
                         tab_id="protected_dynamic_groups",
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),

@@ -233,6 +233,13 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        prefers_id=True,
+        to_field_name="network",
+        method="filter_ancestors",
+        label="Prefixes which are ancestors of this prefix (ID or host string)",
+    )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
@@ -348,6 +355,13 @@ class PrefixFilterSet(
                     query |= Q(network__lte=bytes(prefix), broadcast__gte=bytes(prefix))
             prefixes_queryset |= queryset.filter(query)
         return prefixes_queryset
+
+    def filter_ancestors(self, queryset, name, value):
+        if not value:
+            return queryset
+        prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
+        ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
+        return queryset.filter(pk__in=ancestor_ids)
 
     def generate_query_filter_present_in_vrf(self, value):
         if isinstance(value, (str, uuid.UUID)):
@@ -475,6 +489,11 @@ class IPAddressFilterSet(
         label="Has NAT Inside",
     )
     ip_version = django_filters.NumberFilter()
+    services = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Service.objects.all(),
+        to_field_name="name",
+        label="Services (name or ID)",
+    )
 
     class Meta:
         model = IPAddress
