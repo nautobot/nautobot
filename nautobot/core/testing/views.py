@@ -384,9 +384,9 @@ class ViewTestCases:
                     else:
                         base_action = action_func.kwargs.get("custom_view_base_action")
                         if base_action is None:
-                            if action_func.url_path not in PERMISSIONS_ACTION_MAP:
-                                self.fail(f"Missing custom_view_base_action for action {action_func.url_name}")
-                            base_action = PERMISSIONS_ACTION_MAP[action_func.url_path]
+                            if action_func.__name__ not in PERMISSIONS_ACTION_MAP:
+                                self.fail(f"Missing custom_view_base_action for action {action_func.__name__}")
+                            base_action = PERMISSIONS_ACTION_MAP[action_func.__name__]
 
                         required_permissions = [
                             f"{self.model._meta.app_label}.{base_action}_{self.model._meta.model_name}"
