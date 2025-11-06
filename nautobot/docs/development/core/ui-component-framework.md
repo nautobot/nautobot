@@ -551,11 +551,8 @@ It integrates with `django_tables2` and provides extensive customization options
 | `add_permissions` | No | Model defaults | Required permissions for "add" button |
 | `enable_bulk_actions` | No | `False` | Enable bulk action checkboxes |
 | `related_field_name` | No | `table_filter` value | Field linking to base model |
-| `related_list_url` | No | `None` | URL override for related model list view |
+| `related_list_url_name` | No | `None` | URL override for related model list view |
 | `enable_related_link` | No | `True` | Enable link to related model list view |
-
-!!! note
-    If the ObjectsTablePanel is a related object, it is expected that the related model has a list view and that the badge will link to that view with the appropriate filter applied. If the linked view and filter are not valid, a warning will be logged and the badge will be disabled. Consider fixing the link via providing the proper filter (`related_field_name`) or URL override (`related_list_url`), or disabling it entirely (`enable_related_link=False`).
 
 #### ObjectsTablePanel Examples
 
@@ -588,6 +585,51 @@ ObjectsTablePanel(
     prefetch_related_fields=["devices"],
     select_related_fields=["manufacturers", "locations"],
 )
+```
+
+#### ObjectsTablePanel Advanced Options
+
+If the ObjectsTablePanel is a related object, it is expected that the related model has a list view and that the badge will link to that view with the appropriate filter applied. If the linked view and filter are not valid, a warning will be logged and the badge will be disabled.
+
+Ensure the ObjectsTablePanel has the proper `related_field_name` to apply the appropriate filter to the list view.
+
+```python
+# Example from the Prefix detail view showing the Parent Prefixes
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_title="Parent Prefixes",
+    related_field_name="ancestors",
+    ...,
+),
+```
+
+If the related model is using a custom through table, you can provide the `related_list_url_name` parameter to provide the proper list view URL.
+
+```python
+# Example from the VRF detail view showing the VRF to Device assignments
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_class=tables.VRFDeviceAssignmentTable,
+    table_title="Assigned Devices",
+    related_list_url_name="dcim:device_list",
+    related_field_name="vrfs",
+    ...,
+),
+```
+
+Lastly, if the related model is using a GenericForeignKey, or is a Many-to-Many relationship linked to multiple models, there isn't a single list view you can use for the link. In that case, you can disable the related link via `enable_related_link=False`.
+
+```python
+# Example from the Tag detail view showing the objects assigned to the Tag
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_title="Tagged Objects",
+    enable_related_link=False,
+    ...,
+),
 ```
 
 ## Button Types
