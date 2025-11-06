@@ -158,7 +158,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-vpns",
         url_name="vpns",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpns"],
+        custom_view_additional_permissions=["vpn.view_vpn"],
     )
     def vpn_vpns(self, request, *args, **kwargs):
         return Response({})
@@ -168,7 +168,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-tunnels",
         url_name="vpntunnels",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpntunnels"],
+        custom_view_additional_permissions=["vpn.view_vpntunnel"],
     )
     def vpn_tunnels(self, request, *args, **kwargs):
         return Response({})
@@ -178,7 +178,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-endpoints",
         url_name="vpnendpoints",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpntunnelendpoints"],
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoint"],
     )
     def vpn_endpoints(self, request, *args, **kwargs):
         return Response({})

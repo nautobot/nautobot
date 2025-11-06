@@ -262,6 +262,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="config-context",
         url_name="configcontext",
+        custom_view_base_action="view",
         custom_view_additional_permissions=["extras.view_configcontext"],
     )
     def config_context(self, request, pk):
@@ -288,7 +289,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
             "format": data_format,
             "template": "extras/object_configcontext.html",
-            "base_template": "virtualization/virtualmachine.html",
+            "base_template": "generic/object_retrieve.html",
         }
 
         return Response(context)

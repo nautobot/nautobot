@@ -1504,7 +1504,9 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(
+        detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_objectchange"]
+    )
     def changelog(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1525,7 +1527,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_note"])
     def notes(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {

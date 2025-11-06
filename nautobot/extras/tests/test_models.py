@@ -27,6 +27,7 @@ from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
+    DeviceFamily,
     DeviceType,
     Location,
     LocationType,
@@ -677,8 +678,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.first()
-        cls.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.devicefamily = DeviceFamily.objects.create(name="Device Family 1")
+        cls.devicetype = DeviceType.objects.create(
+            manufacturer=cls.manufacturer, model="Device Type 1", device_family=cls.devicefamily
+        )
         cls.devicerole = Role.objects.get_for_model(Device).first()
         root_location_type = LocationType.objects.create(name="Root Location Type")
         parent_location_type = LocationType.objects.create(name="Parent Location Type", parent=root_location_type)
@@ -1216,6 +1220,38 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             self.assertNotIn("cluster_group_1", context.keys())
             self.assertNotIn("cluster_group_2", context.keys())
             self.assertNotIn("cluster_group_12", context.keys())
+
+    def test_device_family_context(self):
+        """
+        A config context assigned to the device's DeviceFamily is included in get_config_context().
+        """
+
+        # Create a Family-level context
+        cc_family = ConfigContext.objects.create(
+            name="Device Family 1",
+            weight=100,
+            data={
+                "device_family": "Device Family 1",
+            },
+        )
+        cc_family.device_families.add(self.devicefamily)
+        ctx1 = self.device.get_config_context()
+
+        # Create a second device for a negative test and verify that it does NOT receive the family context
+        device_type2 = DeviceType.objects.create(manufacturer=self.manufacturer, model="Device Type2")
+        device2 = Device.objects.create(
+            name="Device 2",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=device_type2,
+        )
+        ctx2 = device2.get_config_context()
+
+        self.assertEqual(ctx1.get("device_family"), "Device Family 1")
+        self.assertEqual(ctx2.get("device_family"), None)
 
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):

@@ -535,7 +535,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="prefixes",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["ipam.view_prefix"],
     )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
