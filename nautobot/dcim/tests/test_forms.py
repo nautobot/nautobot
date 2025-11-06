@@ -393,7 +393,7 @@ class RackTestCase(TestCase):
         rack = form.validated_save()
         # Since u_height wasn't provided, it uses the model's default (42)
         # The Constance config only affects the form's initial display value
-        self.assertEqual(rack.u_height, 42)  # Model default, not form initial
+        self.assertEqual(rack.u_height, RACK_U_HEIGHT_DEFAULT)  # Model default, not form initial
 
 
 class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
