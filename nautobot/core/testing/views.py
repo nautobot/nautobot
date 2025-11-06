@@ -28,6 +28,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
+from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
 from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
@@ -377,6 +378,59 @@ class ViewTestCases:
                 self.assertHttpStatus(self.client.get(url), 200)
                 # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
                 self.remove_permissions(*required_permissions)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_body_content_table_list_url(self):
+            """
+            Testing that the badge links on related object panels are working as expected.
+            """
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            errors = []
+            model_name = self.model._meta.model_name
+
+            response = self.client.get(instance.get_absolute_url())
+            context = response.context
+            if not context.get("object_detail_content"):
+                self.skipTest("Model is not using UIViewSet")
+            for tab in context["object_detail_content"].tabs:
+                if not tab.should_render(context):
+                    continue
+                tab_label = f"'{tab.label}'" if tab.label else "main"
+                for panel in tab.panels:
+                    if not isinstance(panel, ObjectsTablePanel) or panel.context_table_key:
+                        continue
+                    extra_context = panel.get_extra_context(context)
+                    list_url = extra_context.get("body_content_table_list_url")
+                    table_title = panel.label or extra_context.get("body_content_table_verbose_name_plural")
+                    if not list_url:
+                        if not panel.header_extra_content_template_path or not panel.enable_related_link:
+                            continue
+                        errors.append(
+                            (
+                                f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link does not exist."
+                                " Please ensure the related model has a list view, or override with a custom list URL via 'related_list_url=app:model_list'."
+                                " If the link should not be enabled, you must explicitly set 'enable_related_link=False' on the ObjectsTablePanel."
+                            )
+                        )
+                        continue
+                    try:
+                        list_response = self.client.get(list_url)
+                    except Exception as e:
+                        errors.append(
+                            f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {e}"
+                        )
+                    else:
+                        self.assertHttpStatus(list_response, 200)
+                        for error in list_response.context["errors"]:
+                            errors.append(
+                                (
+                                    f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {error}."
+                                )
+                            )
+            if errors:
+                self.fail("\n".join(errors))
 
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
