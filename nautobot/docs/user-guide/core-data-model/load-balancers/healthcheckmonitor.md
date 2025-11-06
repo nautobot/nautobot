@@ -19,6 +19,6 @@ The HealthCheckMonitor model provides the following fields:
 
 Health checks can be applied at the Pool or Pool Member level. If a Pool Member has its own monitor, it takes precedence over the monitor defined on the Pool.
 
-- Health check monitors must be created before they can be assigned.
+- Health check monitors must be created before they can be assigned to a Pool or Pool Member.
 - Different check types (e.g., Ping, TCP, HTTP) may require different port configurations.
 - If `port` is not defined, some vendors may fall back to the service port defined on the pool member or use a protocol-specific default.

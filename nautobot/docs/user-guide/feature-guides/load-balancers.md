@@ -2,7 +2,7 @@
 
 ## Key Features and Functionality
 
-- **Multi-vendor Support:** Native compatibility with popular load balancing vendors including F5, Citrix NetScaler, A10 Networks, and Fortinet.
+- **Multi-vendor Support:** Native compatibility with popular load balancing vendors including F5, Citrix NetScaler, A10 Networks, VMware Avi Load Balancer, and Fortinet.
 - **CRUD Operations:** Manage Load Balancer resources directly within Nautobot UI, REST API, and GraphQL.
 - **Integration and Extensibility:** Leverage Nautobot’s extensibility framework for deeper integration with other applications and automation systems.
 - **Configuration Management:** Generate basic load balancing configurations directly from stored data models.
@@ -629,3 +629,64 @@ To capture these, you can define **Custom Fields** in Nautobot on models like `V
 - Use a **JSON Custom Field** to store structured vendor-specific configuration, such as SNAT policies or fallback persistence logic.
 
 Both field types and many more types are defined are defined through Nautobot’s Custom Field system and will appear in the UI, API, and Jinja2 templates. This provides a flexible, vendor-specific extension mechanism without altering the core data model.
+
+## Sample Citrix NetScaler Jinja Template
+
+This simple template for Citrix NetScaler will work with the same data as above.
+
+```jinja2
+{% for virtual_server in data.virtual_servers %}
+
+add ns ip {{ virtual_server.vip.address.split('/')[0] }} 255.255.255.255 -type VIP
+
+{%- if virtual_server.certificate_profiles %}
+add ssl certKey {{ virtual_server.certificate_profiles[0].name }} -cert {{ virtual_server.certificate_profiles[0].certificate_file_path }} -key {{ virtual_server.certificate_profiles[0].key_file_path }}
+{% endif %}
+
+{%- for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+add service svc_{{ virtual_server.load_balancer_pool.name }}_{{ loop.index }} {{ member.ip_address.address.split('/')[0] }} {{ virtual_server.protocol | upper }} {{ member.port }}
+{%- endfor %}
+
+add servicegroup sg_{{ virtual_server.load_balancer_pool.name }} {{ virtual_server.protocol | upper }}
+{% for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+bind servicegroup sg_{{ virtual_server.load_balancer_pool.name }} svc_{{ virtual_server.load_balancer_pool.name }}_{{ loop.index }}
+{%- endfor %}
+
+add lb vserver {{ virtual_server.name }} {{ virtual_server.protocol | upper }} {{ virtual_server.vip.address.split('/')[0] }} {{ virtual_server.port }}
+bind lb vserver {{ virtual_server.name }} -serviceGroupName sg_{{ virtual_server.load_balancer_pool.name }}
+
+{% if virtual_server.certificate_profiles %}
+bind ssl vserver {{ virtual_server.name }} -certkeyName {{ virtual_server.certificate_profiles[0].name }}
+{%- endif %}
+
+{% endfor %}
+```
+
+## Sample A10 Networks Jinja Template
+
+This simple template for A10 Networks will work with the same data as above.
+
+```jinja2
+{% for virtual_server in data.virtual_servers %}
+
+{% for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+slb server realserver{{ loop.index }} {{ member.ip_address.address.split('/')[0] }}
+  port {{ member.port }} tcp
+
+{%- endfor %}
+
+slb service-group {{ virtual_server.load_balancer_pool.name }} tcp
+{%- for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+  member realserver{{ loop.index }} {{ member.port }}
+
+{%- endfor %}
+
+slb virtual-server {{ virtual_server.name }} {{ virtual_server.vip.address.split('/')[0] }}
+  port {{ virtual_server.port }} {{ virtual_server.protocol | lower }}
+  service-group {{ virtual_server.load_balancer_pool.name }}
+{% if virtual_server.source_nat_pool is defined %}
+  source-nat pool {{ virtual_server.source_nat_pool }}
+{% endif %}
+
+{% endfor %}
+```
