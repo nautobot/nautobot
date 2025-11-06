@@ -551,6 +551,11 @@ It integrates with `django_tables2` and provides extensive customization options
 | `add_permissions` | No | Model defaults | Required permissions for "add" button |
 | `enable_bulk_actions` | No | `False` | Enable bulk action checkboxes |
 | `related_field_name` | No | `table_filter` value | Field linking to base model |
+| `related_list_url` | No | `None` | URL override for related model list view |
+| `enable_related_link` | No | `True` | Enable link to related model list view |
+
+!!! note
+    If the ObjectsTablePanel is a related object, it is expected that the related model has a list view and that the badge will link to that view with the appropriate filter applied. If the linked view and filter are not valid, a warning will be logged and the badge will be disabled. Consider fixing the link via providing the proper filter (`related_field_name`) or URL override (`related_list_url`), or disabling it entirely (`enable_related_link=False`).
 
 #### ObjectsTablePanel Examples
 
