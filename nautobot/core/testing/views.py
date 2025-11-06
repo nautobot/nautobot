@@ -29,6 +29,7 @@ from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.utils import lookup
+from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
@@ -365,18 +366,45 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_custom_actions(self):
-            instance = self._get_queryset().first()
-            for url_name, required_permissions in self.custom_action_required_permissions.items():
-                url = reverse(url_name, kwargs={"pk": instance.pk})
-                self.assertHttpStatus(self.client.get(url), 403)
-                for permission in required_permissions[:-1]:
-                    self.add_permissions(permission)
-                    self.assertHttpStatus(self.client.get(url), 403)
+            base_view = lookup.get_view_for_model(self.model)
+            if not issubclass(base_view, NautobotViewSetMixin):
+                self.skipTest(f"View {base_view} is not using NautobotUIViewSet")
 
-                self.add_permissions(required_permissions[-1])
-                self.assertHttpStatus(self.client.get(url), 200)
-                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
-                self.remove_permissions(*required_permissions)
+            instance = self._get_queryset().first()
+            for action_func in base_view.get_extra_actions():
+                if not action_func.detail:
+                    continue
+                if "get" not in action_func.mapping:
+                    continue
+                if action_func.url_name == "data-compliance" and not getattr(base_view, "object_detail_content", None):
+                    continue
+                with self.subTest(action=action_func.url_name):
+                    if action_func.url_name in self.custom_action_required_permissions:
+                        required_permissions = self.custom_action_required_permissions[action_func.url_name]
+                    else:
+                        base_action = action_func.kwargs.get("custom_view_base_action")
+                        if base_action is None:
+                            if action_func.url_path not in PERMISSIONS_ACTION_MAP:
+                                self.fail(f"Missing custom_view_base_action for action {action_func.url_name}")
+                            base_action = PERMISSIONS_ACTION_MAP[action_func.url_path]
+
+                        required_permissions = [
+                            f"{self.model._meta.app_label}.{base_action}_{self.model._meta.model_name}"
+                        ]
+                        required_permissions += action_func.kwargs.get("custom_view_additional_permissions", [])
+
+                    try:
+                        url = self._get_url(action_func.url_name, instance)
+                        self.assertHttpStatus(self.client.get(url), [403, 404])
+                        for permission in required_permissions[:-1]:
+                            self.add_permissions(permission)
+                            self.assertHttpStatus(self.client.get(url), [403, 404])
+
+                        self.add_permissions(required_permissions[-1])
+                        self.assertHttpStatus(self.client.get(url), 200)
+                    finally:
+                        # delete the permissions here so that we start from a clean slate on the next loop
+                        self.remove_permissions(*required_permissions)
 
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """

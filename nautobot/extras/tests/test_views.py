@@ -97,7 +97,6 @@ from nautobot.extras.models import (
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
-from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -4073,17 +4072,7 @@ class ObjectMetadataTestCase(
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 
 
-class RelationshipTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    RequiredRelationshipTestMixin,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Relationship
     slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)

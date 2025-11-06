@@ -5171,7 +5171,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         url_path="add-member",
         url_name="add_member",
         custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_virtualchassis"],
     )
     def add_member(self, request, pk=None):
         virtual_chassis = self.get_object()

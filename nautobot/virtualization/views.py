@@ -262,6 +262,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="config-context",
         url_name="configcontext",
+        custom_view_base_action="view",
         custom_view_additional_permissions=["extras.view_configcontext"],
     )
     def config_context(self, request, pk):
