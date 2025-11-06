@@ -1,0 +1,1 @@
+Added Constance configuration setting `RACK_DEFAULT_U_HEIGHT` to configure the default height (in rack units) displayed in the Rack creation form.
