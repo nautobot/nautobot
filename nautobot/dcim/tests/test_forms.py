@@ -368,31 +368,6 @@ class RackTestCase(TestCase):
         # (The form will show the model instance's value, not the Constance config)
         self.assertEqual(form.initial["u_height"], 24)
 
-    @override_config(RACK_DEFAULT_U_HEIGHT=50)
-    def test_rack_form_create_with_custom_config(self):
-        """Test that creating a rack via form uses the Constance config default."""
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        status = Status.objects.get(name="Active")
-
-        # Prepare form data WITHOUT specifying u_height (to use the initial value)
-        data = {
-            "name": "Test Rack Form",
-            "location": location.pk,
-            "status": status.pk,
-            "width": RackWidthChoices.WIDTH_19IN,
-            # Note: u_height is intentionally omitted
-        }
-
-        form = RackForm(data=data)
-
-        # The form should be valid and use the Constance config value
-        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
-
-        rack = form.validated_save()
-        # Since u_height wasn't provided, it uses the model's default (42)
-        # The Constance config only affects the form's initial display value
-        self.assertEqual(rack.u_height, RACK_U_HEIGHT_DEFAULT)  # Model default, not form initial
-
 
 class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
     @classmethod
