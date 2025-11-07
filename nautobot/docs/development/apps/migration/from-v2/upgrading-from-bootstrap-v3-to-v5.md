@@ -64,11 +64,22 @@ Total issues fixed: 417
 
 In the case of the above output snippet, you can see that while the script fixed 417 migration issues automatically, it encountered some uncertainty in `nautobot/extras/templates/extras/inc/configcontext_format.html`, likely due to the Django template logic wrapping the `btn-primary` and `btn-default` classes. In this case you'd (as documented below in [Buttons](#buttons)) likely want to manually replace the `btn-default` case with `btn-secondary`.
 
+??? info "Full table of Boostrap v3 to v5 and Nautobot UI API changes"
+    {data-table ../nautobot/core/cli/bootstrap_v3_to_v5_changes.yaml}
+
 ## Overview of High-Level Changes
 
 ### Bootstrap `data-*` attributes
 
 In Bootstrap v5.x, some reused native HTML attributes became `data-*` attributes for less ambiguity. In addition to that, all custom Bootstrap `data-*` attributes are prefixed with an additional `bs-` for even more clarity. For example, `data-toggle="collapse"` is now `data-bs-toggle="collapse"`, and Tooltip's `title` attribute has been changed to `data-bs-title`.
+
+| Bootstrap v3    | Bootstrap v5       |
+|-----------------|--------------------|
+| `data-backdrop` | `data-bs-backdrop` |
+| `data-dismiss`  | `data-bs-dismiss`  |
+| `data-target`   | `data-bs-target`   |
+| `data-title`    | `data-bs-title`    |
+| `data-toggle`   | `data-bs-toggle`   |
 
 === "Bootstrap v3"
 
