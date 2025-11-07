@@ -246,6 +246,8 @@ class Button(Component):
         """
         if self.link_name and self.link_includes_pk:
             obj = get_obj_from_context(context, self.context_object_key)
+            if not obj:
+                return None
             return reverse(self.link_name, kwargs={"pk": obj.pk})
         elif self.link_name:
             return reverse(self.link_name)
