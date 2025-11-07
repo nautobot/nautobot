@@ -209,7 +209,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#8047](https://github.com/nautobot/nautobot/issues/8047) - Fixed incorrect logic in `nautobot.virtualization.tests.test_models.VMInterfaceTestCase` that could lead to test failures.
 - [#8068](https://github.com/nautobot/nautobot/issues/8068) - Updated deprecated HTML templates migration script to handle more cases.
 - [#8113](https://github.com/nautobot/nautobot/issues/8113) - Fixed live reloading when serving development documentation with mkdocs.
-- [#8114](https://github.com/nautobot/nautobot/issues/8114) - Set `INSTALLATION_METRICS_ENABLED=False` explicitly in the testing `nautobot_config.py` to avoid inadvertenly sending metrics when running tests.
+- [#8114](https://github.com/nautobot/nautobot/issues/8114) - Set `INSTALLATION_METRICS_ENABLED=False` explicitly in the testing `nautobot_config.py` to avoid inadvertently sending metrics when running tests.
 
 ## v2.4.21 (2025-10-27)
 
