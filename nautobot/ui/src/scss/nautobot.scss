@@ -2381,6 +2381,11 @@ pre code.hljs {
   border-radius: $border-radius;
 }
 
+/* Swagger docs */
+pre.version, pre.version-stamp {
+    background-color: inherit !important;
+}
+
 /* Rendered Markdown */
 .nb-rendered-markdown {
   table {
