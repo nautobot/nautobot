@@ -189,6 +189,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#8059](https://github.com/nautobot/nautobot/issues/8059) - Fixed the Wireless Networks tab on the Controller detail page.
 - [#8073](https://github.com/nautobot/nautobot/issues/8073) - Added missing call to `super().get_extra_context()` in `LocationUIViewSet`, `ModuleTypeUIViewSet`.
 - [#8077](https://github.com/nautobot/nautobot/issues/8077) - Fixed the rendering of the min and max version fields in the App detail view when they are not set.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect permissions requirement to view Virtual Machine config context tab.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect field name in Config Context filter form.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed leftover use of legacy views in Relationship "notes" and "changelog" tabs.
 
 ### Dependencies in v2.4.22
 

@@ -1,3 +1,0 @@
-Fixed incorrect permissions requirement to view Virtual Machine config context tab.
-Fixed incorrect field name in Config Context filter form.
-Fixed leftover use of legacy views in Relationship "notes" and "changelog" tabs.
