@@ -121,7 +121,7 @@ class NavigationIconChoices(ChoiceSet):
     IPAM = "sitemap-outline"
     ORGANIZATION = "organization"
     CIRCUITS = "cable-data"
-    VPN = "atom"
+    VPN = "bus-shield"
     ROUTING = "route"
     POWER = "battery-3"
     WIRELESS = "wifi"
