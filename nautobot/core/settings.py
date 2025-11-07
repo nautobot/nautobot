@@ -822,6 +822,11 @@ CONSTANCE_CONFIG = {
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
         field_type=bool,
     ),
+    "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
+        default=42,
+        help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
+        field_type=int,
+    ),
     "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": ConstanceConfigItem(
         default=22, help_text="Default height (in pixels) of a rack unit in a rack elevation diagram", field_type=int
     ),
@@ -865,6 +870,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
+        "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
