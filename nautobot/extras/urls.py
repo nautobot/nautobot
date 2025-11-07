@@ -4,7 +4,6 @@ from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
     Job,
-    Relationship,
 )
 
 app_name = "extras"
@@ -111,19 +110,6 @@ urlpatterns = [
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
     path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # Custom relationships
-    path(
-        "relationships/<uuid:pk>/changelog/",
-        views.ObjectChangeLogView.as_view(),
-        name="relationship_changelog",
-        kwargs={"model": Relationship},
-    ),
-    path(
-        "relationships/<uuid:pk>/notes/",
-        views.ObjectNotesView.as_view(),
-        name="relationship_notes",
-        kwargs={"model": Relationship},
-    ),
     # Secrets
     path(
         "secrets/provider/<str:provider_slug>/form/",
