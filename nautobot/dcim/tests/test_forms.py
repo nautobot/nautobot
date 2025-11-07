@@ -11,6 +11,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     RackWidthChoices,
 )
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
     DeviceFilterForm,
     DeviceForm,
