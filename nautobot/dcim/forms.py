@@ -9,7 +9,6 @@ from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -40,7 +39,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
-from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,

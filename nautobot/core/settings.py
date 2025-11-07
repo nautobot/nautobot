@@ -17,6 +17,7 @@ from nautobot.core.constants import (
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT as _RACK_U_HEIGHT_DEFAULT
 
 #
 # Environment setup
@@ -823,7 +824,7 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
-        default=RACK_U_HEIGHT_DEFAULT,
+        default=_RACK_U_HEIGHT_DEFAULT,
         help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
         field_type=int,
     ),
