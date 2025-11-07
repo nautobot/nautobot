@@ -40,7 +40,7 @@
                 "workbench.settings.useSplitJSON": false,
                 // Markdown settings
                 "[markdown]": {
-                    "editor.defaultFormatter": "charliermarsh.ruff"
+                    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
                 },
                 // Python settings
                 "[python]": {
