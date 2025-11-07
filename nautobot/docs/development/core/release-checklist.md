@@ -64,7 +64,7 @@ Follow the [install instructions](../../user-guide/administration/installation/n
 The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
-    Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
+    Fire up `mkdocs serve --livereload` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
 
 Commit any necessary changes to the documentation before proceeding with the release.
 
@@ -248,7 +248,7 @@ poetry publish --username __token__ --password <api_token>
 Build the images locally:
 
 ```no-highlight
-for ver in 3.9 3.10 3.11 3.12; do
+for ver in 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
   invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
@@ -270,7 +270,7 @@ nautobot:
     You should *not* include `docker-compose.dev.yml` in this test scenario!
 
 ```no-highlight
-for ver in 3.9 3.10 3.11 3.12; do
+for ver in 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke stop
   invoke tests --tag integration
@@ -282,7 +282,7 @@ Push the images to GitHub Container Registry and Docker Hub
 ```no-highlight
 docker login
 docker login ghcr.io
-for ver in 3.9 3.10 3.11 3.12; do
+for ver in 3.10 3.11 3.12; do
   export INVOKE_NAUTOBOT_PYTHON_VER=$ver
   invoke docker-push main
 done

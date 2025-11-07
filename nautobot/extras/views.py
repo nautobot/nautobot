@@ -25,6 +25,7 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -748,12 +749,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
         elif self.action == "retrieve":
             model = instance.model
             table_class = get_table_for_model(model)
-            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                # Ensure that members cache is up-to-date for this specific group
-                members = instance.update_cached_members()
-                messages.success(request, f"Refreshed cached members list for {instance}")
-            else:
-                members = instance.members
+            members = instance.members
             if table_class is not None:
                 if hasattr(members, "without_tree_fields"):
                     members = members.without_tree_fields()
@@ -808,7 +804,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
         return context
 
-    def form_save(self, form, **kwargs):
+    def form_save(self, form, commit=True, **kwargs):
         obj = form.save(commit=False)
         context = self.get_extra_context(self.request, obj)
 
@@ -827,10 +823,18 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                         form.add_error(None, msg)
                 raise
 
-        # After filters have been set, now we save the object to the database.
-        obj.save()
-        # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
-        form.save_m2m()
+        if commit:
+            # After filters have been set, now we save the object to the database.
+            obj.save(update_cached_members=False)
+            # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+            form.save_m2m()
+
+            if obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                messages.warning(
+                    self.request,
+                    "Dynamic Group membership is not automatically recalculated after creating/editing the group, "
+                    'as it may take some time to complete. You can use the "Refresh Members" button when ready.',
+                )
 
         # Process the formsets for children
         children = context.get("children")
@@ -845,7 +849,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                         added_errors.add(msg)
             raise ValidationError("invalid DynamicGroupMembershipFormSet")
 
-        if children:
+        if commit and children:
             children.save()
 
         return obj
@@ -1144,6 +1148,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     filterset_class = filters.GitRepositoryFilterSet
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
+    view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -1187,14 +1192,18 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         job_result = instance.get_latest_sync()
 
         context = {
+            **super().get_extra_context(request, instance),
             "result": job_result or {},
-            "base_template": "extras/gitrepository.html",
+            "base_template": "extras/gitrepository_retrieve.html",
             "object": instance,
             "active_tab": "result",
             "verbose_name": instance._meta.verbose_name,
         }
 
-        return render(request, "extras/gitrepository_result.html", context)
+        return Response(
+            context,
+            template_name="extras/gitrepository_result.html",
+        )
 
     @action(
         detail=True,
@@ -1240,6 +1249,27 @@ class GraphQLQueryUIViewSet(
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
     action_buttons = ("add",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Query",
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["name", "query", "variables"],
+                value_transforms={
+                    "query": [lambda val: format_html('<pre><code class="language-graphql">{}</code></pre>', val)],
+                    "variables": [lambda val: helpers.render_json(val, syntax_highlight=True, pretty_print=True)],
+                },
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=object_detail.SectionChoices.RIGHT_HALF,
+                body_content_template_path="extras/inc/graphqlquery_execute.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        )
+    )
 
 
 #
@@ -1539,7 +1569,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
 class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
-    template_name = "extras/job_detail.html"
+    template_name = "generic/object_retrieve.html"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -2362,7 +2392,7 @@ class ObjectChangeLogView(generic.GenericView):
 
         return render(
             request,
-            "extras/object_changelog.html",
+            "generic/object_changelog.html",
             {
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
@@ -2569,7 +2599,7 @@ class ObjectNotesView(generic.GenericView):
 
         return render(
             request,
-            "extras/object_notes.html",
+            "generic/object_notes.html",
             {
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
@@ -3063,8 +3093,8 @@ class WebhookUIViewSet(NautobotUIViewSet):
 
 
 class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "extras/job_detail.html"
+    base_template = "generic/object_retrieve.html"
 
 
 class JobObjectNotesView(ObjectNotesView):
-    base_template = "extras/job_detail.html"
+    base_template = "generic/object_retrieve.html"

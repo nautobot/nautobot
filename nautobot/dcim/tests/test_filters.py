@@ -11,7 +11,9 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     DeviceFaceChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
@@ -124,6 +126,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.filters.mixins import RoleFilter, StatusFilter
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
+from nautobot.extras.tests.test_customfields_filters import CustomFieldsFilters
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
@@ -1037,7 +1040,9 @@ class PathEndpointModelTestMixin:
             )
 
 
-class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
+class LocationTypeFilterSetTestCase(
+    FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin
+):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
     generic_filter_tests = [
@@ -1074,7 +1079,10 @@ class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             )
 
 
-class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class LocationFilterSetTestCase(
+    FilterTestCases.FilterTestCase,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     tenancy_related_name = "locations"
@@ -1147,7 +1155,7 @@ class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         )
 
 
-class RackGroupTestCase(FilterTestCases.FilterTestCase):
+class RackGroupTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
     generic_filter_tests = [
@@ -1355,7 +1363,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
         common_test_data(cls)
 
 
-class ManufacturerTestCase(FilterTestCases.FilterTestCase):
+class ManufacturerTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
     generic_filter_tests = [
@@ -1391,7 +1399,7 @@ class DeviceFamilyTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
-class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
+class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.CustomFieldsFilterSetTestCaseMixin):
     queryset = DeviceType.objects.all()
     filterset = DeviceTypeFilterSet
     generic_filter_tests = [
@@ -2256,6 +2264,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("name",),
         ("parent_interface", "parent_interface__id"),
         ("parent_interface", "parent_interface__name"),
+        ("speed",),
+        ("duplex",),
         ("role", "role__id"),
         ("role", "role__name"),
         ("status", "status__id"),
@@ -2335,6 +2345,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             mtu=100,
             status=interface_statuses[0],
             untagged_vlan=vlans[0],
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
         )
 
         Interface.objects.filter(pk=cabled_interfaces[1].pk).update(
@@ -2344,6 +2356,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             mtu=200,
             status=interface_statuses[3],
             untagged_vlan=vlans[1],
+            speed=InterfaceSpeedChoices.SPEED_10G,
+            duplex=InterfaceDuplexChoices.DUPLEX_HALF,
         )
 
         Interface.objects.filter(pk=cabled_interfaces[2].pk).update(
@@ -2356,6 +2370,16 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
 
         for interface in cabled_interfaces:
             interface.refresh_from_db()
+
+        # Additional optical interface for speed filtering (no duplex)
+        Interface.objects.create(
+            device=devices[2],
+            name="Filter Optical IF",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=interface_statuses[0],
+            speed=InterfaceSpeedChoices.SPEED_10G,
+            duplex="",
+        )
 
         cable_statuses = Status.objects.get_for_model(Cable)
         connected_status = cable_statuses.get(name="Connected")
@@ -2551,6 +2575,20 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_speed_multi(self):
+        params = {"speed": [InterfaceSpeedChoices.SPEED_1G, InterfaceSpeedChoices.SPEED_10G]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(speed__in=params["speed"]),
+        )
+
+    def test_speed_and_duplex(self):
+        params = {"speed": [InterfaceSpeedChoices.SPEED_10G], "duplex": [InterfaceDuplexChoices.DUPLEX_HALF]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(speed__in=params["speed"], duplex__in=params["duplex"]),
+        )
 
     def test_device_with_common_vc(self):
         """Assert only interfaces belonging to devices with common VC are returned"""

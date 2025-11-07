@@ -39,7 +39,7 @@ from nautobot.core.templatetags.helpers import (
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.ui.utils import render_component_template
-from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model, get_view_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
@@ -197,7 +197,7 @@ class Button(Component):
         size=None,
         link_includes_pk=True,
         context_object_key=None,
-        render_on_tab_id="main",
+        render_on_tab_id="__all__",
         **kwargs,
     ):
         """
@@ -258,8 +258,11 @@ class Button(Component):
         }
 
     def should_render(self, context: Context):
+        # Only show if the user has the permission, which is enforce in super.
         if not super().should_render(context):
             return False
+        if self.render_on_tab_id == "__all__":
+            return True
         return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
@@ -529,6 +532,7 @@ class Panel(Component):
         self,
         *,
         label="",
+        css_class="default",
         section=SectionChoices.FULL_WIDTH,
         body_id=None,
         body_content_template_path=None,
@@ -543,6 +547,7 @@ class Panel(Component):
 
         Args:
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
+            css_class (str): Panel variant to render as, e.g. "default", "warning", "info".
             section (str): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
@@ -554,6 +559,7 @@ class Panel(Component):
                 (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
         """
         self.label = label
+        self.css_class = css_class
         self.section = section
         self.body_id = body_id
         self.body_content_template_path = body_content_template_path
@@ -580,6 +586,7 @@ class Panel(Component):
                 self.template_path,
                 context,
                 label=self.render_label(context),
+                css_class=self.css_class,
                 header_extra_content=self.render_header_extra_content(context),
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
@@ -872,7 +879,12 @@ class ObjectsTablePanel(Panel):
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
-            return_url += f"?tab={self.tab_id}"
+            try:
+                # Check to see if the this is a NautobotUIViewset action
+                view = get_view_for_model(obj._meta.model)
+                return_url += getattr(view, self.tab_id).url_path + "/"
+            except AttributeError:
+                return_url += f"?tab={self.tab_id}"
 
         if self.add_button_route is not None:
             add_permissions = self.add_permissions
@@ -1606,7 +1618,7 @@ class StatsPanel(Panel):
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
-            self.filter_pks = (
+            self.filter_pks = list(
                 instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
             )
         else:
@@ -1622,9 +1634,10 @@ class StatsPanel(Panel):
                 else:
                     related_object_model_class, query = related_field, f"{self.filter_name}__in"
                 filter_dict = {query: self.filter_pks}
-                related_object_count = (
-                    related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()
-                )
+                qs = related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict)
+                if len(self.filter_pks) > 1:
+                    qs = qs.distinct()
+                related_object_count = qs.count()
                 related_object_model_class_meta = related_object_model_class._meta
                 related_object_list_url = validated_viewname(related_object_model_class, "list")
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
@@ -2031,6 +2044,36 @@ class _ObjectDetailContactsTab(Tab):
         )
 
 
+class DynamicGroupsTextPanel(BaseTextPanel):
+    """Panel displaying a note about caching of dynamic groups."""
+
+    def __init__(
+        self,
+        *,
+        weight,
+        render_as=BaseTextPanel.RenderOptions.MARKDOWN,
+        label="Dynamic Group caching",
+        css_class="warning",
+        **kwargs,
+    ):
+        super().__init__(weight=weight, render_as=render_as, label=label, css_class=css_class, **kwargs)
+
+    def get_value(self, context):
+        dg_list_url = reverse("extras:dynamicgroup_list")
+        job_run_url = reverse(
+            "extras:job_run_by_class_path",
+            kwargs={"class_path": "nautobot.core.jobs.groups.RefreshDynamicGroupCaches"},
+        )
+        return (
+            "Dynamic group membership is cached for performance reasons, "
+            "therefore this page may not always be up-to-date.\n\n"
+            "You can refresh the membership of any specific group by accessing it from the list below or from the "
+            f'[Dynamic Groups list view]({dg_list_url}) and clicking the "Refresh Members" button.\n\n'
+            "You can also refresh the membership of **all** groups by running the "
+            f"[Refresh Dynamic Group Caches job]({job_run_url})."
+        )
+
+
 @dataclass
 class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
@@ -2047,8 +2090,9 @@ class _ObjectDetailGroupsTab(Tab):
     ):
         if panels is None:
             panels = (
+                DynamicGroupsTextPanel(weight=100),
                 ObjectsTablePanel(
-                    weight=100,
+                    weight=200,
                     table_class=DynamicGroupTable,
                     table_attribute="dynamic_groups",
                     exclude_columns=["content_type"],

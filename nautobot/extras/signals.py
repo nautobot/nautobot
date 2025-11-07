@@ -23,7 +23,7 @@ import redis.exceptions
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.logging import sanitize
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import ButtonClassChoices, JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
     ComputedField,
@@ -542,24 +542,6 @@ m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
-def dynamic_group_update_cached_members(sender, instance, **kwargs):
-    """
-    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members for it and any parent groups.
-    """
-    if isinstance(instance, DynamicGroupMembership):
-        group = instance.parent_group
-    else:
-        group = instance
-
-    group.update_cached_members()
-    for ancestor in group.get_ancestors():
-        ancestor.update_cached_members()
-
-
-post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
-post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
-
-
 #
 # Jobs
 #
@@ -643,6 +625,25 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+    # Wire up the JobButton for Dynamic Group member refresh
+    JobButton = apps.get_model("extras", "JobButton")
+    ContentType = apps.get_model("contenttypes", "ContentType")  # pylint: disable=redefined-outer-name
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")  # pylint: disable=redefined-outer-name
+
+    dg_job_button, _ = JobButton.objects.get_or_create(
+        name="Refresh Dynamic Group Members Cache",
+        job=Job.objects.get(
+            module_name="nautobot.core.jobs.groups", job_class_name="RefreshDynamicGroupCacheJobButtonReceiver"
+        ),
+        defaults={
+            "enabled": True,
+            "text": "Refresh Members",
+            "button_class": ButtonClassChoices.CLASS_WARNING,
+            "confirmation": True,
+        },
+    )
+    dg_job_button.content_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
 
 #

@@ -529,7 +529,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         form.add_error(None, msg)
         return form
 
-    def _handle_not_implemented_error(self):
+    def _handle_not_implemented_error(self, error):
+        self.logger.debug(f"NotImplementedError raised on action {self.action} resulting in error: {error}")
         # Blanket handler for NotImplementedError raised by form helper functions
         msg = "Please provide the appropriate mixin before using this helper function"
         messages.error(self.request, msg)
@@ -564,8 +565,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self._handle_validation_error(e)
         except ObjectDoesNotExist:
             form = self._handle_object_does_not_exist(form)
-        except NotImplementedError:
-            self._handle_not_implemented_error()
+        except NotImplementedError as error:
+            self._handle_not_implemented_error(error)
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")

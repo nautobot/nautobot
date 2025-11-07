@@ -37,6 +37,13 @@ VIRTUAL_IFACE_TYPES = interface_type_by_category["Virtual interfaces"]
 
 NONCONNECTABLE_IFACE_TYPES = VIRTUAL_IFACE_TYPES + WIRELESS_IFACE_TYPES
 
+COPPER_TWISTED_PAIR_IFACE_TYPES = [
+    InterfaceTypeChoices.TYPE_100ME_FIXED,
+    InterfaceTypeChoices.TYPE_1GE_FIXED,
+    InterfaceTypeChoices.TYPE_2GE_FIXED,
+    InterfaceTypeChoices.TYPE_5GE_FIXED,
+    InterfaceTypeChoices.TYPE_10GE_FIXED,
+]
 
 #
 # PowerFeeds

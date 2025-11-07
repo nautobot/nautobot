@@ -18,7 +18,7 @@ jobs:
         with:
           poetry-install-options: "--no-root"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.12"
       - name: "Build Documentation"
         run: "poetry run mkdocs build --no-directory-urls --strict"
       - name: "Run Poetry Build"
@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        python-version: [ "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
@@ -73,14 +73,14 @@ jobs:
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.13 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
           labels: |
             org.opencontainers.image.title=Nautobot
@@ -105,14 +105,14 @@ jobs:
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.13 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
+            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
             type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
           labels: |
             org.opencontainers.image.title=Nautobot

@@ -14,9 +14,11 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
+from django.utils.translation import gettext as _
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -391,17 +393,19 @@ def humanize_speed(speed):
         1544 => "1.544 Mbps"
         100000 => "100 Mbps"
         10000000 => "10 Gbps"
+        1000000000 => "1 Tbps"
+        1600000000 => "1.6 Tbps"
+        10000000000 => "10 Tbps"
     """
     if not speed:
         return ""
-    if speed >= 1000000000 and speed % 1000000000 == 0:
-        return f"{int(speed / 1000000000)} Tbps"
-    elif speed >= 1000000 and speed % 1000000 == 0:
-        return f"{int(speed / 1000000)} Gbps"
-    elif speed >= 1000 and speed % 1000 == 0:
-        return f"{int(speed / 1000)} Mbps"
+
+    if speed >= 1000000000:
+        return f"{speed / 1000000000:g} Tbps"
+    elif speed >= 1000000:
+        return f"{speed / 1000000:g} Gbps"
     elif speed >= 1000:
-        return f"{float(speed) / 1000} Mbps"
+        return f"{speed / 1000:g} Mbps"
     else:
         return f"{speed} Kbps"
 
@@ -829,6 +833,26 @@ def label_list(value, suffix=""):
         '<span class="label label-default">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
+
+
+@library.filter()
+@register.filter()
+def format_timezone(time_zone):
+    """
+    Return a human-readable representation of a time zone including:
+      - Time zone name and UTC offset on the first line
+      - Local date and time on the next line (in smaller font)
+    """
+    if not time_zone:
+        return HTML_NONE
+
+    now = datetime.datetime.now(time_zone)
+
+    # Locale-aware formatting (respects USE_L10N + active locale)
+    local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
+
+    result = f"{time_zone} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
+    return format_html(result)
 
 
 #
