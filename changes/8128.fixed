@@ -1,0 +1,1 @@
+Fixed a condition when trying to render a link on a button for an object that doesn't exist.
