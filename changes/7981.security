@@ -1,1 +1,0 @@
-Updated dependency `Django` to `~4.2.26` to mitigate CVE-2025-64459.
