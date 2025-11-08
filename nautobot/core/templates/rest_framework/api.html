@@ -137,13 +137,13 @@
         <script>
             function linkifyHighlightedUrls() {
                 // Find all hljs-string spans
-                const stringSpans = document.querySelectorAll('.hljs-string');
+                const stringSpans = document.querySelectorAll('span.hljs-string');
                 
                 stringSpans.forEach(span => {
                     const text = span.textContent;
                     
                     // Check if the string starts with "http
-                    if (text.match(/^["']https?:\/\//)) {
+                    if (text.match(/^["']https?:\/\/.*["']$/)) {
                     // Extract the URL (remove quotes)
                     const url = text.slice(1, -1); // Remove opening and closing quotes
                     
