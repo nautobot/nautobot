@@ -7,7 +7,7 @@
 {% load ui_framework %}
 
 {% block bootstrap_theme %}
-    {% include 'inc/media.html' %}
+{% include 'inc/media.html' %}
 {% endblock bootstrap_theme %}
 
 {% block body %}
@@ -27,7 +27,7 @@
                         <nav aria-label="Breadcrumbs" class="mt-1">
                             <ol class="breadcrumb">
                                 {% for breadcrumb_name, breadcrumb_url in breadcrumblist %}
-                                    <li class="breadcrumb-item"><a href="{{ breadcrumb_url }}">{{ breadcrumb_name }}</a></li>
+                                <li class="breadcrumb-item"><a href="{{ breadcrumb_url }}">{{ breadcrumb_name }}</a></li>
                                 {% endfor %}
                             </ol>
                         </nav>
@@ -39,87 +39,80 @@
     </header>
     <main class="container-fluid wrapper" id="main-content" tabindex="-1">
         {% block content %}
-            <div class="region"  aria-label="{% trans "request form" %}">
-          {% block request_forms %}
-
-          {% if 'GET' in allowed_methods %}
-            <form id="get-form" class="button-form">
-              <fieldset>
-                {% if api_settings.URL_FORMAT_OVERRIDE %}
-                  <div class="btn-group format-selection">
-                    <a class="btn btn-primary js-tooltip" href="{{ request.get_full_path }}" rel="nofollow" title="Make a GET request on the {{ name }} resource">GET</a>
-
-                    <button class="btn btn-primary dropdown-toggle js-tooltip" data-bs-toggle="dropdown" title="Specify a format for the GET request">
-                      <span class="mdi mdi-chevron-down"></span>
-                    </button>
-                    <ul class="dropdown-menu">
-                      {% for format in available_formats %}
-                        <li>
-                          <a class="js-tooltip format-option dropdown-item" href="{% add_query_param request api_settings.URL_FORMAT_OVERRIDE format %}" rel="nofollow" title="Make a GET request on the {{ name }} resource with the format set to `{{ format }}`">{{ format }}</a>
-                        </li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                {% else %}
-                  <a class="btn btn-primary js-tooltip" href="{{ request.get_full_path }}" rel="nofollow" title="Make a GET request on the {{ name }} resource">GET</a>
+            <div class="region" aria-label="{% trans "request form" %}">
+                {% block request_forms %}
+                
+                {% if 'GET' in allowed_methods %}
+                <form id="get-form" class="button-form">
+                    <fieldset>
+                        {% if api_settings.URL_FORMAT_OVERRIDE %}
+                        <div class="btn-group format-selection">
+                            <a class="btn btn-primary js-tooltip" href="{{ request.get_full_path }}" rel="nofollow" title="Make a GET request on the {{ name }} resource">GET</a>
+                            
+                            <button class="btn btn-primary dropdown-toggle js-tooltip" data-bs-toggle="dropdown" title="Specify a format for the GET request">
+                                <span class="mdi mdi-chevron-down"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% for format in available_formats %}
+                                <li>
+                                    <a class="js-tooltip format-option dropdown-item" href="{% add_query_param request api_settings.URL_FORMAT_OVERRIDE format %}" rel="nofollow" title="Make a GET request on the {{ name }} resource with the format set to `{{ format }}`">{{ format }}</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <a class="btn btn-primary js-tooltip" href="{{ request.get_full_path }}" rel="nofollow" title="Make a GET request on the {{ name }} resource">GET</a>
+                        {% endif %}
+                    </fieldset>
+                </form>
                 {% endif %}
-              </fieldset>
-            </form>
-          {% endif %}
-
-          {% if options_form %}
-            <form class="button-form" action="{{ request.get_full_path }}" data-method="OPTIONS">
-              <button class="btn btn-primary js-tooltip" title="Make an OPTIONS request on the {{ name }} resource">OPTIONS</button>
-            </form>
-          {% endif %}
-
-          {% if extra_actions %}
-            <div class="dropdown" style="float: right; margin-right: 10px">
-              <button class="btn btn-default" id="extra-actions-menu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                {% trans "Extra Actions" %}
-                <span class="mdi mdi-chevron-down"></span>
-              </button>
-              <ul class="dropdown-menu" aria-labelledby="extra-actions-menu">
-                {% for action_name, url in extra_actions|items %}
-                <li><a href="{{ url }}" class="dropdown-item">{{ action_name }}</a></li>
-                {% endfor %}
-              </ul>
+                
+                {% if options_form %}
+                <form class="button-form" action="{{ request.get_full_path }}" data-method="OPTIONS">
+                    <button class="btn btn-primary js-tooltip" title="Make an OPTIONS request on the {{ name }} resource">OPTIONS</button>
+                </form>
+                {% endif %}
+                
+                {% if extra_actions %}
+                <div class="dropdown" style="float: right; margin-right: 10px">
+                    <button class="btn btn-secondary" id="extra-actions-menu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        {% trans "Extra Actions" %}
+                        <span class="mdi mdi-chevron-down"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="extra-actions-menu">
+                        {% for action_name, url in extra_actions|items %}
+                        <li><a href="{{ url }}" class="dropdown-item">{{ action_name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                {% endblock request_forms %}
             </div>
-          {% endif %}
-
-          {% if filter_form %}
-            <button style="float: right; margin-right: 10px" data-bs-toggle="modal" data-target="#filtersModal" class="btn btn-default">
-              <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-              {% trans "Filters" %}
-            </button>
-          {% endif %}
-
-          {% endblock request_forms %}
-          </div>
-
+            
             <div class="content-main" role="main"  aria-label="{% trans "main content" %}">
-              <div class="pull-left">
-                {% block description %}
-                  {{ description }}
-                {% endblock %}
-              </div>
-
-              {% if paginator %}
-                <nav class="pull-right">
-                  {% get_pagination_html paginator %}
+                <div class="float-start">
+                    {% block description %}
+                    {{ description }}
+                    {% endblock %}
+                </div>
+                
+                {% if paginator %}
+                <nav class="float-end">
+                    {% get_pagination_html paginator %}
                 </nav>
-              {% endif %}
-
-              <div class="request-info" aria-label="{% trans "request info" %}">
-                <pre class="language-json"><b>{{ request.method }}</b> {{ request.get_full_path }}</pre>
-              </div>
-
-              <div class="response-info" aria-label="{% trans "response info" %}">
-                <pre class="language-json"><span class="meta nocode"><b>HTTP {{ response.status_code }} {{ response.status_text }}</b>{% for key, val in response_headers|items %}
-<b>{{ key }}:</b> <span class="lit">{{ val|urlize }}</span>{% endfor %}
-
-</span>{{ content|urlize }}</pre>
-              </div>
+                {% endif %}
+                
+                <div class="request-info pt-4" aria-label="{% trans "request info" %}">
+                    <pre class="language-json"><b>{{ request.method }}</b> {{ request.get_full_path }}</pre>
+                </div>
+                
+                <div class="response-info" aria-label="{% trans "response info" %}">
+                    <pre class="language-json"><span class="meta nocode"><b>HTTP {{ response.status_code }} {{ response.status_text }}</b>{% for key, val in response_headers|items %}
+                        <b>{{ key }}:</b> <span class="lit">{{ val|urlize }}</span>{% endfor %}
+                        
+                    </span>{{ content|urlize }}</pre>
+                </div>
             </div>
         {% endblock %}
     </main>
@@ -144,17 +137,17 @@
                     
                     // Check if the string starts with "http
                     if (text.match(/^["']https?:\/\/.*["']$/)) {
-                    // Extract the URL (remove quotes)
-                    const url = text.slice(1, -1); // Remove opening and closing quotes
-                    
-                    // Create a clickable link while preserving the syntax highlighting
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.className = 'hljs-string'; // Maintain the syntax highlighting class
-                    link.textContent = text; // Keep the original text with quotes
-                    
-                    // Replace the span with the link
-                    span.parentNode.replaceChild(link, span);
+                        // Extract the URL (remove quotes)
+                        const url = text.slice(1, -1); // Remove opening and closing quotes
+                        
+                        // Create a clickable link while preserving the syntax highlighting
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.className = 'hljs-string'; // Maintain the syntax highlighting class
+                        link.textContent = text; // Keep the original text with quotes
+                        
+                        // Replace the span with the link
+                        span.parentNode.replaceChild(link, span);
                     }
                 });
             }
