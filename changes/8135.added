@@ -1,1 +1,0 @@
-Added `get_detail_view_components_context_for_model()` helper API for use by apps implementing DistinctViewTabs.

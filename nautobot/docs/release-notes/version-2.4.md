@@ -176,6 +176,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#6979](https://github.com/nautobot/nautobot/issues/6979) - Added support for speed and duplex on `Interface` objects.
 - [#8048](https://github.com/nautobot/nautobot/issues/8048) - Added Constance configuration setting `RACK_DEFAULT_U_HEIGHT` to configure the default height (in rack units) displayed in the Rack creation form.
+- [#8135](https://github.com/nautobot/nautobot/issues/8135) - Added `get_detail_view_components_context_for_model()` helper API for use by apps implementing DistinctViewTabs.
 
 ### Changed in v2.4.22
 
