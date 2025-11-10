@@ -26,10 +26,13 @@ from nautobot.core.utils.filtering import (
 from nautobot.core.utils.git import BranchDoesNotExist, convert_git_diff_log_to_list, GitRepo, swap_status_initials
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import (
+    get_breadcrumbs_for_model,
     get_changes_for_model,
+    get_detail_view_components_context_for_model,
     get_filterset_for_model,
     get_form_for_model,
     get_model_from_name,
+    get_object_detail_content_for_model,
     get_related_class_for_model,
     get_related_field_for_models,
     get_route_for_model,
@@ -37,6 +40,7 @@ from nautobot.core.utils.lookup import (
     get_url_for_url_pattern,
     get_url_patterns,
     get_view_for_model,
+    get_view_titles_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
 from nautobot.core.utils.permissions import (
@@ -97,8 +101,10 @@ __all__ = (
     "generate_signature",
     "get_all_lookup_expr_for_field",
     "get_base_template",
+    "get_breadcrumbs_for_model",
     "get_celery_queues",
     "get_changes_for_model",
+    "get_detail_view_components_context_for_model",
     "get_filter_field_label",
     "get_filterable_params_from_filter_params",
     "get_filterset_field",
@@ -107,6 +113,7 @@ __all__ = (
     "get_form_for_model",
     "get_latest_release",
     "get_model_from_name",
+    "get_object_detail_content_for_model",
     "get_permission_for_model",
     "get_related_class_for_model",
     "get_related_field_for_models",
@@ -116,6 +123,7 @@ __all__ = (
     "get_url_for_url_pattern",
     "get_url_patterns",
     "get_view_for_model",
+    "get_view_titles_for_model",
     "get_worker_count",
     "hex_to_rgb",
     "image_upload",
