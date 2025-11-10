@@ -751,8 +751,7 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
                     if k in totals:
                         totals[k] += v
 
-    if not skip_templates:
-        templates_replaced = replace_deprecated_templates(directory, dry_run=dry_run)
+    templates_replaced = replace_deprecated_templates(directory, dry_run=dry_run) if not skip_templates else 0
 
     # Global summary
     total_issues = sum(totals.values())
