@@ -11,6 +11,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
@@ -724,6 +725,8 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
         url_params={"interfaces": "pk"},
         verbose_name="Virtual Device Contexts",
     )
+    speed = tables.Column(verbose_name="Speed", accessor="speed", orderable=True)
+    duplex = tables.Column(verbose_name="Duplex", accessor="duplex", orderable=True)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -737,6 +740,8 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "speed",
+            "duplex",
             "mgmt_only",
             "mtu",
             "vrf",
@@ -762,8 +767,12 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "speed",
             "description",
         )
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class DeviceModuleInterfaceTable(InterfaceTable):
@@ -790,6 +799,8 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "speed",
+            "duplex",
             "parent_interface",
             "bridge",
             "lag",
@@ -834,6 +845,9 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class FrontPortTable(ModularDeviceComponentTable, CableTerminationTable):

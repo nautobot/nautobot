@@ -31,6 +31,7 @@ from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
@@ -704,6 +705,8 @@ class InterfaceSerializer(
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True, source="_ip_address_count")
+    speed = serializers.IntegerField(required=False, allow_null=True)
+    duplex = ChoiceField(choices=InterfaceDuplexChoices, allow_blank=True, required=False)
 
     class Meta:
         model = Interface
