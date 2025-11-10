@@ -1079,10 +1079,18 @@ class DynamicGroupTestCase(
         self.assertHttpStatus(response, 200)
 
         body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Filter</strong>", body)
-        filter_section = body.split("Filter</strong>", 1)[1]
-        filter_section = filter_section.split("Filter Query Logic", 1)[0]
-        self.assertIn('<span class="text-muted">&mdash;</span>', filter_section)
+
+        def assert_panel(label, content_html):
+            panel = (
+                '<div class="panel panel-default">'
+                f'<div class="panel-heading"><strong>{label}</strong></div>'
+                f'<div class="panel-body">{content_html}</div>'
+                "</div>"
+            )
+            self.assertInHTML(panel, body)
+
+        assert_panel("Filter", '<span class="text-muted">&mdash;</span>')
+        assert_panel("Filter Query Logic", '<pre><span class="text-muted">&mdash;</span></pre>')
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
