@@ -25,6 +25,7 @@ from nautobot.core.filters import (
 )
 from nautobot.dcim.models import DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
@@ -1214,10 +1215,15 @@ class ScheduledJobFilterSet(BaseFilterSet):
         label="Time zone",
         null_value="",
     )
+    approval_state = django_filters.MultipleChoiceFilter(
+        field_name="associated_approval_workflows__current_state",
+        label="Approval state",
+        choices=ApprovalWorkflowStateChoices,
+    )
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "name", "total_run_count", "start_time", "last_run_at", "time_zone"]
+        fields = ["id", "name", "enabled", "total_run_count", "start_time", "last_run_at", "time_zone"]
 
 
 #
