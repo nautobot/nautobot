@@ -2049,55 +2049,66 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            scheduled_job = ScheduledJob.create_schedule(
-                job_model,
-                request.user,
-                name=schedule_form.cleaned_data.get("_schedule_name"),
-                start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
-                interval=schedule_type,
-                crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
-                job_queue=job_queue,
-                profile=profile,
-                ignore_singleton_lock=ignore_singleton_lock,
-                validated_save=False,
-                **job_class.serialize_data(job_form.cleaned_data),
-            )
-            scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
-            is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
-            if job_model.has_sensitive_variables and scheduled_job_has_approval_workflow:
-                messages.error(
-                    request,
-                    "Unable to run or schedule job: "
-                    "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
-                    "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
-                )
-            else:
-                if dryrun and not is_scheduled:
-                    # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
-                    return self._handle_immediate_execution(
-                        request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
-                    )
-                # Step 1: Check if approval is required
-                if scheduled_job_has_approval_workflow:
-                    scheduled_job.validated_save()
-                    return self._handle_approval_workflow_response(request, scheduled_job, return_url)
-
-                # Step 3: If approval is not required
-                if is_scheduled:
-                    scheduled_job.validated_save()
-                    return self._handle_scheduled_job_response(request, scheduled_job, return_url)
-
-                # Step 4: Immediate execution (no schedule, no approval)
-                return self._handle_immediate_execution(
-                    request,
+            with transaction.atomic():
+                scheduled_job = ScheduledJob.create_schedule(
                     job_model,
-                    job_class,
-                    job_form,
-                    profile,
-                    ignore_singleton_lock,
-                    job_queue,
-                    return_url,
+                    request.user,
+                    name=schedule_form.cleaned_data.get("_schedule_name"),
+                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
+                    interval=schedule_type,
+                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                    job_queue=job_queue,
+                    profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
+                    **job_class.serialize_data(job_form.cleaned_data),
                 )
+                scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
+                is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
+                if job_model.has_sensitive_variables and scheduled_job_has_approval_workflow:
+                    messages.error(
+                        request,
+                        "Unable to run or schedule job: "
+                        "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                        "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
+                    )
+                    scheduled_job.delete()
+                    scheduled_job = None
+                else:
+                    if dryrun and not is_scheduled:
+                        # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
+                        scheduled_job.delete()
+                        scheduled_job = None
+                        return self._handle_immediate_execution(
+                            request,
+                            job_model,
+                            job_class,
+                            job_form,
+                            profile,
+                            ignore_singleton_lock,
+                            job_queue,
+                            return_url,
+                        )
+                    # Step 1: Check if approval is required
+                    if scheduled_job_has_approval_workflow:
+                        return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+
+                    # Step 3: If approval is not required
+                    if is_scheduled:
+                        return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+
+                    # Step 4: Immediate execution (no schedule, no approval)
+                    scheduled_job.delete()
+                    scheduled_job = None
+                    return self._handle_immediate_execution(
+                        request,
+                        job_model,
+                        job_class,
+                        job_form,
+                        profile,
+                        ignore_singleton_lock,
+                        job_queue,
+                        return_url,
+                    )
 
         if return_url:
             return redirect(return_url)
@@ -2512,7 +2523,7 @@ class SavedViewUIViewSet(
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.enabled()
+    queryset = ScheduledJob.objects.all()
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm

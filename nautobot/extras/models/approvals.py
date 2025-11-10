@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -96,6 +96,16 @@ class ApprovalWorkflowDefinition(PrimaryModel):
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    def clean(self):
+        super().clean()
+        model_class = self.model_content_type.model_class()
+        if model_class is None:
+            raise ValidationError({"model_content_type": "Couldn't find corresponding model class. Is it installed?"})
+        try:
+            model_class.objects.filter(**self.model_constraints)
+        except (FieldError, AttributeError) as exc:
+            raise ValidationError({"model_constraints": f"Invalid query filter: {exc}"})
 
 
 @extras_features(
