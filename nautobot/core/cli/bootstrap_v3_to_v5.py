@@ -786,10 +786,14 @@ def main():
         help="Show which files would be modified without making any changes.",
     )
     parser.add_argument("path", type=str, help="Path to directory in which to recursively fix all .html files.")
-    parser.add_argument("-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates.")
+    parser.add_argument(
+        "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
+    )
     args = parser.parse_args()
 
-    fix_html_files_in_directory(args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement)
+    fix_html_files_in_directory(
+        args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
+    )
 
 
 if __name__ == "__main__":
