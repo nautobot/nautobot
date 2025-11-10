@@ -68,11 +68,11 @@
                     {% endif %}
 
                     {% if options_form %}
-                {# djlint:off H029 OPTIONS is an HTTP method #}
+                        {# djlint:off H029 OPTIONS is an HTTP method #}
                         <form class="button-form" action="{{ request.get_full_path }}" data-method="OPTIONS">
                             <button class="btn btn-primary js-tooltip" title="Make an OPTIONS request on the {{ name }} resource">OPTIONS</button>
                         </form>
-                {# djlint:off H029 #}
+                        {# djlint:on H029 #}
                     {% endif %}
 
                     {% if extra_actions %}
