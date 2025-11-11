@@ -33,7 +33,7 @@ def create_default_scheduledjob_workflow(apps, schema_editor):
 
     # --- Approval Workflow Definition ---
     awf_def, _ = ApprovalWorkflowDefinition.objects.update_or_create(
-        name="Scheduled Jobs Approver - Example",
+        name="Scheduled Jobs Approval - Example",
         defaults={
             "model_content_type_id": ct_scheduled_job.id,
             "model_constraints": {"job_model__job_class_name": "JobThatDoesNotExist"},
@@ -43,7 +43,7 @@ def create_default_scheduledjob_workflow(apps, schema_editor):
 
     # --- Stage Definition ---
     ApprovalWorkflowStageDefinition.objects.update_or_create(
-        name="Scheduled Jobs Approver",
+        name="Approval by nautobot-default-scheduledjob-approver",
         defaults={
             "approval_workflow_definition": awf_def,
             "sequence": 10,
@@ -111,7 +111,7 @@ def reverse_default_scheduledjob_workflow(apps, schema_editor):
         ]
     ).delete()
 
-    ApprovalWorkflowDefinition.objects.filter(name="Scheduled Jobs Approver - Example").delete()
+    ApprovalWorkflowDefinition.objects.filter(name="Scheduled Jobs Approval - Example").delete()
 
 
 class Migration(migrations.Migration):

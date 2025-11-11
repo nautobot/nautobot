@@ -332,7 +332,7 @@ Responsible for creating, updating, or running objects, which may trigger an app
 - `extras.view_approvalworkflowstageresponse` - to view responses for each stage.
 
 !!! tip
-    Provided by `nautobot-default-scheduledjobs-approver-permissions` and assigned to group `nautobot-default-scheduledjobs-approver` by default.
+    Provided by object-permission `nautobot-default-scheduledjobs-approver-permissions` and assigned to group `nautobot-default-scheduledjobs-approver` by default.
 
 ### Approver
 
@@ -345,7 +345,7 @@ Responsible for reviewing and making decisions on approval workflow stages assig
 - `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
 
 !!! tip
-    Provided by `nautobot-default-scheduledjobs-operator-permissions` and assigned to group `nautobot-default-scheduledjobs-operator` by default.
+    Provided by object-permission `nautobot-default-scheduledjobs-operator-permissions` and assigned to group `nautobot-default-scheduledjobs-operator` by default.
 
 ### Workflow Architect
 
@@ -358,7 +358,7 @@ Responsible for designing, managing, and configuring approval workflow definitio
 - `extras.view/add/change/delete_approvalworkflowstagedefinition`
 
 !!! tip
-    Provided by `nautobot-default-scheduledjobs-architect-permissions` and assigned to group `nautobot-default-scheduledjobs-architect` by default.
+    Provided by object-permission `nautobot-default-scheduledjobs-architect-permissions` and assigned to group `nautobot-default-scheduledjobs-architect` by default.
 
 ### Approver Groups
 
@@ -397,14 +397,14 @@ Affected jobs (Names):
 
 ### Predefined Approval Workflow
 
-As alluded to, in 3.0, there will be seed data for ths following use cases.
+As alluded to above, when initially installing or upgrading to Nautobot v3.0, seed data for the following use cases will be automatically provisioned:
 
 - Permissions created for the 3 identified personas.
-- Groups create for the 3 identified personas, with permissions applied.
-- An Approval Workflow created that leverages the approval persona defined.
+- Groups created for the 3 identified personas, with permissions applied but no initial group members.
+- An Approval Workflow created that leverages the approval personas defined but does not initially apply to any specific Jobs.
 
 In order to get like for like workflow, you should do the following:
 
 1. Update the Approval Workflow `Model Constraints` to represent the jobs you wish to control.
-2. Add users that initially run the job as `nautobot-default-scheduledjobs-operator`.
-3. Add users that approve the job as `nautobot-default-scheduledjobs-approver`.
+2. Add users that initially run these job to the `nautobot-default-scheduledjobs-operator` group.
+3. Add users that can approve these jobs to the `nautobot-default-scheduledjobs-approver` group.
