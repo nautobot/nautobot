@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
-from nautobot.apps import ui, views
+from nautobot.apps import ui, utils, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
@@ -31,6 +31,12 @@ class CircuitDetailAppTabView(views.ObjectView):
     queryset = Circuit.objects.all()
     template_name = "example_app/tab_circuit_detail.html"
 
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context.update(utils.get_detail_view_components_context_for_model(Circuit))
+        extra_context["active_tab"] = "example_app_distinct_view_tab"
+        return extra_context
+
 
 class DeviceDetailAppTabOneView(views.ObjectView):
     """
@@ -43,10 +49,10 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
-    object_detail_content = DeviceUIViewSet.object_detail_content
 
     def get_extra_context(self, request, instance):
         extra_context = super().get_extra_context(request, instance)
+        extra_context.update(utils.get_detail_view_components_context_for_model(Device))
         extra_context["active_tab"] = "example_app_device_detail_tab_1"
         return extra_context
 
@@ -58,7 +64,12 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
-    object_detail_content = DeviceUIViewSet.object_detail_content
+
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context.update(utils.get_detail_view_components_context_for_model(Device))
+        extra_context["active_tab"] = "example_app_device_detail_tab_2"
+        return extra_context
 
 
 class ExampleAppHomeView(views.GenericView):
@@ -92,11 +103,11 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
-    breadcrumbs = Breadcrumbs(
+    breadcrumbs = ui.Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(),
-                InstanceParentBreadcrumbItem(
+                ui.ModelBreadcrumbItem(),
+                ui.InstanceParentBreadcrumbItem(
                     parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
                 ),
             ]
@@ -141,21 +152,21 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="Text panel with JSON",
                 weight=300,
                 context_field="text_panel_content",
-                render_as=TextPanel.RenderOptions.JSON,
+                render_as=ui.TextPanel.RenderOptions.JSON,
             ),
             ui.TextPanel(
                 section=ui.SectionChoices.LEFT_HALF,
                 label="Text panel with YAML",
                 weight=300,
                 context_field="text_panel_content",
-                render_as=TextPanel.RenderOptions.YAML,
+                render_as=ui.TextPanel.RenderOptions.YAML,
             ),
             ui.TextPanel(
                 section=ui.SectionChoices.RIGHT_HALF,
                 label="Text panel with PRE tag usage",
                 weight=300,
                 context_field="text_panel_code_content",
-                render_as=TextPanel.RenderOptions.CODE,
+                render_as=ui.TextPanel.RenderOptions.CODE,
             ),
             ui.EChartsPanel(
                 section=ui.SectionChoices.RIGHT_HALF,
@@ -342,11 +353,11 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
-    breadcrumbs = Breadcrumbs(
+    breadcrumbs = ui.Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(),
-                InstanceParentBreadcrumbItem(
+                ui.ModelBreadcrumbItem(),
+                ui.InstanceParentBreadcrumbItem(
                     parent_key="number", parent_lookup_key=None, label=lambda c: f"{c['object'].number} (Breadcrumbs)"
                 ),
             ]

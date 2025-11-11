@@ -1,5 +1,0 @@
-Updated documentation dependency `mkdocs-glightbox` to `~0.5.2`.
-Updated documentation dependency `mkdocs-macros-plugin` to `~1.4.1`.
-Updated documentation dependency `mkdocs-material` to `~9.6.23`.
-Updated development dependency `pymarkdownlnt` to `~0.9.33`.
-Updated development dependency `ruff` to `~0.14.3`.

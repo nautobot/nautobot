@@ -1,1 +1,0 @@
-Set `INSTALLATION_METRICS_ENABLED=False` explicitly in the testing `nautobot_config.py` to avoid inadvertenly sending metrics when running tests.
