@@ -7,19 +7,38 @@ import shutil
 import tempfile
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
 from nautobot.extras.utils import extras_features
 
 logger = logging.getLogger(__name__)
+
+
+class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    def get_for_provided_contents(self, provided_contents_type):
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
+            cache.set(cache_key, queryset)
+        return queryset
 
 
 @extras_features(
@@ -74,6 +93,8 @@ class GitRepository(PrimaryModel):
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
+
+    objects = GitRepositoryManager()
 
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 

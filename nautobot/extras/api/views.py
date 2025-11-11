@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import mixins, status, viewsets
@@ -27,16 +28,19 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
-from nautobot.core.events import publish_event
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -257,6 +261,194 @@ class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
 
 
 #
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowDefinition viewset."""
+
+    queryset = ApprovalWorkflowDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
+
+
+class ApprovalWorkflowStageDefinitionViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStageDefinition viewset."""
+
+    queryset = ApprovalWorkflowStageDefinition.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
+    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
+
+
+class ApprovalWorkflowViewSet(NautobotModelViewSet):
+    """ApprovalWorkflow viewset."""
+
+    queryset = ApprovalWorkflow.objects.all()
+    serializer_class = serializers.ApprovalWorkflowSerializer
+    filterset_class = filters.ApprovalWorkflowFilterSet
+
+
+class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
+    """ApprovalWorkflowStage viewset."""
+
+    queryset = ApprovalWorkflowStage.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageSerializer
+    filterset_class = filters.ApprovalWorkflowStageFilterSet
+
+    def _validate_stage(self, stage):
+        """Checks if a workflow has an active stage."""
+        return stage.state == ApprovalWorkflowStateChoices.PENDING
+
+    def _has_change_permission(self, user, workflow):
+        """Checks whether the user has 'change' permission on the model under review."""
+        ct = workflow.object_under_review_content_type
+        model_name = ct.model
+        app_label = ct.app_label
+        change_perm = f"{app_label}.change_{model_name}"
+        return user.has_perm(change_perm)
+
+    def _is_user_approver(self, user, stage):
+        """Checks if the user belongs to the group allowed to approve the current stage."""
+        approver_group = stage.approval_workflow_stage_definition.approver_group
+        return user in approver_group.user_set.all()
+
+    def _user_already_approved_or_denied(self, user, stage, action_type):
+        """Checks if the user has already approved/denied to the current stage."""
+        if action_type == "approve":
+            return user in stage.users_that_already_approved
+        elif action_type == "deny":
+            return user in stage.users_that_already_denied
+        else:
+            return False
+
+    def _handle_approve_deny_response(self, request, action_type):
+        """Common logic for approve/deny actions."""
+        stage = self.get_object()
+        user = request.user
+        if not self._validate_stage(stage):
+            return Response(
+                {"detail": "Approval workflow stage is not active."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        workflow = stage.approval_workflow
+        if not self._has_change_permission(user, workflow):
+            ct = workflow.object_under_review_content_type
+            model_name = ct.model
+            app_label = ct.app_label
+            return Response(
+                {"detail": f"You do not have 'change' permission on {app_label}.{model_name}."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not self._is_user_approver(user, stage):
+            return Response(
+                {"detail": "You do not have permission to approve this stage."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if self._user_already_approved_or_denied(user, stage, action_type):
+            past_tense = {"approve": "approved", "deny": "denied"}.get(action_type, action_type)
+            return Response(
+                {"detail": f"You have already {past_tense} to this stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        comment = request.data.get("comments", "")
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=user,
+            state=ApprovalWorkflowStateChoices.APPROVED
+            if action_type == "approve"
+            else ApprovalWorkflowStateChoices.DENIED,
+            comments=comment,
+        )
+        serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /approve/, /deny/, and /comment/ endpoints.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"approve": "change", "deny": "change", "comment": "change"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class ApprovalWorkflowStageChangePermission(TokenPermissions):
+        """
+        Enforce `change_approvalworkflowstage` permission (instead of default `add_approvalworkflowstage` for POST).
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.change_approvalworkflowstage"],
+        }
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ApprovalWorkflowStageChangePermission],
+    )
+    def approve(self, request, pk=None):
+        """Approve the approval workflow stage."""
+        return self._handle_approve_deny_response(request, action_type="approve")
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ApprovalWorkflowStageChangePermission],
+    )
+    def deny(self, request, pk=None):
+        """Deny the approval workflow stage."""
+        return self._handle_approve_deny_response(request, action_type="deny")
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowStageSerializer},
+    )
+    @action(detail=True, methods=["post"], permission_classes=[ApprovalWorkflowStageChangePermission])
+    def comment(self, request, pk=None):
+        """Add a comment to the specific stage (without approving or denying)."""
+        stage = self.get_object()
+
+        comment = request.data.get("comments", "")
+        if not comment:
+            return Response(
+                {"detail": "Comment cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage, user=request.user, state=stage.state, comments=comment
+        )
+
+        serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
+    """ApprovalWorkflowStageResponse viewset."""
+
+    queryset = ApprovalWorkflowStageResponse.objects.all()
+    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
+    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
+
+
+#
 # Contacts
 #
 
@@ -472,8 +664,8 @@ class GraphQLQueryViewSet(NotesViewSetMixin, ModelViewSet):
     def run(self, request, pk):
         try:
             query = get_object_or_404(self.queryset, pk=pk)
-            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request).to_dict()
-            return Response(result)
+            result = execute_saved_query(query.name, variables=request.data.get("variables"), request=request)
+            return Response({"data": result.data, "errors": result.errors})
         except GraphQLError as error:
             return Response(
                 {"errors": [GraphQLView.format_error(error)]},
@@ -590,21 +782,6 @@ class JobViewSetBase(
             raise PermissionDenied("This job is not enabled to be run.")
         if not job_model.installed:
             raise MethodNotAllowed(request.method, detail="This job is not presently installed and cannot be run")
-        if job_model.has_sensitive_variables:
-            if (
-                "schedule" in request.data
-                and "interval" in request.data["schedule"]
-                and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
-            ):
-                raise ValidationError(
-                    {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
-                )
-            if job_model.approval_required:
-                raise ValidationError(
-                    "Unable to run or schedule job: "
-                    "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                    "One of these two flags must be removed before this job can be scheduled or run."
-                )
 
         job_class = job_model.job_class
         if job_class is None:
@@ -717,23 +894,11 @@ class JobViewSetBase(
         # Default to a null JobResult.
         job_result = None
 
-        # Approval is not required for dryrun
-        if job_class.supports_dryrun:
-            dryrun = data.get("dryrun", False)
-            approval_required = not dryrun and job_model.approval_required
-        else:
-            approval_required = job_model.approval_required
+        # Set schedule for jobs if request did not supply schedule data
+        if schedule_data is None:
+            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY, "start_time": timezone.now()}
 
-        # Set schedule for jobs that require approval but request did not supply schedule data
-        if schedule_data is None and approval_required:
-            schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY}
-
-        # Skip creating a ScheduledJob when job can be executed immediately
-        elif schedule_data and schedule_data["interval"] == JobExecutionType.TYPE_IMMEDIATELY and not approval_required:
-            schedule_data = None
-
-        # Try to create a ScheduledJob, or...
-        if schedule_data:
+        with transaction.atomic():
             schedule = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
@@ -741,29 +906,53 @@ class JobViewSetBase(
                 start_time=schedule_data.get("start_time"),
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
-                approval_required=approval_required,
                 job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
-        else:
+
+            scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
+            if job_model.has_sensitive_variables:
+                if (
+                    "schedule" in request.data
+                    and "interval" in request.data["schedule"]
+                    and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+                ):
+                    schedule.delete()
+                    schedule = None
+                    raise ValidationError(
+                        {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+                    )
+                # check approval_required pointer
+                if scheduled_job_has_approval_workflow:
+                    schedule.delete()
+                    schedule = None
+                    raise ValidationError(
+                        "Unable to run or schedule job: "
+                        "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                        "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False."
+                    )
+
+            # Approval is not required for dryrun
+            # TODO: remove this once we have the ability to configure an approval workflow to ignore jobs with specific parameters(including `dryrun`)
+            dryrun = data.get("dryrun", False) if job_class.supports_dryrun else False
+
+            if (not dryrun and scheduled_job_has_approval_workflow) or schedule_data[
+                "interval"
+            ] in JobExecutionType.SCHEDULE_CHOICES:
+                serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+                return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
+
+            schedule.delete()
             schedule = None
 
-        # ... If we can't create one, create a JobResult instead.
-        if schedule is None:
-            job_result = JobResult.enqueue_job(
-                job_model,
-                request.user,
-                job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
-            )
-
-        # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
-        data = {"scheduled_job": None, "job_result": None}
-        if schedule:
-            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
-        if job_result:
-            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
-        return Response(data, status=status.HTTP_201_CREATED)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            job_queue=job_queue,
+            **job_class.serialize_data(cleaned_data),
+        )
+        serializer = serializers.JobResultSerializer(job_result, context={"request": request})
+        return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(
@@ -930,94 +1119,15 @@ class ScheduledJobViewSet(
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
-        Apply special permissions as queryset filter on the /approve/, /deny/, and /dry-run/ endpoints.
+        Apply special permissions as queryset filter on the /dry-run/ endpoints.
 
         Otherwise, same as ModelViewSetMixin.
         """
-        action_to_method = {"approve": "change", "deny": "delete", "dry-run": "view"}
+        action_to_method = {"dry-run": "view"}
         if request.user.is_authenticated and self.action in action_to_method:
             self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
         else:
             super().restrict_queryset(request, *args, **kwargs)
-
-    class ScheduledJobChangePermissions(TokenPermissions):
-        """
-        As nautobot.core.api.authentication.TokenPermissions, but enforcing change_scheduledjob not add_scheduledjob.
-        """
-
-        perms_map = {
-            "POST": ["%(app_label)s.change_%(model_name)s"],
-        }
-
-    @extend_schema(
-        methods=["post"],
-        responses={"200": serializers.ScheduledJobSerializer},
-        request=None,
-        parameters=[
-            OpenApiParameter(
-                "force",
-                location=OpenApiParameter.QUERY,
-                description="force execution even if start time has passed",
-                type=OpenApiTypes.BOOL,
-            )
-        ],
-    )
-    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobChangePermissions])
-    def approve(self, request, pk):
-        scheduled_job = get_object_or_404(self.queryset, pk=pk)
-
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
-            raise PermissionDenied("You do not have permission to approve this request.")
-
-        # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
-        if request.user == scheduled_job.user:
-            # The requestor *cannot* approve their own job
-            return Response("You cannot approve your own job request!", status=403)
-
-        if (
-            scheduled_job.one_off
-            and scheduled_job.start_time < timezone.now()
-            and not request.query_params.get("force")
-        ):
-            return Response(
-                "The job's start time is in the past. If you want to force a run anyway, add the `force` query parameter.",
-                status=400,
-            )
-
-        scheduled_job.approved_by_user = request.user
-        scheduled_job.approved_at = timezone.now()
-        scheduled_job.save()
-        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
-        serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
-
-        return Response(serializer.data)
-
-    class ScheduledJobDeletePermissions(TokenPermissions):
-        """
-        As nautobot.core.api.authentication.TokenPermissions, but enforcing delete_scheduledjob not add_scheduledjob.
-        """
-
-        perms_map = {
-            "POST": ["%(app_label)s.delete_%(model_name)s"],
-        }
-
-    @extend_schema(
-        methods=["post"],
-        request=None,
-    )
-    @action(detail=True, methods=["post"], permission_classes=[ScheduledJobDeletePermissions])
-    def deny(self, request, pk):
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
-
-        if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
-            raise PermissionDenied("You do not have permission to deny this request.")
-
-        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
-        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
-        scheduled_job.delete()
-
-        return Response(None)
 
     class ScheduledJobViewPermissions(TokenPermissions):
         """
@@ -1043,7 +1153,7 @@ class ScheduledJobViewSet(
     def dry_run(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
         job_model = scheduled_job.job_model
-        if job_model is None or not job_model.runnable:
+        if job_model is None or not scheduled_job.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")
         if not job_model.supports_dryrun:
             raise MethodNotAllowed("This job does not support dry-run.")

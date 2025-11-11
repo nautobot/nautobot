@@ -1,0 +1,4 @@
+Fixed browseable API dark mode colors on syntax highlighting.
+Fixed missing icons on browseable API GET button.
+Fixed redundant header on browseable API pages.
+Fixed missing theme modal on pages that only import footer.html.

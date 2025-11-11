@@ -95,11 +95,12 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+    DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -312,9 +313,11 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-if VERSION_MAJOR != 2:
+if VERSION_MAJOR > 3:
     raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
+REST_FRAMEWORK_ALLOWED_VERSIONS = ["2.0", "2.1", "2.2", "2.3", "2.4"] + [
+    f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)
+]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -403,16 +406,19 @@ SPECTACULAR_SETTINGS = {
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
+        "ApprovalWorkflowStateChoices": "nautobot.extras.choices.ApprovalWorkflowStateChoices",
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
         # These choice enums need to be overridden because they get assigned to the `protocol` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        "VirtualServerProtocolChoices": "nautobot.load_balancers.choices.ProtocolChoices",
         # These choice enums need to be overridden because they get assigned to the `mode` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
         "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "VPNPhase2PolicyChoices": "nautobot.vpn.choices.DhGroupChoices",
         "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
@@ -446,8 +452,10 @@ DATABASES = {
 }
 
 # Ensure proper Unicode handling for MySQL
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+if "mysql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"].setdefault("OPTIONS", {})["charset"] = "utf8mb4"
+    DATABASES["default"].setdefault("TEST", {})["CHARSET"] = "utf8mb4"
+    DATABASES["default"]["TEST"]["COLLATION"] = "utf8mb4_0900_ai_ci"
 
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
@@ -557,12 +565,15 @@ INSTALLED_APPS = [
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.cloud",
+    "nautobot.data_validation",
     "nautobot.dcim",
-    "nautobot.ipam",
     "nautobot.extras",
+    "nautobot.ipam",
+    "nautobot.load_balancers",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.vpn",
     "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -615,6 +626,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.nav_menu",
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
@@ -634,6 +646,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.nav_menu",
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
@@ -751,12 +764,15 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
-    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
-        default=False,
-        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
-        "Set this to True to use the device name alone as the natural key for Device objects. "
-        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
-        field_type=bool,
+    "DEVICE_UNIQUENESS": ConstanceConfigItem(
+        default="location_tenant_name",
+        help_text=(
+            "Select how Devices are uniquely identified:\n"
+            "- 'location_tenant_name': combination of Location + Tenant + Name\n"
+            "- 'name': Device name must be globally unique\n"
+            "- 'none': No enforced uniqueness (rely on other validation rules or custom validators)"
+        ),
+        field_type=str,
     ),
     "DEPLOYMENT_ID": ConstanceConfigItem(
         default="",
@@ -861,7 +877,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
-    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
+    "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
@@ -1027,12 +1043,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
-    "header_bullet": os.getenv(
-        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-    ),  # bullet image used for various view headers
-    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
+    # "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    # "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
@@ -1138,6 +1150,12 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# django-tables2
+#
+
+DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 
 #
 # Kubernetes settings variables

@@ -16,10 +16,10 @@ function updatePendingStatusLabel(status) {
         labelClass = 'success';
     }
     else {
-        labelClass = 'default';
+        labelClass = 'secondary';
     }
     var elem = $('#pending-result-label > label');
-    elem.attr('class', 'label label-' + labelClass);
+    elem.attr('class', 'badge bg-' + labelClass);
     elem.text(status.label);
 }
 

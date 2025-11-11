@@ -3,6 +3,7 @@
 /site/
 /venv/
 **/dist/
+!nautobot/project-static/dist/
 /*.sh
 local_requirements.txt
 !upgrade.sh
@@ -30,7 +31,7 @@ jobs/*
 htmlcov/*
 /nautobot/project-static/docs/
 /examples/example_*/**/static/example_*/docs/
-/examples/example_*/**/docs/*
+/examples/example_*/example_*/docs/
 development/factory_dump*.json
 development/kind-kube-config
 development/pod.yaml

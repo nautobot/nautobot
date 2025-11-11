@@ -1,6 +1,7 @@
 """Nautobot utility functions."""
 
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.color import foreground_color, hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import (
@@ -52,7 +53,6 @@ from nautobot.core.utils.requests import (
     is_single_choice_field,
     normalize_querydict,
 )
-from nautobot.extras.plugins.validators import custom_validator_clean, wrap_model_clean_methods
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     check_if_key_is_graphql_safe,
@@ -85,9 +85,9 @@ __all__ = (
     "check_if_key_is_graphql_safe",
     "class_deprecated",
     "class_deprecated_in_favor_of",
+    "construct_cache_key",
     "convert_git_diff_log_to_list",
     "convert_querydict_to_factory_formset_acceptable_querydict",
-    "custom_validator_clean",
     "deepmerge",
     "ensure_content_type_and_field_name_in_query_params",
     "fixup_null_statuses",
@@ -141,5 +141,4 @@ __all__ = (
     "task_queues_as_choices",
     "to_meters",
     "validate_jinja2",
-    "wrap_model_clean_methods",
 )

@@ -7,10 +7,12 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.models.querysets import count_related
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
 from nautobot.core.ui.object_detail import TextPanel
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Device, Location
 from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -114,6 +116,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=100,
                 context_table_key="dynamic_table",
                 max_display_count=3,
+                enable_related_link=False,
             ),
             # A table of non-object data with staticly defined columns
             ui.DataTablePanel(
@@ -153,6 +156,90 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=300,
                 context_field="text_panel_code_content",
                 render_as=TextPanel.RenderOptions.CODE,
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                weight=400,
+                label="EChart - LINE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.LINE,
+                    "header": "Number of device - group by device type (Line)",
+                    "description": "Example line chart from EChartsBase",
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                weight=400,
+                label="EChart - PIE",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.PIE,
+                    "theme_colors": [
+                        {  # blue-lighter
+                            "light": "#8cc5ff",
+                            "dark": "#a3d3ff",
+                        },
+                        {  # green-lighter
+                            "light": "#99d89f",
+                            "dark": "#a1e8a9",
+                        },
+                        {  # orange-lighter
+                            "light": "#f1c28f",
+                            "dark": "#ffd1a3",
+                        },
+                        {  # red-lighter
+                            "light": "#f19a9a",
+                            "dark": "#ffaeae",
+                        },
+                    ],
+                    "header": "Number of device - group by device type (Pie)",
+                    "description": "Example pie chart from EChartsBase",
+                    "data": {
+                        "Cisco Device Type": {"CSR1000V": 335, "ISR4451-X": 310, "N9K-C9372TX": 234, "C1111-8P": 135}
+                    },
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=200,
+                label="EChart - BAR",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "theme_colors": ui.EChartsThemeColors.LIGHTER_GREEN_RED_COLORS,
+                    "header": "Compliance per Feature",
+                    "description": "Example bar chart from EChartsBase with LIGHTER_GREEN_AND_RED_ONLY theme colors",
+                    "data": {
+                        "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                        "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+                    },
+                    "combined_with": ui.EChartsBase(
+                        chart_type=ui.EChartsTypeChoices.LINE,
+                        data={
+                            "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                            "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+                        },
+                    ),
+                },
+            ),
+            ui.EChartsPanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                weight=300,
+                label="EChart - Bar queryset",
+                chart_kwargs={
+                    "chart_type": ui.EChartsTypeChoices.BAR,
+                    "header": "Devices and Prefixes by Location Type",
+                    "description": "Example chart with queryset_to_nested_dict_records_as_series. Please run `nautobot-server generate_test_data` to see data here.",
+                    "data": lambda context: ui.queryset_to_nested_dict_records_as_series(
+                        Location.objects.annotate(
+                            device_count=count_related(Device, "location"),
+                            prefix_count=count_related(Prefix, "locations"),
+                        ),
+                        record_key="location_type__nestable",
+                        value_keys=["prefix_count", "device_count"],
+                    ),
+                },
             ),
         ),
     )

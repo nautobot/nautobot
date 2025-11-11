@@ -27,7 +27,9 @@ from nautobot.core.forms import (
     form_from_model,
     JSONArrayFormField,
     MultipleContentTypeField,
+    MultiValueCharInput,
     NullableDateField,
+    NumberWithSelect,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -84,8 +86,10 @@ from .choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     LocationDataToContactActionChoices,
     PortTypeChoices,
@@ -1460,16 +1464,29 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
             "label",
             "type",
             "mgmt_only",
+            "speed",
+            "duplex",
             "description",
         ]
         widgets = {
             "type": StaticSelect2(),
+            "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
+            "duplex": StaticSelect2(),
+        }
+        labels = {
+            "speed": "Speed (Kbps)",
         }
 
 
 class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=InterfaceTypeChoices, widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
     field_order = (
         "device_type",
         "module_family",
@@ -1478,6 +1495,8 @@ class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
         "label_pattern",
         "type",
         "mgmt_only",
+        "speed",
+        "duplex",
         "description",
     )
 
@@ -1491,10 +1510,16 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
         widget=StaticSelect2(),
     )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
     description = forms.CharField(required=False)
 
     class Meta:
-        nullable_fields = ["label", "description"]
+        nullable_fields = ["label", "speed", "duplex", "description"]
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1965,6 +1990,8 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
             "label",
             "type",
             "mgmt_only",
+            "speed",
+            "duplex",
         ]
 
 
@@ -2112,9 +2139,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
-        initial_params={"clusters": "$cluster"},
+        initial_params={"clusters__in": "$clusters"},
     )
-    cluster = DynamicModelChoiceField(
+    clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
         query_params={"cluster_group": "$cluster_group"},
@@ -2160,7 +2187,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "primary_ip6",
             "secrets_group",
             "cluster_group",
-            "cluster",
+            "clusters",
             "tenant_group",
             "tenant",
             "vrfs",
@@ -2238,6 +2265,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["clusters"] = self.instance.clusters.values_list("id", flat=True)
             self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
         else:
@@ -2274,6 +2302,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.clusters.set(self.cleaned_data["clusters"])
         return instance
 
 
@@ -2306,7 +2335,12 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    add_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Add to clusters"
+    )
+    remove_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Remove from clusters"
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2329,7 +2363,6 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
-            "cluster",
             "comments",
             "secrets_group",
             "device_redundancy_group",
@@ -3131,6 +3164,7 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
+    speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mac_address = forms.CharField(required=False, label="MAC address")
@@ -3215,6 +3249,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "bridge",
             "lag",
             "mac_address",
+            "speed",
+            "duplex",
             "ip_addresses",
             "virtual_device_contexts",
             "mtu",
@@ -3230,9 +3266,12 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         widgets = {
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
+            "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
+            "duplex": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
+            "speed": "Speed (Kbps)",
         }
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
@@ -3305,6 +3344,12 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         },
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
     mgmt_only = forms.BooleanField(
         required=False,
         label="Management only",
@@ -3351,6 +3396,8 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "status",
         "role",
         "type",
+        "speed",
+        "duplex",
         "enabled",
         "parent_interface",
         "bridge",
@@ -3384,6 +3431,10 @@ class InterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
+    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     field_order = (
         "name_pattern",
@@ -3397,6 +3448,8 @@ class InterfaceBulkCreateForm(
         "mgmt_only",
         "description",
         "mode",
+        "speed",
+        "duplex",
         "tags",
     )
 
@@ -3416,6 +3469,10 @@ class ModuleInterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
+    speed = forms.IntegerField(required=False, min_value=0, label="Speed (Kbps)")
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     field_order = (
         "name_pattern",
@@ -3429,13 +3486,28 @@ class ModuleInterfaceBulkCreateForm(
         "mgmt_only",
         "description",
         "mode",
+        "speed",
+        "duplex",
         "tags",
     )
 
 
 class InterfaceBulkEditForm(
     form_from_model(
-        Interface, ["label", "type", "parent_interface", "bridge", "lag", "mac_address", "mtu", "description", "mode"]
+        Interface,
+        [
+            "label",
+            "type",
+            "parent_interface",
+            "bridge",
+            "lag",
+            "mac_address",
+            "mtu",
+            "description",
+            "mode",
+            "speed",
+            "duplex",
+        ],
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
@@ -3479,6 +3551,12 @@ class InterfaceBulkEditForm(
         label="VRF",
         required=False,
     )
+    speed = forms.IntegerField(
+        required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
+    )
+    duplex = forms.ChoiceField(
+        choices=add_blank_choice(InterfaceDuplexChoices), required=False, widget=StaticSelect2(), label="Duplex"
+    )
 
     class Meta:
         nullable_fields = [
@@ -3490,6 +3568,8 @@ class InterfaceBulkEditForm(
             "mtu",
             "description",
             "mode",
+            "speed",
+            "duplex",
             "untagged_vlan",
             "tagged_vlans",
             "vrf",
@@ -4571,7 +4651,7 @@ class BaseVCMemberFormSet(forms.BaseModelFormSet):
                 vc_position_list.append(vc_position)
 
 
-class DeviceVCMembershipForm(forms.ModelForm):
+class DeviceVCMembershipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Device
         fields = [

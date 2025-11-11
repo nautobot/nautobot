@@ -3,6 +3,7 @@
 import logging
 
 import graphene
+from graphene_django.fields import DjangoListField
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
@@ -27,7 +28,7 @@ def generate_restricted_queryset():
     fail gracefully in that case.
     """
 
-    def get_queryset(queryset, info):
+    def get_queryset(cls, queryset, info):
         if not hasattr(queryset, "restrict"):
             logger.debug(f"Queryset {queryset} is not restrictable")
             return queryset
@@ -74,9 +75,11 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
         if not filterset_class or not kwargs:
             return field.all()
 
-        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
         if "_type" in kwargs:
-            kwargs["type"] = kwargs.pop("_type")
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
         resolved_obj = filterset_class(kwargs, field.all())
 
@@ -92,7 +95,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             errors[key] = resolved_obj.errors[key]
 
         # Raising this exception will send the error message in the response of the GraphQL request
-        raise GraphQLError(errors)
+        raise GraphQLError(str(errors))
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
@@ -316,6 +319,13 @@ def generate_list_resolver(schema_type, resolver_name):
 
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
+
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
+
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
 
@@ -329,7 +339,7 @@ def generate_list_resolver(schema_type, resolver_name):
                     errors[key] = resolved_obj.errors[key]
 
                 # Raising this exception will send the error message in the response of the GraphQL request
-                raise GraphQLError(errors)
+                raise GraphQLError(str(errors))
             qs = resolved_obj.qs.all()
 
         else:
@@ -365,7 +375,7 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
-    attrs[list_name] = graphene.List(schema_type, **search_params)
+    attrs[list_name] = DjangoListField(schema_type, **search_params)
 
     # Define Resolvers for both single item and list
     single_item_resolver_name = f"{RESOLVER_PREFIX}{single_item_name}"

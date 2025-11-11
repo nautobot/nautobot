@@ -1,0 +1,3 @@
+Added validation of model constraints when creating/editing an Approval Workflow Definition.
+Added "Approval State" and "Enabled" filters to Scheduled Job filterset.
+Added "Approval State" and "Enabled" columns to Scheduled Job table.

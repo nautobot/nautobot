@@ -2,90 +2,48 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block extra_styles %}
-    <style>
-        .style-line {
-            overflow: hidden;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .style-line span {
-            text-align: center;
-            font-size: 15px;
-            color: #acacac;
-            display: inline-block;
-            position: relative;
-            padding: 0 25px;
-            z-index: 1;
-        }
-        .style-line span:before {
-            display: inline-block;
-            content: "";
-            height: 2px;
-            width: 100%;
-            background-color: #cfcfcf;
-            left: 100%;
-            top: 50%;
-            -webkit-transform: translateY(-50%);
-            -ms-transform: translateY(-50%);
-            transform: translateY(-50%);
-            position: absolute;
-            z-index: 1;
-        }
-        .style-line span:after {
-            display: inline-block;
-            content: "";
-            height: 2px;
-            width: 100%;
-            background-color: #cfcfcf;
-            right: 100%;
-            top: 50%;
-            -webkit-transform: translateY(-50%);
-            -ms-transform: translateY(-50%);
-            transform: translateY(-50%);
-            position: absolute;
-            z-index: 1;
-        }
-    </style>
-{% endblock %}
+{% block title %}Home{% endblock title %}
 
 {% block content %}
-    <div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
-        <div class="col-sm-4 col-sm-offset-4">
+    <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
+        <div class="col-sm-12 col-md-9 col-lg-7 nb-lg-max-width">
             {% if "BANNER_LOGIN"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
                     {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}
             {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
+                <div class="card border-danger mb-20">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Errors</strong>
+                    </div>
+                    <div class="card-body">
                         {{ form.non_field_errors }}
                     </div>
                 </div>
             {% endif %}
-            <form action="{% url 'login' %}" method="post" class="form form-horizontal">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+            <form action="{% url 'login' %}" method="post">
+                <div class="card">
+                    <div class="card-header">
                         <strong>Log In</strong>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {% csrf_token %}
                         {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
                         {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
                         {% render_form form %}
                     </div>
-                    <div class="panel-footer text-right">
+                    <div class="card-footer bg-body text-center">
                         <button type="submit" class="btn btn-primary">Log In</button>
                     </div>
                 </div>
             </form>
             {% if SSO_AUTH_ENABLED %}
-                <div class="style-line">
-                    <span>Or</span>
+                <div class="position-relative text-center">
+                    <hr class="border-top m-20">
+                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle">Or</span>
+                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary">Continue with SSO</a>
                 </div>
-                <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary btn-block">Continue with SSO</a>
             {% endif %}
         </div>
     </div>
