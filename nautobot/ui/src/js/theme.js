@@ -1,5 +1,5 @@
 import { Modal } from 'bootstrap';
-import { getCookie, removeCookie, setCookie } from './cookie.js';
+import { setCookie } from './cookie.js';
 
 const THEME_MODAL_ID = 'theme_modal';
 
@@ -22,11 +22,11 @@ const getPreferredColorScheme = () =>
   window.matchMedia?.(`(prefers-color-scheme: ${THEME_DARK})`).matches ? THEME_DARK : THEME_LIGHT;
 
 /**
- * Get the user's theme choice from cookies, defaulting to 'system' if not set or invalid.
+ * Get the user's theme choice from localStorage, defaulting to 'system' if not set or invalid.
  * @returns {('dark'|'light'|'system')} The user's theme choice.
  */
 const getThemeChoice = () => {
-  let current_theme_choice = getCookie('theme');
+  let current_theme_choice = window.localStorage?.getItem('theme');
   if (!isValidTheme(current_theme_choice)) {
     current_theme_choice = THEME_SYSTEM;
   }
@@ -40,27 +40,27 @@ const determineTheme = () => {
   const current_theme_choice = getThemeChoice();
   let determined_theme = getPreferredColorScheme();
 
-  // If cookie theme is valid and not 'system', we use the cookie theme.
+  // If localStorage theme is valid and not 'system', we use the localStorage theme.
   if (current_theme_choice !== 'system') {
     determined_theme = current_theme_choice;
   }
 
-  // Persist the determined theme in localStorage for quick access.
-  window.localStorage.setItem('theme', determined_theme);
+  // Persist the determined theme in cookie for server-side access.
+  setCookie('theme', determined_theme);
   return determined_theme;
 };
 
 /**
- * Persist the user's theme choice in cookies.
+ * Persist the user's theme choice in localStorage.
  * @param {('dark'|'light'|'system')} theme - The user's theme choice.
  * @returns {('dark'|'light'|'system')} The persisted theme choice.
  */
 const persistThemeChoice = (theme) => {
   if (isValidTheme(theme)) {
     if (theme === THEME_SYSTEM) {
-      removeCookie('theme');
+      window.localStorage?.removeItem('theme');
     } else {
-      setCookie('theme', theme);
+      window.localStorage?.setItem('theme', theme);
     }
   }
   return theme;
