@@ -1,1 +1,0 @@
-`BaseBreadcrumbItem.as_pair` now returns `iterator` instead of `tuple[str, str]` to support dynamic breadcrumb items.
