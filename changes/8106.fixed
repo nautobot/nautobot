@@ -1,3 +1,0 @@
-Fixed error in rendering Virtual Machine config context tab.
-Fixed incorrect application of config contexts scoped by device-type or device-redundancy-group to all virtual machines.
-Fixed incorrect permissions requirements to view various tabs on VPN Profile detail view.
