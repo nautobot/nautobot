@@ -49,43 +49,63 @@
 
 ## Screenshots Showcasing Load Balancer Data Model
 
-![Virtual Servers List](./images/load-balancer-virtual-server.png)
+![Virtual Servers List](./images/load-balancer/load-balancer-virtual-server-light.png#only-light){ .on-glb }
+![Virtual Servers List](./images/load-balancer/load-balancer-virtual-server-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/`"
 
 A list view of all configured Virtual Servers, including name, load balancer type, protocol, and associated pools.
 
-![Virtual Server Detail](./images/load-balancer-virtual-server-detail.png)
+![Virtual Server Detail](./images/load-balancer/load_balancer-virtual-server-detail-light.png#only-light){ .on-glb }
+![Virtual Server Detail](./images/load-balancer/load-balancer-virtual-server-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/19736556-378c-4a61-b3b8-aaae2f2f422c/`"
 
 Detailed view of a single Virtual Server, showing the VIP, port, protocol, associated Certificate Profile, and linked Load Balancer Pool.
 
-![Load Balancer Pools List](./images/load-balancer-pools.png)
+![Load Balancer Pools List](./images/load-balancer/load-balancer-pools-light.png#only-light){ .on-glb }
+![Load Balancer Pools List](./images/load-balancer/load-balancer-pools-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/`"
 
 A list view of Load Balancer Pools, showing pool names and algorithms.
 
-![Load Balancer Pool Detail](./images/load-balancer-pools-detail.png)
+![Load Balancer Pool Detail](./images/load-balancer/load-balancer-pools-detail-light.png#only-light){ .on-glb }
+![Load Balancer Pools Detail](./images/load-balancer/load-balancer-pools-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/d5097984-9c43-4c33-a6b2-43339dfd65f4/`"
 
 Detailed view of a specific Load Balancer Pool, including load balancing algorithm, associated pool members, and associated Health Check Monitor.
 
-![Load Balancer Pool Members List](./images/load-balancer-pool-member.png)
+![Load Balancer Pool Members List](./images/load-balancer/load-balancer-pool-member-light.png#only-light){ .on-glb }
+![Load Balancer Pool Members List](./images/load-balancer/load-balancer-pool-member-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/`"
 
 A list view of Load Balancer Pool Members, displaying IP Addresses, ports, and status.
 
-![Load Balancer Pool Member Detail](./images/load-balancer-pool-member-detail.png)
+![Load Balancer Pool Member Detail](./images/load-balancer/load-balancer-pool-member-detail-light.png#only-light){ .on-glb }
+![Load Balancer Pool Member Detail](./images/load-balancer/load-balancer-pool-member-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/132759f4-1fa9-47dd-94f3-371abb943dd7/`"
 
 Detailed view of an individual Load Balancer Pool Member, including its linked pool, port, health check monitor configuration, and certificate profile.
 
-![Health Checks List](./images/load-balancer-health-check.png)
+![Health Checks List](./images/load-balancer/load-balancer-health-check-light.png#only-light){ .on-glb }
+![Health Checks List](./images/load-balancer/load-balancer-health-check-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/`"
 
 A list view of a Health Check Monitor showing health check types, port, interval, retry and timeout settings.
 
-![Health Check Detail](./images/load-balancer-health-check-detail.png)
+![Health Check Detail](./images/load-balancer/load-balancer-health-check-detail-light.png#only-light){ .on-glb }
+![Health Check Detail](./images/load-balancer/load-balancer-health-check-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/497deb96-e43b-4408-b3fb-2a1ae6bf7856/`"
 
 Detailed view of a Health Check Monitor including interval, timeout, and target port.
 
-![Certificate Profiles List](./images/load-balancer-cert.png)
+![Certificate Profiles List](./images/load-balancer/load-balancer-cert-light.png#only-light){ .on-glb }
+![Certificate Profiles List](./images/load-balancer/load-balancer-cert-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/`"
 
 A list view of available Certificate Profiles used for SSL/TLS termination, showing certificate type and other optional fields.
 
-![Certificate Profile Detail](./images/load-balancer-cert-detail.png)
+![Certificate Profile Detail](./images/load-balancer/load-balancer-cert-detail-light.png#only-light){ .on-glb }
+![Certificate Profile Detail](./images/load-balancer/load-balancer-cert-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/c80b768a-498d-4111-be42-e9462afe645e/`"
 
 Detailed view for a Certificate Profile, including certificate type, certificate file path, and key file paths.
 
