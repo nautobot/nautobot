@@ -886,7 +886,7 @@ def yamllint(context):
 def serve_docs(context):
     """Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
-        run_command(context, "mkdocs serve")
+        run_command(context, "mkdocs serve --livereload")
     else:
         start(context, service="mkdocs")
 
