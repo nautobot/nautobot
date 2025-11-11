@@ -74,7 +74,14 @@ The Navigation Bar has been redesigned for greater efficiency and usability. It 
 
 #### Load Balancer Models
 
-TODO: Fill in
+Nautobot 3.0 introduces a [Load Balancer](../user-guide/core-data-model/load-balancers/index.md) data model, enabling you to model Virtual Servers, Pools, Pool Members, Health Checks, and Certificates. This feature provides compatibility for configuration generation (via Golden Configuration) with popular load balancing vendors such as F5, Citrix NetScaler, A10 Networks, VMware Avi Load Balancer, and Fortinet.
+
+Key use cases include:
+
+- Modeling load balancer resources for service, application, and inventory tracking.
+- Generating device configurations using Nautobot Golden Configuration templates for supported vendors.
+- Mapping Virtual Servers to backend servers and services.
+- Managing certificate configuration and associated metadata.
 
 #### VPN Models
 
@@ -201,6 +208,115 @@ Added the JavaScript Library ECharts version 6.0.0.
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v3.0.0rc1 (2025-11-11)
+
+### Breaking Changes in v3.0.0rc1
+
+- [#8051](https://github.com/nautobot/nautobot/issues/8051) - Removed deprecated HTML templates that are no longer used.
+- [#8056](https://github.com/nautobot/nautobot/issues/8056) - `BaseBreadcrumbItem.as_pair` now returns `iterator` instead of `tuple[str, str]` to support dynamic breadcrumb items.
+- [#8081](https://github.com/nautobot/nautobot/issues/8081) - Removed support for branding options of `header_bullet`, `nav_bullet`, `javascript`, and `css`.
+
+### Added in v3.0.0rc1
+
+- [#7873](https://github.com/nautobot/nautobot/issues/7873) - Added support for assigning Configuration Contexts to Device Families.
+- [#8012](https://github.com/nautobot/nautobot/issues/8012) - Added Version Control and Ansible Automation to marketplace.
+- [#8014](https://github.com/nautobot/nautobot/issues/8014) - Added vpn.VPNTunnelEndpoint model constraints
+- [#8056](https://github.com/nautobot/nautobot/issues/8056) - Added `BaseModel.page_title` property with preferred object representation for titles.
+- [#8064](https://github.com/nautobot/nautobot/issues/8064) - Added `ValidateModelData` system Job.
+- [#8091](https://github.com/nautobot/nautobot/issues/8091) - Added dark mode support for `highlight.js`.
+- [#8093](https://github.com/nautobot/nautobot/issues/8093) - Added Load Balancer app and data models.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added the `vrfs` filter to Devices and VirtualMachines.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added the `secrets_groups` filter to Secrets.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added the `ancestors` filter to Prefixes.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added the `services` filter to IPAddresses.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added the `load_balancer_pool_members` and `virtual_servers` filters to CertificateProfiles.
+- [#8125](https://github.com/nautobot/nautobot/issues/8125) - Added `bus-globe`, `bus-shield` and `bus-shield-check` Nautobot icons.
+- [#8130](https://github.com/nautobot/nautobot/issues/8130) - Added validation of model constraints when creating/editing an Approval Workflow Definition.
+- [#8130](https://github.com/nautobot/nautobot/issues/8130) - Added "Approval State" and "Enabled" filters to Scheduled Job filterset.
+- [#8130](https://github.com/nautobot/nautobot/issues/8130) - Added "Approval State" and "Enabled" columns to Scheduled Job table.
+- [#8143](https://github.com/nautobot/nautobot/issues/8143) - Merged up latest content and fixes from Nautobot v2.4.22.
+
+### Changed in v3.0.0rc1
+
+- [#7462](https://github.com/nautobot/nautobot/issues/7462) - Changed `Device.device_redundancy_group_priority` and `InterfaceRedundancyGroupAssociation.priority` from `PositiveSmallIntegerField` to `PositiveIntegerField` to allow a wider range of values.
+- [#8056](https://github.com/nautobot/nautobot/issues/8056) - Removed last breadcrumb item from custom breadcrumbs implementations.
+- [#8057](https://github.com/nautobot/nautobot/issues/8057) - Echart Theme is derived from the browser and not require the Python developer to assign.
+- [#8057](https://github.com/nautobot/nautobot/issues/8057) - Added new `LIGHTER_GREEN_AND_RED_ONLY` EChartsThemeColors choice.
+- [#8069](https://github.com/nautobot/nautobot/issues/8069) - Set all Select2 placeholders to hyphens: `---------`.
+- [#8071](https://github.com/nautobot/nautobot/issues/8071) - Underlined links in blue colored table rows and alerts.
+- [#8074](https://github.com/nautobot/nautobot/issues/8074) - Enforced constant width on the first column of attribute tables.
+- [#8075](https://github.com/nautobot/nautobot/issues/8075) - Changed Rack list view to not show space utilization and power utilization columns by default.
+- [#8080](https://github.com/nautobot/nautobot/issues/8080) - Removed "Log in" item from nav menu. When user is unauthenticated and not on login page the "Log in" button now shows up in the header.
+- [#8088](https://github.com/nautobot/nautobot/issues/8088) - Changed nav menu logo and icon size to 32px.
+- [#8090](https://github.com/nautobot/nautobot/issues/8090) - Updated titles for Modules and Cable trace.
+- [#8090](https://github.com/nautobot/nautobot/issues/8090) - Improved breadcrumbs for Rack Elevations and Software Versions.
+- [#8090](https://github.com/nautobot/nautobot/issues/8090) - Improved `helpers.pre_tag` rendering for empty values.
+- [#8098](https://github.com/nautobot/nautobot/issues/8098) - When applying filters, use selected advanced filter even if not manually applied by user (i.e. even if not added to the selected filters list with "Add Filter" button).
+- [#8099](https://github.com/nautobot/nautobot/issues/8099) - Changed icon for "Rename" buttons from `mdi-pencil` to `mdi-rename`.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Changed the badge color from blue to gray for the ObjectsTablePanel badges without a link.
+- [#8125](https://github.com/nautobot/nautobot/issues/8125) - Changed VPN navigation icon from `atom` to `shield-check`.
+- [#8130](https://github.com/nautobot/nautobot/issues/8130) - Changed Scheduled Job list view to not hide non-enabled schedules by default.
+- [#8131](https://github.com/nautobot/nautobot/issues/8131) - Changed the `nautobot-migrate-bootstrap-v3-to-v5` script to also call the `nautobot-migrate-deprecated-templates` script by default.
+
+### Fixed in v3.0.0rc1
+
+- [#8058](https://github.com/nautobot/nautobot/issues/8058) - Fixed some tests skipped in v3.
+- [#8060](https://github.com/nautobot/nautobot/issues/8060) - Fixed dark mode for Rack Elevation view to match Rack view.
+- [#8062](https://github.com/nautobot/nautobot/issues/8062) - Fixed pagination of Job Result logs table.
+- [#8063](https://github.com/nautobot/nautobot/issues/8063) - Fixed a regression that removed many-to-many fields from change logs and webhook payloads.
+- [#8064](https://github.com/nautobot/nautobot/issues/8064) - Fixed style of "Profile job execution" and "Ignore singleton lock" checkboxes in Job forms.
+- [#8064](https://github.com/nautobot/nautobot/issues/8064) - Fixed style of checkboxes in user preferences table.
+- [#8064](https://github.com/nautobot/nautobot/issues/8064) - Added exception handler for the case where `nautobot-server refresh_dynamic_group_member_caches` encounters an exception with a specific group(s).
+- [#8064](https://github.com/nautobot/nautobot/issues/8064) - Fixed rendering of Job `description` in its detail view page.
+- [#8065](https://github.com/nautobot/nautobot/issues/8065) - Fixed remaining tests skipped in v3.
+- [#8072](https://github.com/nautobot/nautobot/issues/8072) - Fixed job detail view copy buttons.
+- [#8086](https://github.com/nautobot/nautobot/issues/8086) - Fixed StatsPanel causing traceback when it includes a filter_extension.
+- [#8087](https://github.com/nautobot/nautobot/issues/8087) - Fixed tab and tab panel spacings inside forms.
+- [#8088](https://github.com/nautobot/nautobot/issues/8088) - Fixed "Nautobot Powered" link in footer and nav menu branding icon.
+- [#8089](https://github.com/nautobot/nautobot/issues/8089) - Fixed ECharts text in dark mode.
+- [#8089](https://github.com/nautobot/nautobot/issues/8089) - Fixed ECharts with dynamic data. ECharts data is not overwritten by resolved data.
+- [#8089](https://github.com/nautobot/nautobot/issues/8089) - Fixed `combine_with` option.
+- [#8090](https://github.com/nautobot/nautobot/issues/8090) - Fixed breadcrumbs rendering on generic views like Notes and Changelog.
+- [#8090](https://github.com/nautobot/nautobot/issues/8090) - Fixed status labels on Rack Elevations and Cable Trace.
+- [#8092](https://github.com/nautobot/nautobot/issues/8092) - Fixed title being hard-coded on list views instead of using view_titles.
+- [#8096](https://github.com/nautobot/nautobot/issues/8096) - Fixed filtering on VPN forms for Dynamic Groups and VPNTunnelEndpoint.
+- [#8099](https://github.com/nautobot/nautobot/issues/8099) - Fixed bulk-action buttons not rendering in the footer of object tables on non-default tabs.
+- [#8100](https://github.com/nautobot/nautobot/issues/8100) - Fixed tables when boolean field should use BooleanColumn.
+- [#8101](https://github.com/nautobot/nautobot/issues/8101) - Fixed Virtual Chassis edit member view.
+- [#8102](https://github.com/nautobot/nautobot/issues/8102) - Fixed missing/broken "Data Compliance" tab on Secret views.
+- [#8102](https://github.com/nautobot/nautobot/issues/8102) - Added missing Data Compliance support to GraphQLQuery and Note models.
+- [#8102](https://github.com/nautobot/nautobot/issues/8102) - Fixed Data Compliance URL patterns from `data_compliance` to `data-compliance`.
+- [#8105](https://github.com/nautobot/nautobot/issues/8105) - Fixed detailed view top buttons alignment.
+- [#8106](https://github.com/nautobot/nautobot/issues/8106) - Fixed error in rendering Virtual Machine config context tab.
+- [#8106](https://github.com/nautobot/nautobot/issues/8106) - Fixed incorrect application of config contexts scoped by device-type or device-redundancy-group to all virtual machines.
+- [#8106](https://github.com/nautobot/nautobot/issues/8106) - Fixed incorrect permissions requirements to view various tabs on VPN Profile detail view.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Fixed various ObjectsTablePanel badge links that were invalid or broken.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Fixed the new path for the insourced DVE jobs.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Fixed the creation of Statuses for the insourced Load Balancer app.
+- [#8111](https://github.com/nautobot/nautobot/issues/8111) - Allowed space as valid character in Select2 tags.
+- [#8112](https://github.com/nautobot/nautobot/issues/8112) - Fixed missing Admin "Add" buttons on list views.
+- [#8118](https://github.com/nautobot/nautobot/issues/8118) - Fixed condition in `GetObjectViewTestCase.test_body_content_table_list_url` in which tests failed if it did not have data.
+- [#8122](https://github.com/nautobot/nautobot/issues/8122) - Fixed rendering of API version badges in Swagger UI docs.
+- [#8124](https://github.com/nautobot/nautobot/issues/8124) - Fixed browseable API dark mode colors on syntax highlighting.
+- [#8124](https://github.com/nautobot/nautobot/issues/8124) - Fixed missing icons on browseable API GET button.
+- [#8124](https://github.com/nautobot/nautobot/issues/8124) - Fixed redundant header on browseable API pages.
+- [#8124](https://github.com/nautobot/nautobot/issues/8124) - Fixed missing theme modal on pages that only import footer.html.
+- [#8128](https://github.com/nautobot/nautobot/issues/8128) - Fixed a condition when trying to render a link on a button for an object that doesn't exist.
+- [#8130](https://github.com/nautobot/nautobot/issues/8130) - Fixed model constraints on approval workflows not correctly applying to scheduled jobs.
+
+### Documentation in v3.0.0rc1
+
+- [#8081](https://github.com/nautobot/nautobot/issues/8081) - Updated v2 to v3 migration guide.
+- [#8108](https://github.com/nautobot/nautobot/issues/8108) - Updated load balancer documentation.
+
+### Housekeeping in v3.0.0rc1
+
+- [#8078](https://github.com/nautobot/nautobot/issues/8078) - Fixed the rendering of the license badge in the App detail page.
+- [#8083](https://github.com/nautobot/nautobot/issues/8083) - Bumped `highlight.js` version.
+- [#8103](https://github.com/nautobot/nautobot/issues/8103) - Fixed bootstrap v3 to v5 script silently failing on invalid path arguments.
+- [#8107](https://github.com/nautobot/nautobot/issues/8107) - Added a unit test to verify all ObjectsTablePanel badges have a valid link.
+- [#8116](https://github.com/nautobot/nautobot/issues/8116) - Update navbar choices for icon and weight attributes to support the Nautobot Device Lifecycle App.
 
 ## v3.0.0a3 (2025-10-29)
 
