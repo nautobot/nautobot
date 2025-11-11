@@ -135,7 +135,9 @@ Ensure the following IP Addresses exist in Nautobot's IPAM:
     - Name: `pool1`
     - Load Balancing Algorithm: `Round Robin`
 
-![F5 Simple Adding Load Balancer Pool](./images/load-balancer-f5-simple-2.png)
+![F5 Simple Adding Load Balancer Pool](./images/load-balancer/load-balancer-f5-simple-3-light.png#only-light){ .on-glb }
+![F5 Simple Adding Load Balancer Pool](./images/load-balancer/load-balancer-f5-simple-3-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 ### 3. Adding a Load Balancer Pool Member
 
@@ -146,7 +148,8 @@ Ensure the following IP Addresses exist in Nautobot's IPAM:
     - Status: Active
     - Port: `80`
 
-![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer-f5-simple-3.png)
+![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer/load-balancer-f5-simple-5-light.png#only-light){ .on-glb }
+![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer/load-balancer-f5-simple-5-dark.png#only-dark){ .on-glb }
 
 ### 4. Creating the Virtual Server
 
@@ -155,12 +158,14 @@ In the Nautobot UI:
 - Navigate to **Load Balancer > Virtual Servers**.
 - Click **Add Virtual Server**.
     - Name: `virtual1`
-    - IP Address (VIP): `192.0.2.1`
+    - IP Address (VIP): `10.0.0.1`
     - Port: `80`
     - Protocol: `TCP`
     - Load Balancer Pool: `pool1`
 
-![F5 Simple Adding Virtual Server](./images/load-balancer-f5-simple-4.png)
+![F5 Simple Adding Virtual Server](./images/load-balancer/load-balancer-f5-simple-2-light.png#only-light){ .on-glb }
+![F5 Simple Adding Virtual Server](./images/load-balancer/load-balancer-f5-simple-2-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 ### 5. Validation and Configuration Snippet
 
@@ -200,7 +205,7 @@ A sample JSON response for that query would look like:
         "port": 80,
         "protocol": "TCP",
         "vip": {
-          "address": "192.0.2.1/32"
+          "address": "10.0.0.1/32"
         },
         "load_balancer_pool": {
           "name": "pool1",
@@ -219,7 +224,9 @@ A sample JSON response for that query would look like:
 }
 ```
 
-![F5 Simple GraphQL](./images/load-balancer-f5-simple-5.png)
+![F5 Simple GraphQL](./images/load-balancer/load-balancer-f5-simple-4-light.png#only-light){ .on-glb }
+![F5 Simple GraphQL](./images/load-balancer/load-balancer-f5-simple-4-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 Using that JSON response, you can then build a Jinja2 template following the data model:
 
@@ -318,7 +325,9 @@ Ensure these IP Addresses are available in Nautobot's IPAM:
 
 ### 2. Health Check Configuration
 
-![F5 Advanced Health Check](./images/load-balancer-f5-advanced-2.png)
+![F5 Advanced Health Check](./images/load-balancer/load-balancer-f5-advanced-2-light.png#only-light){ .on-glb }
+![F5 Advanced Health Check](./images/load-balancer/load-balancer-f5-advanced-2-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/add/`"
 
 Before configuring your pools, set up your health checks:
 
@@ -333,7 +342,9 @@ Before configuring your pools, set up your health checks:
 
 ### 3. Certificate Profile Configuration
 
-![F5 Advanced Certificate Profile](./images/load-balancer-f5-advanced-3.png)
+![F5 Advanced Certificate Profile](./images/load-balancer/load-balancer-f5-advanced-3-light.png#only-light){ .on-glb }
+![F5 Advanced Certificate Profile](./images/load-balancer/load-balancer-f5-advanced-3-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/add/`"
 
 Define Certificate Profiles:
 
@@ -347,7 +358,9 @@ Define Certificate Profiles:
 
 ### 4. Configuring Load Balancer Pool
 
-![F5 Advanced Pool Config](./images/load-balancer-f5-advanced-4.png)
+![F5 Advanced Pool Config](./images/load-balancer/load-balancer-f5-advanced-4-light.png#only-light){ .on-glb }
+![F5 Advanced Pool Config](./images/load-balancer/load-balancer-f5-advanced-4-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/add/`"
 
 - Navigate to **Load Balancer > Pools**.
 - Click **Add Load Balancer Pool**.
@@ -357,14 +370,16 @@ Define Certificate Profiles:
 
 ### 5. Adding Load Balancer Pool Members
 
-![F5 Advanced Pool Members](./images/load-balancer-f5-advanced-5.png)
+![F5 Advanced Pool Members](./images/load-balancer/load-balancer-f5-advanced-5-light.png#only-light){ .on-glb }
+![F5 Advanced Pool Members](./images/load-balancer/load-balancer-f5-advanced-5-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/add/`"
 
 - Navigate to **Load Balancer > Pool Members**.
 - Add each pool member individually:
     - IP Addresses:
-        - `10.230.32.121`
-        - `10.230.32.122`
-        - `10.230.32.123`
+        - `10.0.10.2`
+        - `10.0.10.3`
+        - `10.0.10.4`
     - Load Balancer Pool: `pool_live_ident_admin_web_http`
     - Status: `Active`
     - Port: `9280`
@@ -373,12 +388,14 @@ Define Certificate Profiles:
 
 ### 6. Creating the Virtual Server
 
-![F5 Advanced Virtual Server](./images/load-balancer-f5-advanced-6.png)
+![F5 Advanced Virtual Server](./images/load-balancer/load-balancer-f5-advanced-6-light.png#only-light){ .on-glb }
+![F5 Advanced Virtual Server](./images/load-balancer/load-balancer-f5-advanced-6-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 - Navigate to **Load Balancer > Virtual Servers**.
 - Click **Add Virtual Server**.
     - Name: `vs_live_ident_admin_web_https`
-    - IP Address (VIP): `10.230.15.214`
+    - IP Address (VIP): `10.0.20.1`
     - Protocol: `TCP`
     - Load Balancer Type: `Layer 7`
     - Port: `443`
@@ -424,7 +441,9 @@ Define Certificate Profiles:
 }
 ```
 
-![F5 Advanced GraphQL Response](./images/load-balancer-f5-advanced-7.png)
+![F5 Advanced GraphQL Response](./images/load-balancer/load-balancer-f5-advanced-7-light.png#only-light){ .on-glb }
+![F5 Advanced GraphQL Response](./images/load-balancer/load-balancer-f5-advanced-7-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ```json
 {
@@ -435,15 +454,7 @@ Define Certificate Profiles:
         "port": 443,
         "protocol": "TCP",
         "vip": {
-          "address": "10.230.15.214/32"
-        },
-        "health_check_monitor": {
-          "name": "http",
-          "health_check_type": "HTTP",
-          "port": 80,
-          "interval": 30,
-          "timeout": 5,
-          "retry": 3
+          "address": "10.0.20.1/32"
         },
         "certificate_profiles": [
           {
@@ -467,19 +478,19 @@ Define Certificate Profiles:
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.121/32"
+                "address": "10.0.20.2/32"
               }
             },
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.122/32"
+                "address": "10.0.20.3/32"
               }
             },
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.123/32"
+                "address": "10.0.20.4/32"
               }
             }
           ]
