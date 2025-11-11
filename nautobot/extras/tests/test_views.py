@@ -2758,59 +2758,6 @@ class ScheduledJobTestCase(
             crontab="15 10 * * *",
         )
 
-    def test_only_enabled_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        # this should not appear, since it's not enabled
-        ScheduledJob.objects.create(
-            enabled=False,
-            name="test4",
-            task="pass_job.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-    def test_approved_required_jobs_are_listed_only_when_approved(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        # this should not appear, since it's not approved
-        ScheduledJob.objects.create(
-            enabled=True,
-            approval_required=True,
-            decision_date=None,
-            name="test4",
-            task="pass_job.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-        ScheduledJob.objects.create(
-            enabled=True,
-            approval_required=False,
-            name="test5",
-            task="pass_job.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-        self.assertIn("test5", extract_page_body(response.content.decode(response.charset)))
-
-        scheduled_job = ScheduledJob.objects.get(name="test4")
-        scheduled_job.decision_date = timezone.now()
-        scheduled_job.save()
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertIn("test4", extract_page_body(response.content.decode(response.charset)))
-
     def test_non_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
 
@@ -3294,7 +3241,6 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
-            mock_begin_approval_workflow.assert_not_called()
 
     def test_rerun_job(self):
         self.add_permissions("extras.run_job")
@@ -3515,11 +3461,13 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
-        ApprovalWorkflowDefinition.objects.create(
+        workflow = ApprovalWorkflowDefinition(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
             weight=0,
+            model_constraints={"job_model__name": self.test_pass.name},
         )
+        workflow.validated_save()
         data = {
             "_schedule_type": "future",
             "_schedule_name": "test",
@@ -3527,14 +3475,15 @@ class JobTestCase(
         }
 
         for i, run_url in enumerate(self.run_urls):
-            if "_schedule_name" in data:
-                data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
+            with self.subTest(run_url=run_url):
+                if "_schedule_name" in data:
+                    data["_schedule_name"] = f"test {i}"
+                response = self.client.post(run_url, data)
+                scheduled_job = ScheduledJob.objects.last()
+                self.assertRedirects(
+                    response,
+                    reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+                )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_scheduled_job_with_no_approval_workflow_defined(self, _):

@@ -84,7 +84,7 @@ The template for a workflow, specifying which model(s) it applies to, any constr
 Constraints define when a workflow definition should apply to a particular model instance.
 
 - Constraints are stored as a dictionary of **field lookups → values** (e.g. `{"approval_required": True}`).
-- Any valid Django ORM lookup can be used (e.g. `{"name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`, `{"job_model__name__icontains": "Export"}`, `{"total_run_count__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
+- Any valid Django ORM lookup can be used (e.g. `{"job_model__name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`, `{"job_model__name__icontains": "Export"}`, `{"total_run_count__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
 - If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
 

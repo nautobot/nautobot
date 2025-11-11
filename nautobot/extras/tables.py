@@ -1479,12 +1479,20 @@ class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
+    enabled = BooleanColumn()
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
     actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
+    approval_state = tables.Column(empty_values=[], orderable=False)
+
+    def render_approval_state(self, record):
+        workflow = record.associated_approval_workflows.first()
+        if workflow is not None:
+            return format_html('<a href="{}">{}</a>', record.get_approval_workflow_url(), workflow.current_state)
+        return HTML_NONE
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
@@ -1493,6 +1501,7 @@ class ScheduledJobTable(BaseTable):
             "name",
             "total_run_count",
             "job_model",
+            "approval_state",
             "interval",
             "start_time",
             "last_run_at",
@@ -1504,6 +1513,8 @@ class ScheduledJobTable(BaseTable):
             "pk",
             "name",
             "job_model",
+            "enabled",
+            "approval_state",
             "interval",
             "last_run_at",
             "actions",
