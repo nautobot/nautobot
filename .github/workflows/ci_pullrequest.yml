@@ -287,7 +287,7 @@ jobs:
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
       - name: "Generate coverage comment"
         if: >
-          contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
+          contains(fromJson('["ltm-2.4","develop","next"]'), github.base_ref) &&
           (github.head_ref != 'main') && (!startsWith(github.head_ref, 'release'))
         id: "coverage_comment"
         uses: "py-cov-action/python-coverage-comment-action@d1ff8fbb5ff80feedb3faa0f6d7b424f417ad0e1"  # v3.30
@@ -299,7 +299,7 @@ jobs:
           ANNOTATION_TYPE: "warning"
       - name: "Store Pull Request comment to be posted"
         if: >
-          contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
+          contains(fromJson('["ltm-2.4","develop","next"]'), github.base_ref) &&
           (github.head_ref != 'main') && (!startsWith(github.head_ref, 'release'))
         uses: "actions/upload-artifact@v4"
         with:
