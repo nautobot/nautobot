@@ -8,10 +8,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.circuits.views import CircuitUIViewSet
 from nautobot.core.models.querysets import count_related
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceParentBreadcrumbItem, ModelBreadcrumbItem
-from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device, Location
-from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
