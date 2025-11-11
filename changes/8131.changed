@@ -1,1 +1,0 @@
-Changed the `nautobot-migrate-bootstrap-v3-to-v5` script to also call the `nautobot-migrate-deprecated-templates` script by default.
