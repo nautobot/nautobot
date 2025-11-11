@@ -271,15 +271,16 @@ ltm node /Common/{{ member.ip_address.address.split('/')[0] }} {
 Sample output from the template (you can use the Jinja Renderer linked at the bottom of Nautobot):
 
 ```no-highlight
-ltm virtual-address /Common/192.0.2.1 {
-    address 192.0.2.1
+
+ltm virtual-address /Common/10.0.0.1 {
+    address 10.0.0.1
     arp enabled
     mask 255.255.255.255
     route-advertisement selective
 }
 
 ltm virtual /Common/virtual1 {
-    destination /Common/192.0.2.1:80
+    destination /Common/10.0.0.1:80
     ip-protocol tcp
     mask 255.255.255.255
     pool /Common/pool1
@@ -302,7 +303,9 @@ ltm node /Common/10.0.0.1 {
 }
 ```
 
-![F5 Simple Jinja2](./images/load-balancer-f5-simple-6.png)
+![F5 Simple Jinja2](./images/load-balancer/load-balancer-f5-simple-6-light.png#only-light){ .on-glb }
+![F5 Simple Jinja2](./images/load-balancer/load-balancer-f5-simple-6-dark.png#only-dark){ .on-glb }
+[//] : # "`https://next.demo.nautobot.com/render-jinja-template/`"
 
 ## F5 Advanced Load Balancing Use Case
 
@@ -501,7 +504,9 @@ Define Certificate Profiles:
 }
 ```
 
-![F5 Advanced Jinja2 Template](./images/load-balancer-f5-advanced-8.png)
+![F5 Advanced Jinja2 Template](./images/load-balancer/load-balancer-f5-advanced-8-light.png#only-light){ .on-glb }
+![F5 Advanced Jinja2 Template](./images/load-balancer/load-balancer-f5-advanced-8-dark.png#only-dark){ .on-glb }
+[//] : # "`https://next.demo.nautobot.com/render-jinja-template/`"
 
 ```jinja2
 {% for virtual_server in data.virtual_servers %}
@@ -567,8 +572,8 @@ ltm node /Common/{{ member.ip_address.address.split('/')[0] }} {
 You can use the Jinja Renderer at the bottom of Nautobot with your JSON output and the sample Jinja2 template:
 
 ```no-highlight
-ltm virtual-address /Common/10.230.15.214 {
-    address 10.230.15.214
+ltm virtual-address /Common/10.0.20.1 {
+    address 10.0.20.1
     arp enabled
     mask 255.255.255.255
     route-advertisement selective
@@ -587,7 +592,7 @@ ltm profile client-ssl /Common/clientssl-fedcheck.app-strong {
 }
 
 ltm virtual /Common/vs_live_ident_admin_web_https {
-    destination /Common/10.230.15.214:443
+    destination /Common/10.0.20.1:443
     ip-protocol tcp
     mask 255.255.255.255
     pool /Common/pool_live_ident_admin_web_http
@@ -605,30 +610,30 @@ ltm virtual /Common/vs_live_ident_admin_web_https {
 
 ltm pool /Common/pool_live_ident_admin_web_http {
     members {
-        /Common/10.230.32.121:9280 {
-            address 10.230.32.121
+        /Common/10.0.20.2:9280 {
+            address 10.0.20.2
         }
-        /Common/10.230.32.122:9280 {
-            address 10.230.32.122
+        /Common/10.0.20.3:9280 {
+            address 10.0.20.3
         }
-        /Common/10.230.32.123:9280 {
-            address 10.230.32.123
+        /Common/10.0.20.4:9280 {
+            address 10.0.20.4
         }
     }
     monitor /Common/http
 }
 
 
-ltm node /Common/10.230.32.121 {
-    address 10.230.32.121
+ltm node /Common/10.0.20.2 {
+    address 10.0.20.2
 }
 
-ltm node /Common/10.230.32.122 {
-    address 10.230.32.122
+ltm node /Common/10.0.20.3 {
+    address 10.0.20.3
 }
 
-ltm node /Common/10.230.32.123 {
-    address 10.230.32.123
+ltm node /Common/10.0.20.4 {
+    address 10.0.20.4
 }
 ```
 
