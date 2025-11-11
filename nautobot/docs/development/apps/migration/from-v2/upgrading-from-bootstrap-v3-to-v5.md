@@ -64,6 +64,9 @@ Total issues fixed: 417
 
 In the case of the above output snippet, you can see that while the script fixed 417 migration issues automatically, it encountered some uncertainty in `nautobot/extras/templates/extras/inc/configcontext_format.html`, likely due to the Django template logic wrapping the `btn-primary` and `btn-default` classes. In this case you'd (as documented below in [Buttons](#buttons)) likely want to manually replace the `btn-default` case with `btn-secondary`.
 
+!!! note
+    The `nautobot-migrate-bootstrap-v3-to-v5` also, by default, calls the `nautobot-migrate-deprecated-templates` script to replace deprecated template references found in your HTML files. You can skip this additional step by using the `--skip-template-replacement` flag. For more details on the deprecated template script, see [Deprecated Templates](../code-updates.md#deprecated-templates).
+
 ## Overview of High-Level Changes
 
 ### Bootstrap `data-*` attributes
