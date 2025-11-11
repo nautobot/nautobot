@@ -74,7 +74,14 @@ The Navigation Bar has been redesigned for greater efficiency and usability. It 
 
 #### Load Balancer Models
 
-TODO: Fill in
+Nautobot 3.0 introduces a [Load Balancer](../user-guide/core-data-model/load-balancers/index.md) data model, enabling you to model Virtual Servers, Pools, Pool Members, Health Checks, and Certificates. This feature provides compatibility for configuration generation (via Golden Configuration) with popular load balancing vendors such as F5, Citrix NetScaler, A10 Networks, VMware Avi Load Balancer, and Fortinet.
+
+Key use cases include:
+
+- Modeling load balancer resources for service, application, and inventory tracking.
+- Generating device configurations using Nautobot Golden Configuration templates for supported vendors.
+- Mapping Virtual Servers to backend servers and services.
+- Managing certificate configuration and associated metadata.
 
 #### VPN Models
 
