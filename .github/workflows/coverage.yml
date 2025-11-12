@@ -10,7 +10,7 @@ on: # yamllint disable-line rule:truthy rule:comments
 jobs:
   test:
     name: "Post coverage comment to PR"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' # yamllint disable-line rule:quoted-strings rule:comments
     permissions:
       # Gives the action the necessary permissions for publishing new

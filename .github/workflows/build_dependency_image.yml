@@ -10,7 +10,7 @@ on:  # yamllint disable
 
 jobs:
   container-build:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     strategy:
       fail-fast: true
       matrix:

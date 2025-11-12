@@ -18,7 +18,7 @@ jobs:
       - name: "Security checks"
         uses: "./.github/actions/security-checks"
   ruff:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -33,7 +33,7 @@ jobs:
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   yamllint:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -63,7 +63,7 @@ jobs:
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   docs:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -78,7 +78,7 @@ jobs:
       - name: "Linting: docs build and validation"
         run: "poetry run invoke build-and-check-docs"
   djhtml:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -93,7 +93,7 @@ jobs:
       - name: "Linting: djhtml"
         run: "poetry run invoke djhtml"
   djlint:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -108,7 +108,7 @@ jobs:
       - name: "Linting: djlint"
         run: "poetry run invoke djlint"
   hadolint:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -120,7 +120,7 @@ jobs:
           dockerfile: "docker/Dockerfile"
   check-migrations:
     name: "Run 'nautobot-server makemigrations --dry-run --check'"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -148,7 +148,7 @@ jobs:
         run: "poetry run invoke check-migrations"
   check-schema:
     name: "Run REST API schema checks"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -177,7 +177,7 @@ jobs:
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
   pylint:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -206,7 +206,7 @@ jobs:
         run: "poetry run invoke pylint"
   ui-code-check:
     name: "Check UI code style and formatting"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -228,7 +228,7 @@ jobs:
         run: "poetry run invoke ui-code-check"
   ui-build-check:
     name: "Check UI src and dist files validity and integrity"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -269,7 +269,7 @@ jobs:
           fi
   tests-postgres:
     name: "Unit tests (PostgreSQL and Python 3.10)"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -312,7 +312,7 @@ jobs:
       - "djlint"
   tests-mysql-plus-coverage:
     name: "Unit tests (MySQL and Python 3.13) plus test coverage reporting"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -382,7 +382,7 @@ jobs:
       - "djlint"
   # tests-doltsql:
   #   name: "Unit tests (DoltSQL and Python 3.13)"
-  #   runs-on: "bryan-test"
+  #   runs-on: bryan-test
   #   env:
   #     INVOKE_NAUTOBOT_LOCAL: "True"
   #     NAUTOBOT_DB_USER: "root"
@@ -428,7 +428,7 @@ jobs:
   #     - "djlint"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.10)"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -473,7 +473,7 @@ jobs:
       - "djlint"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -514,7 +514,7 @@ jobs:
       - "djhtml"
       - "djlint"
   integration-test:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -563,7 +563,7 @@ jobs:
       - "djlint"
   changelog:
     if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -581,7 +581,7 @@ jobs:
           poetry run towncrier check --compare-with origin/${{ github.base_ref }}
   container-build-test:
     name: "Test Container Build (amd64 only on Python 3.13)"
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     needs:
       - "check-migrations"
       - "check-schema"
@@ -619,7 +619,7 @@ jobs:
           tag-latest-for-py: "false"
           target: "final"
   all-tests-passed:
-    runs-on: "bryan-test"
+    runs-on: bryan-test
     steps:
       - run: "echo 'All tests succeeded'"
     needs:
