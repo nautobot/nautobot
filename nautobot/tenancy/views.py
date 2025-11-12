@@ -44,6 +44,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=["tenant_group"],
                 context_table_key="tenant_table",
+                related_field_name="tenant_group",
             ),
         )
     )
