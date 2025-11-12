@@ -13,6 +13,14 @@ from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
 
 
+def get_breadcrumbs_for_model(model, view_type: str = "List"):
+    """Get a UI Component Framework 'Breadcrumbs' instance for the given model's related UIViewSet or generic view."""
+    view = get_view_for_model(model)
+    if hasattr(view, "get_breadcrumbs"):
+        return view.get_breadcrumbs(model, view_type=view_type)
+    return None
+
+
 def get_changes_for_model(model):
     """
     Return a queryset of ObjectChanges for a model or instance. The queryset will be filtered
@@ -28,6 +36,30 @@ def get_changes_for_model(model):
     if issubclass(model, Model):
         return ObjectChange.objects.filter(changed_object_type=ContentType.objects.get_for_model(model._meta.model))
     raise TypeError(f"{model!r} is not a Django Model class or instance")
+
+
+def get_detail_view_components_context_for_model(model) -> dict:
+    """Helper method for DistinctViewTabs etc. to retrieve the UI Component Framework context for the base detail view.
+
+    Functionally equivalent to calling `get_breadcrumbs_for_model()`, `get_object_detail_content_for_model()`, and
+    `get_view_titles_for_model()`, but marginally more efficient.
+    """
+    context = {
+        "breadcrumbs": None,
+        "object_detail_content": None,
+        "view_titles": None,
+    }
+
+    view = get_view_for_model(model, view_type="")
+    if view is not None:
+        if hasattr(view, "get_breadcrumbs"):
+            context["breadcrumbs"] = view.get_breadcrumbs(model, view_type="")
+        if hasattr(view, "get_view_titles"):
+            context["view_titles"] = view.get_view_titles(model, view_type="")
+        if hasattr(view, "object_detail_content"):
+            context["object_detail_content"] = view.object_detail_content
+
+    return context
 
 
 def get_model_from_name(model_name):
@@ -178,6 +210,12 @@ def get_form_for_model(model, form_prefix=""):
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
 
 
+def get_object_detail_content_for_model(model):
+    """Get the UI Component Framework 'object_detail_content' for the given model's related UIViewSet or ObjectView."""
+    view = get_view_for_model(model)
+    return getattr(view, "object_detail_content", None)
+
+
 def get_related_field_for_models(from_model, to_model):
     """
     Find the field on `from_model` that is a relation to `to_model`.
@@ -243,6 +281,14 @@ def get_view_for_model(model, view_type=""):
     if result is None:
         result = get_related_class_for_model(model, module_name="views", object_suffix=f"{view_type}View")
     return result
+
+
+def get_view_titles_for_model(model, view_type: str = "List"):
+    """Get a UI Component Framework 'Titles' instance for the given model's related UIViewSet or generic view."""
+    view = get_view_for_model(model)
+    if hasattr(view, "get_view_titles"):
+        return view.get_view_titles(model, view_type=view_type)
+    return None
 
 
 def get_model_for_view_name(view_name):

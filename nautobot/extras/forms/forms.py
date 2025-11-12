@@ -386,7 +386,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
     )
-    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="model", required=False)
+    device_type = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(), to_field_name="model", required=False
+    )
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(), to_field_name="name", required=False

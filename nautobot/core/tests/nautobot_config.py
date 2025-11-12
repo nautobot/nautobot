@@ -10,6 +10,9 @@ from nautobot.core.settings_funcs import parse_redis_connection
 
 ALLOWED_HOSTS = ["nautobot.example.com"]
 
+# Do *not* send anonymized install metrics when migration or post_upgrade management commands are run while testing
+INSTALLATION_METRICS_ENABLED = False
+
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"
