@@ -21,72 +21,6 @@ function slugify(s, num_chars) {
 *  JS-ify Inputs
 */
 
-// Static choice selection
-function initializeCheckboxes(context){
-    // Track last selected checkbox for range selection
-    let lastSelectedIndex = null;
-
-    // "Toggle" checkbox for object lists (PK column)
-    document.querySelectorAll('input[type="checkbox"].toggle').forEach(toggleCheckbox => {
-        toggleCheckbox.addEventListener('click', function () {
-            const isChecked = this.checked;
-            // Check/uncheck all pk column checkboxes in the table
-            this.closest('table')
-                .querySelectorAll('input[type="checkbox"][name="pk"]:not([visually-hidden])')
-                .forEach(checkbox => checkbox.checked = isChecked);
-
-            // Show the "select all" box if present
-            const selectAllBox = document.getElementById('select_all_box');
-            if (selectAllBox) {
-                if (isChecked) {
-                    // unhide the select all objects form that contains the bulk action buttons
-                    selectAllBox.classList.remove('visually-hidden');
-                } else {
-                    const selectAll = document.getElementById('select_all');
-                    if (selectAll) selectAll.checked = false;
-                }
-            }
-        });
-
-        // Reset last selected index when using toggle all
-        lastSelectedIndex = null;
-    });
-
-    // Uncheck the "toggle" and "select all" checkboxes if an item is unchecked
-    document.querySelectorAll('input[type="checkbox"][name="pk"]').forEach((itemCheckbox) => {
-        itemCheckbox.addEventListener('click', function () {
-            const table = this.closest('table');
-            const allCheckboxes = Array.from(table.querySelectorAll('input[type="checkbox"][name="pk"]:not([visually-hidden])'));
-            const currentIndex = allCheckboxes.indexOf(this);
-
-            // Handle shift-click for range selection/deselection
-            if (event.shiftKey && lastSelectedIndex !== null) {
-                // Create range from previous click to current click
-                const startIndex = Math.min(lastSelectedIndex, currentIndex);
-                const endIndex = Math.max(lastSelectedIndex, currentIndex);
-
-                // Use the clicked item's new state for entire range
-                const shouldSelect = this.checked;
-
-                // Apply to entire range
-                for (let i = startIndex; i <= endIndex; i++) {
-                    allCheckboxes[i].checked = shouldSelect;
-                }
-            }
-
-            // Always update anchor to current click (normal click or shift+click)
-            lastSelectedIndex = currentIndex;
-
-            // Uncheck the "toggle" and "select all" checkboxes if any item is unchecked
-            const hasUnchecked = allCheckboxes.some(checkbox => !checkbox.checked);
-            if (hasUnchecked) {
-                document.querySelectorAll('input[type="checkbox"].toggle, #select_all')
-                    .forEach(checkbox => checkbox.checked = false);
-            }
-        });
-    });
-}
-
 function repopulateAutoField(context, targetField, sourceFields, maxLength, transformValue = null){
    const newValues = sourceFields.map(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
@@ -333,23 +267,6 @@ function initializeImagePreview(context){
     });
 }
 
-function initializeSelectAllForm(context){
-    // selectAll is the checkbox that selects all objects
-    const selectAll = document.querySelector('#select_all');
-    // selectAllBox is the div that contains the form bulk action buttons
-    const selectAllBox = document.querySelector('#select_all_box');
-
-    if (selectAll && selectAllBox) {
-        selectAll.addEventListener('click', function () {
-            // If the selectAll checkbox is checked, enable all form bulk action buttons
-            const isChecked = this.checked;
-            selectAllBox.querySelectorAll('button').forEach(button => {
-                button.disabled = !isChecked;
-            });
-        });
-    }
-}
-
 function initializeResultPerPageSelection(context){
     this_context = $(context);
     this_context.find('select#per_page').change(function() {
@@ -359,7 +276,6 @@ function initializeResultPerPageSelection(context){
 
 function initializeInputs(context) {
     const this_context = $(context);
-    initializeCheckboxes(this_context)
     initializeSlugField(this_context)
     initializeAutoPopulateField(this_context)
     initializeFormActionClick(this_context)
@@ -368,8 +284,8 @@ function initializeInputs(context) {
     initializeVLANModeSelection(this_context)
     initializeSortableList(this_context)
     initializeImagePreview(this_context)
-    initializeSelectAllForm(this_context)
 
+    window.nb.checkbox.initializeCheckboxes()
     window.nb.select2.initializeSelect2Fields(this_context)
 }
 
