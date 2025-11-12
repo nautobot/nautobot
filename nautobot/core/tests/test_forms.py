@@ -1,4 +1,5 @@
 import inspect
+import json
 import sys
 from unittest import mock
 
@@ -12,6 +13,9 @@ from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
+from nautobot.core.forms.fields import DynamicModelChoiceField
+from nautobot.core.forms.forms import RenderJinjaForm
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.utils import requests
 from nautobot.core.utils.filtering import get_filterset_parameter_form_field
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
@@ -905,3 +909,49 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
+
+
+class RenderJinjaFormTest(NautobotTestCaseMixin, TestCase):
+    def setUp(self):
+        self.setUpNautobot()
+
+    def test_defaults_and_content_type_choices(self):
+        """Test the default values and content type choices of the RenderJinjaForm."""
+        form = RenderJinjaForm()
+        # Fields present
+        for field_name in ["template_code", "context_mode", "context", "content_type", "object_uuid"]:
+            self.assertIn(field_name, form.fields)
+
+        # Default field-level initial values
+        self.assertEqual(form.fields["context_mode"].initial, "json")
+        self.assertEqual(form.fields["context"].initial, {})
+
+        # Content type uses a dynamic field configured to fetch only viewable types via API (?can_view=true)
+        self.assertIsInstance(form.fields["content_type"], DynamicModelChoiceField)
+        attrs = form.fields["content_type"].widget.attrs
+        self.assertIn("data-query-param-can_view", attrs)
+        self.assertEqual([v.lower() for v in json.loads(attrs["data-query-param-can_view"])], ["true"])
+
+    def test_initial_values_applied(self):
+        """Test that the initial values are applied to the RenderJinjaForm."""
+        ct = ContentType.objects.get_for_model(extras_models.Status)
+        obj = extras_models.Status.objects.first()
+        init = {
+            "content_type": str(ct.pk),
+            "object_uuid": str(obj.pk),
+            "context_mode": "object",
+        }
+        form = RenderJinjaForm(initial=init)
+
+        self.assertEqual(form.initial.get("content_type"), str(ct.pk))
+        self.assertEqual(form.initial.get("object_uuid"), str(obj.pk))
+        self.assertEqual(form.initial.get("context_mode"), "object")
+
+    def test_content_type_dynamic_field_configured_with_can_view(self):
+        """Dynamic field should request only viewable content types via API (?can_view=true)."""
+
+        form = RenderJinjaForm()
+        self.assertIsInstance(form.fields["content_type"], DynamicModelChoiceField)
+        attrs = form.fields["content_type"].widget.attrs
+        self.assertIn("data-query-param-can_view", attrs)
+        self.assertEqual(json.loads(attrs["data-query-param-can_view"]), ["True"])

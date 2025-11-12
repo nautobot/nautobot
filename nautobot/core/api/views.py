@@ -993,11 +993,23 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         data = serializers.RenderJinjaSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         template_code = data.validated_data["template_code"]
-        context = data.validated_data["context"]
+
+        # Determine context source
+        if data.validated_data.get("content_type") and data.validated_data.get("object_uuid"):
+            # Object-based context
+            try:
+                context = self._build_object_context(request, data.validated_data)
+            except ValidationError as exc:
+                raise RenderJinjaError(f"Failed to build object context: {exc}") from exc
+        else:
+            # JSON-based context (existing functionality)
+            context = data.validated_data.get("context") or {}
+
         try:
             rendered_template = render_jinja2(template_code, context)
         except Exception as exc:
             raise RenderJinjaError(f"Failed to render Jinja template: {exc}") from exc
+
         return Response(
             {
                 "rendered_template": rendered_template,
@@ -1006,3 +1018,23 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
                 "context": context,
             }
         )
+
+    def _build_object_context(self, request, validated_data):
+        """Build Jinja context from selected object, following Custom Links pattern."""
+        content_type_obj = validated_data["content_type"]
+        content_type_obj_model_class = content_type_obj.model_class()
+
+        try:
+            obj = content_type_obj_model_class.objects.restrict(request.user, "view").get(
+                pk=validated_data["object_uuid"]
+            )
+        except content_type_obj_model_class.DoesNotExist:
+            raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
+
+        # Build context with the minimal data needed for the template. serialize_object_v2 is not used for
+        # performance reasons. With it, a dcim.device render uses 10 queries in the basic case; fetching
+        # all subobjects the first time it's rendered. Without it, the basic dcim.device case uses 1 query and
+        # subobjects are fetched on demand.
+        context = {"obj": obj}
+
+        return context

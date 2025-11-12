@@ -25,7 +25,7 @@ from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
-from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
+from nautobot.core.api.fields import ContentTypeField, LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
@@ -889,6 +889,60 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     """Serializer for RenderJinjaView."""
 
     template_code = serializers.CharField(required=True)
-    context = serializers.DictField(default=dict)
+
+    # JSON context (required for JSON mode, mutually exclusive with object fields)
+    context = serializers.DictField(required=False)
+
+    # Object selection fields (both required for object mode, mutually exclusive with context)
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
+        required=False,
+        allow_null=True,
+    )
+    # Accept a PK variant that normalizes into the same target attribute
+    content_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=ContentType.objects.all(), source="content_type", required=False, allow_null=True
+    )
+    object_uuid = serializers.UUIDField(required=False, allow_null=True)
+
+    # Read-only response fields
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
+
+    def validate(self, attrs):
+        """Ensure either context OR object fields are provided, but not both."""
+        has_context = "context" in attrs  # Check presence, not truthiness (allows empty {})
+
+        # Enforce exclusivity between content_type and content_type_id using raw payload. This 'if not'
+        # jiggery-pokery is because DRF can return a rest_framwork.fields.empty object which has
+        # no .get() method.
+        raw = getattr(self, "initial_data", {})
+        if not isinstance(raw, dict):
+            raw = {}
+
+        raw_content_type = raw.get("content_type")
+        raw_content_type_id = raw.get("content_type_id")
+        if raw_content_type not in (None, "", []) and raw_content_type_id not in (None, "", []):
+            raise ValidationError("Provide either 'content_type' or 'content_type_id', not both.")
+
+        # Check for meaningful object fields (not just presence). At this point, either input form
+        # will have normalized to attrs['content_type'] when valid.
+        content_type = attrs.get("content_type")
+        object_uuid = attrs.get("object_uuid")
+        has_object = bool(content_type and object_uuid)
+
+        if not has_context and not has_object:
+            raise ValidationError(
+                "Either 'context' or object selection ('content_type'/'content_type_id' and 'object_uuid') must be provided."
+            )
+
+        if has_context and has_object:
+            raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
+
+        if has_context and (content_type or object_uuid):
+            raise ValidationError("Cannot specify both 'context' and partial object selection. Choose one approach.")
+
+        if content_type and content_type.model_class() is None:
+            raise ValidationError(f"Model not found for {content_type.app_label}.{content_type.model}.")
+
+        return attrs

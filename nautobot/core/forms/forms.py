@@ -4,6 +4,7 @@ import logging
 import re
 
 from django import forms
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField
 from django.forms import formset_factory
@@ -11,6 +12,7 @@ from django.urls import reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
+from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
@@ -24,6 +26,7 @@ __all__ = (
     "DynamicFilterForm",
     "ImportForm",
     "PrefixFieldMixin",
+    "RenderJinjaForm",
     "ReturnURLForm",
     "TableConfigForm",
 )
@@ -394,3 +397,51 @@ def dynamic_formset_factory(filterset, data=None, **kwargs):
 
 
 DynamicFilterFormSet = dynamic_formset_factory
+
+
+class RenderJinjaForm(BootstrapMixin, forms.Form):
+    """Form for the Jinja template renderer utility."""
+
+    template_code = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "placeholder": "",  # Blank placeholder, label is descriptive enough
+                "style": "resize: vertical; white-space: pre;",
+            }
+        ),
+        required=True,
+        label="Jinja Template",
+    )
+
+    context_mode = forms.ChoiceField(
+        choices=[("json", "JSON Data"), ("object", "Nautobot Object")],
+        widget=forms.RadioSelect,
+        initial="json",
+        label="Context Mode",
+    )
+
+    context = forms.JSONField(
+        widget=forms.Textarea(
+            attrs={
+                "placeholder": "{}",
+                "style": "resize: vertical; white-space: pre;",
+            }
+        ),
+        required=False,
+        initial={},
+        label="Data",
+        help_text="Enter data in JSON format.",
+    )
+
+    content_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.all(),
+        query_params={"can_view": True},
+        label="Object Type",
+        help_text="Choose the type of object to use as template context.",
+    )
+
+    object_uuid = forms.UUIDField(
+        required=False,
+        label="Object UUID",
+        help_text="Enter the UUID of the object to use as template context.",
+    )

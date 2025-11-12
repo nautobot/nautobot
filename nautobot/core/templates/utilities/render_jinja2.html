@@ -30,17 +30,49 @@
                 <div class="panel panel-default">
                     <div class="panel-heading"><strong>Template</strong></div>
                     <div class="panel-body">
-                        <div class="form-group">
-                            <label class="col-md-3 control-label required" for="id_template_code">Jinja Template</label>
-                            <div class="col-md-9">
-                                <textarea cols="40" rows="10" class="form-control" id="id_template_code" required=""></textarea>
+                        {% render_field form.template_code %}
+                        <div class="form-group" id="template_obj_help_group">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9 text-right">
+                                <span class="help-block" id="template_obj_help_text" style="visibility: hidden;">Use <code>obj</code> to refer to the selected object.</span>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-3 control-label" for="id_context">Data</label>
+                            <label class="col-md-3 control-label">{{ form.context_mode.label }}</label>
                             <div class="col-md-9">
-                                <textarea cols="40" rows="10" class="form-control" placeholder="{}" id="id_context">{}</textarea>
-                                <span class="help-block">Enter data in <a href="https://json.org/">JSON</a> format.</span>
+                                {% for choice in form.context_mode %}
+                                    <label class="radio-inline">
+                                        {{ choice.tag }} {{ choice.choice_label }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div id="json_context_group">
+                            {% render_field form.context %}
+                        </div>
+
+                        <div id="object_content_type_group" style="display: none;">
+                            <div class="form-group">
+                                <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
+                                <div class="col-md-9">
+                                    {{ form.content_type }}
+                                    {% if form.content_type.help_text %}
+                                        <span class="help-block">{{ form.content_type.help_text }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="object_uuid_group" style="display: none;">
+                            <div class="form-group">
+                                <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
+                                <div class="col-md-9">
+                                    {{ form.object_uuid }}
+                                    {% if form.object_uuid.help_text %}
+                                        <span class="help-block">{{ form.object_uuid.help_text }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -70,48 +102,157 @@
     {{ block.super }}
     <script>
         new ClipboardJS('.copy-rendered-template');
-        const sanitize = function(string) {
-            return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        };
-        async function handleFormSubmit(event) {
-            event.preventDefault(); // Prevent default form submission
 
-            // Check that the context is valid JSON
-            const context = document.getElementById("id_context");
-            var parsed_context;
-            try {
-                parsed_context = JSON.parse(context.value);
-            } catch (error) {
-                context.setCustomValidity("Invalid JSON");
-                context.reportValidity();
-                context.setCustomValidity("");
-                return error;
+        // Variables to preserve form data when switching between modes
+        let savedFormData = {
+            jsonContext: null,
+            objectContentType: null,
+            objectUuid: null
+        };
+
+        function toggleContextMode(mode) {
+            const jsonGroup = document.getElementById("json_context_group");
+            const contentTypeGroup = document.getElementById("object_content_type_group");
+            const uuidGroup = document.getElementById("object_uuid_group");
+            const templateObjHelp = document.getElementById("template_obj_help_text");
+
+            if (mode === "object") {
+                // Save current JSON data before hiding
+                savedFormData.jsonContext = document.getElementById("id_context").value;
+
+                jsonGroup.style.display = "none";
+                contentTypeGroup.style.display = "block";
+                uuidGroup.style.display = "block";
+                templateObjHelp.style.visibility = "visible";
+
+                // Clear JSON field (for submission logic)
+                document.getElementById("id_context").value = "{}";
+
+                // Restore previously saved object data
+                if (savedFormData.objectContentType !== null) {
+                    document.getElementById("id_content_type").value = savedFormData.objectContentType;
+                }
+                if (savedFormData.objectUuid !== null) {
+                    document.getElementById("id_object_uuid").value = savedFormData.objectUuid;
+                }
+
+                // Make object fields required
+                document.getElementById("id_content_type").setAttribute("required", "");
+                document.getElementById("id_object_uuid").setAttribute("required", "");
+            } else {
+                // Save current object data before hiding
+                savedFormData.objectContentType = document.getElementById("id_content_type").value;
+                savedFormData.objectUuid = document.getElementById("id_object_uuid").value;
+
+                jsonGroup.style.display = "block";
+                contentTypeGroup.style.display = "none";
+                uuidGroup.style.display = "none";
+                templateObjHelp.style.visibility = "hidden";
+
+                // Clear object fields (for submission logic)
+                document.getElementById("id_content_type").value = "";
+                document.getElementById("id_object_uuid").value = "";
+                document.getElementById("id_content_type").removeAttribute("required");
+                document.getElementById("id_object_uuid").removeAttribute("required");
+
+                // Restore previously saved JSON data
+                if (savedFormData.jsonContext !== null) {
+                    document.getElementById("id_context").value = savedFormData.jsonContext;
+                }
+            }
+        }
+
+        function extractApiErrorMessage(data) {
+            if (!data || typeof data !== "object") return "Bad Request";
+            if (data.detail) return String(data.detail);
+
+            if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+                return data.non_field_errors.join("; ");
+            }
+
+            // Flatten field errors: { field: ["msg1", "msg2"], ... }
+            const fieldMsgs = [];
+            for (const [field, value] of Object.entries(data)) {
+                if (Array.isArray(value) && value.length) {
+                    fieldMsgs.push(`${field}: ${value.join(", ")}`);
+                } else if (typeof value === "string" && value) {
+                    fieldMsgs.push(`${field}: ${value}`);
+                } else if (typeof value === "object" && value) {
+                    fieldMsgs.push(`${field}: ${JSON.stringify(value)}`);
+                } else {
+                    fieldMsgs.push(`${field}: Failed to parse ${value} (type: ${typeof value})`);
+                }
+            }
+            return fieldMsgs.length ? fieldMsgs.join("; ") : "Bad Request";
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const mode = document.querySelector("input[name=\"context_mode\"]:checked").value;
+            const template_code = document.getElementById("id_template_code").value;
+
+            let data = {
+                template_code: template_code
+            };
+
+            if (mode === "object") {
+                // Object mode - send content_type and object_uuid
+                data.content_type_id = document.getElementById("id_content_type").value;
+                data.object_uuid = document.getElementById("id_object_uuid").value;
+            } else {
+                // JSON mode - send context
+                const context = document.getElementById("id_context");
+                try {
+                    data.context = JSON.parse(context.value);
+                } catch (error) {
+                    context.setCustomValidity("Invalid JSON");
+                    context.reportValidity();
+                    context.setCustomValidity("");
+                    return;
+                }
             }
 
             try {
                 const rendered_template = document.getElementById("rendered_template");
-                rendered_template.innerHTML = "Loading...";
-                const template_code = document.getElementById("id_template_code").value;
+                rendered_template.value = "Loading...";
                 const url = "{% url 'core-api:render_jinja_template' %}";
-                const data = {
-                    template_code: template_code,
-                    context: parsed_context
-                }
+
                 const response = await fetch(url, {
                     method: "POST",
                     body: JSON.stringify(data),
                     headers: {"Content-Type": "application/json", "X-CSRFTOKEN": "{{ csrf_token }}"}
                 });
+
                 const responseData = await response.json();
                 if (!response.ok) {
-                    const msg = responseData.detail ? responseData.detail : response.statusText;
-                    rendered_template.innerHTML = sanitize(`An error occurred:\n\n${msg}`);
+                    const msg = extractApiErrorMessage(responseData);
+                    rendered_template.value = `An error occurred:\n\n${msg}`;
                 } else {
-                    rendered_template.innerHTML = sanitize(responseData.rendered_template);
+                    rendered_template.value = responseData.rendered_template;
                 }
             } catch (error) {
-                rendered_template.innerHTML = sanitize(`An error occurred:\n\n${error.message}`);
+                rendered_template.value = `An error occurred:\n\n${error.message}`;
             }
         }
+
+        // Check for preselected values on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            // Add event listeners to Django-generated radio buttons
+            const radioButtons = document.querySelectorAll("input[name=\"context_mode\"]");
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener("change", function() {
+                    toggleContextMode(this.value);
+                });
+            });
+
+            // Check if form was pre-populated with object mode (from Django form initial data)
+            const contextModeSelected = document.querySelector("input[name=\"context_mode\"]:checked");
+
+            if (contextModeSelected && contextModeSelected.value === "object") {
+                // Form was pre-populated with object mode - toggle UI to show object fields
+                toggleContextMode("object");
+            }
+        });
     </script>
 {% endblock javascript %}
