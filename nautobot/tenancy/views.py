@@ -59,7 +59,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
                 tenant_group__in=instance.descendants(include_self=True)
             )
 
-            tenant_table = tables.TenantTable(tenants)
+            tenant_table = tables.TenantTable(tenants, configurable=True)
             tenant_table.columns.hide("tenant_group")
 
             paginate = {
