@@ -128,8 +128,8 @@ There are several ways you can navigate Saved Views. As we've already seen, any 
 
 Additionally, if you have the `extras:view_savedview` object permission (or are a superuser), you can view a table of all Saved Views created by any user for any list view, accessible from the navigation menu under "Extensibility -> Saved Views":
 
-![Navigation Menu](../../feature-guides/images/saved-views/navigation-menu_light.png#only-light){ .on-glb }
-![Navigation Menu](../../feature-guides/images/saved-views/navigation-menu_dark.png#only-dark){ .on-glb }
+![Navigation Menu](../../feature-guides/images/saved-views/navigation-menu_light.png#only-light){: style="width: 50%" .on-glb }
+![Navigation Menu](../../feature-guides/images/saved-views/navigation-menu_dark.png#only-dark){: style="width: 50%" .on-glb }
 
 ### How to set a Saved View as global default for all users
 
