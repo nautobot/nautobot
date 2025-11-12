@@ -3,7 +3,6 @@
 import logging
 
 import graphene
-from graphene_django.fields import DjangoListField
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
@@ -375,7 +374,8 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
-    attrs[list_name] = DjangoListField(schema_type, **search_params)
+    # TODO: refactor to use DjangoListField instead of graphene.List (https://github.com/nautobot/nautobot/issues/4690)
+    attrs[list_name] = graphene.List(schema_type, **search_params)
 
     # Define Resolvers for both single item and list
     single_item_resolver_name = f"{RESOLVER_PREFIX}{single_item_name}"
