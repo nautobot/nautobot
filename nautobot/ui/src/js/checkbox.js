@@ -29,6 +29,18 @@ export const initializeCheckboxes = () => {
   // Track the last selected checkbox index for range selection.
   let lastSelectedIndex = null;
 
+  /*
+   * `onClick` and `onInput` event handlers both act on the same checkbox elements, but in slightly different scenarios:
+   *   1. `onClick` is specifically tied to manual user interaction and is called only when user directly interacts with
+   *      checkbox element. It handles:
+   *        1.1. Checking/unchecking all individual checkboxes in the table when "toggle" checkbox is clicked.
+   *        1.2. Shift-click range selection for individual checkboxes in the table.
+   *   2. `onInput` is called after checkbox state is changed, regardless of the change being triggered programmatically
+   *       or by manual user interaction. It handles:
+   *         2.1. Showing/hiding "select all" box when "toggle" checkbox is checked/unchecked.
+   *         2.2. Checking/unchecking "toggle" checkbox based on the collective state of individual checkboxes.
+   *         2.3. Enabling/disabling buttons in "select all" box based on its checkbox state.
+   */
   const onClick = (event) => {
     // "Toggle" checkbox for object lists (PK column). Notice distinction between handling `'click'` and `'input'` events.
     const toggleCheckbox = event.target.closest(TOGGLE_CHECKBOX_SELECTOR);
