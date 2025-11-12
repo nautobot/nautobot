@@ -146,8 +146,12 @@ class RackReservationTable(BaseTable):
     location = tables.Column(accessor=Accessor("rack__location"), linkify=True)
     tenant = TenantColumn()
     rack = tables.Column(linkify=True)
-    unit_list = tables.Column(orderable=False, verbose_name="Units")
+    unit_list = tables.Column(orderable=False, verbose_name="Units", linkify=True)
     tags = TagColumn(url_name="dcim:rackreservation_list")
+    description = tables.TemplateColumn(
+        template_code="{{ record.description }}<br /><small>{{ record.user }} &middot; {{ record.created }}</small>"
+    )
+
     actions = ButtonsColumn(RackReservation)
 
     class Meta(BaseTable.Meta):

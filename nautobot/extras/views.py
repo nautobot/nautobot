@@ -1596,7 +1596,7 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobResultTable,
                 table_title="JobResults",
-                table_filter=["job_model"],
+                table_filter="job_model",
             ),
             jobs_ui.JobObjectFieldsPanel(
                 weight=100,
