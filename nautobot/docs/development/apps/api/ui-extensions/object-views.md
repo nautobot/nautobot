@@ -154,9 +154,13 @@ In either of the above cases, you would need to define a new view for the `devic
 {% endblock %}
 ```
 
-Here's a basic example of a tab's view
+Here's a basic example of a tab's view. Note that while you're free to *add* additional context data in `get_extra_context`, you *must* call `super().get_extra_context()` and set the `active_tab` key to match the `tab_id` defined in the template extension for this view.
+
++++ 2.4.22 "Added `get_detail_view_components_context_for_model()` helper function"
+    The `get_detail_view_components_context_for_model()` helper function was added. Calling this allows you to correctly set the `breadcrumbs`, `object_detail_content`, and `view_titles` context keys from the base detail-view that this view is extending.
 
 ```python title="example_app/views.py"
+from nautobot.apps.utils import get_detail_view_components_context_for_model
 from nautobot.apps.views import ObjectView
 from nautobot.dcim.models import Device
 
@@ -171,6 +175,12 @@ class DeviceDetailAppTabOne(ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
+
+    def get_extra_context(self, request, instance):
+        extra_context = super().get_extra_context(request, instance)
+        extra_context.update(get_detail_view_components_context_for_model(Device))
+        extra_context["active_tab"] = "example_app_distinct_view_tab"
+        return extra_context
 ```
 
 You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
