@@ -1,6 +1,8 @@
 import contextlib
 import datetime
+from importlib import resources
 import logging
+import mimetypes
 import os
 import platform
 import posixpath
@@ -16,7 +18,7 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.http import FileResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
@@ -47,11 +49,13 @@ from rest_framework.views import APIView
 
 from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
-from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.mixins import UIComponentsMixin
 from nautobot.core.views.utils import (
     generate_latest_with_cache,
     is_metrics_experimental_caching_enabled,
@@ -59,7 +63,9 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
+from nautobot.extras.tables import StatusTable
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +113,7 @@ class HomeView(AccessMixin, TemplateView):
         context = self.get_context_data()
         context.update(
             {
-                "search_form": SearchForm(),
+                "title": "Home",
                 "new_release": new_release,
             }
         )
@@ -141,6 +147,40 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
+class AppDocsView(LoginRequiredMixin, View):
+    """
+    Serve documentation files for any pip-installed app from inside the package,
+    only for authenticated users.
+    """
+
+    def get(self, request, app_base_url, path="index.html"):
+        app_label = BASE_URL_TO_APP_LABEL.get(app_base_url)
+        if not app_label:
+            return JsonResponse({"detail": f"Unknown base_url '{app_base_url}'."}, status=404)
+        try:
+            base_dir = resources.files(app_label)
+        except ModuleNotFoundError:
+            return JsonResponse({"detail": f"App {app_label} not found."}, status=404)
+
+        # Dir to documentation inside the package
+        docs_dir = base_dir / "docs"
+        # Normalize path to avoid (../) etc.
+        normalized_path = posixpath.normpath(path).lstrip("/")
+        file_path = docs_dir / normalized_path
+
+        # Additional check to ensure the resolved path is still within docs_dir
+        if not file_path.resolve().is_relative_to(docs_dir.resolve()):
+            return JsonResponse({"detail": "Access denied."}, status=403)
+
+        if not file_path.is_file():
+            return JsonResponse({"detail": f"File {file_path} not found."}, status=404)
+
+        # Determine the MIME type based on the file extension and return the file as an HTTP response.
+        # This ensures that browsers interpret the file correctly (e.g., HTML, CSS, JS, images).
+        content_type, _ = mimetypes.guess_type(str(file_path))
+        return FileResponse(open(file_path, "rb"), content_type=content_type)
+
+
 class MediaView(AccessMixin, View):
     """
     Serves media files while enforcing login restrictions.
@@ -160,8 +200,9 @@ class MediaView(AccessMixin, View):
         return self.handle_no_permission()
 
 
-class WorkerStatusView(UserPassesTestMixin, TemplateView):
+class WorkerStatusView(UserPassesTestMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/worker_status.html"
+    view_titles = Titles(titles={"*": "Nautobot Worker Status"})
 
     def test_func(self):
         return self.request.user.is_staff
@@ -272,13 +313,24 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
                 "timeout": timeout,
                 "workers": workers,
             },
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_titles": self.get_view_titles(),
         }
 
         return self.render_to_response(context)
 
 
-class ThemePreviewView(LoginRequiredMixin, TemplateView):
+class ThemePreviewView(LoginRequiredMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
+    view_titles = Titles(titles={"*": "Nautobot Theme Preview"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "generic": [
+                ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
+                ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
+            ],
+        },
+    )
 
     def get_context_data(self, **kwargs):
         return {
@@ -286,6 +338,10 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
+            "table": StatusTable(Status.objects.all()[:3]),
+            "view_titles": self.get_view_titles(),
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_action": "generic",
         }
 
 
@@ -298,70 +354,57 @@ class SearchView(AccessMixin, View):
 
         # No query
         if "q" not in request.GET:
-            return render(
-                request,
-                "search.html",
-                {
-                    "form": SearchForm(),
-                },
-            )
+            return render(request, "search.html", {})
 
-        form = SearchForm(request.GET)
         results = []
 
-        if form.is_valid():
-            # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
-            # based on the `app_config.searchable_models` list (if any) defined by each app
-            searchable_models = []
-            for app_config in apps.get_app_configs():
-                if hasattr(app_config, "searchable_models"):
-                    searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
+        # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
+        # based on the `app_config.searchable_models` list (if any) defined by each app
+        searchable_models = []
+        for app_config in apps.get_app_configs():
+            if hasattr(app_config, "searchable_models"):
+                searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
 
-            if form.cleaned_data["obj_type"]:
-                # Searching for a single type of object
-                obj_types = [form.cleaned_data["obj_type"]]
-            else:
-                # Searching all object types
-                obj_types = [model_info[1] for model_info in searchable_models]
+        # Searching all object types
+        obj_types = [model_info[1] for model_info in searchable_models]
 
-            for label, modelname in searchable_models:
-                if modelname not in obj_types:
-                    continue
-                # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
-                # corresponding to that URL, and finally the queryset, filterset, and table classes needed
-                # to find and display the model search results.
-                url = get_route_for_model(f"{label}.{modelname}", "list")
-                try:
-                    view_func = resolve(reverse(url)).func
-                    # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-                    view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-                    queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                    # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-                    filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-                    # For a UIViewSet, .table_class, for an ObjectListView, .table.
-                    table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
+        for label, modelname in searchable_models:
+            if modelname not in obj_types:
+                continue
+            # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
+            # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+            # to find and display the model search results.
+            url = get_route_for_model(f"{label}.{modelname}", "list")
+            try:
+                view_func = resolve(reverse(url)).func
+                # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-                    # Construct the results table for this object type
-                    filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
-                    table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
-                    table.paginate(per_page=SEARCH_MAX_RESULTS)
+                # Construct the results table for this object type
+                filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
+                table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
+                table.paginate(per_page=SEARCH_MAX_RESULTS)
 
-                    if table.page:
-                        results.append(
-                            {
-                                "name": queryset.model._meta.verbose_name_plural,
-                                "table": table,
-                                "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
-                            }
-                        )
-                except NoReverseMatch:
-                    messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
+                if table.page:
+                    results.append(
+                        {
+                            "name": queryset.model._meta.verbose_name_plural,
+                            "table": table,
+                            "url": f"{reverse(url)}?q={request.GET.get('q')}",
+                        }
+                    )
+            except NoReverseMatch:
+                messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
 
         return render(
             request,
             "search.html",
             {
-                "form": form,
                 "results": results,
             },
         )
@@ -422,7 +465,9 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, UIComponentsMixin, GraphQLView):
+    view_titles = Titles(titles={"*": "GraphiQL"})
+
     def render_graphiql(self, request, **data):
         query_name = request.GET.get("name")
         if query_name:
@@ -430,6 +475,8 @@ class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
             data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
+        data["breadcrumbs"] = self.get_breadcrumbs()
+        data["view_titles"] = self.get_view_titles()
         return render(request, self.graphiql_template, data)
 
 
@@ -524,13 +571,14 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
-class AboutView(AccessMixin, TemplateView):
+class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
     """
     Nautobot About View which displays general information about Nautobot and contact details
     for Network to Code.
     """
 
     template_name = "about.html"
+    view_titles = Titles(titles={"*": "About Nautobot"})
 
     def get(self, request, *args, **kwargs):
         # Redirect user to login page if not authenticated
@@ -558,6 +606,8 @@ class AboutView(AccessMixin, TemplateView):
                 "new_release": new_release,
                 "support_contract_active": support_contract_active,
                 "support_expiration_date": support_expiration_date,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             }
         )
 
@@ -568,3 +618,4 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
+    extra_context = {"view_titles": Titles(titles={"*": "Jinja Template Renderer"})}

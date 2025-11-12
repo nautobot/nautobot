@@ -166,6 +166,117 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.22 (2025-11-10)
+
+### Security in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `Django` to `~4.2.26` to mitigate CVE-2025-64459.
+
+### Added in v2.4.22
+
+- [#6979](https://github.com/nautobot/nautobot/issues/6979) - Added support for speed and duplex on `Interface` objects.
+- [#8048](https://github.com/nautobot/nautobot/issues/8048) - Added Constance configuration setting `RACK_DEFAULT_U_HEIGHT` to configure the default height (in rack units) displayed in the Rack creation form.
+- [#8135](https://github.com/nautobot/nautobot/issues/8135) - Added `get_detail_view_components_context_for_model()` helper API for use by apps implementing DistinctViewTabs.
+
+### Changed in v2.4.22
+
+- [#6979](https://github.com/nautobot/nautobot/issues/6979) - Changed the `humanize_speed` template filter to now return a decimalized value instead of finding an integer value (e.g. 2.5 Gbps instead of 2500 Mbps).
+
+### Fixed in v2.4.22
+
+- [#6852](https://github.com/nautobot/nautobot/issues/6852) - Fixed unintended dependency on `django-debug-toolbar` when enabling the `theme-preview/` view.
+- [#8039](https://github.com/nautobot/nautobot/issues/8039) - Fixed issue where device components added via table footer button did not return to the same page.
+- [#8042](https://github.com/nautobot/nautobot/issues/8042) - Fixed incorrect `base_template` on Git Repository Synchronization Status page.
+- [#8059](https://github.com/nautobot/nautobot/issues/8059) - Fixed the Wireless Networks tab on the Controller detail page.
+- [#8073](https://github.com/nautobot/nautobot/issues/8073) - Added missing call to `super().get_extra_context()` in `LocationUIViewSet`, `ModuleTypeUIViewSet`.
+- [#8077](https://github.com/nautobot/nautobot/issues/8077) - Fixed the rendering of the min and max version fields in the App detail view when they are not set.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect permissions requirement to view Virtual Machine config context tab.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect field name in Config Context filter form.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed leftover use of legacy views in Relationship "notes" and "changelog" tabs.
+
+### Dependencies in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `django-constance` to `~4.3.3`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `nh3` to `~0.3.2`.
+
+### Documentation in v2.4.22
+
+- [#8068](https://github.com/nautobot/nautobot/issues/8068) - Updated documentation to include information about the latest deprecated HTML templates in v3.0.
+
+### Housekeeping in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-glightbox` to `~0.5.2`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.4.1`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-material` to `~9.6.23`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated development dependency `pymarkdownlnt` to `~0.9.33`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated development dependency `ruff` to `~0.14.3`.
+- [#8047](https://github.com/nautobot/nautobot/issues/8047) - Fixed incorrect logic in `nautobot.virtualization.tests.test_models.VMInterfaceTestCase` that could lead to test failures.
+- [#8068](https://github.com/nautobot/nautobot/issues/8068) - Updated deprecated HTML templates migration script to handle more cases.
+- [#8113](https://github.com/nautobot/nautobot/issues/8113) - Fixed live reloading when serving development documentation with mkdocs.
+- [#8114](https://github.com/nautobot/nautobot/issues/8114) - Set `INSTALLATION_METRICS_ENABLED=False` explicitly in the testing `nautobot_config.py` to avoid inadvertently sending metrics when running tests.
+
+## v2.4.21 (2025-10-27)
+
+### Added in v2.4.21
+
+- [#7282](https://github.com/nautobot/nautobot/issues/7282) - Added individual and bulk delete methods to the `/extras/scheduled-jobs/` API endpoint.
+- [#7834](https://github.com/nautobot/nautobot/issues/7834) - Added `Refresh Dynamic Group Members Cache` system Job Button Receiver; a corresponding Job Button for Dynamic Groups will be automatically created after running `nautobot-server post_upgrade`.
+- [#7834](https://github.com/nautobot/nautobot/issues/7834) - Added `update_cached_members` optional parameter to `DynamicGroup.save()` and `DynamicGroupMembership.save()` methods, which can be set to `False` to defer the potentially costly synchronous (re)calculation of the group members at save time. This parameter presently defaults to `True` for backwards compatibility reasons, but may change to a default of `False` in a future major release.
+- [#7996](https://github.com/nautobot/nautobot/issues/7996) - Added a script to help app developers migrate deprecated HTML templates to the new ones.
+
+### Changed in v2.4.21
+
+- [#7834](https://github.com/nautobot/nautobot/issues/7834) - Changed UI behavior when creating/editing Dynamic Groups to no longer synchronously (re)calculate the members of the group on form submission, as this could cause page timeouts when a large number of members need to be added or removed. This functionality is replaced by a Job Button on the detail view that can be clicked to asynchronously refresh the members cache on demand instead.
+- [#7834](https://github.com/nautobot/nautobot/issues/7834) - Changed UI behavior when rendering a Dynamic Group detail view to no longer synchronously (re)calculate the members of the group at render time, as this could cause page timeouts when a large number of members need to be added or removed. This functionality is replaced by a Job Button that can be clicked to asynchronously refresh the members cache on demand instead.
+
+### Fixed in v2.4.21
+
+- [#5379](https://github.com/nautobot/nautobot/issues/5379) - Fixed exception when filtering Location Types by associated Content Types.
+- [#5638](https://github.com/nautobot/nautobot/issues/5638) - Added missing logic to allow mapping model names to feature names for all FilterSets.
+- [#7728](https://github.com/nautobot/nautobot/issues/7728) - Fixed bug in which `m2m_changed` signals were not being sent when adding IPs to interfaces.
+- [#7952](https://github.com/nautobot/nautobot/issues/7952) - Fixed changelog list view not working when there was data referencing `ContentTypes` in the database but not installed.
+- [#7955](https://github.com/nautobot/nautobot/issues/7955) - Fixed custom `ancestors` method in tree queries to forgo tree fields, yielding performance improvements in checking for loops in the tree structure.
+- [#7955](https://github.com/nautobot/nautobot/issues/7955) - Fixed `invalidate_max_depth_cache` signal to forgo cache invalidation when a TreeModel has siblings.
+- [#7958](https://github.com/nautobot/nautobot/issues/7958) - Fixed title & breadcrumbs rendering on Git Repositories - Synchronization Status view
+- [#7987](https://github.com/nautobot/nautobot/issues/7987) - Fixed filtering of select- and multiselect-type custom fields in Dynamic Groups.
+- [#7988](https://github.com/nautobot/nautobot/issues/7988) - Fixed device detail object view failing when a power poert is connected to a power outlet.
+
+### Dependencies in v2.4.21
+
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated dependency `django-cors-headers` to `~4.9.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated dependency `django-tree-queries` to `~0.21.2`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated dependency `emoji` to `~2.15.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated dependency `prometheus-client` to `~0.23.1`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated dependency `social-auth-core` to `~4.8.1`.
+- [#8030](https://github.com/nautobot/nautobot/issues/8030) - Updated dependency `cryptography` to `~46.0.3`.
+- [#8030](https://github.com/nautobot/nautobot/issues/8030) - Updated dependency `django-structlog` to `~10.0.0`.
+- [#8030](https://github.com/nautobot/nautobot/issues/8030) - Updated dependency `Pillow` to `~12.0.0`.
+
+### Documentation in v2.4.21
+
+- [#7968](https://github.com/nautobot/nautobot/issues/7968) - Add a note for how to retrieve computed fields in an Export Template.
+
+### Housekeeping in v2.4.21
+
+- [#2288](https://github.com/nautobot/nautobot/issues/2288) - Added `docs` step to pull request CI to validate that Nautobot docs build successfully and contain valid hyperlinks.
+- [#7530](https://github.com/nautobot/nautobot/issues/7530) - Refactored Location model related UI views to use `UI component framework`.
+- [#7661](https://github.com/nautobot/nautobot/issues/7661) - Refactored GraphQLQuery model related UI views to use `UI component framework`.
+- [#7972](https://github.com/nautobot/nautobot/issues/7972) - Updated Renovate configuration to open separate PRs for NPM dependency updates versus Python dependency updates.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `django-test-migrations` to `~1.5.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `faker` to `^37.11.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `invoke` to `2.2.1`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `rich` to `~14.2.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `ruff` to `~0.14.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `selenium` to `~4.36.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `time-machine` to `~2.19.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated development dependency `towncrier` to `~25.8.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated documentation dependency `mkdocs-glightbox` to `~0.5.1`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.4.0`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated documentation dependency `mkdocs-material` to `~9.6.22`.
+- [#7973](https://github.com/nautobot/nautobot/issues/7973) - Updated documentation dependency `mkdocstrings-python` to `~1.18.2`.
+- [#7977](https://github.com/nautobot/nautobot/issues/7977) - Restored tagging of `latest` Docker images inadvertently untagged in 2.4.20.
+- [#8022](https://github.com/nautobot/nautobot/issues/8022) - Added support for `.breaking` change fragments and corresponding "Breaking Changes" section in release-notes.
+
 ## v2.4.20 (2025-10-14)
 
 ### Security in v2.4.20

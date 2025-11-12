@@ -1,6 +1,6 @@
 {% load helpers %}
 
-<div class="cable" style="border-left-color: #{% if cable.color == 'ffffff' %}909090; border-left-style: double; border-left-width: 6px;{% else %}{{ cable.color|default:'606060' }};{% endif %} {% if cable.status.name != 'Connected' %} border-left-style: dashed{% endif %}">
+<div class="nb-cable" style="border-left-color: #{% if cable.color == 'ffffff' %}909090; border-left-style: double; border-left-width: 6px;{% else %}{{ cable.color|default:'606060' }};{% endif %} {% if cable.status.name != 'Connected' %} border-left-style: dashed{% endif %}">
     <strong>{{ cable|hyperlinked_object }}</strong><br>
     {% if cable.type %}
         {{ cable.get_type_display|default:"" }}<br />
@@ -8,7 +8,7 @@
     {% if cable.length %}
         ({{ cable.length }} {{ cable.get_length_unit_display }})<br />
     {% endif %}
-    <span class="label" style="color: {{cable.status.color|fgcolor}}; background-color: #{{cable.status.color}}">{{ cable.get_status_display }}</span><br />
+    <span class="badge" style="color: {{cable.status.color|fgcolor}}; background-color: #{{cable.status.color}}">{{ cable.get_status_display }}</span><br />
     {% for tag in cable.tags.all %}
         {% tag tag 'dcim:cable_list' %}
     {% endfor %}

@@ -76,6 +76,7 @@ class DynamicGroup(PrimaryModel):
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
+    is_data_compliance_model = False
 
     clone_fields = ["content_type", "group_type", "filter", "tenant"]
 
@@ -665,6 +666,22 @@ class DynamicGroup(PrimaryModel):
 
             # TODO limit most changes to self.group_type as well.
 
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroup record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.update_cached_members()` explicitly when ready.
+        """
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.update_cached_members()
+            for ancestor in self.get_ancestors():
+                ancestor.update_cached_members()
+
     def _generate_query_for_filter(self, filter_field, value):
         """
         Return a `Q` object generated from a `filter_field` and `value`.
@@ -1179,12 +1196,26 @@ class DynamicGroupMembership(BaseModel):
         if self.group in self.parent_group.get_ancestors():
             raise ValidationError({"group": "Cannot add ancestor as a child"})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroupMembership record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.parent_group.update_cached_members()` explicitly when ready.
+        """
         # For backwards compatibility
         if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
             self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
             self.parent_group.save()
-        return super().save(*args, **kwargs)
+
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.parent_group.update_cached_members()
+            for ancestor in self.parent_group.get_ancestors():
+                ancestor.update_cached_members()
 
 
 class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
@@ -1225,6 +1256,7 @@ class StaticGroupAssociation(OrganizationalModel):
     is_contact_associable_model = False
     is_dynamic_group_associable_model = False
     is_saved_view_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["dynamic_group", "associated_object_type", "associated_object_id"]]

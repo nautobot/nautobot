@@ -1,8 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 
-from nautobot.dcim.models import Location, LocationType
+from nautobot.core.testing import TestCase
+from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
@@ -11,7 +11,7 @@ from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine,
 
 
 class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
-    def test_cluster_validation(self):
+    def test_cluster_location_validation(self):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         location_type = LocationType.objects.create(name="Location Type 1")
         location_status = Status.objects.get_for_model(Location).first()
@@ -22,6 +22,20 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.assertIn('Clusters may not associate to locations of type "Location Type 1"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
+        cluster.validated_save()
+
+    def test_cluster_device_location_validation(self):
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        location_type = LocationType.objects.create(name="Location Type 1")
+        location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
+        cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, location=location)
+        cluster.validated_save()
+        with self.assertRaises(ValidationError) as cm:
+            # Assign any device with a Location, since we're using a custom Location for this test we know it won't match
+            cluster.devices.add(Device.objects.filter(location__isnull=False).first())  # pylint: disable=no-member
+        self.assertIn("does not include", str(cm.exception))
 
 
 class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
@@ -131,6 +145,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
             name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
         )
         ips = list(IPAddress.objects.all()[:10])
+        self.assertEqual(len(ips), 10)
 
         # baseline (no vm_interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
@@ -171,7 +186,8 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_interface = VMInterface.objects.create(
             name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
         )
-        ips = list(IPAddress.objects.all()[:10])
+        ips = list(IPAddress.objects.filter(ip_version=4)[:10])
+        self.assertEqual(len(ips), 10)
 
         # baseline (no vm_interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(vm_interface=vm_interface).exists())
@@ -219,7 +235,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.virtualmachine.refresh_from_db()
         self.assertEqual(self.virtualmachine.primary_ip4, None)
         # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
-        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: does not remove a v6 address, because there are no v6 IPs used in this test
         # NOTE: class.
         count = vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
         self.assertEqual(count, 0)

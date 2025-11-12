@@ -5,6 +5,7 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Location
 * Role
 * Device type
+* Device family
 * Device redundancy group
 * Platform
 * Cluster group
@@ -13,6 +14,9 @@ Sometimes it is desirable to associate additional data with a group of devices o
 * Tenant
 * Tag
 * Dynamic group - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](../../administration/configuration/settings.md#config_context_dynamic_groups_enabled)
+
++++ 3.0.0 "Device family support"
+    Support for assigning config contexts by device families was added in Nautobot v3.0.0.
 
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 

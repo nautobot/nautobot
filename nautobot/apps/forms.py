@@ -73,6 +73,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -130,6 +131,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "DataValidationModelFormMixin",
     "DatePicker",
     "DateTimePicker",
     "DynamicFilterForm",

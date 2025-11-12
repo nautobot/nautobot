@@ -10,27 +10,10 @@ from nautobot.core.ui.object_detail import (
     Button,
     KeyValueTablePanel,
     ObjectFieldsPanel,
-    ObjectsTablePanel,
 )
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
-
-
-# TODO: can be removed as a part of NAUTOBOT-1051
-class PrefixChildTablePanel(ObjectsTablePanel):
-    def should_render(self, context: Context):
-        if not super().should_render(context):
-            return False
-        return context.get("active_tab") == "prefixes"
-
-
-# TODO: can be removed as a part of NAUTOBOT-1051
-class IPAddressTablePanel(ObjectsTablePanel):
-    def should_render(self, context: Context):
-        if not super().should_render(context):
-            return False
-        return context.get("active_tab") == "ip-addresses"
 
 
 class AddChildPrefixButton(Button):

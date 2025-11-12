@@ -1,6 +1,7 @@
 from django.test import override_settings, TestCase
 
 from nautobot.core import checks
+from nautobot.dcim.choices import DeviceUniquenessChoices
 
 
 class CheckCoreSettingsTest(TestCase):
@@ -42,3 +43,30 @@ class CheckCoreSettingsTest(TestCase):
     def test_check_maintenance_mode(self):
         """Error if MAINTENANCE_MODE is set and yet SESSION_ENGINE is still storing sessions in the db."""
         self.assertEqual(checks.check_maintenance_mode(None), [checks.E005])
+
+    @override_settings(
+        DEVICE_NAME_AS_NATURAL_KEY=True,
+    )
+    def test_check_deprecated_device_name_as_natural_key(self):
+        """Warn if DEVICE_NAME_AS_NATURAL_KEY is defined in settings."""
+        self.assertEqual(
+            checks.check_deprecated_device_name_as_natural_key(None),
+            [checks.W006],
+        )
+
+    @override_settings(
+        DEVICE_UNIQUENESS="invalid_value",
+    )
+    def test_check_invalid_device_uniqueness_value(self):
+        """Warn if DEVICE_UNIQUENESS is set to an invalid value."""
+        self.assertEqual(
+            checks.check_valid_value_for_device_uniqueness(None),
+            [checks.W007],
+        )
+
+    @override_settings(
+        DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME,
+    )
+    def test_check_valid_device_uniqueness_value(self):
+        """No warning if DEVICE_UNIQUENESS is set to a valid value."""
+        self.assertEqual(checks.check_valid_value_for_device_uniqueness(None), [])
