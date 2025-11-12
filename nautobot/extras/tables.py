@@ -385,7 +385,9 @@ class ApprovalWorkflowStageTable(BaseTable):
         verbose_name="Actions Needed",
     )
     state = ApprovalChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("detail", "changelog", "approve", "deny"))
+    actions = ApprovalButtonsColumn(
+        ApprovalWorkflowStage, buttons=("detail", "changelog", "comment", "approve", "deny")
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -427,7 +429,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -462,7 +464,7 @@ class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

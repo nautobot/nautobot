@@ -505,6 +505,52 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
+    @action(detail=True, url_path="comment", methods=["get", "post"])
+    def comment(self, request, *args, **kwargs):
+        """
+        Comment the approval workflow stage response.
+        """
+        instance = self.get_object()
+
+        try:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
+                approval_workflow_stage=instance,
+                state=instance.state,
+                user=request.user,
+            )
+        except ApprovalWorkflowStageResponse.DoesNotExist:
+            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=instance,
+                state=instance.state,
+                user=request.user,
+            )
+
+        if request.method == "GET":
+            obj = approval_workflow_stage_response
+            form = ApprovalForm(initial={"comments": obj.comments})
+
+            template_name = "extras/approval_workflow/comment.html"
+
+            return render(
+                request,
+                template_name,
+                {
+                    "obj": obj.approval_workflow_stage,
+                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "form": form,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
+                    "return_url": self.get_return_url(request, obj),
+                    "card_class": "success",
+                    "button_class": "success",
+                },
+            )
+        approval_workflow_stage_response.comments = request.data.get("comments")
+        approval_workflow_stage_response.state = instance.state
+        approval_workflow_stage_response.save()
+        instance.refresh_from_db()
+        messages.success(request, f"You commented {instance}.")
+        return redirect(self.get_return_url(request))
+
 
 class ApprovalWorkflowStageResponseUIViewSet(
     ObjectBulkDestroyViewMixin,

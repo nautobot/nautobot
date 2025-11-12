@@ -76,6 +76,7 @@ PERMISSIONS_ACTION_MAP = {
     "data_compliance": "view",
     "approve": "change",
     "deny": "change",
+    "comment": "change",
 }
 
 
