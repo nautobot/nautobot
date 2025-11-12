@@ -1,3 +1,4 @@
+from constance.test import override_config
 from django.test import TestCase
 
 from nautobot.core.testing.forms import FormTestCases
@@ -10,6 +11,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     RackWidthChoices,
 )
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
     DeviceFilterForm,
     DeviceForm,
@@ -333,6 +335,38 @@ class RackTestCase(TestCase):
         }
         form = RackForm(data=data, instance=racks[0])
         self.assertTrue(form.is_valid())
+
+    def test_rack_form_initial_u_height_default(self):
+        """Test that RackForm sets initial u_height from default Constance config (42)."""
+        # Create a new form (not bound to an instance)
+        form = RackForm()
+
+        # The initial value should be 42 (default Constance config)
+        self.assertEqual(form.fields["u_height"].initial, RACK_U_HEIGHT_DEFAULT)
+
+    @override_config(RACK_DEFAULT_U_HEIGHT=48)
+    def test_rack_form_initial_u_height_custom(self):
+        """Test that RackForm sets initial u_height from custom Constance config."""
+        # Create a new form (not bound to an instance)
+        form = RackForm()
+
+        # The initial value should be 48 (from Constance config)
+        self.assertEqual(form.fields["u_height"].initial, 48)
+
+    def test_rack_form_initial_u_height_not_set_on_edit(self):
+        """Test that RackForm does NOT override u_height when editing an existing rack."""
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        status = Status.objects.get(name="Active")
+
+        # Create a rack with u_height of 24
+        rack = Rack.objects.create(name="Test Rack", location=location, status=status, u_height=24)
+
+        # Create a form bound to the existing rack
+        form = RackForm(instance=rack)
+
+        # The initial value should NOT be overridden - it should use the rack's actual value
+        # (The form will show the model instance's value, not the Constance config)
+        self.assertEqual(form.initial["u_height"], 24)
 
 
 class InterfaceTestCase(NautobotTestCaseMixin, TestCase):

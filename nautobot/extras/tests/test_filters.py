@@ -14,6 +14,7 @@ from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
+    DeviceFamily,
     DeviceType,
     Interface,
     Location,
@@ -605,6 +606,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         ("cluster_group", "cluster_groups__id"),
         ("cluster_group", "cluster_groups__name"),
         ("cluster_group_id", "cluster_groups__id"),
+        ("device_family", "device_families__id"),
+        ("device_family", "device_families__name"),
         ("device_type", "device_types__id"),
         ("device_type", "device_types__model"),
         ("device_type_id", "device_types__id"),
@@ -631,10 +634,28 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.first()
 
+        cls.device_families = (
+            DeviceFamily.objects.create(name="Device Family A"),
+            DeviceFamily.objects.create(name="Device Family B"),
+            DeviceFamily.objects.create(name="Device Family C"),
+        )
+
         device_types = (
-            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 2", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 3", manufacturer=manufacturer),
+            DeviceType.objects.create(
+                model="Device Type 1",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[0],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 2",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[1],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 3",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[2],
+            ),
         )
         cls.device_types = device_types
 
@@ -669,6 +690,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
             c.locations.set([cls.locations[i]])
             c.roles.set([device_roles[i]])
+            c.device_families.set([cls.device_families[i]])
             c.device_types.set([device_types[i]])
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
@@ -2142,6 +2164,8 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
         ("created",),
         ("last_updated",),
         ("name",),
+        ("secrets_groups", "secrets_groups__id"),
+        ("secrets_groups", "secrets_groups__name"),
         ("tags", "tags__id"),
         ("tags", "tags__name"),
     )
@@ -2169,6 +2193,15 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
             secret.validated_save()
         secrets[0].tags.set(Tag.objects.get_for_model(Secret))
         secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
+
+        secrets_groups = (
+            SecretsGroup.objects.create(
+                name="Secrets Group 1",
+            ),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
+        secrets_groups[0].secrets.set([secrets[0]])
+        secrets_groups[1].secrets.set([secrets[1]])
 
     def test_provider(self):
         params = {"provider": ["environment-variable"]}

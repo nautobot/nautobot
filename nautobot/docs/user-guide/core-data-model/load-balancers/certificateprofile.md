@@ -25,7 +25,7 @@ The `CertificateProfile` model stores metadata related to SSL/TLS certificates t
     In some vendor systems (e.g., F5), these profiles may be referred to as **SSL Profiles**. In the Load Balancer App, the equivalent data model is `CertificateProfile`.
 
 - This model does not store the actual certificate or key content—only file paths and identification details for integration with external systems or device configurations.
-- Certificate Profiles are optional and only used when `ssl_offload` is enabled.
+- Certificate Profiles are optional and only used when `ssl_offload` is enabled on the `VirtualServer` or `LoadBalancerPoolMember`.
 - The fields assume that actual certificate files are stored outside of Nautobot (e.g., on managed devices or external secrets engines).
 - Multiple profiles can be applied to the same virtual server or pool member if needed.
 - These profiles are often referenced when rendering device-specific configurations, such as Jinja2 templates for F5, A10, or other SSL-terminating devices.

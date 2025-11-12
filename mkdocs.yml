@@ -509,8 +509,8 @@ nav:
               - VRF: "user-guide/core-data-model/ipam/vrf.md"
           - Load Balancers:
               - "user-guide/core-data-model/load-balancers/index.md"
-              - Certificate Profile: "user-guide/core-data-model/load-balancers/certificateprofile.md"
               - Health Check Monitor: "user-guide/core-data-model/load-balancers/healthcheckmonitor.md"
+              - Certificate Profile: "user-guide/core-data-model/load-balancers/certificateprofile.md"
               - Load Balancer Pool: "user-guide/core-data-model/load-balancers/loadbalancerpool.md"
               - Load Balancer Pool Member: "user-guide/core-data-model/load-balancers/loadbalancerpoolmember.md"
               - Virtual Server: "user-guide/core-data-model/load-balancers/virtualserver.md"

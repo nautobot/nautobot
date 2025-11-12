@@ -22,7 +22,13 @@ from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
 from nautobot.data_validation import models as data_validation_models
-from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
+from nautobot.dcim import (
+    filters as dcim_filters,
+    forms as dcim_forms,
+    models as dcim_models,
+    tables,
+    views as dcim_views,
+)
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.filters import StatusFilterSet
@@ -329,6 +335,26 @@ class GetFooForModelTest(TestCase):
         instance = extras_models.GraphQLQuery.objects.create(name="FizzBuzz", query="{devices { name }}")
         self.assertIsNone(lookup.get_user_from_instance(instance))
 
+    def test_get_breadcrumbs_for_model(self):
+        breadcrumbs = lookup.get_breadcrumbs_for_model(dcim_models.Device)
+        self.assertEqual(breadcrumbs.items, dcim_views.DeviceUIViewSet.get_breadcrumbs(dcim_models.Device).items)
+        breadcrumbs = lookup.get_breadcrumbs_for_model(dcim_models.Device, view_type="")
+        self.assertEqual(
+            breadcrumbs.items, dcim_views.DeviceUIViewSet.get_breadcrumbs(dcim_models.Device, view_type="").items
+        )
+
+    def test_get_detail_view_components_context_for_model(self):
+        context = lookup.get_detail_view_components_context_for_model(dcim_models.Device)
+        self.assertEqual(
+            context["breadcrumbs"].items, lookup.get_breadcrumbs_for_model(dcim_models.Device, view_type="").items
+        )
+        self.assertEqual(
+            context["object_detail_content"], lookup.get_object_detail_content_for_model(dcim_models.Device)
+        )
+        self.assertEqual(
+            context["view_titles"].titles, lookup.get_view_titles_for_model(dcim_models.Device, view_type="").titles
+        )
+
     def test_get_filterset_for_model(self):
         """
         Test that `get_filterset_for_model` returns the right FilterSet for various inputs.
@@ -350,6 +376,12 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_form_for_model(dcim_models.Device), dcim_forms.DeviceForm)
         self.assertEqual(lookup.get_form_for_model("dcim.location"), dcim_forms.LocationForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Location), dcim_forms.LocationForm)
+
+    def test_get_object_detail_content_for_model(self):
+        self.assertEqual(
+            lookup.get_object_detail_content_for_model(dcim_models.Device),
+            dcim_views.DeviceUIViewSet.object_detail_content,
+        )
 
     def test_get_related_field_for_models(self):
         """
@@ -462,6 +494,14 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_table_class_string_from_view_name("dcim:location_list"), "LocationTable")
         # Testing unconventional table name
         self.assertEqual(lookup.get_table_class_string_from_view_name("ipam:prefix_list"), "PrefixDetailTable")
+
+    def test_get_view_titles_for_model(self):
+        view_titles = lookup.get_view_titles_for_model(dcim_models.Device)
+        self.assertEqual(view_titles.titles, dcim_views.DeviceUIViewSet.get_view_titles(dcim_models.Device).titles)
+        view_titles = lookup.get_view_titles_for_model(dcim_models.Device, view_type="")
+        self.assertEqual(
+            view_titles.titles, dcim_views.DeviceUIViewSet.get_view_titles(dcim_models.Device, view_type="").titles
+        )
 
 
 class IsTaggableTest(TestCase):

@@ -191,6 +191,8 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="virtual_machine",
                 exclude_columns=["related_object_type", "related_object_name"],
+                related_list_url_name="ipam:vrf_list",
+                related_field_name="virtual_machines",
             ),
             object_detail.ObjectFieldsPanel(
                 weight=200,
@@ -262,6 +264,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="config-context",
         url_name="configcontext",
+        custom_view_base_action="view",
         custom_view_additional_permissions=["extras.view_configcontext"],
     )
     def config_context(self, request, pk):
@@ -288,7 +291,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
             "format": data_format,
             "template": "extras/object_configcontext.html",
-            "base_template": "virtualization/virtualmachine.html",
+            "base_template": "generic/object_retrieve.html",
         }
 
         return Response(context)

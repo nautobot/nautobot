@@ -63,7 +63,7 @@ Follow the [install instructions](../../user-guide/administration/installation/n
 The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
-    Fire up `mkdocs serve` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
+    Fire up `mkdocs serve --livereload` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
 
 Commit any necessary changes to the documentation before proceeding with the release.
 

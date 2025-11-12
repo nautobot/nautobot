@@ -1,1 +1,0 @@
-Removed "Log in" item from nav menu. When user is unauthenticated and not on login page the "Log in" button now shows up in the header.

@@ -1413,7 +1413,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
-        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1503,8 +1502,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             crontab=crontab,
             job_queue=job_queue,
         )
-        if validated_save:
-            scheduled_job.validated_save()
+        scheduled_job.validated_save()
         return scheduled_job
 
     create_schedule.__func__.alters_data = True

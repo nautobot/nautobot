@@ -263,52 +263,57 @@ class UIComponentsMixin:
     breadcrumbs: ClassVar[Optional[Breadcrumbs]] = None
     view_titles: ClassVar[Optional[Titles]] = None
 
-    def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
+    @classmethod
+    def get_view_titles(cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
         """
         Resolve and return the `Titles` component instance.
 
         Resolution order:
-          1) If `self.view_titles` is set on the current view, use it.
-          2) Else, if `model` is provided, copy the `view_titles` from the view
-             class associated with that model via `lookup.get_view_for_model(model, action)`.
+          1) If `.view_titles` is set on the current view, use it.
+          2) Else, if `model` is provided, copy the `view_titles` from the view class associated with that model
+             via `lookup.get_view_for_model(model, action)`.
           3) Else, instantiate and return the default `Titles()`.
 
         Args:
             model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-            view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+            view_type: Logical view type used by `lookup.get_view_for_model()`
+                (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
             Titles: A concrete `Titles` component instance ready to use.
         """
-        return self._resolve_component("view_titles", Titles, model, view_type)
+        return cls._resolve_component("view_titles", Titles, model, view_type)
 
+    @classmethod
     def get_breadcrumbs(
-        self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
+        cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
     ) -> Breadcrumbs:
         """
         Resolve and return the `Breadcrumbs` component instance.
 
         Resolution order mirrors `get_view_titles()`:
-         1) Use `self.breadcrumbs` if set locally.
-         2) Else, if `model` is provided, copy the `breadcrumbs` from the view
-             class associated with that model via `lookup.get_view_for_model(model, action)`.
+         1) Use `.breadcrumbs` if set locally.
+         2) Else, if `model` is provided, copy the `breadcrumbs` from the view class associated with that model
+            via `lookup.get_view_for_model(model, action)`.
          3) Else return a new default `Breadcrumbs()`.
 
         Args:
            model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-           view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+           view_type: Logical view type used by `lookup.get_view_for_model()`
+                (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
            Breadcrumbs: A concrete `Breadcrumbs` component instance.
         """
-        return self._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
+        return cls._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
 
+    @classmethod
     def _resolve_component(
-        self,
+        cls,
         attr_name: str,
         default_cls: Type[Union[Breadcrumbs, Titles]],
         model: Union[None, str, Type[Model], Model] = None,
@@ -329,14 +334,14 @@ class UIComponentsMixin:
         Returns:
             Breadcrumbs/Title instance.
         """
-        local = getattr(self, attr_name, None)
+        local = getattr(cls, attr_name, None)
         if local is not None:
-            return self._instantiate_if_needed(local, default_cls)
+            return cls._instantiate_if_needed(local, default_cls)
 
         if model is not None:
             view_class = lookup.get_view_for_model(model, view_type)
             view_component = getattr(view_class, attr_name, None)
-            return self._instantiate_if_needed(view_component, default_cls)
+            return cls._instantiate_if_needed(view_component, default_cls)
 
         return default_cls()
 
@@ -1504,7 +1509,9 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(
+        detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_objectchange"]
+    )
     def changelog(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1525,7 +1532,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_note"])
     def notes(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {

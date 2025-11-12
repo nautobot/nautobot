@@ -56,6 +56,8 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
+                related_list_url_name="vpn:vpnphase1policy_list",
+                related_field_name="vpn_profiles",
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -64,6 +66,8 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[],
                 show_table_config_button=False,
+                related_list_url_name="vpn:vpnphase2policy_list",
+                related_field_name="vpn_profiles",
             ),
         ],
         extra_tabs=[
@@ -158,7 +162,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-vpns",
         url_name="vpns",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpns"],
+        custom_view_additional_permissions=["vpn.view_vpn"],
     )
     def vpn_vpns(self, request, *args, **kwargs):
         return Response({})
@@ -168,7 +172,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-tunnels",
         url_name="vpntunnels",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpntunnels"],
+        custom_view_additional_permissions=["vpn.view_vpntunnel"],
     )
     def vpn_tunnels(self, request, *args, **kwargs):
         return Response({})
@@ -178,7 +182,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         url_path="vpn-endpoints",
         url_name="vpnendpoints",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["vpn.view_vpntunnelendpoints"],
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoint"],
     )
     def vpn_endpoints(self, request, *args, **kwargs):
         return Response({})
@@ -463,6 +467,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                         table_filter="vpn_tunnel_endpoints",
                         tab_id="protected_dynamic_groups",
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),

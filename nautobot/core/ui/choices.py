@@ -121,10 +121,11 @@ class NavigationIconChoices(ChoiceSet):
     IPAM = "sitemap-outline"
     ORGANIZATION = "organization"
     CIRCUITS = "cable-data"
-    VPN = "atom"
+    VPN = "bus-shield"
     ROUTING = "route"
     POWER = "battery-3"
     WIRELESS = "wifi"
+    DEVICE_LIFECYCLE = "device-lifecycle"
     SECRETS = "secrets"
     SECURITY = "security"
     LOAD_BALANCERS = "arrow-decision"
@@ -146,6 +147,7 @@ class NavigationIconChoices(ChoiceSet):
         (ROUTING, "Routing"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
+        (DEVICE_LIFECYCLE, "Device Lifecycle"),
         (SECRETS, "Secrets"),
         (SECURITY, "Security"),
         (LOAD_BALANCERS, "Load Balancers"),
@@ -176,11 +178,12 @@ class NavigationWeightChoices(ChoiceSet):
     ROUTING = 500
     POWER = 550
     WIRELESS = 600
-    SECRETS = 650
-    SECURITY = 700
-    LOAD_BALANCERS = 750
-    VIRTUALIZATION = 800
-    CLOUD = 850
+    DEVICE_LIFECYCLE = 650
+    SECRETS = 700
+    SECURITY = 750
+    LOAD_BALANCERS = 800
+    VIRTUALIZATION = 850
+    CLOUD = 900
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
@@ -200,6 +203,7 @@ class NavigationWeightChoices(ChoiceSet):
         (ROUTING, "Routing"),
         (POWER, "Power"),
         (WIRELESS, "Wireless"),
+        (DEVICE_LIFECYCLE, "Device Lifecycle"),
         (SECRETS, "Secrets"),
         (SECURITY, "Security"),
         (VIRTUALIZATION, "Virtualization"),
