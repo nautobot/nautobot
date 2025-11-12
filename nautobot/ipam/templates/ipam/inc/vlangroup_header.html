@@ -1,7 +1,8 @@
-<div class="pull-right">
+{# TODO: this file is unused as far as I can tell - remove it? #}
+<div class="float-end">
     {% if perms.ipam.add_vlan and first_available_vlan %}
         <a href="{% url 'ipam:vlan_add' %}?vid={{ first_available_vlan }}&group={{ object.pk }}{% if object.location %}&location={{ object.location.pk }}{% endif %}" class="btn btn-success">
-            <i class="mdi mdi-plus-thick" aria-hidden="true"></i> Add a VLAN
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add a VLAN
         </a>
     {% endif %}
     {% if perms.ipam.change_vlangroup %}

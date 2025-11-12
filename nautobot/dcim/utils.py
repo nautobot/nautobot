@@ -49,9 +49,9 @@ def cable_status_color_css(record):
         return ""
     else:
         CABLE_STATUS_TO_CSS_CLASS = {
-            ColorChoices.COLOR_GREEN: "success",
-            ColorChoices.COLOR_AMBER: "warning",
-            ColorChoices.COLOR_CYAN: "info",
+            ColorChoices.COLOR_GREEN: "table-success",
+            ColorChoices.COLOR_AMBER: "table-warning",
+            ColorChoices.COLOR_CYAN: "table-info",
         }
         status_color = record.cable.get_status_color().strip("#")
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")

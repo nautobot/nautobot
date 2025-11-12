@@ -31,15 +31,15 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.templatetags.helpers import bettertitle, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
-    AncestorsBreadcrumbs,
+    AncestorsInstanceBreadcrumbItem,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -77,7 +77,6 @@ from nautobot.core.views.utils import common_detail_view_context, get_obj_from_c
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.ui import RackBreadcrumbs
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
@@ -91,7 +90,8 @@ from nautobot.ipam.tables import (
 )
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -248,7 +248,14 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationTypeForm
     bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -307,13 +314,13 @@ class LocationRackGroupsPanel(object_detail.Panel):
             """
             <tr>
                 <td style="padding-left: {}px">
-                    <i class="mdi mdi-folder-open"></i>
+                    <span class="mdi mdi-folder-open"></span>
                     <a href="{}">{}</a>
                 </td>
                 <td>{}</td>
-                <td class="text-right noprint">
-                    <a href="{}" class="btn btn-xs btn-primary" title="View elevations">
-                        <i class="mdi mdi-server"></i>
+                <td class="float-end d-print-none">
+                    <a href="{}" class="btn btn-sm btn-primary" title="View elevations">
+                        <span class="mdi mdi-server"></span>
                     </a>
                 </td>
             </tr>
@@ -392,7 +399,14 @@ class LocationUIViewSet(NautobotUIViewSet):
     form_class = forms.LocationForm
     bulk_update_form_class = forms.LocationBulkEditForm
     serializer_class = serializers.LocationSerializer
-    breadcrumbs = AncestorsBreadcrumbs(detail_item_label=context_object_attr("name"))
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(),
+            ]
+        }
+    )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
 
     object_detail_content = object_detail.ObjectDetailContent(
@@ -470,6 +484,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 table_attribute="images",
                 related_field_name="location",
                 show_table_config_button=False,
+                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -659,6 +674,14 @@ class RackGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackGroupSerializer
     table_class = tables.RackGroupTable
     queryset = RackGroup.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -718,7 +741,26 @@ class RackUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.RackSerializer
     table_class = tables.RackDetailTable
     queryset = Rack.objects.select_related("location", "tenant__tenant_group", "rack_group", "role")
-    breadcrumbs = RackBreadcrumbs()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("location"),
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(parent_key="location", parent=ancestor),
+                    include_self=True,
+                ),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("rack_group"),
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(
+                        parent_key="rack_group", parent=ancestor
+                    ),
+                    include_self=True,
+                    should_render=context_object_attr("rack_group"),
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -764,9 +806,6 @@ class RackElevationListView(generic.ObjectListView):
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
     view_titles = Titles(titles={"list": "Rack Elevation"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:rack_elevation_list", label="Rack Elevation")]}
-    )
 
     def extra_context(self):
         racks = self.queryset
@@ -930,7 +969,7 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-muted">&mdash;</span>')
+            return format_html('<span class="text-secondary">&mdash;</span>')
 
         return super().render_value(key, value, context)
 
@@ -1023,6 +1062,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=InterfaceTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1048,6 +1088,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=FrontPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1073,6 +1114,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=RearPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1098,6 +1140,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ConsolePortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1123,6 +1166,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ConsoleServerPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1148,6 +1192,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=PowerPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1173,6 +1218,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=PowerOutletTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1198,6 +1244,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=DeviceBayTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1223,6 +1270,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ModuleBayTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1230,7 +1278,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-type-add-components-button"},
                 icon="mdi-plus-thick",
@@ -1438,6 +1486,7 @@ class ModuleTypeUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    # ObjectDataComplianceViewMixin,  # TODO: enable once converted to UI framework
     ObjectChangeLogViewMixin,
     ObjectNotesViewMixin,
 ):
@@ -2154,6 +2203,7 @@ class ModuleBayTemplateUIViewSet(
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
     create_template_name = "dcim/device_component_add.html"
+    object_detail_content = None
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -2249,32 +2299,43 @@ class DeviceComponentPageMixin:
     - Console Port assigned to the device: Devices / <Device name and link to details> / Console Ports (dcim/devices/<id>/console-ports/) / <Console Port name>
     """
 
-    breadcrumbs = Breadcrumbs(
-        items={
-            "detail": [
-                ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
-                ),
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        device_breadcrumbs = [
+            ModelBreadcrumbItem(model=Device, should_render=lambda c: c["object"].device is not None),
+            InstanceBreadcrumbItem(
+                instance=lambda c: c["object"].device, should_render=lambda c: c["object"].device is not None
+            ),
+        ]
+        module_breadcrumbs = [
+            ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
+            InstanceBreadcrumbItem(
+                instance=lambda c: c["object"].module, should_render=lambda c: c["object"].device is None
+            ),
+        ]
+        if device_breadcrumb_url := getattr(cls, "device_breadcrumb_url", None):
+            device_breadcrumbs.append(
                 ViewNameBreadcrumbItem(
-                    view_name_key="device_breadcrumb_url",
-                    should_render=lambda c: c["object"].device is not None and c.get("device_breadcrumb_url"),
+                    view_name=device_breadcrumb_url,
+                    should_render=lambda c: c["object"].device is not None,
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
-                ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].device is None),
-                InstanceBreadcrumbItem(
-                    instance=lambda c: c["object"].module, should_render=lambda c: c["object"].device is None
-                ),
+            )
+
+        if module_breadcrumb_url := getattr(cls, "module_breadcrumb_url", None):
+            module_breadcrumbs.append(
                 ViewNameBreadcrumbItem(
-                    view_name_key="module_breadcrumb_url",
-                    should_render=lambda c: c["object"].device is None and c.get("module_breadcrumb_url"),
+                    view_name=module_breadcrumb_url,
+                    should_render=lambda c: c["object"].device is None,
                     reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
+                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
-            ]
-        }
-    )
+            )
+
+        cls.breadcrumbs = Breadcrumbs(items={"detail": [*device_breadcrumbs, *module_breadcrumbs]})
+
     view_titles = Titles(
         titles={
             "detail": "{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}"
@@ -2297,7 +2358,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Device),
-                InstanceParentBreadcrumbItem(parent_key="location"),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("location"),
+                    include_self=True,
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(parent_key="location", parent=ancestor),
+                ),
                 InstanceBreadcrumbItem(
                     instance=lambda c: c["object"].parent_bay.device,
                     should_render=lambda c: hasattr(c["object"], "parent_bay"),
@@ -2313,7 +2378,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
         queryset = super().get_queryset()
         if self.action == "retrieve":
             queryset = queryset.select_related(
-                "cluster__cluster_group",
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
                 "device_type__device_family",
@@ -2328,7 +2392,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 "status",
                 "tenant__tenant_group",
                 "virtual_chassis",
-            ).prefetch_related("images", "software_image_files")
+            ).prefetch_related("clusters", "images", "software_image_files")
         if self.action == "config_context":
             queryset = queryset.annotate_config_context_data()
         return queryset
@@ -2391,7 +2455,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
-                    return mark_safe('<span class="label label-warning">Not racked</span>')
+                    return mark_safe('<span class="badge bg-warning">Not racked</span>')
                 return helpers.HTML_NONE
             if key == "device_redundancy_group" and value is not None:
                 instance = get_obj_from_context(context, self.context_object_key)
@@ -2553,7 +2617,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         extra_buttons=(
             object_detail.DropdownButton(
                 weight=100,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.ADD,
                 label="Add Components",
                 attributes={"id": "device-add-components-button"},
                 icon="mdi-plus-thick",
@@ -2684,7 +2748,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "device_redundancy_group",
                     "controller_managed_device_group",
                     "controller_managed_device_group__controller",
-                    "cluster",
                     "software_version",
                 ],
                 key_transforms={"controller_managed_device_group__controller": "Managed By Controller"},
@@ -2692,7 +2755,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     "primary_ip4": [render_ip_with_nat],
                     "primary_ip6": [render_ip_with_nat],
                 },
-                hide_if_unset=["controller_managed_device_group__controller", "cluster"],
+                hide_if_unset=["controller_managed_device_group__controller"],
             ),
             DevicePowerUtilizationPanel(
                 weight=100,
@@ -2707,7 +2770,17 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
+                related_list_url_name="ipam:vrf_list",
                 show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=250,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Clusters",
+                table_class=ClusterTable,
+                table_filter="devices",
+                show_table_config_button=False,
+                exclude_columns=["device_count"],
             ),
             object_detail.ObjectsTablePanel(
                 weight=300,
@@ -2727,6 +2800,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_attribute="images",
                 related_field_name="device",
                 show_table_config_button=False,
+                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
@@ -3037,29 +3111,52 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     ),
                 ),
             ),
-            DeviceNAPALMTab(
+            object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1200,
+                tab_id="vpn_endpoints",
+                label="VPN Endpoints",
+                url_name="dcim:device_vpnendpoints",
+                related_object_attribute="vpn_tunnel_endpoints",
+                hide_if_empty=True,
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="VPN Endpoints",
+                        table_class=VPNTunnelEndpointTable,
+                        table_attribute="vpn_tunnel_endpoints",
+                        related_field_name="device",
+                        select_related_fields=["source_interface", "role"],
+                        exclude_columns=["device"],
+                        tab_id="vpn_endpoints",
+                        enable_bulk_actions=True,
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+            DeviceNAPALMTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
                 tab_id="status",
                 label="Status",
                 url_name="dcim:device_status",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             DeviceNAPALMTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1300,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
                 tab_id="lldp_neighbors",
                 label="LLDP Neighbors",
                 url_name="dcim:device_lldp_neighbors",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             DeviceNAPALMTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1400,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
                 tab_id="config",
                 label="Configuration",
                 url_name="dcim:device_config",
                 required_permissions=["dcim.napalm_read_device"],
             ),
             object_detail.DistinctViewTab(
-                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1500,
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 1600,
                 tab_id="config_context",
                 label="Config Context",
                 url_name="dcim:device_configcontext",
@@ -3085,6 +3182,16 @@ class DeviceUIViewSet(NautobotUIViewSet):
             extra_context["vc_members_table"] = vc_members_table
 
         return extra_context
+
+    @action(
+        detail=True,
+        url_path="vpn-endpoints",
+        url_name="vpnendpoints",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["vpn.view_vpntunnelendpoint"],
+    )
+    def vpn_endpoints(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=True,
@@ -3442,7 +3549,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
-        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
+        consoleport_table = tables.DeviceModuleConsolePortTable(
+            data=consoleports, user=request.user, configurable=True, orderable=False
+        )
         if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
             consoleport_table.columns.show("pk")
 
@@ -3468,7 +3577,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .prefetch_related("_path__destination")
         )
         consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
-            data=consoleserverports, user=request.user, orderable=False, parent_module=instance
+            data=consoleserverports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
             "dcim.delete_consoleserverport"
@@ -3497,7 +3606,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .prefetch_related("_path__destination")
         )
         powerport_table = tables.DeviceModulePowerPortTable(
-            data=powerports, user=request.user, orderable=False, parent_module=instance
+            data=powerports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
             powerport_table.columns.show("pk")
@@ -3524,7 +3633,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .prefetch_related("_path__destination")
         )
         poweroutlet_table = tables.DeviceModulePowerOutletTable(
-            data=poweroutlets, user=request.user, orderable=False, parent_module=instance
+            data=poweroutlets, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
             poweroutlet_table.columns.show("pk")
@@ -3555,7 +3664,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .select_related("lag", "cable")
         )
         interface_table = tables.DeviceModuleInterfaceTable(
-            data=interfaces, user=request.user, orderable=False, parent_module=instance
+            data=interfaces, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
@@ -3578,7 +3687,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         instance = self.get_object()
         frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(
-            data=frontports, user=request.user, orderable=False, parent_module=instance
+            data=frontports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
             frontport_table.columns.show("pk")
@@ -3601,7 +3710,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         instance = self.get_object()
         rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
         rearport_table = tables.DeviceModuleRearPortTable(
-            data=rearports, user=request.user, orderable=False, parent_module=instance
+            data=rearports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
         if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
             rearport_table.columns.show("pk")
@@ -3625,7 +3734,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
         modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
             "installed_module__status", "installed_module"
         )
-        modulebay_table = tables.ModuleModuleBayTable(data=modulebays, user=request.user, orderable=False)
+        modulebay_table = tables.ModuleModuleBayTable(
+            data=modulebays, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
             modulebay_table.columns.show("pk")
 
@@ -3765,11 +3876,13 @@ class ConsolePortListView(generic.ObjectListView):
 
 class ConsolePortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsolePort.objects.all()
+    device_breadcrumb_url = "dcim:device_consoleports"
+    module_breadcrumb_url = "dcim:module_consoleports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_consoleports",
-            "module_breadcrumb_url": "dcim:module_consoleports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -3831,11 +3944,13 @@ class ConsoleServerPortListView(generic.ObjectListView):
 
 class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = ConsoleServerPort.objects.all()
+    device_breadcrumb_url = "dcim:device_consoleserverports"
+    module_breadcrumb_url = "dcim:module_consoleserverports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_consoleserverports",
-            "module_breadcrumb_url": "dcim:module_consoleserverports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -3897,11 +4012,13 @@ class PowerPortListView(generic.ObjectListView):
 
 class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerPort.objects.all()
+    device_breadcrumb_url = "dcim:device_powerports"
+    module_breadcrumb_url = "dcim:module_powerports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_powerports",
-            "module_breadcrumb_url": "dcim:module_powerports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -3963,11 +4080,13 @@ class PowerOutletListView(generic.ObjectListView):
 
 class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = PowerOutlet.objects.all()
+    device_breadcrumb_url = "dcim:device_poweroutlets"
+    module_breadcrumb_url = "dcim:module_poweroutlets"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_poweroutlets",
-            "module_breadcrumb_url": "dcim:module_poweroutlets",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4032,6 +4151,8 @@ class InterfaceView(
     generic.ObjectView,
 ):
     queryset = Interface.objects.all()
+    device_breadcrumb_url = "dcim:device_interfaces"
+    module_breadcrumb_url = "dcim:module_interfaces"
 
     def get_extra_context(self, request, instance):
         # Get assigned IP addresses
@@ -4072,8 +4193,8 @@ class InterfaceView(
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
-            "device_breadcrumb_url": "dcim:device_interfaces",
-            "module_breadcrumb_url": "dcim:module_interfaces",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
@@ -4162,11 +4283,13 @@ class FrontPortListView(generic.ObjectListView):
 
 class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = FrontPort.objects.all()
+    device_breadcrumb_url = "dcim:device_frontports"
+    module_breadcrumb_url = "dcim:module_frontports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_frontports",
-            "module_breadcrumb_url": "dcim:module_frontports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4228,11 +4351,13 @@ class RearPortListView(generic.ObjectListView):
 
 class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = RearPort.objects.all()
+    device_breadcrumb_url = "dcim:device_rearports"
+    module_breadcrumb_url = "dcim:module_rearports"
 
     def get_extra_context(self, request, instance):
         return {
-            "device_breadcrumb_url": "dcim:device_rearports",
-            "module_breadcrumb_url": "dcim:module_rearports",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
             **super().get_extra_context(request, instance),
         }
 
@@ -4294,9 +4419,13 @@ class DeviceBayListView(generic.ObjectListView):
 
 class DeviceBayView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = DeviceBay.objects.all()
+    device_breadcrumb_url = "dcim:device_devicebays"
 
     def get_extra_context(self, request, instance):
-        return {"device_breadcrumb_url": "dcim:device_devicebays", **super().get_extra_context(request, instance)}
+        return {
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            **super().get_extra_context(request, instance),
+        }
 
 
 class DeviceBayCreateView(generic.ComponentCreateView):
@@ -4489,14 +4618,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if instance:
-            # Set breadcrumbs always
-            context.update(
-                {
-                    "device_breadcrumb_url": "dcim:device_modulebays",
-                    "module_breadcrumb_url": "dcim:module_modulebays",
-                }
-            )
-
             # Add installed module context
             context["installed_module_data"] = self._get_installed_module_context(instance)
 
@@ -4539,6 +4660,7 @@ class InventoryItemListView(generic.ObjectListView):
 
 class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
     queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
+    device_breadcrumb_url = "dcim:device_inventory"
 
     def get_extra_context(self, request, instance):
         # Software images
@@ -4548,7 +4670,7 @@ class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
             software_version_images = []
 
         return {
-            "device_breadcrumb_url": "dcim:device_inventory",
+            "device_breadcrumb_url": self.device_breadcrumb_url,
             "software_version_images": software_version_images,
             **super().get_extra_context(request, instance),
         }
@@ -4738,6 +4860,7 @@ class PathTraceView(generic.ObjectView):
 
     additional_permissions = ["dcim.view_cable"]
     template_name = "dcim/cable_trace.html"
+    view_titles = Titles(titles={"detail": "Cable Trace for {{ object }}"})
 
     def dispatch(self, request, *args, **kwargs):
         model = kwargs.pop("model")
@@ -4774,6 +4897,7 @@ class PathTraceView(generic.ObjectView):
             "path": path,
             "related_paths": related_paths,
             "total_length": path.get_total_length() if path else None,
+            "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
 
@@ -4883,7 +5007,6 @@ class ConsoleConnectionsListView(ConnectionsListView):
         return {
             "title": "Console Connections",
             "list_url": "dcim:console_connections_list",
-            "search_form": None,  # ConsoleConnectionFilterSet do not support q filter
         }
 
 
@@ -4903,7 +5026,6 @@ class PowerConnectionsListView(ConnectionsListView):
         return {
             "title": "Power Connections",
             "list_url": "dcim:power_connections_list",
-            "search_form": None,  # PowerConnectionFilterSet do not support q filter
         }
 
 
@@ -4949,7 +5071,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
         return {
             "title": "Interface Connections",
             "list_url": "dcim:interface_connections_list",
-            "search_form": None,  # InterfaceConnectionFilterSet do not support q filter
         }
 
 
@@ -5063,7 +5184,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         url_path="add-member",
         url_name="add_member",
         custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_virtualchassis"],
     )
     def add_member(self, request, pk=None):
         virtual_chassis = self.get_object()
@@ -5260,7 +5380,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(),
-                InstanceBreadcrumbItem(instance=context_object_attr("power_panel.location")),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("power_panel.location"), include_self=True
+                ),
                 InstanceBreadcrumbItem(instance=context_object_attr("power_panel")),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("rack"),
@@ -5339,7 +5461,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         """
 
         type_class = instance.get_type_class()
-        return format_html('<span class="label label-{}">{}</span>', type_class, instance.get_type_display())
+        return format_html('<span class="badge bg-{}">{}</span>', type_class, instance.get_type_display())
 
     def _get_connected_target(self, instance):
         """Return (label, value) for the connected row."""
@@ -5412,7 +5534,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 + f"?return_url={instance.get_absolute_url()}"
             )
             connect_link = format_html(
-                '<a href="{}" class="btn btn-primary btn-sm pull-right">'
+                '<a href="{}" class="btn btn-primary btn-sm float-end">'
                 '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
                 connect_url,
             )
@@ -5425,9 +5547,9 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         Render the Path Status as a label based on the path status (active or not).
         """
         path_status = (
-            '<span class="label label-success">Reachable</span>'
+            '<span class="badge bg-success">Reachable</span>'
             if getattr(instance, "path", None) and instance.path.is_active
-            else '<span class="label label-danger">Not Reachable</span>'
+            else '<span class="badge bg-danger">Not Reachable</span>'
         )
         return format_html(path_status)  # Safely render HTML
 
@@ -5496,7 +5618,8 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 prefetch_related_fields=["interface"],
                 order_by_fields=["priority"],
                 table_title="Interfaces",
-                related_field_name="interface_redundancy_group",
+                related_field_name="interface_redundancy_groups",
+                related_list_url_name="dcim:interface_list",
                 include_columns=[
                     "interface__device",
                     "interface",
@@ -5517,6 +5640,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+    object_detail_content = None
 
 
 class ModuleFamilyUIViewSet(NautobotUIViewSet):
@@ -5748,6 +5872,14 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("platform")),
+            ]
+        }
+    )
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -5840,6 +5972,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
                         select_related_fields=["wireless_network"],
                         exclude_columns=["controller"],
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),

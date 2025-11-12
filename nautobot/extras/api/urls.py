@@ -4,6 +4,13 @@ from . import views
 
 router = OrderedDefaultRouter(view_name="Extras")
 
+# Approval Workflows
+router.register("approval-workflow-definitions", views.ApprovalWorkflowDefinitionViewSet)
+router.register("approval-workflows", views.ApprovalWorkflowViewSet)
+router.register("approval-workflow-stage-definitions", views.ApprovalWorkflowStageDefinitionViewSet)
+router.register("approval-workflow-stages", views.ApprovalWorkflowStageViewSet)
+router.register("approval-workflow-stage-responses", views.ApprovalWorkflowStageResponseViewSet)
+
 # Computed Fields
 router.register("computed-fields", views.ComputedFieldViewSet)
 

@@ -13,19 +13,19 @@
             <div class="well well-small inline-related{% if inline_admin_form.original or inline_admin_form.show_url %} has_original{% endif %}{% if forloop.last %} empty-form last-related{% endif %}" id="{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
                 <legend>
                     {% if not forloop.last %}
-                        <a data-toggle="collapse" data-target="#{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %} > .collapse">
+                        <a data-bs-toggle="collapse" data-bs-target="#{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %} > .collapse">
                     {% endif %}
                     {% if inline_admin_form.original %}{{ inline_admin_form.original }}{% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %} <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="inlinechangelink">{% trans "Change" %}</a>{% endif %}{% else %}#{{ forloop.counter }}{% endif %} <small class="inline_label">({{ inline_admin_formset.opts.verbose_name|capfirst }})</small>
                     {% if not forloop.last %}
-                        <span class="btn btn-default btn-xs"><i class="glyphicon glyphicon-resize-full"></i></span>
+                        <span class="btn btn-secondary btn-sm"><i class="glyphicon glyphicon-resize-full"></i></span>
                         {% if inline_admin_formset.opts.sortable_field_name %}
-                            <span class="btn btn-default btn-xs drag-handler"><i class="glyphicon glyphicon-move"></i></span>
+                            <span class="btn btn-secondary btn-sm drag-handler"><i class="glyphicon glyphicon-move"></i></span>
                         {% endif %}
                         </a>
                     {% endif %}
                     {% if inline_admin_form.show_url %}<a href="{{ inline_admin_form.absolute_url }}">{% trans "View on site" %}</a>{% endif %}
-                    <div class="pull-right">
-                        {% if inline_admin_formset.formset.can_delete and inline_admin_form.original %}<div class="delete control-group"><div class="checkbox">{{ inline_admin_form.deletion_field.field }} {{ inline_admin_form.deletion_field.label_tag }}</div></div>{% endif %}
+                    <div class="float-end">
+                        {% if inline_admin_formset.formset.can_delete and inline_admin_form.original %}<div class="delete control-group"><div class="form-check">{{ inline_admin_form.deletion_field.field }} {{ inline_admin_form.deletion_field.label_tag }}</div></div>{% endif %}
                     </div>
                 </legend>
                 {% for fieldset in inline_admin_form %}{% for line in fieldset %}

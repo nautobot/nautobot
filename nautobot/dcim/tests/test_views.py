@@ -763,7 +763,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
                 32%
             </div>
@@ -773,7 +773,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
                 65%
             </div>
@@ -783,7 +783,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <td><div title="Used: 3789&#13;Count: 7680" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
                 49%
             </div>
@@ -890,11 +890,11 @@ class DeviceTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -907,11 +907,11 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -1240,7 +1240,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 
@@ -1305,11 +1305,11 @@ class ModuleTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -1322,11 +1322,11 @@ class ModuleTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -2373,7 +2373,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[1].pk,
             "primary_ip4": None,
             "primary_ip6": None,
-            "cluster": None,
+            "clusters": [cluster.pk],
             "secrets_group": secrets_groups[1].pk,
             "virtual_chassis": None,
             "vc_position": None,
@@ -2396,7 +2396,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[2].pk,
             "location": locations[1].pk,
             "rack": racks[1].pk,
-            "cluster": cluster.pk,
+            "add_clusters": [cluster.pk],
             "comments": "An older device",
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
@@ -2417,7 +2417,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         add_vdc_url = reverse("dcim:virtualdevicecontext_add")
         return_url = device.get_absolute_url()
         expected_add_vdc_button_html = f"""
-        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-xs">
+        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-sm">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add virtual device context
         </a>
         """
@@ -2575,7 +2575,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
@@ -2686,6 +2686,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device.controller_managed_device_group.validated_save()
 
         url = reverse("dcim:device_wireless", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_vpnendpoints(self):
+        self.add_permissions("vpn.view_vpntunnelendpoint")
+        device = Device.objects.first()
+
+        url = reverse("dcim:device_vpnendpoints", kwargs={"pk": device.pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
@@ -2961,7 +2970,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
@@ -4394,7 +4403,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
         Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, 'Interfaces <span class="badge">6</span>')
+        self.assertBodyContains(response, 'Interfaces <span class="badge bg-primary">6</span>')
         self.assertBodyContains(response, "device 1 interface 1")
         self.assertBodyContains(response, "device 1 interface 2")
         self.assertBodyContains(response, "device 2 interface 1")
@@ -4645,7 +4654,8 @@ class PathTraceViewTestCase(ModelViewTestCase):
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
-        self.assertBodyContains(response, "<h1>Cable Trace for Rear Port Rear Port 1</h1>", html=True)
+        self.assertBodyContains(response, "Rear Port 1")
+        self.assertBodyContains(response, "eth0")
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -1,6 +1,7 @@
 import logging
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
 
@@ -41,6 +42,12 @@ class NautobotKombuJSONEncoder(JSONEncoder):
                 # TODO: change to natural key to provide additional context if object is deleted from the db
                 "display": getattr(obj, "display", str(obj)),
             }
+
+            if "nautobot_version_control" in settings.PLUGINS:
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+                data["__nautobot_branch__"] = active_branch()
+
             return data
 
         elif isinstance(obj, set):

@@ -10,6 +10,8 @@ from django.db.models import Q
 from django.db.models.deletion import PROTECT
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.core.templatetags.helpers import bettertitle
+
 # Use the proper swappable User model
 User = get_user_model()
 
@@ -70,17 +72,34 @@ def extract_page_body(content):
     <html>
       <head>...</head>
       <body>
-        <nav>...</nav>
-        <div class="container-fluid wrapper"> <!-- BEGIN -->
-          ...
-        </div> <!-- END -->
+        <nav id="sidenav">...</nav><!-- BEGIN -->
+        <header><nav><!-- breadcrumbs --></nav></header>
+        <main class="container-fluid wrapper" id="main-content" tabindex="-1">
+        ...
+        </div><!-- END -->
         <footer class="footer">...</footer>
         ...
       </body>
     </html>
     """
     try:
-        return re.findall(r"(?<=</nav>).*(?=<footer)", content, flags=(re.MULTILINE | re.DOTALL))[0]
+        return re.findall(
+            r"<nav id=\"sidenav\"[^>]*>.*?</nav>(.*?)(?=<footer)", content, flags=(re.MULTILINE | re.DOTALL)
+        )[0]
+    except IndexError:
+        return content
+
+
+def extract_page_title(content):
+    """
+    Given raw HTML content from an HTTP response, extract the page title section only.
+
+    <div id="page-title" ...>...</header>
+    """
+    try:
+        return re.findall(
+            r"<div class=\"col-4\" id=\"page-title\">(.*?)(?=<\/header)", content, flags=(re.MULTILINE | re.DOTALL)
+        )[0]
     except IndexError:
         return content
 
@@ -117,3 +136,21 @@ def generate_random_device_asset_tag_of_specified_size(size):
     """
     asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311  # suspicious-non-cryptographic-random-usage
     return asset_tag
+
+
+def get_expected_menu_item_name(view_model) -> str:
+    """Return the expected menu item name for a given model."""
+    name_map = {
+        "Approval Workflow Definitions": "Workflow Definitions",
+        "Approval Workflow Stages": "Approval Dashboard",
+        "Controller Managed Device Groups": "Device Groups",
+        "Object Changes": "Change Log",
+        "Min Max Validation Rules": "Min/Max Rules",
+        "Regular Expression Validation Rules": "Regex Rules",
+        "Required Validation Rules": "Required Rules",
+        "Unique Validation Rules": "Unique Rules",
+        "VM Interfaces": "Interfaces",
+    }
+
+    expected = bettertitle(view_model._meta.verbose_name_plural)
+    return name_map.get(expected, expected)

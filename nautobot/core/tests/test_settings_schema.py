@@ -132,6 +132,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "CSRF_FAILURE_VIEW",
             "DATA_UPLOAD_MAX_NUMBER_FIELDS",
             "DEFAULT_AUTO_FIELD",
+            "DJANGO_TABLES2_TEMPLATE",
             "DRF_REACT_TEMPLATE_TYPE_MAP",
             "EXEMPT_EXCLUDE_MODELS",
             "FILTERS_NULL_CHOICE_LABEL",

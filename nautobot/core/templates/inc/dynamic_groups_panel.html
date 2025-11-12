@@ -1,10 +1,10 @@
 {% load helpers %}
 {% with dynamic_groups=object.dynamic_groups_cached.all %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Dynamic Groups</strong>
         </div>
-        <table class="table table-hover panel-body">
+        <table class="table table-hover card-body">
             {% for dg in dynamic_groups %}
                 <tr>
                     <td>{{ dg|hyperlinked_object }}</td>

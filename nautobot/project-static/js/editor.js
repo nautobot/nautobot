@@ -12,7 +12,7 @@
  * Example Usage:
  * 
  * Diff Viewer:
- * <div class="editor-container" 
+ * <div class="nb-editor-container"
  *      data-mode="diff"
  *      data-original="{{ diff_removed }}"
  *      data-modified="{{ diff_added }}"
@@ -20,7 +20,7 @@
  * </div>
  * 
  * Standard Editor:
- * <div class="editor-container"
+ * <div class="nb-editor-container"
  *      data-lang="yaml"
  *      data-value="key: value"
  *      data-options='{"readOnly": false}'>
@@ -280,7 +280,7 @@
 
   // Initialize editors with error handling
   document.addEventListener('DOMContentLoaded', () => {
-      const containers = Array.from(document.querySelectorAll('.editor-container'));
+      const containers = Array.from(document.querySelectorAll('.nb-editor-container'));
       Promise.allSettled(containers.map(host => Editor.create(host)))
           .then(results => results.forEach((result, i) => {
               if (result.status === 'rejected') {
