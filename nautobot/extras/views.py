@@ -19,7 +19,6 @@ from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -1698,7 +1697,6 @@ class JobApprovalRequestView(generic.ObjectView):
     def post(self, request, pk):
         """
         Act upon one of the 3 submit button actions from the user.
-
         dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
         deny will delete the scheduled_job instance
         approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
@@ -2086,18 +2084,37 @@ class SavedViewUIViewSet(
         return super().destroy(request, *args, **kwargs)
 
 
-class ScheduledJobListView(generic.ObjectListView):
+class ScheduledJobUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+):
     queryset = ScheduledJob.objects.enabled()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-    filterset_form = forms.ScheduledJobFilterForm
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    serializer_class = serializers.ScheduledJobSerializer
+    table_class = tables.ScheduledJobTable
     action_buttons = ()
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if instance is None:
+            return context
+        job_class = get_job(instance.task)
+        labels = {}
+        if job_class is not None:
+            for name, var in job_class._get_vars().items():
+                field = var.as_field()
+                labels[name] = field.label or pretty_name(name)
+        context.update(
+            {
+                "labels": labels,
+                "job_class_found": (job_class is not None),
+            }
+        )
 
-class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
-    queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
+        return context
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
@@ -2107,31 +2124,6 @@ class ScheduledJobApprovalQueueListView(generic.ObjectListView):
     filterset_form = forms.ScheduledJobFilterForm
     action_buttons = ()
     template_name = "extras/scheduled_jobs_approval_queue_list.html"
-
-
-class ScheduledJobView(generic.ObjectView):
-    queryset = ScheduledJob.objects.all()
-
-    def get_extra_context(self, request, instance):
-        job_class = get_job(instance.task)
-        labels = {}
-        if job_class is not None:
-            for name, var in job_class._get_vars().items():
-                field = var.as_field()
-                if field.label:
-                    labels[name] = field.label
-                else:
-                    labels[name] = pretty_name(name)
-        return {
-            "labels": labels,
-            "job_class_found": (job_class is not None),
-            "default_time_zone": get_current_timezone(),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ScheduledJobDeleteView(generic.ObjectDeleteView):
-    queryset = ScheduledJob.objects.all()
 
 
 #

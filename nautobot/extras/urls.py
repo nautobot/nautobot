@@ -25,6 +25,7 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("job-results", views.JobResultUIViewSet)
+router.register("jobs/scheduled-jobs", views.ScheduledJobUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-changes", views.ObjectChangeUIViewSet)
 router.register("notes", views.NoteUIViewSet)
@@ -69,14 +70,6 @@ urlpatterns = [
     ),
     # Jobs
     path("jobs/", views.JobListView.as_view(), name="job_list"),
-    path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
-    path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
-    path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
-    path(
-        "jobs/scheduled-jobs/delete/",
-        views.ScheduledJobBulkDeleteView.as_view(),
-        name="scheduledjob_bulk_delete",
-    ),
     path(
         "jobs/scheduled-jobs/approval-queue/",
         views.ScheduledJobApprovalQueueListView.as_view(),
