@@ -1,0 +1,2 @@
+Changed behavior of Interface and Interface Template creation forms to no longer prefill automatically with a `type` of `Virtual`.
+Changed behavior of Front Port, Front Port Template, Rear Port, and Rear Port Template creation forms to no longer prefill automatically with a `type` of `8P8C`.
