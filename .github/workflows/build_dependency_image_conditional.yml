@@ -16,7 +16,7 @@ on:  # yamllint disable
 
 jobs:
   dep-container-build:
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"

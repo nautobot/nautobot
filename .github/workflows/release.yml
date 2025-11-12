@@ -9,7 +9,7 @@ jobs:
   publish_python:
     if: "${{ ! github.event.release.draft }}"
     name: "Publish Python Packages"
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -40,7 +40,7 @@ jobs:
   publish_containers:
     if: "${{ ! github.event.release.draft }}"
     name: "Build & Publish Container Images"
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     strategy:
       fail-fast: true
       matrix:
@@ -137,7 +137,7 @@ jobs:
     needs:
       - "publish_python"
       - "publish_containers"
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
       SLACK_MESSAGE: >-
@@ -174,7 +174,7 @@ jobs:
     needs:
       - "publish_python"
       - "publish_containers"
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       - name: "Call deploy sandbox workflow for demo.nautobot.com"
         run: "gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=demo"

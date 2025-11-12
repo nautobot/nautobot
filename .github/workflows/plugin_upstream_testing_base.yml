@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -65,7 +65,7 @@ jobs:
       fail-fast: false
       matrix:
         nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       # Try to download the artifact first so the job can be skipped if the artifact is not found
       - name: Download docker image artifact
@@ -96,7 +96,7 @@ jobs:
       fail-fast: false
       matrix:
         nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "bryan-test"
     steps:
       # Try to download the artifact first so the job can be skipped if the artifact is not found
       - name: Download docker image artifact
