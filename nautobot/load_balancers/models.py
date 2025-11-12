@@ -1,5 +1,6 @@
 """Models for Load Balancer Models."""
 
+from django.core.validators import MaxValueValidator
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -7,7 +8,7 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
-from nautobot.load_balancers import choices
+from nautobot.load_balancers import choices, constants
 
 
 @extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
@@ -18,7 +19,7 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         to="ipam.IPAddress", on_delete=models.PROTECT, related_name="virtual_servers", verbose_name="VIP"
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    port = models.PositiveIntegerField(blank=True, null=True, max_value=65535)
+    port = models.PositiveIntegerField(blank=True, null=True, validators=[MaxValueValidator(constants.PORT_VALUE_MAX)])
     protocol = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, choices=choices.ProtocolChoices)
     source_nat_pool = models.ForeignKey(
         to="ipam.Prefix",
@@ -200,7 +201,7 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
         related_name="load_balancer_pool_members",
         on_delete=models.PROTECT,
     )
-    port = models.PositiveIntegerField(max_value=65535)
+    port = models.PositiveIntegerField(validators=[MaxValueValidator(constants.PORT_VALUE_MAX)])
     ssl_offload = models.BooleanField(
         default=False,
         verbose_name="SSL Offload",
@@ -262,7 +263,7 @@ class HealthCheckMonitor(PrimaryModel):  # pylint: disable=too-many-ancestors
     interval = models.PositiveIntegerField(blank=True, null=True)
     retry = models.PositiveIntegerField(blank=True, null=True, help_text="Number of retries before marking as down")
     timeout = models.PositiveIntegerField(blank=True, null=True)
-    port = models.PositiveIntegerField(blank=True, null=True, max_value=65535)
+    port = models.PositiveIntegerField(blank=True, null=True, validators=[MaxValueValidator(constants.PORT_VALUE_MAX)])
     health_check_type = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.HealthCheckTypeChoices,
