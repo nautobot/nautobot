@@ -2263,6 +2263,19 @@ query {
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
+    def test_query_pagination_with_restricted_permissions(self):
+        # Test for https://github.com/nautobot/nautobot/issues/8155
+        self.user.is_superuser = False
+        self.user.save()
+        try:
+            self.add_permissions("dcim.view_manufacturer")
+            result = self.execute_query("query { manufacturers (limit: 1) { name } }")
+            self.assertIsNone(result.errors)
+            self.assertEqual(len(result.data.get("manufacturers", [])), 1)
+        finally:
+            self.user.is_superuser = True
+            self.user.save()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):
         """Test querying power feeds for their cable peers"""
