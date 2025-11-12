@@ -1,11 +1,11 @@
 import json
 import logging
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
 from django.forms import ChoiceField, IntegerField, NumberInput
+from django.test import tag
 from django.urls import reverse
 from rest_framework import status
 
@@ -31,6 +31,7 @@ from nautobot.virtualization.models import VirtualMachine
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
 #       (due to the test_multi_select_field_value_after_bulk_update() test).
 #       At some point we should probably split this into separate classes.
+@tag("example_app")
 class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
     model = CustomField
 
@@ -397,6 +398,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             self.assertIsInstance(filter_field.widget, NumberInput)
 
 
+@tag("example_app")
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
         self.content_type = ContentType.objects.get_for_model(Location)
@@ -569,6 +571,7 @@ class ComputedFieldManagerTestCase(TestCase):
         self.assertQuerysetEqualAndNotEmpty(qs, listing)
 
 
+@tag("example_app")
 class CustomFieldDataAPITest(APITestCase):
     """
     Check that object representations in the REST API include their custom field data.
@@ -693,9 +696,8 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_json,
         ]
 
-        if "example_app" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
-            self.all_cfs.append(self.cf_plugin_field)
+        self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+        self.all_cfs.append(self.cf_plugin_field)
         self.statuses = Status.objects.get_for_model(Location)
 
         # Create some locations
@@ -717,8 +719,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
             self.cf_json.key: {"hello": "world"},
         }
-        if "example_app" in settings.PLUGINS:
-            self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
+        self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
         self.locations[1].validated_save()
         self.list_url = reverse("dcim-api:location-list")
         self.detail_url = reverse("dcim-api:location-detail", kwargs={"pk": self.locations[1].pk})
@@ -792,8 +793,7 @@ class CustomFieldDataAPITest(APITestCase):
                 self.cf_json.key: {"foo": "bar"},
             },
         }
-        if "example_app" in settings.PLUGINS:
-            data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
+        data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
         response = self.client.post(self.list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
@@ -865,9 +865,8 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Heading",
             self.cf_json.key: {"dict1": {"dict2": {}}},
         }
-        if "example_app" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
-            custom_field_data[self.cf_plugin_field.key] = "Custom Value"
+        self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+        custom_field_data[self.cf_plugin_field.key] = "Custom Value"
         data = (
             {
                 "name": "Location 3",
@@ -1169,6 +1168,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
 
+@tag("example_app")
 class CustomFieldImportTest(TestCase):
     """
     Test importing object custom field data along with the object itself.
@@ -2031,6 +2031,7 @@ class CustomFieldFilterTest(TestCase):
         )
 
 
+@tag("example_app")
 class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
     model = CustomFieldChoice
 
@@ -2367,9 +2368,9 @@ class CustomFieldTableTest(TestCase):
             "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
-            "choice_field": '<span class="label label-default">Bar</span>',
+            "choice_field": '<span class="badge bg-secondary">Bar</span>',
             "multi_choice_field": (
-                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>'
+                '<span class="badge bg-secondary">Bar</span> <span class="badge bg-secondary">Baz</span>'
             ),
         }
 

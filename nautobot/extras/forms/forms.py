@@ -5,6 +5,7 @@ from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -25,6 +26,7 @@ from nautobot.core.forms import (
     CommentField,
     CSVContentTypeField,
     CSVModelForm,
+    DatePicker,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -37,11 +39,12 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import MultiValueCharField
 from nautobot.core.forms.forms import ConfirmationForm
 from nautobot.core.forms.widgets import ClearableFileInput
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     ButtonClassChoices,
     CustomFieldFilterLogicChoices,
     DynamicGroupTypeChoices,
@@ -55,6 +58,11 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -117,12 +125,23 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
+    RelationshipModelFormMixin,
     TagsBulkEditFormMixin,
 )
 
 logger = logging.getLogger(__name__)
 
 __all__ = (
+    "ApprovalWorkflowDefinitionBulkEditForm",
+    "ApprovalWorkflowDefinitionFilterForm",
+    "ApprovalWorkflowDefinitionForm",
+    "ApprovalWorkflowFilterForm",
+    "ApprovalWorkflowStageDefinitionBulkEditForm",
+    "ApprovalWorkflowStageDefinitionFilterForm",
+    "ApprovalWorkflowStageDefinitionForm",
+    "ApprovalWorkflowStageDefinitionFormSet",
+    "ApprovalWorkflowStageFilterForm",
+    "ApprovalWorkflowStageResponseFilterForm",
     "BaseDynamicGroupMembershipFormSet",
     "ComputedFieldBulkEditForm",
     "ComputedFieldFilterForm",
@@ -133,7 +152,6 @@ __all__ = (
     "ConfigContextSchemaBulkEditForm",
     "ConfigContextSchemaFilterForm",
     "ConfigContextSchemaForm",
-    "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
@@ -214,6 +232,211 @@ __all__ = (
     "WebhookFilterForm",
     "WebhookForm",
 )
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowDefinitionForm(
+    BootstrapMixin,
+    CustomFieldModelFormMixin,
+    NoteModelFormMixin,
+    RelationshipModelFormMixin,
+):
+    """Form for creating and updating ApprovalWorkflowDefinition."""
+
+    model_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=True,
+        label="Model Content Type",
+    )
+    model_constraints = JSONField(
+        required=False,
+        label="Model Constraints",
+        help_text="Constraints for filtering selected model content type.<br>"
+        "Supports simple Django field lookups.<br>"
+        'Enter in <a href="https://json.org/">JSON</a> format.',
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        fields = "__all__"
+
+
+class ApprovalWorkflowDefinitionBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ApprovalWorkflowDefinition bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    model_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=True,
+        label="Model Content Type",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        nullable_fields = ["model_constraints"]
+
+
+class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowDefinition."""
+
+    model = ApprovalWorkflowDefinition
+    q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    model_content_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+    )
+    tags = TagFilterField(model)
+
+
+class ApprovalWorkflowStageDefinitionForm(NautobotModelForm):
+    """Form for creating and updating ApprovalWorkflowStageDefinition."""
+
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
+        required=True,
+        label="Approval Workflow Definition",
+    )
+    approver_group = DynamicModelChoiceField(
+        queryset=Group.objects.all(),
+        required=True,
+        label="Approver Group",
+        help_text="User group that can approve this stage.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        fields = "__all__"
+
+
+# ApprovalWorkFlow inline formset for use with providing dynamic rows when creating/editing choices
+# for `ApprovalWorkFlowInstance` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
+    parent_model=ApprovalWorkflowDefinition,
+    model=ApprovalWorkflowStageDefinition,
+    exclude=("_custom_field_data",),
+    extra=5,
+    widgets={
+        "name": forms.TextInput(attrs={"class": "form-control"}),
+        "sequence": forms.NumberInput(attrs={"class": "form-control"}),
+        "min_approvers": forms.NumberInput(attrs={"class": "form-control"}),
+        "denial_message": forms.TextInput(attrs={"class": "form-control"}),
+        "approver_group": forms.Select(attrs={"class": "form-control"}),
+    },
+)
+
+
+class ApprovalWorkflowStageDefinitionBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ApprovalWorkflowStageDefinition bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ApprovalWorkflowStageDefinition.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    sequence = forms.IntegerField(required=False, label="Sequence")
+    min_approvers = forms.IntegerField(required=False, label="Minimum Approvers")
+    denial_message = forms.CharField(required=False, label="Denial Message")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        nullable_fields = ["denial_message"]
+
+
+class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStageDefinition."""
+
+    model = ApprovalWorkflowStageDefinition
+    q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
+        required=False,
+        label="Approval Workflow Definition",
+    )
+    sequence = forms.IntegerField(required=False, label="Sequence")
+    min_approvers = forms.IntegerField(required=False, label="Minimum Approvers")
+    approver_group = DynamicModelChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        label="Approver Group",
+        help_text="User group that can approve this stage.",
+    )
+    tags = TagFilterField(model)
+
+
+class ApprovalWorkflowFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflow."""
+
+    model = ApprovalWorkflow
+    q = forms.CharField(required=False, label="Search")
+    approval_workflow_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowDefinition.objects.all(),
+        required=False,
+        label="Approval Workflow Definition",
+    )
+    object_under_review_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+        label="Object Under Review Content Type",
+    )
+    current_state = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ApprovalWorkflowStateChoices),
+        widget=StaticSelect2,
+        label="Current State",
+    )
+
+
+class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStage."""
+
+    model = ApprovalWorkflowStage
+    q = forms.CharField(required=False, label="Search")
+    approval_workflow = DynamicModelChoiceField(
+        queryset=ApprovalWorkflow.objects.all(),
+        required=False,
+        label="Approval Workflow",
+    )
+    approval_workflow_stage_definition = DynamicModelChoiceField(
+        queryset=ApprovalWorkflowStageDefinition.objects.all(),
+        required=False,
+        label="Approval Workflow Stage Definition",
+    )
+    state = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ApprovalWorkflowStateChoices),
+        widget=StaticSelect2,
+        label="State",
+    )
+    decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
+
+
+class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
+    """Filter form for ApprovalWorkflowStageResponse."""
+
+    model = ApprovalWorkflowStageResponse
+    q = forms.CharField(required=False, label="Search")
 
 
 #
@@ -321,6 +544,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
         required=False,
     )
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
+    device_families = DynamicModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False)
@@ -353,6 +577,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "locations",
             "roles",
             "device_types",
+            "device_families",
             "platforms",
             "cluster_groups",
             "clusters",
@@ -388,6 +613,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     )
     device_type = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(), to_field_name="model", required=False
+    )
+    device_family = DynamicModelMultipleChoiceField(
+        queryset=DeviceFamily.objects.all(), to_field_name="name", required=False
     )
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
@@ -602,12 +830,6 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 
             # Annotate the field in the list of CustomField form fields
             self.custom_fields.append(field_name)
-
-
-# 2.0 TODO: remove this class
-@class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
-class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
-    """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
 
 
 class CustomFieldBulkDeleteForm(ConfirmationForm):
@@ -1198,8 +1420,6 @@ class JobEditForm(NautobotModelForm):
             "dryrun_default",
             "hidden_override",
             "hidden",
-            "approval_required_override",
-            "approval_required",
             "soft_time_limit_override",
             "soft_time_limit",
             "time_limit_override",
@@ -1272,11 +1492,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
-    approval_required = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="Whether the job requires approval from another user before running",
-    )
     hidden = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
@@ -1343,10 +1558,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
-    clear_approval_required_override = forms.BooleanField(
-        required=False,
-        help_text="If checked, the values of approval required will be reverted to the default values defined in each Job's source code",
-    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1435,7 +1646,6 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     read_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    approval_required = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     is_job_hook_receiver = forms.NullBooleanField(
         initial=False,
         required=False,

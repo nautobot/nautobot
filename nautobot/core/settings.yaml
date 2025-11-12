@@ -162,22 +162,17 @@ properties:
     type: "string"
   BRANDING_FILEPATHS:
     default:
-      css: null
       favicon: null
-      header_bullet: null
       icon_16: null
       icon_32: null
       icon_180: null
       icon_192: null
       icon_mask: null
-      javascript: null
       logo: null
-      nav_bullet: null
     description: >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
       custom branding of your Nautobot instance.
-      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
-      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
+      Each of the assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
       If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
     details: |-
@@ -186,22 +181,15 @@ properties:
 
       +++ 2.2.4
           The `css` and `javascript` assets were added as options.
+
+      --- 3.0.0
+          The `header_bullet`, `nav_bullet`, `javascript`, and `css` assets were removed.
     properties:
-      css:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global CSS file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
-      header_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for various view headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
         default: null
@@ -227,21 +215,11 @@ properties:
         default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
-      javascript:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global JavaScript file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
-      nav_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for nav menu headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
     version_added: "1.2.0"
   BRANDING_PREPENDED_FILENAME:
@@ -758,16 +736,22 @@ properties:
       "`nautobot-server send_installation_metrics`": "../tools/nautobot-server.md#send_installation_metrics"
     type: "string"
     version_added: "1.6.0"
-  DEVICE_NAME_AS_NATURAL_KEY:
-    default: false
+  DEVICE_UNIQUENESS:
+    default: "location_tenant_name"
     description: >-
       `Device` names are not guaranteed globally-unique by Nautobot but in practice they often are.
-      Set this to `True` to use the device `name` alone as the natural key for `Device` objects.
-      Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
-    environment_variable: "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"
+      Select how Devices are uniquely identified:
+        - 'location_tenant_name': combination of Location + Tenant + Name
+        - 'name': Device name must be globally unique
+        - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+      The `DEVICE_UNIQUENESS` setting also determines which fields Nautobot treats as the natural key for a Device.
+        - If set to "location_tenant_name", the natural key is the combination of Name, Tenant, and Location.
+        - If set to "name", the natural key is the device name alone.
+        - If set to "none", Nautobot falls back to using the primary key for uniqueness.
+    environment_variable: "NAUTOBOT_DEVICE_UNIQUENESS"
     is_constance_config: true
-    type: "boolean"
-    version_added: "2.0.0"
+    type: "string"
+    version_added: "3.0.0"
   EVENT_BROKERS:
     default: {}
     description: >-

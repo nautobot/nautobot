@@ -1,6 +1,18 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import DynamicGroup, GitRepository, JobResult, ObjectChange
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobResultStatusChoices
+from nautobot.extras.models import ApprovalWorkflowStage, DynamicGroup, GitRepository, JobResult, ObjectChange
+
+
+def get_approval_workflow_stages(request):
+    """Callback function to collect pending approval workflow stage instances for panel."""
+    user = request.user
+    group_pks = user.groups.all().values_list("pk", flat=True)
+
+    return ApprovalWorkflowStage.objects.filter(
+        approval_workflow__current_state=ApprovalWorkflowStateChoices.PENDING,
+        state=ApprovalWorkflowStateChoices.PENDING,
+        approval_workflow_stage_definition__approver_group__pk__in=group_pks,
+    )[:15]
 
 
 def get_job_results(request):
@@ -40,6 +52,13 @@ layout = (
                 weight=300,
             ),
         ),
+    ),
+    HomePagePanel(
+        name="Approval Workflow",
+        permissions=["extras.view_approvalworkflowstage"],
+        weight=600,
+        custom_data={"approval_workflow_stages": get_approval_workflow_stages},
+        custom_template="panel_approvalworkflowstage.html",
     ),
     HomePagePanel(
         name="Data Sources",

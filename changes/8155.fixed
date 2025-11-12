@@ -1,0 +1,1 @@
+Fixed a GraphQL query error when executing queries with `limit` or `offset` as a non-superuser.

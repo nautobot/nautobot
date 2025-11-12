@@ -4,6 +4,7 @@ from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.ui.base import PermissionsMixin
 from nautobot.core.ui.breadcrumbs import (
     AncestorsBreadcrumbs,
+    AncestorsInstanceBreadcrumbItem,
     BaseBreadcrumbItem,
     Breadcrumbs,
     context_object_attr,
@@ -12,7 +13,19 @@ from nautobot.core.ui.breadcrumbs import (
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
-from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.choices import (
+    EChartsThemeColors,
+    EChartsTypeChoices,
+    LayoutChoices,
+    NavigationIconChoices,
+    NavigationWeightChoices,
+    SectionChoices,
+)
+from nautobot.core.ui.echarts import (
+    EChartsBase,
+    queryset_to_nested_dict_keys_as_series,
+    queryset_to_nested_dict_records_as_series,
+)
 from nautobot.core.ui.homepage import (
     HomePageBase,
     HomePageGroup,
@@ -35,6 +48,7 @@ from nautobot.core.ui.object_detail import (
     DataTablePanel,
     DistinctViewTab,
     DropdownButton,
+    EChartsPanel,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -53,6 +67,7 @@ from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
     "AncestorsBreadcrumbs",
+    "AncestorsInstanceBreadcrumbItem",
     "Banner",
     "BannerClassChoices",
     "BaseBreadcrumbItem",
@@ -64,6 +79,10 @@ __all__ = (
     "DataTablePanel",
     "DistinctViewTab",
     "DropdownButton",
+    "EChartsBase",
+    "EChartsPanel",
+    "EChartsThemeColors",
+    "EChartsTypeChoices",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
@@ -81,6 +100,8 @@ __all__ = (
     "NavMenuImportButton",
     "NavMenuItem",
     "NavMenuTab",
+    "NavigationIconChoices",
+    "NavigationWeightChoices",
     "ObjectDetailContent",
     "ObjectFieldsPanel",
     "ObjectTextPanel",
@@ -95,5 +116,7 @@ __all__ = (
     "Titles",
     "ViewNameBreadcrumbItem",
     "context_object_attr",
+    "queryset_to_nested_dict_keys_as_series",
+    "queryset_to_nested_dict_records_as_series",
     "render_component_template",
 )

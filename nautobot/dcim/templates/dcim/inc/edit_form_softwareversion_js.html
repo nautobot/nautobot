@@ -46,7 +46,7 @@
     }
 
     function hide_software_image_container(){
-        software_version_image_container.style.display = 'none';
+        software_version_image_container.style.setProperty('display', 'none', 'important');
         software_version_image_description.innerHTML = '';
         clear_software_image_list();
     }
@@ -55,7 +55,7 @@
         clear_software_image_list();
         software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
         software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
-        software_version_image_container.style.display = 'block';
+        software_version_image_container.style.setProperty('display', 'flex', 'important');
         retrieve_software_images(software_image_url, {'software_version': version_id});
         software_version_image_list.style.visibility = 'visible';
     }

@@ -7,31 +7,31 @@
               method="post" action="{% url 'extras:gitrepository_dryrun' pk=object.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-info">
-                <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
+                <span class="mdi mdi-book-refresh" aria-hidden="true"></span> Dry-Run
             </button>
         </form>
         <form class="form-inline" style="display: inline-block"
               method="post" action="{% url 'extras:gitrepository_sync' pk=object.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
-                <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
+                <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span> Sync
             </button>
         </form>
     {% endif %}
 {% endblock extra_buttons %}
 
 {% block extra_nav_tabs %}
-    <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
-        <a href="{% url 'extras:gitrepository_result' pk=object.pk %}">Synchronization Status</a>
+    <li class="nav-item" role="presentation">
+        <a href="{% url 'extras:gitrepository_result' pk=object.pk %}" class="nav-link{% if active_tab == 'result' %} active{% endif %}">Synchronization Status</a>
     </li>
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Repository Details</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Remote URL</td>
                 <td>{{ object.remote_url }}</td>
@@ -56,16 +56,16 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Provided Data Types</strong>
         </div>
-        <table class="table table-hover panel-body">
+        <table class="table table-hover card-body">
             {% for entry in datasource_contents %}
                 <tr>
                     <td>
-                        <span style="display: inline-block" class="label label-info">
-                            <i class="mdi {{ entry.icon }}"></i>
+                        <span style="display: inline-block" class="badge bg-info">
+                            <span class="mdi {{ entry.icon }}"></span>
                         </span>
                         {{ entry.name|title }}</td>
                     <td>

@@ -8,22 +8,13 @@
 </a>
 {% endblock extra_buttons %}
 
-{% block panel_buttons %}
-<a onClick="alert('I am from the detail view template.')" class="btn btn-primary">
-    <span class="mdi mdi-help" aria-hidden="true"></span> Panel Buttons go here
-</a>
-<a onClick="alert('I am from the detail view template.')" class="btn btn-primary">
-    <span class="mdi mdi-help" aria-hidden="true"></span> Another Panel Button
-</a>
-{% endblock panel_buttons %}
-
 {% block content_left_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>AnotherExampleModel (Left Page Content)</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <td>Name</td>
             <td><span>{{ object.name }}</span></td>
@@ -45,12 +36,12 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>View Template Right Page Content</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <th>Things</th>
             <th>Stuff</th>
@@ -64,12 +55,12 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>View Template Full Width Page Content</strong>
     </div>
 
-    <table class="table table-hover panel-body attr-table">
+    <table class="table table-hover card-body attr-table">
         <tr>
             <th>ID</th>
             <th>Name</th>

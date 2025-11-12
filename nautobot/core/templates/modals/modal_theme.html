@@ -4,34 +4,23 @@
 <!-- Theme Setting Modal -->
 <div id="theme_modal" class="modal fade" role="dialog">
     <div class="modal-dialog modal-lg">
-        <!-- Modal content-->
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Select A Theme</h4>
+                <h4 class="modal-title">Select a Theme</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="table-responsive-md">
-                    <table class="table theme-table">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="text-center">Light</th>
-                                <th scope="col" class="text-center">Dark</th>
-                                <th scope="col" class="text-center">System</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td id="td-light-theme"><a href="#" onclick="toggleTheme('light');" id="btn-light-theme"><img src="{% static 'img/light-theme.png' %}" id="img-light-theme" alt="Light" height="170" width="232" class="img-responsive" /></a></td>
-                                <td id="td-dark-theme"><a href="#" onclick="toggleTheme('dark');" id="btn-dark-theme"><img src="{% static 'img/dark-theme.png' %}" id="img-dark-theme" alt="Dark" height="170" width="232" class="img-responsive" /></a></td>
-                                <td id="td-system-theme"><a href="#" onclick="toggleTheme('system');" id="btn-system-theme"><img src="{% static 'img/system-theme.png' %}" id="img-system-theme" alt="Toggle" height="170" width="232" class="img-responsive" /></a></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <dl class="align-items-center column-gap-20 d-grid row-gap-16 mb-0 text-center" style="grid-auto-flow: column; grid-template: repeat(2, auto) / repeat(3, 1fr);">
+                    <dt>Light</dt>
+                    <dd><button class="btn overflow-hidden p-0" data-nb-theme="light"><img src="{% static 'img/light-theme.png' %}" alt="Light Theme" class="mx-auto my-0 w-100" /></button></dd>
+                    <dt>Dark</dt>
+                    <dd><button class="btn overflow-hidden p-0" data-nb-theme="dark"><img src="{% static 'img/dark-theme.png' %}" alt="Dark Theme" class="mx-auto my-0 w-100" /></button></dd>
+                    <dt>System</dt>
+                    <dd><button class="btn overflow-hidden p-0" data-nb-theme="system"><img src="{% static 'img/system-theme.png' %}" alt="System Theme" class="mx-auto my-0 w-100" /></button></dd>
+                </dl>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" id="dismiss-modal-theme" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" id="dismiss-modal-theme" data-bs-dismiss="modal"><span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel</button>
             </div>
         </div>
     </div>
