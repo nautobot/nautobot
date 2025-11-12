@@ -382,7 +382,7 @@ class ClusterTypeView(generic.ObjectView):
 
 1. There is no need to override `get_extra_context` method or fetch data for the table manually.
 2. Proper labels are set automatically both for `Cluster Type` and `Clusters` panel according to the models names.
-3. `ObjectsTablePanel` has built in support for `Add` button and render `Add cluster` button automatically.
+3. `ObjectsTablePanel` has built in support for `Add` button and render `Add cluster` button automatically.  This button can be disabled by setting `add_button_route=None` in the table attributes.
 4. There is no need for custom template or to maintain custom HTML file. HTML template is standardized across the Nautobot.
 5. Pagination support is also built-in into `ObjectsTablePanel`.
 6. You can easily shuffle Panels if needed or adjust displayed fields at the Panel declaration level without need to look for HTML template.
