@@ -712,6 +712,7 @@ nav:
           - Testing: "development/core/testing.md"
           - User Preferences: "development/core/user-preferences.md"
           - UI Component Framework: "development/core/ui-component-framework.md"
+          - Media Standards: "development/core/media-standards.md"
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
