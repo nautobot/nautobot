@@ -123,10 +123,12 @@ In this example, we configure:
 
 Ensure the following IP Addresses exist in Nautobot's IPAM:
 
-- **Virtual IP (VIP):** `192.0.2.1`
+- **Virtual IP (VIP):** `10.0.0.1`
 - **Pool Member IP:** `10.0.0.1`
 
-![F5 Simple IP Addresses](./images/load-balancer-f5-simple-1.png)
+![F5 Simple IP Addresses](./images/load-balancer/load-balancer-f5-simple-1-light.png#only-light){ .on-glb }
+![F5 Simple IP Addresses](./images/load-balancer/load-balancer-f5-simple-1-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/ip-addresses/`"
 
 ### 2. Configuring Load Balancer Pool
 
@@ -319,12 +321,14 @@ In this advanced configuration scenario, we illustrate:
 
 ### 1. Advanced IPAM Configuration
 
-![F5 Advanced IPAM Configuration](./images/load-balancer-f5-advanced-1.png)
+![F5 Advanced IPAM Configuration](./images/load-balancer/load-balancer-f5-advanced-1-light.png#only-light){ .on-glb }
+![F5 Advanced IPAM Configuration](./images/load-balancer/load-balancer-f5-advanced-1-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/ip-addresses/`"
 
 Ensure these IP Addresses are available in Nautobot's IPAM:
 
-- **Virtual IP (VIP):** `10.230.15.214`
-- **Pool Member IPs:** `10.230.32.121`, `10.230.32.122`, `10.230.32.123`
+- **Virtual IP (VIP):** `10.0.20.1`
+- **Pool Member IPs:** `10.0.20.2`, `10.0.20.3`, `10.0.20.4`
 
 ### 2. Health Check Configuration
 
