@@ -397,14 +397,16 @@ Affected jobs (Names):
 
 ### Predefined Approval Workflow
 
-As alluded to above, when initially installing or upgrading to Nautobot v3.0, seed data for the following use cases will be automatically provisioned:
+When installing or upgrading to Nautobot v3.0, the following seed data is automatically provisioned:
 
-- Permissions created for the 3 identified personas.
-- Groups created for the 3 identified personas, with permissions applied but no initial group members.
-- An Approval Workflow created that leverages the approval personas defined but does not initially apply to any specific Jobs.
+- Permissions for the three approval workflow personas.
+- Groups for each persona, with permissions assigned (no initial group members).
+- An Approval Workflow definition that references these personas but does not apply to any specific jobs by default.
 
 In order to get like for like workflow, you should do the following:
 
-1. Update the Approval Workflow `Model Constraints` to represent the jobs you wish to control.
-2. Add users that initially run these job to the `nautobot-default-scheduledjobs-operator` group.
-3. Add users that can approve these jobs to the `nautobot-default-scheduledjobs-approver` group.
+1. Update the Approval Workflow **Model Constraints** to match the jobs you want to control. By default, a placeholder value (`JobThatDoesNotExist`) is set, replace this with the name of your job (e.g., `BackupJob` or `LogsCleanup`) or any other valid constraint.
+2. Add users who will run jobs requiring approval to the `nautobot-default-scheduledjobs-operator` group.
+3. Add users who can approve these jobs to the `nautobot-default-scheduledjobs-approver` group.
+
+New users should review the [Jobs permission checklist](../../user-guide/platform-functionality/jobs/managing-jobs.md#permissions-checklist) to ensure all necessary permissions are in place.

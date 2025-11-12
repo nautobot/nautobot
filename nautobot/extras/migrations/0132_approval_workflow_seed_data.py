@@ -6,9 +6,13 @@ from django.db import migrations
 def create_default_scheduledjob_workflow(apps, schema_editor):
     Group = apps.get_model("auth", "Group")
     ObjectPermission = apps.get_model("users", "ObjectPermission")
+    ApprovalWorkflow = apps.get_model("extras", "ApprovalWorkflow")
+    ApprovalWorkflowStage = apps.get_model("extras", "ApprovalWorkflowStage")
+    ApprovalWorkflowStageResponse = apps.get_model("extras", "ApprovalWorkflowStageResponse")
     ApprovalWorkflowDefinition = apps.get_model("extras", "ApprovalWorkflowDefinition")
     ApprovalWorkflowStageDefinition = apps.get_model("extras", "ApprovalWorkflowStageDefinition")
     ContentType = apps.get_model("contenttypes", "ContentType")
+    ScheduledJob = apps.get_model("extras", "ScheduledJob")
 
     # --- Groups ---
     groups = {
@@ -24,13 +28,12 @@ def create_default_scheduledjob_workflow(apps, schema_editor):
     }
 
     # --- Content Types ---
-    ct_workflow = ContentType.objects.get(app_label="extras", model="approvalworkflow")
-    ct_stage = ContentType.objects.get(app_label="extras", model="approvalworkflowstage")
-    ct_response = ContentType.objects.get(app_label="extras", model="approvalworkflowstageresponse")
-    ct_workflow_def = ContentType.objects.get(app_label="extras", model="approvalworkflowdefinition")
-    ct_stage_def = ContentType.objects.get(app_label="extras", model="approvalworkflowstagedefinition")
-    ct_scheduled_job = ContentType.objects.get(app_label="extras", model="scheduledjob")
-
+    ct_workflow = ContentType.objects.get_for_model(ApprovalWorkflow)
+    ct_stage = ContentType.objects.get_for_model(ApprovalWorkflowStage)
+    ct_response = ContentType.objects.get_for_model(ApprovalWorkflowStageResponse)
+    ct_workflow_def = ContentType.objects.get_for_model(ApprovalWorkflowDefinition)
+    ct_stage_def = ContentType.objects.get_for_model(ApprovalWorkflowStageDefinition)
+    ct_scheduled_job = ContentType.objects.get_for_model(ScheduledJob)
     # --- Approval Workflow Definition ---
     awf_def, _ = ApprovalWorkflowDefinition.objects.update_or_create(
         name="Scheduled Jobs Approval - Example",
