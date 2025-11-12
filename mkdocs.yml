@@ -699,6 +699,7 @@ nav:
           - Best Practices: "development/core/best-practices.md"
           - Caching: "development/core/caching.md"
           - Controllers: "development/core/controllers.md"
+          - Docs Media Standards: "development/core/docs-media-standards.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
           - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
