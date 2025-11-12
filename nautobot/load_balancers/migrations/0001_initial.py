@@ -3,6 +3,7 @@
 import uuid
 
 import django.core.serializers.json
+import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -86,7 +87,12 @@ class Migration(migrations.Migration):
                 ("interval", models.PositiveIntegerField(blank=True, null=True)),
                 ("retry", models.PositiveIntegerField(blank=True, null=True)),
                 ("timeout", models.PositiveIntegerField(blank=True, null=True)),
-                ("port", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "port",
+                    models.PositiveIntegerField(
+                        blank=True, null=True, validators=[django.core.validators.MaxValueValidator(65535)]
+                    ),
+                ),
                 ("health_check_type", models.CharField(blank=True, max_length=255)),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
                 (
@@ -175,7 +181,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("label", models.CharField(blank=True, max_length=255)),
-                ("port", models.PositiveIntegerField()),
+                ("port", models.PositiveIntegerField(validators=[django.core.validators.MaxValueValidator(65535)])),
                 ("ssl_offload", models.BooleanField(default=False)),
             ],
             options={
@@ -203,7 +209,12 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("name", models.CharField(max_length=255)),
-                ("port", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "port",
+                    models.PositiveIntegerField(
+                        blank=True, null=True, validators=[django.core.validators.MaxValueValidator(65535)]
+                    ),
+                ),
                 ("protocol", models.CharField(blank=True, max_length=255)),
                 ("source_nat_type", models.CharField(blank=True, max_length=255)),
                 ("load_balancer_type", models.CharField(blank=True, max_length=255)),

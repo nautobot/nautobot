@@ -36,6 +36,7 @@ window.$ = window.jQuery;
 import 'jquery-ui';
 import 'select2';
 
+import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
@@ -53,12 +54,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // History
   loadState();
   window.nb.history = { saveState };
+
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
   [...document.querySelectorAll('[data-bs-toggle="tooltip"]')].forEach((tooltip) => new bootstrap.Tooltip(tooltip));
 
   // Sidenav
   initializeSidenav();
+
+  // Checkbox
+  window.nb.checkbox = { initializeCheckboxes };
 
   // Collapse
   initializeCollapseToggleAll();
