@@ -16,70 +16,92 @@ Simply querying the `/api/dcim/devices/` API route provides:
 
     ```json
     {
-      "count": 2,
-      "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=2",
-      "previous": "https://demo.nautobot.com/api/dcim/devices/?limit=1",
+      "count": 975,
+      "next": "https://next.demo.nautobot.com/api/dcim/devices/?limit=1&offset=3",
+      "previous": "https://next.demo.nautobot.com/api/dcim/devices/?limit=1&offset=1",
       "results": [
         {
-          "id": "c8886c88-6eff-4c4f-a079-4ef16b53d4f6",
-          "url": "https://demo.nautobot.com/api/dcim/devices/c8886c88-6eff-4c4f-a079-4ef16b53d4f6/",
-          "name": "ams-edge-02",
-          "display": "ams-edge-02",
-          "device_type": {
-            "id": "244ea351-3c7a-4d23-ba80-5db6b65312cc",
-            "url": "https://demo.nautobot.com/api/dcim/device-types/244ea351-3c7a-4d23-ba80-5db6b65312cc/",
-            "manufacturer": {
-              "id": "687f53d9-2c51-40fd-83aa-875e43d01a05",
-              "url": "https://demo.nautobot.com/api/dcim/manufacturers/687f53d9-2c51-40fd-83aa-875e43d01a05/",
-              "name": "Arista",
-            },
-            "model": "DCS-7280CR2-60",
-            "display": "Arista DCS-7280CR2-60"
-          },
-          "role": {
-            "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
-            "url": "https://demo.nautobot.com/api/dcim/device-roles/a3637471-6b4d-4f5a-a249-838d621abe60/",
-            "name": "edge",
-          },
-          "tenant": null,
-          "platform": null,
-          "serial": "",
-          "asset_tag": null,
-          "location": {
-            "id": "4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3",
-            "url": "https://demo.nautobot.com/api/dcim/locations/4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3/",
-            "name": "ams",
-          },
-          "rack": {
-            "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
-            "url": "https://demo.nautobot.com/api/dcim/racks/bff3f7af-bd77-49b6-a57a-9c4b8fc7673a/",
-            "name": "ams-102",
-            "display": "ams-102"
-          },
-          "position": 40,
+          "id": "9fc491bd-e2cc-535d-bcf9-6c1e05284448",
+          "object_type": "dcim.device",
+          "display": "ams01-dsw-01",
+          "url": "https://next.demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/",
+          "natural_slug": "ams01-dsw-01_emea-net-eng_ams01_netherlands_emea_9fc4",
           "face": {
             "value": "front",
             "label": "Front"
           },
-          "parent_device": null,
-          "status": {
-            "value": "active",
-            "label": "Active"
-          },
-          "primary_ip": null,
-          "primary_ip4": null,
-          "primary_ip6": null,
-          "cluster": null,
-          "virtual_chassis": null,
-          "vc_position": null,
-          "vc_priority": null,
-          "comments": "",
           "local_config_context_data": null,
-          "tags": [],
+          "local_config_context_data_owner_object_id": null,
+          "name": "ams01-dsw-01",
+          "serial": "JSH160115GV",
+          "asset_tag": null,
+          "position": 36,
+          "device_redundancy_group_priority": null,
+          "vc_position": 1,
+          "vc_priority": 1,
+          "comments": "",
+          "local_config_context_schema": null,
+          "local_config_context_data_owner_content_type": null,
+          "device_type": {
+            "id": "d04d0090-752e-5d1c-8a58-f17971b6d39c",
+            "object_type": "dcim.devicetype",
+            "url": "https://next.demo.nautobot.com/api/dcim/device-types/d04d0090-752e-5d1c-8a58-f17971b6d39c/"
+          },
+          "status": {
+            "id": "bf03f613-7663-5ed6-bee3-f05d588065cc",
+            "object_type": "extras.status",
+            "url": "https://next.demo.nautobot.com/api/extras/statuses/bf03f613-7663-5ed6-bee3-f05d588065cc/"
+          },
+          "role": {
+            "id": "5c96af63-530e-585c-88fa-de4e4b6000ae",
+            "object_type": "extras.role",
+            "url": "https://next.demo.nautobot.com/api/extras/roles/5c96af63-530e-585c-88fa-de4e4b6000ae/"
+          },
+          "tenant": {
+            "id": "13a556d1-be59-5e22-9112-8f77250e6ece",
+            "object_type": "tenancy.tenant",
+            "url": "https://next.demo.nautobot.com/api/tenancy/tenants/13a556d1-be59-5e22-9112-8f77250e6ece/"
+          },
+          "platform": {
+            "id": "dd6fd4c1-1bc3-5af4-af27-41bc2dea1fbe",
+            "object_type": "dcim.platform",
+            "url": "https://next.demo.nautobot.com/api/dcim/platforms/dd6fd4c1-1bc3-5af4-af27-41bc2dea1fbe/"
+          },
+          "location": {
+            "id": "ec4c2953-b564-57c4-91df-cd1f4f92b727",
+            "object_type": "dcim.location",
+            "url": "https://next.demo.nautobot.com/api/dcim/locations/ec4c2953-b564-57c4-91df-cd1f4f92b727/"
+          },
+          "rack": {
+            "id": "2d5fc5b1-b520-5e1f-8687-73888995cfbb",
+            "object_type": "dcim.rack",
+            "url": "https://next.demo.nautobot.com/api/dcim/racks/2d5fc5b1-b520-5e1f-8687-73888995cfbb/"
+          },
+          "primary_ip4": {
+            "id": "22ff34cb-3762-546d-bf7d-9979a7eeb282",
+            "object_type": "ipam.ipaddress",
+            "url": "https://next.demo.nautobot.com/api/ipam/ip-addresses/22ff34cb-3762-546d-bf7d-9979a7eeb282/"
+          },
+          "primary_ip6": null,
+          "virtual_chassis": {
+            "id": "0342aaed-0e9b-4ce9-8d9d-a44603adb702",
+            "object_type": "dcim.virtualchassis",
+            "url": "https://next.demo.nautobot.com/api/dcim/virtual-chassis/0342aaed-0e9b-4ce9-8d9d-a44603adb702/"
+          },
+          "device_redundancy_group": null,
+          "software_version": {
+            "id": "f054d40d-4751-54aa-90c3-61de73867d10",
+            "object_type": "dcim.softwareversion",
+            "url": "https://next.demo.nautobot.com/api/dcim/software-versions/f054d40d-4751-54aa-90c3-61de73867d10/"
+          },
+          "secrets_group": null,
+          "controller_managed_device_group": null,
+          "created": "2025-03-11T15:38:40.480047Z",
+          "last_updated": "2025-03-11T15:38:58.609687Z",
+          "notes_url": "https://next.demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/notes/",
           "custom_fields": {},
-          "config_context": {},
-          "created": "2021-02-25T00:00:00Z",
-          "last_updated": "2021-02-25T14:51:57.609598"
+          "tags": [],
+          "parent_bay": null
         }
       ]
     }
@@ -93,21 +115,29 @@ GraphQL reduces the complexity of performing multiple API calls and correlating 
 
 In Nautobot, there is a link to the GraphQL web interface at the bottom right-hand side of the page. The GraphQL web interface is called GraphiQL. Navigating to the URI (`/graphql`), brings up the GraphiQL tool for creating queries. This interface is useful for exploring the possibilities of GraphQL and validating that written queries execute successfully.
 
-![GraphiQL Interface](./images/graphql/00-graphiql.png)
+![GraphiQL Interface](./images/graphql/00-graphiql-light.png#only-light){ .on-glb }
+![GraphiQL Interface](./images/graphql/00-graphiql_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ### Documentation Explorer
 
 If you're new to GraphQL, take a little bit of time to explore the *Documentation Explorer*. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within *Documentation Explorer* is specific to creating queries in Nautobot.
 
-![Documentation Explorer](./images/graphql/01-graphiql-explorer.png)
+![Documentation Explorer](./images/graphql/01-graphiql-explorer-light.png#only-light){ .on-glb }
+![Documentation Explorer](./images/graphql/01-graphiql-explorer-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 In the *Documentation Explorer*, search for `devices`. The results are all of the models that utilize the `devices` model.
 
-![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query.png)
+![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query-light.png#only-light){ .on-glb }
+![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 From the `devices` query, select `devices` from `Query.devices`. This will display all of the potential query fields from devices.
 
-![Documentation Explorer: Device Attributes](./images/graphql/03-graphiql-explorer-device-attributes.png)
+![Documentation Explorer: Device Attributes](./images/graphql/03-graphiql-explorer-device-attributes-light.png#only-light){ on-glb }
+![Documentation Explorer: Device Attributes](./images/graphql/03-graphiql-explorer-device-attributes-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ### First Query
 
@@ -126,11 +156,15 @@ query {
 This query will retrieve a list of all devices by their hostname.
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/04-graphql-query-01.png)
+    ![GraphQL: Query Results](./images/graphql/04-graphql-query-01-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/04-graphql-query-01-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
-![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete.png)
+![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete-light.png#only-light){ .on-glb }
+![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ```graphql
 query {
@@ -146,7 +180,9 @@ query {
 The result is a list of all the devices by their hostname and associated interfaces by their names.
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/06-graphql-query-02.png)
+    ![GraphQL: Query Results](./images/graphql/06-graphql-query-02-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/06-graphql-query-02-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
@@ -169,37 +205,43 @@ query {
 The results of the query look like:
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/07-graphql-query-03.png)
+    ![GraphQL: Query Results](./images/graphql/07-graphql-query-03-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/07-graphql-query-03-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ### Filtering Queries
 
-These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "ams") { name }}` will display all devices in the `ams` location.
+These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "AMS01") { name }}` will display all devices in the `AMS01` location.
 
-As an example. We can query devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "ams") { name }}` will display all devices in the `ams` location.
+As an example. We can query devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "AMS01") { name }}` will display all devices in the `AMS01` location.
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/08-graphql-query-04.png)
+    ![GraphQL: Query Results](./images/graphql/08-graphql-query-04-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/08-graphql-query-04-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `location`.
 
 ```graphql
 query {
-  devices(location: "ams", role: "edge") {
+  devices(location: "AMS01", role: "branch_access") {
     name
   }
 }
 ```
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/09-graphql-query-05.png)
+    ![GraphQL: Query Results](./images/graphql/09-graphql-query-05-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/09-graphql-query-05-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
 
 ```graphql
 query {
-  devices(location: "ams", role: "edge") {
+  devices(location: "AMS01", role: "branch_access") {
     name
-    interfaces(name: "Ethernet1/1") {
+    interfaces(name: "GigabitEthernet1") {
       name
     }
   }
@@ -208,10 +250,10 @@ query {
 
 ```graphql
 query {
-  locations(name: "ams") {
-    devices(role: "edge") {
+  locations(name: "AMS01") {
+    devices(role: "branch_access") {
       name
-      interfaces(name: "Ethernet1/1") {
+      interfaces(name: "GigabitEthernet1") {
         name
       }
     }
@@ -223,7 +265,7 @@ You can also paginate the results returned to you when the data set gets larger.
 
     ```graphql
     query {
-      devices(location: "ams01", limit: 1, offset: 1) {
+      devices(location: "AMS01", limit: 1, offset: 1) {
         name
       }
     }
@@ -236,9 +278,11 @@ You can also paginate the results returned to you when the data set gets larger.
 
 Now that we've explored how to use the GraphiQL interface to help us create GraphQL queries, let's take our queries and call them with the REST API. This is where the real advantage is going to come in to play, because it will allow us to utilize these queries in a programmatic way.
 
-![GraphQL: Swagger](./images/graphql/10-graphql-swagger.png)
+![GraphQL: Swagger](./images/graphql/10-graphql-swagger-light.png#only-light){ .on-glb }
+![GraphQL: Swagger](./images/graphql/10-graphql-swagger-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/api/docs/`"
 
-From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
+From the [Nautobot Swagger documentation](https://next.demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
 
 To simplify the process even more, we'll utilize the [PyNautobot SDK](https://pynautobot.readthedocs.io/en/latest/index.html).
 
@@ -282,7 +326,7 @@ The contents of the `query` variable was taken directly from the example above w
 import pynautobot
 import json
 
-variables = {"location_name": "ams"}
+variables = {"location_name": "AMS01"}
 query = """
 query ($location_name: String!) {
   devices (location: $location_name) {
@@ -306,7 +350,7 @@ gql = nb.graphql.query(query=query, variables=variables)
 print(json.dumps(gql.json, indent=2))
 ```
 
-In the updated script, we add the `variables = {"location_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `location`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` location. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
+In the updated script, we add the `variables = {"location_name": "AMS01"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `location`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `AMS01` location. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
 ### Saving Queries
 
