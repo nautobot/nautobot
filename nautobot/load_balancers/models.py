@@ -18,7 +18,7 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         to="ipam.IPAddress", on_delete=models.PROTECT, related_name="virtual_servers", verbose_name="VIP"
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    port = models.PositiveIntegerField(blank=True, null=True)
+    port = models.PositiveIntegerField(blank=True, null=True, max_value=65535)
     protocol = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, choices=choices.ProtocolChoices)
     source_nat_pool = models.ForeignKey(
         to="ipam.Prefix",
@@ -200,7 +200,7 @@ class LoadBalancerPoolMember(PrimaryModel):  # pylint: disable=too-many-ancestor
         related_name="load_balancer_pool_members",
         on_delete=models.PROTECT,
     )
-    port = models.PositiveIntegerField()
+    port = models.PositiveIntegerField(max_value=65535)
     ssl_offload = models.BooleanField(
         default=False,
         verbose_name="SSL Offload",
@@ -262,7 +262,7 @@ class HealthCheckMonitor(PrimaryModel):  # pylint: disable=too-many-ancestors
     interval = models.PositiveIntegerField(blank=True, null=True)
     retry = models.PositiveIntegerField(blank=True, null=True, help_text="Number of retries before marking as down")
     timeout = models.PositiveIntegerField(blank=True, null=True)
-    port = models.PositiveIntegerField(blank=True, null=True)
+    port = models.PositiveIntegerField(blank=True, null=True, max_value=65535)
     health_check_type = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.HealthCheckTypeChoices,
