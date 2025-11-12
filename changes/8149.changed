@@ -1,0 +1,1 @@
+Disabled smooth scroll in order to display "Please fill out this field" tooltip on required fields which are not in the viewport during form submission.
