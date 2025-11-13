@@ -420,6 +420,8 @@ $btn-close-filter-dark:      invert(100%); /* $black-0-dark: #ffffff; */
 $btn-close-white-filter:     $btn-close-filter-dark;
 
 /* Code */
+$code-font-size: $font-size-base;
+
 $kbd-padding-y: map.get($spacers, 1);
 $kbd-padding-x: map.get($spacers, 4);
 $kbd-color:     var(--#{$prefix}secondary-color);
@@ -1455,6 +1457,10 @@ textarea {
 }
 
 /* Code */
+code:not(.hljs) {
+  @extend kbd;
+}
+
 pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
   background: var(--#{$prefix}secondary-bg);
   border-radius: $border-radius;
