@@ -64,7 +64,7 @@ const handleSyntaxHighlighterThemeChange = (theme) => {
   if (highlighterLinks.length === 1) {
     // We send two stylesheets on the initial page with media queries, but after that only one is present which we need to swap out.
     const [syntaxLinkElement] = highlighterLinks;
-    const css_file = (theme === THEME_DARK) ? 'github-dark.min.css' : 'github.min.css';
+    const css_file = theme === THEME_DARK ? 'github-dark.min.css' : 'github.min.css';
     syntaxLinkElement.href = syntaxLinkElement.href.replace(/github(-dark)?\.min\.css/, css_file);
   }
 };
@@ -76,12 +76,12 @@ const handleSyntaxHighlighterThemeChange = (theme) => {
  */
 const handleEchartsThemeChange = (theme) => {
   // If using Echarts, we need to update the theme there as well.
-  const echart_instances = document.querySelectorAll("div[_echarts_instance_]");
+  const echart_instances = document.querySelectorAll('div[_echarts_instance_]');
   echart_instances?.forEach((instance) => {
     const options = JSON.parse(document.getElementById(`echarts-config-${instance.id}`).textContent);
     const colors = Array.isArray(options.color)
-                    ? options.color.map((colorObj) => colorObj?.[theme] || colorObj?.light || colorObj)
-                    : options.color
+      ? options.color.map((colorObj) => colorObj?.[theme] || colorObj?.light || colorObj)
+      : options.color;
     window.echarts.getInstanceByDom(instance)?.setOption({
       color: colors,
       darkMode: theme === THEME_DARK,
@@ -90,12 +90,12 @@ const handleEchartsThemeChange = (theme) => {
 };
 
 /**
- * Set Nautobot theme.
+ * Set Nautobot theme
  * @param {('dark'|'light'|'system'|null)} theme - Nautobot theme to be set. If `null`, determine theme based on existing user choice or system preference.
  * @returns {void} Do not return any value, set given `theme` and save it into a persistent store if `manual` is `true`.
  */
 const setTheme = (theme = null) => {
-  if(theme !== null && isValidThemeChoice(theme)) {
+  if (theme !== null && isValidThemeChoice(theme)) {
     // An explicit theme was provided, so we persist the choice.
     persistThemeChoice(theme);
   }
@@ -147,15 +147,15 @@ const handleThemeChoiceUpgradeAndSetDefault = () => {
    * We will also keep the `theme` cookie as the "determined" theme for server-side rendering purposes.
    * Generally we shouldn't need this as good media queries should handle it, but it's here for completeness.
    * For example, some SVG renderings on the server may need to know the theme.
-   * 
+   *
    * To handle this upgrade scenario, we will:
    * 1. Check if `theme_choice` cookie exists. If it does, we assume the user has already "upgraded" and do nothing.
    * 2. If `theme_choice` cookie does not exist, we check localStorage for the user's theme choice.
    * 3. If localStorage has a valid theme choice, we persist it to the `theme_choice` cookie.
    * 4. Finally, we remove the theme from localStorage to complete the migration.'
-   * 
+   *
    * We can remove/refactor this in 4.0 for certain, but likely in 3.1+.
-   * 
+   *
    * In that scenario, if the theme_choice cookie is missing, we can default to 'system' without checking localStorage.
    */
 
