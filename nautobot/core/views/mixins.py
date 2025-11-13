@@ -1049,7 +1049,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
                     self.success_url = url
-                self.success_url = request.get_full_path()
+                else:
+                    self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
