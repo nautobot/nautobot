@@ -2,7 +2,7 @@
 
 This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. While Nautobot supports Wireless Networks managed in various modes, in this example we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
 
-![Central Mode Diagram](images/wireless/central-mode.png)
+![Central Mode Diagram](images/wireless/central-mode.png){ .on-glb }
 
 ## Optional Preparation
 
@@ -21,7 +21,9 @@ To create a Wireless Network:
 2. Select **Wireless Networks** under the **Wireless** group.
 3. Click the blue **+ Add Wireless Network** button.
 
-![Add Wireless Network](images/wireless/wireless-network-add.png)
+![Add Wireless Network](images/wireless/ss_wireless-network-add_light.png){ .on-glb }
+![Add Wireless Network](images/wireless/ss_wireless-network-add_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/wireless-networks/`"
 
 Fill in the required fields for the Wireless Network:
 
@@ -31,7 +33,9 @@ Fill in the required fields for the Wireless Network:
 4. Choose the Authentication type.
 5. Click **Create** or **Create and Add Another** to save.
 
-![Create Wireless Network Form](images/wireless/wireless-network-create.png)
+![Create Wireless Network Form](images/wireless/ss_wireless-network-create_light.png){ .on-glb }
+![Create Wireless Network Form](images/wireless/ss_wireless-network-create_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/wireless-networks/add/`"
 
 ## Controllers
 
@@ -41,7 +45,9 @@ To create a Wireless Controller:
 2. Select **Wireless Controllers** under the **Wireless** group.
 3. Click the blue **+ Add Controller** button.
 
-![Add Wireless Controller](images/wireless/wireless-controller-add.png)
+![Add Wireless Controller](images/wireless/ss_wireless-controller-add_light.png){ .on-glb }
+![Add Wireless Controller](images/wireless/ss_wireless-controller-add_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/controllers/?capabilities=wireless`"
 
 Fill in the required fields for the Wireless Controller:
 
@@ -52,8 +58,11 @@ Fill in the required fields for the Wireless Controller:
 5. (Optional) Click the **Controller Device** tab to assign a Device that hosts the Controller.
 6. Click **Create** or **Create and Add Another** to save.
 
-![Create Wireless Controller Form](images/wireless/wireless-controller-create-1.png)
-![Create Wireless Controller Optional Device](images/wireless/wireless-controller-create-2.png)
+![Create Wireless Controller Form](images/wireless/ss_wireless-controller-create-1_light.png){ .on-glb }
+![Create Wireless Controller Optional Device](images/wireless/ss_wireless-controller-create-2_light.png){ .on-glb }
+![Create Wireless Controller Form](images/wireless/ss_wireless-controller-create-1_dark.png){ .on-glb }
+![Create Wireless Controller Optional Device](images/wireless/ss_wireless-controller-create-2_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/controllers/add/`"
 
 ## Device Groups
 
@@ -63,7 +72,9 @@ To create a Device Group:
 2. Select **Device Groups** under the **Wireless** group.
 3. Click the blue **+ Add Controller Managed Device Group** button.
 
-![Add Device Group](images/wireless/device-group-add.png)
+![Add Device Group](images/wireless/ss_device-group-add_light.png){ .on-glb }
+![Add Device Group](images/wireless/ss_device-group-add_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/controller-managed-device-groups/?capabilities=wireless`"
 
 Fill in the required fields for the Device Group:
 
@@ -75,8 +86,11 @@ Fill in the required fields for the Device Group:
 6. (Optional) Filter VLANs by Location or VLAN Group, then select a VLAN.
 7. Click **Create** or **Create and Add Another** to save.
 
-![Create Device Group Form](images/wireless/device-group-create-1.png)
-![Create Device Group Form Add Networks](images/wireless/device-group-create-2.png)
+![Create Device Group Form](images/wireless/ss_device-group-create-1_light.png){ .on-glb }
+![Create Device Group Form Add Networks](images/wireless/ss_device-group-create-2_light.png){ .on-glb }
+![Create Device Group Form](images/wireless/ss_device-group-create-1_dark.png){ .on-glb }
+![Create Device Group Form Add Networks](images/wireless/ss_device-group-create-2_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/controller-managed-device-groups/add/`"
 
 ## Supported Data Rates (Optional)
 
@@ -86,7 +100,9 @@ This part is optional, Supported Data Rates supports tracking wireless speed and
 2. Select **Supported Data Rates** under the **Wireless** group.
 3. Click the blue **+ Add Supported Data Rate**.
 
-![Add Supported Data Rate](images/wireless/supported-data-rate-add.png)
+![Add Supported Data Rate](images/wireless/ss_supported-data-rate-add_light.png){ .on-glb }
+![Add Supported Data Rate](images/wireless/ss_supported-data-rate-add_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/supported-data-rates/`"
 
 Fill in the required fields for Supported Data Rates:
 
@@ -94,7 +110,9 @@ Fill in the required fields for Supported Data Rates:
 2. Enter a rate in Kbps.
 3. Enter the MCS Index.
 
-![Create Supported Data Rate](images/wireless/supported-data-rate-create.png)
+![Create Supported Data Rate](images/wireless/ss_supported-data-rate-create_light.png){ .on-glb }
+![Create Supported Data Rate](images/wireless/ss_supported-data-rate-create_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/supported-data-rates/add/`"
 
 ## Radio Profiles (Optional)
 
@@ -104,7 +122,9 @@ This part is optional, Radio Profiles provide context to the Wireless Radios of 
 2. Select **Radio Profiles** under the **Wireless** group.
 3. Click the blue **+ Add Radio Profile**.
 
-![Add Radio Profile](images/wireless/radio-profile-add.png)
+![Add Radio Profile](images/wireless/ss_radio-profile-add_light.png){ .on-glb }
+![Add Radio Profile](images/wireless/ss_radio-profile-add_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/radio-profiles/`"
 
 Fill in the required fields for Radio Profiles:
 
@@ -112,4 +132,6 @@ Fill in the required fields for Radio Profiles:
 2. Set the regulatory domain. We can also fill out any other data that you have.
 3. Click **Create** or **Create and Add Another** to save.
 
-![Radio Profile Create](images/wireless/radio-profile-create.png)
+![Radio Profile Create](images/wireless/ss_radio-profile-create_light.png){ .on-glb }
+![Radio Profile Create](images/wireless/ss_radio-profile-create_dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/wireless/radio-profiles/add/`"
