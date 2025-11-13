@@ -199,9 +199,9 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
           ['depth', String(depth)],
           ['limit', String(limit)],
           ['offset', String(offset)],
-          ...(api_version ? ['api_version', api_version] : []),
-          ...(content_type ? ['content_type', content_type] : []),
-          ...(q ? [search_field, q] : []),
+          ...(api_version ? [['api_version', api_version]] : []),
+          ...(content_type ? [['content_type', content_type]] : []),
+          ...(q ? [[search_field, q]] : []),
           ...extra_query_parameters_array,
         ];
 
