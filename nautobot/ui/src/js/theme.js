@@ -90,7 +90,7 @@ const handleEchartsThemeChange = (theme) => {
 };
 
 /**
- * Set Nautobot theme
+ * Set Nautobot theme.
  * @param {('dark'|'light'|'system'|null)} theme - Nautobot theme to be set. If `null`, determine theme based on existing user choice or system preference.
  * @returns {void} Do not return any value, set given `theme` and save it into a persistent store if `manual` is `true`.
  */
