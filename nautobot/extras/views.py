@@ -515,20 +515,20 @@ class ApprovalWorkflowStageUIViewSet(
         """
         instance = self.get_object()
 
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
+        if not instance.is_not_done_stage:
+            messages.error(
+                request, f"This stage is in {instance.state} state. Can't comment on an approved or denied stage."
             )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(initial={"comments": obj.comments})
+            existing_response = ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first()
+            if existing_response is not None:
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
 
             template_name = "extras/approval_workflow/comment.html"
 
@@ -536,13 +536,18 @@ class ApprovalWorkflowStageUIViewSet(
                 request,
                 template_name,
                 {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
+                    "return_url": self.get_return_url(request, instance),
                 },
             )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
+
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.save()
