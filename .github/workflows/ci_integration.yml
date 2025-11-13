@@ -1,5 +1,5 @@
 ---
-# Full CI for commits to the integration branches (main, develop, next)
+# Full CI for commits to the integration branches (main, develop, next, and long-term maintenance branches)
 name: "CI - Integration Branch"
 on:  # yamllint disable
   push:
@@ -7,6 +7,7 @@ on:  # yamllint disable
       - "main"
       - "develop"
       - "next"
+      - "ltm-2.4"
   workflow_call:
   workflow_dispatch:
 
@@ -224,7 +225,7 @@ jobs:
     runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')
+      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-2.4')
     needs:
       - "check-schema"
       - "integration-test"

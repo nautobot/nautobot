@@ -73,15 +73,12 @@ jobs:
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
+            latest=false
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-            type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -105,15 +102,12 @@ jobs:
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
+            latest=false
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-            type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
@@ -177,6 +171,6 @@ jobs:
     runs-on: "ubuntu-24.04"
     steps:
       - name: "Call deploy sandbox workflow for demo.nautobot.com"
-        run: "gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=demo"
+        run: "gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=ltm.demo"
         env:
           GH_TOKEN: "${{ secrets.GH_NAUTOBOT_BOT_TOKEN }}"
