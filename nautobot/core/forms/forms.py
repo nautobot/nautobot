@@ -434,14 +434,21 @@ class RenderJinjaForm(BootstrapMixin, forms.Form):
     )
 
     content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.all(),
+        queryset=ContentType.objects.all().order_by("app_label", "model"),
         query_params={"can_view": True},
         label="Object Type",
         help_text="Choose the type of object to use as template context.",
     )
 
     object_uuid = forms.UUIDField(
-        required=False,
         label="Object UUID",
         help_text="Enter the UUID of the object to use as template context.",
+    )
+
+    depth = forms.IntegerField(
+        required=False,
+        min_value=0,
+        initial=1,
+        label="Depth",
+        help_text="Enter the depth of the object graph to include in the template context.",
     )

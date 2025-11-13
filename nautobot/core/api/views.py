@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import ProtectedError
+from django.db.models import Prefetch, ProtectedError
 from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http.response import HttpResponseBadRequest
@@ -40,7 +40,7 @@ import yaml
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import build_permission_filtered_proxy, get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.fields import TagsField
@@ -50,6 +50,9 @@ from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
+from nautobot.dcim.models import Interface
+from nautobot.ipam.models import IPAddress
+from nautobot.virtualization.models import VMInterface
 
 from . import serializers
 
@@ -993,17 +996,20 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         data = serializers.RenderJinjaSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         template_code = data.validated_data["template_code"]
+        depth = data.validated_data.get("depth", 1)
+        json_context = {}
 
         # Determine context source
         if data.validated_data.get("content_type") and data.validated_data.get("object_uuid"):
             # Object-based context
             try:
-                context = self._build_object_context(request, data.validated_data)
+                context = self._build_object_context(request, data.validated_data, depth)
             except ValidationError as exc:
                 raise RenderJinjaError(f"Failed to build object context: {exc}") from exc
         else:
             # JSON-based context (existing functionality)
             context = data.validated_data.get("context") or {}
+            json_context = context
 
         try:
             rendered_template = render_jinja2(template_code, context)
@@ -1015,26 +1021,71 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
                 "rendered_template": rendered_template,
                 "rendered_template_lines": rendered_template.split("\n"),
                 "template_code": template_code,
-                "context": context,
+                # "context": render_proxy_to_json(context["obj"]),
+                "context": json_context,
             }
         )
 
-    def _build_object_context(self, request, validated_data):
+    def _build_object_context(self, request, validated_data, depth):
         """Build Jinja context from selected object, following Custom Links pattern."""
-        content_type_obj = validated_data["content_type"]
-        content_type_obj_model_class = content_type_obj.model_class()
 
-        try:
-            obj = content_type_obj_model_class.objects.restrict(request.user, "view").get(
-                pk=validated_data["object_uuid"]
-            )
-        except content_type_obj_model_class.DoesNotExist:
-            raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
-
-        # Build context with the minimal data needed for the template. serialize_object_v2 is not used for
-        # performance reasons. With it, a dcim.device render uses 10 queries in the basic case; fetching
-        # all subobjects the first time it's rendered. Without it, the basic dcim.device case uses 1 query and
-        # subobjects are fetched on demand.
-        context = {"obj": obj}
+        context_object = self._build_context_object(request, validated_data, depth)
+        context = {"obj": context_object}
 
         return context
+
+    def _build_context_object(self, request, validated_data, depth):
+        content_type_object = validated_data["content_type"]
+        content_type_object_model_class = content_type_object.model_class()
+
+        try:
+            #
+            # Don't wrap anything if the user is a superuser. Firstly, because superusers
+            # have no restrictions anyway and secondly, it provides end users a way to compare
+            # renders done by regular users to a baseline.
+            if request.user.is_superuser:
+                context_object = content_type_object_model_class.objects.get(pk=validated_data["object_uuid"])
+            else:
+                qs = self._build_prefetch_qs(request, content_type_object_model_class)
+                context_object = build_permission_filtered_proxy(
+                    qs.get(pk=validated_data["object_uuid"]), request.user, depth=depth
+                )
+        except content_type_object_model_class.DoesNotExist:
+            raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
+
+        return context_object
+
+    def _build_prefetch_qs(self, request, content_type_obj_model_class):
+        object_content_type_label = content_type_obj_model_class._meta.label_lower
+        base_qs = content_type_obj_model_class.objects.restrict(request.user, "view")
+        # return base_qs
+
+        qs_builder_method_name = f"_{object_content_type_label.replace('.', '_')}_prefetch_qs"
+
+        if method := getattr(self, qs_builder_method_name, None):
+            return method(request, base_qs)  # pylint: disable=not-callable
+
+        logger.debug(f"Building base qs for {object_content_type_label}")
+        return base_qs
+
+    #
+    # Prefetch optimizations
+    def _dcim_device_prefetch_qs(self, request, base_qs):
+        return base_qs.prefetch_related(
+            Prefetch(
+                "interfaces",
+                queryset=Interface.objects.all().prefetch_related(
+                    Prefetch("ip_addresses", queryset=IPAddress.objects.all())
+                ),
+            )
+        )
+
+    def _virtualization_virtualmachine_prefetch_qs(self, request, base_qs):
+        return base_qs.prefetch_related(
+            Prefetch(
+                "vm_interfaces",
+                queryset=VMInterface.objects.all().prefetch_related(
+                    Prefetch("ip_addresses", queryset=IPAddress.objects.all())
+                ),
+            )
+        )

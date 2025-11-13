@@ -52,29 +52,12 @@
                             {% render_field form.context %}
                         </div>
 
-                        <div id="object_content_type_group" style="display: none;">
-                            <div class="form-group">
-                                <label class="col-md-3 control-label required" for="{{ form.content_type.id_for_label }}">{{ form.content_type.label }}</label>
-                                <div class="col-md-9">
-                                    {{ form.content_type }}
-                                    {% if form.content_type.help_text %}
-                                        <span class="help-block">{{ form.content_type.help_text }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
+                        <div id="object_group" style="display: none;">
+                            {% render_field form.content_type %}
+                            {% render_field form.object_uuid %}
+                            {% render_field form.depth %}
                         </div>
 
-                        <div id="object_uuid_group" style="display: none;">
-                            <div class="form-group">
-                                <label class="col-md-3 control-label required" for="{{ form.object_uuid.id_for_label }}">{{ form.object_uuid.label }}</label>
-                                <div class="col-md-9">
-                                    {{ form.object_uuid }}
-                                    {% if form.object_uuid.help_text %}
-                                        <span class="help-block">{{ form.object_uuid.help_text }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div class="button-container text-right">
@@ -113,8 +96,7 @@
 
         function toggleContextMode(mode) {
             const jsonGroup = document.getElementById("json_context_group");
-            const contentTypeGroup = document.getElementById("object_content_type_group");
-            const uuidGroup = document.getElementById("object_uuid_group");
+            const objectGroup = document.getElementById("object_group");
             const templateObjHelp = document.getElementById("template_obj_help_text");
 
             if (mode === "object") {
@@ -122,8 +104,7 @@
                 savedFormData.jsonContext = document.getElementById("id_context").value;
 
                 jsonGroup.style.display = "none";
-                contentTypeGroup.style.display = "block";
-                uuidGroup.style.display = "block";
+                objectGroup.style.display = "block";
                 templateObjHelp.style.visibility = "visible";
 
                 // Clear JSON field (for submission logic)
@@ -146,8 +127,7 @@
                 savedFormData.objectUuid = document.getElementById("id_object_uuid").value;
 
                 jsonGroup.style.display = "block";
-                contentTypeGroup.style.display = "none";
-                uuidGroup.style.display = "none";
+                objectGroup.style.display = "none";
                 templateObjHelp.style.visibility = "hidden";
 
                 // Clear object fields (for submission logic)
@@ -201,6 +181,13 @@
                 // Object mode - send content_type and object_uuid
                 data.content_type_id = document.getElementById("id_content_type").value;
                 data.object_uuid = document.getElementById("id_object_uuid").value;
+                const depthInput = document.getElementById("id_depth");
+                if (depthInput && depthInput.value !== "") {
+                    const parsedDepth = parseInt(depthInput.value, 10);
+                    if (!Number.isNaN(parsedDepth)) {
+                        data.depth = parsedDepth;
+                    }
+                }
             } else {
                 // JSON mode - send context
                 const context = document.getElementById("id_context");

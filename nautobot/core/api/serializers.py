@@ -904,6 +904,7 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         queryset=ContentType.objects.all(), source="content_type", required=False, allow_null=True
     )
     object_uuid = serializers.UUIDField(required=False, allow_null=True)
+    depth = serializers.IntegerField(required=False, min_value=0, default=1)
 
     # Read-only response fields
     rendered_template = serializers.CharField(read_only=True)
