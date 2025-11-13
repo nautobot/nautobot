@@ -776,11 +776,13 @@ button {
 
   > thead:not(caption) > tr > th {
     background-color: var(--#{$prefix}tertiary-bg);
-    color: var(--#{$prefix}secondary-color);
+    color: var(--#{$prefix}tertiary-color);
     position: relative;
 
     &.nb-actionable,
     &.orderable {
+      color: var(--#{$prefix}secondary-color);
+
       a,
       button {
         &:empty {
@@ -803,10 +805,6 @@ button {
           }
         }
       }
-    }
-
-    &:not(.orderable) {
-      color: var(--#{$prefix}tertiary-color);
     }
   }
 
