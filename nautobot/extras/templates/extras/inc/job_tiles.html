@@ -21,14 +21,14 @@
 
                 {% if perms.extras.run_job and row.record.runnable %}
                     <a href="{% url 'extras:job_run' pk=row.record.pk %}"
-                       class="btn btn-primary btn-sm"
+                       class="btn btn-primary btn-sm p-2 rounded-circle"
                        data-bs-toggle="tooltip"
                        data-bs-title="Run/Schedule">
                         <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
                     </a>
                 {% else %}
                     <a aria-disabled="true"
-                       class="btn btn-primary btn-sm disabled"
+                       class="btn btn-primary btn-sm disabled p-2 rounded-circle"
                        data-bs-toggle="tooltip"
                        data-bs-title="Run/Schedule">
                         <span class="mdi mdi-play" aria-hidden="true"><span class="visually-hidden">Run/Schedule</span></span>
