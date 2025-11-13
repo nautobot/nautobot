@@ -261,12 +261,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "icon_mask": os.getenv(
 #         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
 #     ),  # mono-chrome icon used for the mask-icon header
-#     "header_bullet": os.getenv(
-#         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-#     ),  # bullet image used for various view headers
-#     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-#     "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-#     "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 # }
 
 # Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
@@ -358,11 +352,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-# if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-#     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+# if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+#     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 # EVENT_BROKERS = {}

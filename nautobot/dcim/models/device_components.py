@@ -16,6 +16,7 @@ from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -1030,7 +1031,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         related_name="interface_redundancy_group_associations",
     )
-    priority = models.PositiveSmallIntegerField()
+    priority = models.PositiveIntegerField()
     is_metadata_associable_model = False
 
     class Meta:
@@ -1370,4 +1371,5 @@ class ModuleBay(PrimaryModel):
 
         if self.parent_device is not None:
             # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
-            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
+            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
+            cache.set(cache_key, True, timeout=5)

@@ -45,12 +45,53 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
+  ui-build-check:
+    name: "Check UI src and dist files validity and integrity"
+    runs-on: "ubuntu-24.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--only dev --only linting"
+          poetry-version: "1.8.5"
+          python-version: "3.13"
+      - name: "Setup Node.js"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "22"
+      - name: "Install npm dependencies"
+        run: "poetry run invoke npm --command ci"
+      - name: "Calculate checksum of originally committed UI dist files"
+        shell: bash
+        run: |
+          original_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "original_checksum=$original_checksum" >> "$GITHUB_ENV"
+      - name: "Build UI from source"
+        run: "poetry run invoke ui-build"
+      - name: "Re-calculate checksum of UI dist files after the build"
+        shell: bash
+        run: |
+          updated_checksum=$(find nautobot/project-static/dist -type f -exec md5sum {} + | sort -k 2 | md5sum)
+          echo "updated_checksum=$updated_checksum" >> "$GITHUB_ENV"
+      - name: "Compare calculated checksums"
+        run: |
+          echo "Comparing UI dist files checksums: \"$original_checksum\" and \"$updated_checksum\"."
+          if [ "$original_checksum" = "$updated_checksum" ]; then
+            echo "Checksums match."
+          else
+            >&2 echo "ERROR: Checksums do not match. Please verify build."
+            exit 1
+          fi
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.12)"
+    name: "Unit tests (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -78,7 +119,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
@@ -152,7 +193,7 @@ jobs:
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.12)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -179,7 +220,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
@@ -215,12 +256,12 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.12"
+          python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
   container-build:
-    name: "Build Container Images (amd64 on GHCR Only)"
+    name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-24.04"
     if: |
       github.event_name == 'push' &&
@@ -232,10 +273,11 @@ jobs:
       - "migration-tests-postgres"
       - "tests-mysql"
       - "tests-postgres"
+      - "ui-build-check"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12"]
+        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
     steps:
       - name: "Configuration"
         id: "config"
@@ -246,7 +288,7 @@ jobs:
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.13" ]]; then
             export TAG_LATEST_FOR_BRANCH="true"
           fi
 
@@ -266,7 +308,7 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final`"
+      - name: "Build `final` (amd64 only)"
         if: |
           steps.config.outputs.tag-latest-for-branch == 'true'
         uses: "./.github/actions/build-nautobot-image"
@@ -280,12 +322,30 @@ jobs:
           tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final"
-      - name: "Build and Push `final-dev`"
+      - name: "Build and Push `final-dev` (amd64 only)"
+        if:
+          steps.config.outputs.tag-latest-for-branch != 'true' ||
+          steps.config.outputs.branch != 'next'
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
           platforms: "linux/amd64"
+          push: "true"
+          python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          target: "final-dev"
+      - name: "Build and Push `final-dev` (amd64 + arm64) for 3.13 + next"
+        if:
+          steps.config.outputs.tag-latest-for-branch == 'true' &&
+          steps.config.outputs.branch == 'next'
+        uses: "./.github/actions/build-nautobot-image"
+        with:
+          branch: "${{ steps.config.outputs.branch }}"
+          image: "ghcr.io/nautobot/nautobot-dev"
+          platforms: "linux/amd64,linux/arm64"
           push: "true"
           python-version: "${{ matrix.python-version }}"
           tag-latest: "${{ steps.config.outputs.tag-latest }}"

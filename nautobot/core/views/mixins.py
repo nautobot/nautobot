@@ -73,6 +73,9 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "data_compliance": "view",
+    "approve": "change",
+    "deny": "change",
 }
 
 
@@ -407,16 +410,17 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         """
         Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
 
-        :param model: A model or instance
-        :param actions: A list of actions to perform on the model
+        Args:
+            model (Union[type(Model), Model]): A model or instance
+            actions (List[str]): A list of actions to perform on the model
         """
         model_permissions = []
         for action in actions:
-            # Append additional object permissions if specified.
-            if self.custom_view_additional_permissions:
-                model_permissions.append(*self.custom_view_additional_permissions)
             # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+        # Append additional object permissions if specified.
+        if self.custom_view_additional_permissions:
+            model_permissions.append(*self.custom_view_additional_permissions)
         return model_permissions
 
     def get_required_permission(self):
@@ -689,7 +693,10 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             default_tab = "main"
             if hasattr(self, "action") and self.action != "retrieve":
                 default_tab = self.action
-            return {"active_tab": request.GET.get("tab", default_tab)}
+            return {
+                "object_detail_content": getattr(self, "object_detail_content", None),
+                "active_tab": request.GET.get("tab", default_tab),
+            }
         return {}
 
     def get_template_name(self):
@@ -730,7 +737,11 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
                     except TemplateDoesNotExist:
                         # Try a different detail view template format
                         template_name = f"{app_label}/{model_opts.model_name}.html"
-                        select_template([template_name])
+                        try:
+                            select_template([template_name])
+                        except TemplateDoesNotExist:
+                            # Catch-all fallback to just object_retrieve.html
+                            template_name = "generic/object_retrieve.html"
         return template_name
 
     def get_form(self, *args, **kwargs):
@@ -920,35 +931,40 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 self.filterset_class(),
             )
 
-        # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
-            # Check if there is a default for this view for this specific user
-            app_label, model_name = queryset.model._meta.label.split(".")
-            view_name = f"{app_label}:{model_name.lower()}_list"
-            user = request.user
-            if not isinstance(user, AnonymousUser):
-                try:
-                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=view_name
-                    ).saved_view.pk
-                    # Saved view should either belong to the user or be public
-                    SavedView.objects.get(
-                        Q(pk=user_default_saved_view_pk),
-                        Q(owner=user) | Q(is_shared=True),
-                    )
-                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    pass
-
-            # Check if there is a global default for this view
+        # Check if there is a default for this view for this specific user
+        user_default_saved_view = None
+        app_label, model_name = queryset.model._meta.label.split(".")
+        view_name = f"{app_label}:{model_name.lower()}_list"
+        user = request.user
+        if not isinstance(user, AnonymousUser):
             try:
-                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+                user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                    user=user, view_name=view_name
+                ).saved_view.pk
+                # Saved view should either belong to the user or be public
+                user_default_saved_view = SavedView.objects.get(
+                    Q(pk=user_default_saved_view_pk),
+                    Q(owner=user) | Q(is_shared=True),
+                )
             except ObjectDoesNotExist:
                 pass
 
-        return Response({})
+        # Check if there is a global default for this view
+        global_saved_view = None
+        try:
+            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
+            if user_default_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": user_default_saved_view.pk}))
+
+            if global_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+
+        return Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -1493,7 +1509,9 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(
+        detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_objectchange"]
+    )
     def changelog(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1514,7 +1532,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_note"])
     def notes(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1522,3 +1540,13 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for a DataCompliance to show up for a given object.
+    """
+
+    @drf_action(detail=True, url_path="data-compliance")
+    def data_compliance(self, request, *args, **kwargs):
+        return Response({})
