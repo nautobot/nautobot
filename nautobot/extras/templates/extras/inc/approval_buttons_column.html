@@ -36,7 +36,7 @@
         {% endif %}
     </span>
 {% endif %}
-{% if "comment" in buttons and have_permission %}
+{% if "comment" in buttons and have_permission and record.is_not_done_stage %}
     <span title='Comment this stage'>
         <a href="{% url comment_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}"
             class="btn btn-secondary btn-sm">

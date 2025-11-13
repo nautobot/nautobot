@@ -598,10 +598,10 @@ class ApprovalWorkflowStageTest(
                 response_obj = stage.approval_workflow_stage_responses.first()
                 self.assertEqual(response_obj.comments, "This is a test comment.")
                 self.assertEqual(response_obj.user, self.user)
-                self.assertEqual(response_obj.state, stage.state)
+                self.assertEqual(response_obj.state, ApprovalWorkflowStateChoices.COMMENT)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approval_workflow_stage_add_more_comment_to_stage(self):
+    def test_approval_workflow_stage_edit_comment(self):
         for case in self.approval_workflow_content_type_cases:
             content_type = case["content_type"]
             with self.subTest(case=content_type):
@@ -618,7 +618,31 @@ class ApprovalWorkflowStageTest(
                 self.assertHttpStatus(response, status.HTTP_200_OK)
 
                 stage.refresh_from_db()
-                self.assertEqual(stage.approval_workflow_stage_responses.count(), 2)
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(stage.approval_workflow_stage_responses.first().comments, "This is a test comment.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approval_workflow_stage_not_allow_add_comment_to_approved_denied_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                stage = case["stage"]
+                # set state to approved - zrobic, zeby tez DENIED mozna bylo ustawic w tym tescie
+                stage.state = ApprovalWorkflowStateChoices.APPROVED
+                stage.save()
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
+
+                data = {"comments": "This is a test comment."}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(
+                    response.data["detail"],
+                    f"This stage is in {stage.state} state. Can't comment approved or denied stage.",
+                )
+
+                stage.refresh_from_db()
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_pending_my_approvals(self):

@@ -515,13 +515,11 @@ class ApprovalWorkflowStageUIViewSet(
         try:
             approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
                 approval_workflow_stage=instance,
-                state=instance.state,
                 user=request.user,
             )
         except ApprovalWorkflowStageResponse.DoesNotExist:
             approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
                 approval_workflow_stage=instance,
-                state=instance.state,
                 user=request.user,
             )
 
@@ -540,12 +538,10 @@ class ApprovalWorkflowStageUIViewSet(
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
                     "return_url": self.get_return_url(request, obj),
-                    "card_class": "success",
-                    "button_class": "success",
                 },
             )
         approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = instance.state
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.save()
         instance.refresh_from_db()
         messages.success(request, f"You commented {instance}.")

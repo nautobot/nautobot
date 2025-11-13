@@ -368,6 +368,16 @@ class ApprovalWorkflowStage(OrganizationalModel):
         return self.pk == active_stage.pk and active_stage.state == ApprovalWorkflowStateChoices.PENDING
 
     @property
+    def is_not_done_stage(self):
+        """
+        Check if the stage is not done (approved or denied).
+
+        Returns:
+            bool: True if the stage is not APPROVED or DENIED
+        """
+        return self.state == ApprovalWorkflowStateChoices.PENDING
+
+    @property
     def users_that_already_approved(self):
         """
         Get the users that have already approved this stage instance.
