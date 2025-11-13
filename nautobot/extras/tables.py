@@ -514,6 +514,9 @@ class ApprovalWorkflowStageResponseTable(BaseTable):
             "state",
         )
 
+    def render_comments(self, value):
+        return render_markdown(value)
+
 
 class RelatedApprovalWorkflowStageResponseTable(ApprovalWorkflowStageResponseTable):
     """Table for ApprovalWorkflowStageResponse list view."""
