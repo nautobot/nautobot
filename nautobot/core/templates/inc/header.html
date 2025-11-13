@@ -36,7 +36,7 @@
                         class="align-items-center d-inline-flex gap-4 text-nowrap{% if not request.GET.q %} text-secondary{% endif %}"
                     >
                         {% if not request.GET.q %}
-                            Press <kbd>{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
+                            Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
                         {% else %}
                             {{ request.GET.q }}
                         {% endif %}
