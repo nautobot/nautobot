@@ -627,7 +627,7 @@ class ApprovalWorkflowStageTest(
             content_type = case["content_type"]
             with self.subTest(case=content_type):
                 stage = case["stage"]
-                # set state to approved - zrobic, zeby tez DENIED mozna bylo ustawic w tym tescie
+                # set state to approved so we can ensure comments *do not* work.
                 stage.state = ApprovalWorkflowStateChoices.APPROVED
                 stage.save()
                 url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
