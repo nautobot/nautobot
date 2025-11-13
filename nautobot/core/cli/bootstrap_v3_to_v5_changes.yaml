@@ -1,259 +1,259 @@
-- "Boostrap v3":  btn-default
-  "Boostrap v5":  btn-secondary
+- "Bootstrap v3":  btn-default
+  "Bootstrap v5":  btn-secondary
   "Search Regex": ("|')([^"']*)(?<=\s|"|')btn-default(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  btn-lg
-  "Boostrap v5":  btn
+- "Bootstrap v3":  btn-lg
+  "Bootstrap v5":  btn
   "Search Regex": ("|')([^"']*)(?<=\s|"|')btn-lg(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  btn-xs
-  "Boostrap v5":  btn-sm
+- "Bootstrap v3":  btn-xs
+  "Bootstrap v5":  btn-sm
   "Search Regex": ("|')([^"']*)(?<=\s|"|')btn-xs(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  caret
-  "Boostrap v5":  mdi mdi-chevron-down
+- "Bootstrap v3":  caret
+  "Bootstrap v5":  mdi mdi-chevron-down
   "Search Regex": ("|')([^"']*)(?<=\s|"|')caret(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  center-block
-  "Boostrap v5":  d-block mx-auto
+- "Bootstrap v3":  center-block
+  "Bootstrap v5":  d-block mx-auto
   "Search Regex": ("|')([^"']*)(?<=\s|"|')center-block(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  checkbox
-  "Boostrap v5":  form-check
+- "Bootstrap v3":  checkbox
+  "Bootstrap v5":  form-check
   "Search Regex": (?<!type=)("|')([^"']*)(?<=\s|"|')checkbox(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  checkbox-inline
-  "Boostrap v5":  form-check-input
+- "Bootstrap v3":  checkbox-inline
+  "Bootstrap v5":  form-check-input
   "Search Regex": ("|')([^"']*)(?<=\s|"|')checkbox-inline(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  close
-  "Boostrap v5":  btn-close
+- "Bootstrap v3":  close
+  "Bootstrap v5":  btn-close
   "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')close(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  col-*-offset-*
-  "Boostrap v5":  offset-*-*
+- "Bootstrap v3":  col-*-offset-*
+  "Bootstrap v5":  offset-*-*
   "Search Regex": ("|')([^"']*)(?<=\s|"|')col-(xs|sm|md|lg|x?xl)-offset-\d{1,2}(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  control-label
-  "Boostrap v5":  col-form-label
+- "Bootstrap v3":  control-label
+  "Bootstrap v5":  col-form-label
   "Search Regex": ("|')([^"']*)(?<=\s|"|')control-label(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  dropdown-menu-left
-  "Boostrap v5":  dropdown-menu-start
+- "Bootstrap v3":  dropdown-menu-left
+  "Bootstrap v5":  dropdown-menu-start
   "Search Regex": ("|')([^"']*)(?<=\s|"|')dropdown-menu-left(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  dropdown-menu-right
-  "Boostrap v5":  dropdown-menu-end
+- "Bootstrap v3":  dropdown-menu-right
+  "Bootstrap v5":  dropdown-menu-end
   "Search Regex": ("|')([^"']*)(?<=\s|"|')dropdown-menu-right(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  form-control-static
-  "Boostrap v5":  form-control-plaintext
+- "Bootstrap v3":  form-control-static
+  "Bootstrap v5":  form-control-plaintext
   "Search Regex": ("|')([^"']*)(?<=\s|"|')form-control-static(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  form-group
-  "Boostrap v5":  mb-10 d-flex justify-content-center
+- "Bootstrap v3":  form-group
+  "Bootstrap v5":  mb-10 d-flex justify-content-center
   "Search Regex": ("|')([^"']*)(?<=\s|"|')form-group(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  help-block
-  "Boostrap v5":  form-text
+- "Bootstrap v3":  help-block
+  "Bootstrap v5":  form-text
   "Search Regex": ("|')([^"']*)(?<=\s|"|')help-block(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  hidden
-  "Boostrap v5":  d-none
+- "Bootstrap v3":  hidden
+  "Bootstrap v5":  d-none
   "Search Regex": (?<!type=)("|')([^"']*)(?<=\s|"|')hidden(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label
-  "Boostrap v5":  badge
+- "Bootstrap v3":  label
+  "Bootstrap v5":  badge
   "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')label(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-default
-  "Boostrap v5":  bg-default
+- "Bootstrap v3":  label-default
+  "Bootstrap v5":  bg-default
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-default(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-danger
-  "Boostrap v5":  bg-danger
+- "Bootstrap v3":  label-danger
+  "Bootstrap v5":  bg-danger
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-danger(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-info
-  "Boostrap v5":  bg-info
+- "Bootstrap v3":  label-info
+  "Bootstrap v5":  bg-info
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-info(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-primary
-  "Boostrap v5":  bg-primary
+- "Bootstrap v3":  label-primary
+  "Bootstrap v5":  bg-primary
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-primary(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-success
-  "Boostrap v5":  bg-success
+- "Bootstrap v3":  label-success
+  "Bootstrap v5":  bg-success
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-success(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-transparent
-  "Boostrap v5":  bg-transparent
+- "Bootstrap v3":  label-transparent
+  "Bootstrap v5":  bg-transparent
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-transparent(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  label-warning
-  "Boostrap v5":  bg-warning
+- "Bootstrap v3":  label-warning
+  "Bootstrap v5":  bg-warning
   "Search Regex": ("|')([^"']*)(?<=\s|"|')label-warning(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  noprint
-  "Boostrap v5":  d-print-none
+- "Bootstrap v3":  noprint
+  "Bootstrap v5":  d-print-none
   "Search Regex": ("|')([^"']*)(?<=\s|"|')noprint(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  panel
-  "Boostrap v5":  card
+- "Bootstrap v3":  panel
+  "Bootstrap v5":  card
   "Search Regex": ("|')([^"']*)(?<=\s|"|')panel(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  panel-body
-  "Boostrap v5":  card-body
+- "Bootstrap v3":  panel-body
+  "Bootstrap v5":  card-body
   "Search Regex": ("|')([^"']*)(?<=\s|"|')panel-body(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  panel-footer
-  "Boostrap v5":  card-footer
+- "Bootstrap v3":  panel-footer
+  "Bootstrap v5":  card-footer
   "Search Regex": ("|')([^"']*)(?<=\s|"|')panel-footer(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  panel-heading
-  "Boostrap v5":  card-header
+- "Bootstrap v3":  panel-heading
+  "Bootstrap v5":  card-header
   "Search Regex": ("|')([^"']*)(?<=\s|"|')panel-heading(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  pull-left
-  "Boostrap v5":  float-start
+- "Bootstrap v3":  pull-left
+  "Bootstrap v5":  float-start
   "Search Regex": ("|')([^"']*)(?<=\s|"|')pull-left(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  pull-right
-  "Boostrap v5":  float-end
+- "Bootstrap v3":  pull-right
+  "Bootstrap v5":  float-end
   "Search Regex": ("|')([^"']*)(?<=\s|"|')pull-right(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  sr-only
-  "Boostrap v5":  visually-hidden
+- "Bootstrap v3":  sr-only
+  "Bootstrap v5":  visually-hidden
   "Search Regex": ("|')([^"']*)(?<=\s|"|')sr-only(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  sr-only-focusable
-  "Boostrap v5":  visually-hidden-focusable
+- "Bootstrap v3":  sr-only-focusable
+  "Bootstrap v5":  visually-hidden-focusable
   "Search Regex": ("|')([^"']*)(?<=\s|"|')sr-only-focusable(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  text-left
-  "Boostrap v5":  text-start
+- "Bootstrap v3":  text-left
+  "Bootstrap v5":  text-start
   "Search Regex": ("|')([^"']*)(?<=\s|"|')text-left(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  text-muted
-  "Boostrap v5":  text-secondary
+- "Bootstrap v3":  text-muted
+  "Bootstrap v5":  text-secondary
   "Search Regex": ("|')([^"']*)(?<=\s|"|')text-muted(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  text-right
-  "Boostrap v5":  text-end
+- "Bootstrap v3":  text-right
+  "Bootstrap v5":  text-end
   "Search Regex": ("|')([^"']*)(?<=\s|"|')text-right(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  accordion-toggle
-  "Boostrap v5":  nb-collapse-toggle
+- "Bootstrap v3":  accordion-toggle
+  "Bootstrap v5":  nb-collapse-toggle
   "Search Regex": ("|')([^"']*)(?<=\s|"|')accordion-toggle(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  accordion-toggle-all
-  "Boostrap v5":  data-nb-toggle
+- "Bootstrap v3":  accordion-toggle-all
+  "Bootstrap v5":  data-nb-toggle
   "Search Regex": ("|')([^"']*)(?<=\s|"|')accordion-toggle-all(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  banner-bottom
-  "Boostrap v5":  nb-banner-bottom
+- "Bootstrap v3":  banner-bottom
+  "Bootstrap v5":  nb-banner-bottom
   "Search Regex": ("|')([^"']*)(?<=\s|"|')banner-bottom(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  btn-inline
-  "Boostrap v5":  nb-btn-inline-hover
+- "Bootstrap v3":  btn-inline
+  "Bootstrap v5":  nb-btn-inline-hover
   "Search Regex": ("|')([^"']*)(?<=\s|"|')btn-inline(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  color-block
-  "Boostrap v5":  nb-color-block
+- "Bootstrap v3":  color-block
+  "Bootstrap v5":  nb-color-block
   "Search Regex": ("|')([^"']*)(?<=\s|"|')color-block(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  description
-  "Boostrap v5":  nb-description
+- "Bootstrap v3":  description
+  "Bootstrap v5":  nb-description
   "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')description(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  editor-container
-  "Boostrap v5":  nb-editor-container
+- "Bootstrap v3":  editor-container
+  "Bootstrap v5":  nb-editor-container
   "Search Regex": ("|')([^"']*)(?<=\s|"|')editor-container(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  loading
-  "Boostrap v5":  nb-loading
+- "Bootstrap v3":  loading
+  "Bootstrap v5":  nb-loading
   "Search Regex": ("|')([^"']*)(?<=\s|"|')loading(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  report-stats
-  "Boostrap v5":  nb-report-stats
+- "Bootstrap v3":  report-stats
+  "Bootstrap v5":  nb-report-stats
   "Search Regex": ("|')([^"']*)(?<=\s|"|')report-stats(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  required
-  "Boostrap v5":  nb-required
+- "Bootstrap v3":  required
+  "Bootstrap v5":  nb-required
   "Search Regex": ("|')([^"']*)(?<=\s|"|')required(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  right-side-panel
-  "Boostrap v5":  nb-right-side-panel
+- "Bootstrap v3":  right-side-panel
+  "Bootstrap v5":  nb-right-side-panel
   "Search Regex": ("|')([^"']*)(?<=\s|"|')right-side-panel(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  software-image-hierarchy
-  "Boostrap v5":  nb-software-image-hierarchy
+- "Bootstrap v3":  software-image-hierarchy
+  "Bootstrap v5":  nb-software-image-hierarchy
   "Search Regex": ("|')([^"']*)(?<=\s|"|')software-image-hierarchy(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  style-line
-  "Boostrap v5":  nb-style-line
+- "Bootstrap v3":  style-line
+  "Bootstrap v5":  nb-style-line
   "Search Regex": ("|')([^"']*)(?<=\s|"|')style-line(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  table-headings
-  "Boostrap v5":  nb-table-headings
+- "Bootstrap v3":  table-headings
+  "Bootstrap v5":  nb-table-headings
   "Search Regex": ("|')([^"']*)(?<=\s|"|')table-headings(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tile
-  "Boostrap v5":  nb-tile
+- "Bootstrap v3":  tile
+  "Bootstrap v5":  nb-tile
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tile(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tile-description
-  "Boostrap v5":  nb-tile-description
+- "Bootstrap v3":  tile-description
+  "Bootstrap v5":  nb-tile-description
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tile-description(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tile-footer
-  "Boostrap v5":  nb-tile-footer
+- "Bootstrap v3":  tile-footer
+  "Bootstrap v5":  nb-tile-footer
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tile-footer(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tile-header
-  "Boostrap v5":  nb-tile-header
+- "Bootstrap v3":  tile-header
+  "Bootstrap v5":  nb-tile-header
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tile-header(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tiles
-  "Boostrap v5":  nb-tiles
+- "Bootstrap v3":  tiles
+  "Bootstrap v5":  nb-tiles
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tiles(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  tree-hierarchy
-  "Boostrap v5":  nb-tree-hierarchy
+- "Bootstrap v3":  tree-hierarchy
+  "Bootstrap v5":  nb-tree-hierarchy
   "Search Regex": ("|')([^"']*)(?<=\s|"|')tree-hierarchy(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  filter-container
-  "Boostrap v5":  removed
+- "Bootstrap v3":  filter-container
+  "Bootstrap v5":  removed
   "Search Regex": ("|')([^"']*)(?<=\s|"|')filter-container(?=\s|"|')([^"']*)("|')
 
-- "Boostrap v3":  data-backdrop
-  "Boostrap v5":  data-bs-backdrop
+- "Bootstrap v3":  data-backdrop
+  "Bootstrap v5":  data-bs-backdrop
   "Search Regex": data-backdrop
 
-- "Boostrap v3":  data-dismiss
-  "Boostrap v5":  data-bs-dismiss
+- "Bootstrap v3":  data-dismiss
+  "Bootstrap v5":  data-bs-dismiss
   "Search Regex": data-dismiss
 
-- "Boostrap v3":  data-target
-  "Boostrap v5":  data-bs-target
+- "Bootstrap v3":  data-target
+  "Bootstrap v5":  data-bs-target
   "Search Regex": data-target
 
-- "Boostrap v3":  data-title
-  "Boostrap v5":  data-bs-title
+- "Bootstrap v3":  data-title
+  "Bootstrap v5":  data-bs-title
   "Search Regex": data-title
 
-- "Boostrap v3":  data-toggle
-  "Boostrap v5":  data-bs-toggle
+- "Bootstrap v3":  data-toggle
+  "Bootstrap v5":  data-bs-toggle
   "Search Regex": data-toggle
 
-- "Boostrap v3":  Dropdowns
-  "Boostrap v5":  Dropdowns
+- "Bootstrap v3":  Dropdowns
+  "Bootstrap v5":  Dropdowns
   "Search Regex": WIP
 
-- "Boostrap v3":  Dropdowns
-  "Boostrap v5":  Dropdowns
+- "Bootstrap v3":  Dropdowns
+  "Bootstrap v5":  Dropdowns
   "Search Regex": WIP
 
-- "Boostrap v3":  Tabs
-  "Boostrap v5":  Tabs
+- "Bootstrap v3":  Tabs
+  "Bootstrap v5":  Tabs
   "Search Regex": WIP
