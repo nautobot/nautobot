@@ -1962,11 +1962,11 @@ class Module(PrimaryModel):
     @property
     def page_title(self):
         if self.location:
-            return f"{self.module_type!s} at location {self.location}"
+            return f"{self.location} {self.module_type!s}"
         if self.parent_module_bay.parent_device is not None:
-            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
+            return f"{self.parent_module_bay.parent_device.display} {self.module_type!s}"
 
-        return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.module_type!s}"
+        return f"{self.parent_module_bay.parent_module.module_type!s} {self.module_type!s}"
 
     @property
     def device(self):
