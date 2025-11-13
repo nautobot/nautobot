@@ -6,7 +6,7 @@ import subprocess
 
 import yaml
 
-# from .migrate_deprecated_templates import replace_deprecated_templates
+from .migrate_deprecated_templates import replace_deprecated_templates
 
 logger = logging.getLogger(__name__)
 
