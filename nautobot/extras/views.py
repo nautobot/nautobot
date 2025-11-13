@@ -706,6 +706,8 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "default_time_zone": get_current_timezone(),
                 "stage_table": stage_table,
                 "response_table": response_table,
+                # TODO: is this the right general pattern? Scheduled Jobs aren't yet using NautobotUIViewSet
+                "title": f"{obj} - Approval Workflow",
                 **common_detail_view_context(request, obj),
             },
         )
