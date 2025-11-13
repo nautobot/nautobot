@@ -5,12 +5,12 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect, render
 
-from nautobot.apps.ui import Titles
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
+from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
