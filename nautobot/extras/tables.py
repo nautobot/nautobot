@@ -1123,7 +1123,7 @@ class JobTable(BaseTable):
 
     def render_name(self, value):
         return format_html(
-            '<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}',
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
             value,
         )
 
