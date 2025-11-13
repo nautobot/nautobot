@@ -247,11 +247,11 @@ class VRFTable(StatusTableMixin, BaseTable):
 class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
-    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf__name")
     namespace = tables.Column(
         verbose_name="Namespace",
         linkify=lambda record: record.vrf.namespace.get_absolute_url(),
-        accessor="vrf.namespace.name",
+        accessor="vrf__namespace__name",
     )
     related_object_type = tables.TemplateColumn(
         template_code="""
@@ -287,10 +287,10 @@ class VRFDeviceAssignmentTable(BaseTable):
 class VRFPrefixAssignmentTable(BaseTable):
     """Table for displaying VRF Prefix Assignments."""
 
-    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf__name")
     prefix = tables.Column(linkify=True)
-    rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
-    tenant = TenantColumn(accessor="vrf.tenant")
+    rd = tables.Column(accessor="vrf__rd", verbose_name="RD")
+    tenant = TenantColumn(accessor="vrf__tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFPrefixAssignment

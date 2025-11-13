@@ -7,7 +7,7 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import ControllerManagedDeviceGroup
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -66,6 +66,11 @@ class RadioProfileFilterSet(NautobotFilterSet):
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
     )
+    controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Device.objects.all(),
+        to_field_name="name",
+    )
     has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
         field_name="controller_managed_device_groups",
         label="Has controller managed device groups",
@@ -100,6 +105,15 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     )
     controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+    )
+    controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Device.objects.all(),
+        to_field_name="name",
+    )
+    controller_managed_device_groups__controller = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Controller.objects.all(),
         to_field_name="name",
     )
     has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
