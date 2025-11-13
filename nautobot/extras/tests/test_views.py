@@ -444,8 +444,8 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(response, "Approval Date")  # Assert the approval date is present
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_approve_stage_with_exisitng_comment_endpoint(self):
-        """Test the approve stage with exisitng comment endpoint."""
+    def test_approve_stage_with_existing_comment_endpoint(self):
+        """Test the approve stage with existing comment endpoint."""
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         new_response = ApprovalWorkflowStageResponse.objects.create(
             approval_workflow_stage=approval_workflow_stage,
@@ -525,8 +525,8 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(response, "Denial Date")  # Assert the denial date is present
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_deny_stage_with_exisitng_comment_endpoint(self):
-        """Test the deny stage with exisitng comment endpoint."""
+    def test_deny_stage_with_existing_comment_endpoint(self):
+        """Test the deny stage with existing comment endpoint."""
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         new_response = ApprovalWorkflowStageResponse.objects.create(
             approval_workflow_stage=approval_workflow_stage,
