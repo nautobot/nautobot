@@ -2279,6 +2279,69 @@ class JobTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_run_job_filtered_approval(self, mock_enqueue_job, mock_get_worker_count):
+        """
+        Run a job with a defined approval workflow whose filter should or should not include it.
+        """
+        workflow = ApprovalWorkflowDefinition(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+            model_constraints={"job_model__job_class_name": "APITestJob"},
+        )
+        workflow.validated_save()
+
+        # Do the stuff.
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = Role.objects.get_for_model(Device).first()
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": device_role.pk,
+        }
+
+        data = {
+            "data": job_data,
+            # schedule is omitted
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # Assert that a JobResult for this job was NOT created.
+        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
+
+        # Assert that we have an immediate ScheduledJob and that it matches the job_model.
+        schedule = ScheduledJob.objects.last()
+        self.assertIsNotNone(schedule)
+        self.assertEqual(schedule.interval, JobExecutionType.TYPE_FUTURE)
+        self.assertTrue(schedule.approval_required)
+        self.assertEqual(schedule.kwargs["var4"], str(device_role.pk))
+        mock_enqueue_job.assert_not_called()
+
+        # Change the workflow definition so that it no longer applies to this job model
+        workflow.model_constraints = {"job_model__job_class_name__istartswith": "SomeOtherJob"}
+        workflow.validated_save()
+
+        mock_enqueue_job.return_value = None
+        deserialized_data = self.job_class.deserialize_data(job_data)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+        expected_enqueue_job_args = (self.job_model, self.user)
+        expected_enqueue_job_kwargs = {
+            "job_queue": self.job_model.default_job_queue,
+            **self.job_class.serialize_data(deserialized_data),
+        }
+        mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
+        # No new scheduled job should be created
+        self.assertEqual(schedule, ScheduledJob.objects.last())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
     def test_run_job_object_var_lookup(self, mock_enqueue_job, mock_get_worker_count):
         """Job run requests can reference objects by their attributes."""
         mock_get_worker_count.return_value = 1

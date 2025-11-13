@@ -4,7 +4,7 @@
 
 A load balancer pool member is an individual service within a load balancing pool that handles incoming traffic distributed by the load balancer.
 
-The LoadBalancerPoolMember model provides the following fields:
+The `LoadBalancerPoolMember` model provides the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|

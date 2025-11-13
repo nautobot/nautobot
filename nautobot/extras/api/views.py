@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
@@ -906,55 +907,61 @@ class JobViewSetBase(
         if schedule_data is None:
             schedule_data = {"interval": JobExecutionType.TYPE_IMMEDIATELY, "start_time": timezone.now()}
 
-        schedule = ScheduledJob.create_schedule(
-            job_model,
-            request.user,
-            name=schedule_data.get("name"),
-            start_time=schedule_data.get("start_time"),
-            interval=schedule_data.get("interval"),
-            crontab=schedule_data.get("crontab", ""),
-            job_queue=job_queue,
-            validated_save=False,
-            **job_class.serialize_data(cleaned_data),
-        )
-
-        scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
-        if job_model.has_sensitive_variables:
-            if (
-                "schedule" in request.data
-                and "interval" in request.data["schedule"]
-                and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
-            ):
-                raise ValidationError(
-                    {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
-                )
-            # check approval_required pointer
-            if scheduled_job_has_approval_workflow:
-                raise ValidationError(
-                    "Unable to run or schedule job: "
-                    "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
-                    "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False."
-                )
-
-        # Approval is not required for dryrun
-        # TODO: remove this once we have the ability to configure an approval workflow to ignore jobs with specific parameters(including `dryrun`)
-        dryrun = data.get("dryrun", False) if job_class.supports_dryrun else False
-
-        if (not dryrun and scheduled_job_has_approval_workflow) or schedule_data[
-            "interval"
-        ] in JobExecutionType.SCHEDULE_CHOICES:
-            schedule.validated_save()
-            serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
-            return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
-        else:
-            job_result = JobResult.enqueue_job(
+        with transaction.atomic():
+            schedule = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
+                name=schedule_data.get("name"),
+                start_time=schedule_data.get("start_time"),
+                interval=schedule_data.get("interval"),
+                crontab=schedule_data.get("crontab", ""),
                 job_queue=job_queue,
                 **job_class.serialize_data(cleaned_data),
             )
-            serializer = serializers.JobResultSerializer(job_result, context={"request": request})
-            return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
+
+            scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
+            if job_model.has_sensitive_variables:
+                if (
+                    "schedule" in request.data
+                    and "interval" in request.data["schedule"]
+                    and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
+                ):
+                    schedule.delete()
+                    schedule = None
+                    raise ValidationError(
+                        {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
+                    )
+                # check approval_required pointer
+                if scheduled_job_has_approval_workflow:
+                    schedule.delete()
+                    schedule = None
+                    raise ValidationError(
+                        "Unable to run or schedule job: "
+                        "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                        "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False."
+                    )
+
+            # Approval is not required for dryrun
+            # TODO: remove this once we have the ability to configure an approval workflow to ignore jobs with specific parameters(including `dryrun`)
+            dryrun = data.get("dryrun", False) if job_class.supports_dryrun else False
+
+            if (not dryrun and scheduled_job_has_approval_workflow) or schedule_data[
+                "interval"
+            ] in JobExecutionType.SCHEDULE_CHOICES:
+                serializer = serializers.ScheduledJobSerializer(schedule, context={"request": request})
+                return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
+
+            schedule.delete()
+            schedule = None
+
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            job_queue=job_queue,
+            **job_class.serialize_data(cleaned_data),
+        )
+        serializer = serializers.JobResultSerializer(job_result, context={"request": request})
+        return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 class JobViewSet(

@@ -129,7 +129,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filter_mixins import RoleFilter, StatusFilter
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.extras.tests.test_customfields_filters import CustomFieldsFilters
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup, VRF, VRFDeviceAssignment
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
@@ -1830,6 +1830,8 @@ class DeviceTestCase(
         ("vc_priority",),
         ("virtual_chassis", "virtual_chassis__id"),
         ("virtual_chassis", "virtual_chassis__name"),
+        ("vrfs", "vrfs__id"),
+        ("vrfs", "vrfs__rd"),
         ("wireless_networks", "controller_managed_device_group__wireless_networks__id"),
         ("wireless_networks", "controller_managed_device_group__wireless_networks__name"),
     ]
@@ -1935,6 +1937,14 @@ class DeviceTestCase(
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis_1, vc_position=2, vc_priority=2)
         virtual_chassis_2 = VirtualChassis.objects.create(name="vc2", master=devices[2])
         Device.objects.filter(pk=devices[2].pk).update(virtual_chassis=virtual_chassis_2, vc_position=1, vc_priority=1)
+
+        # VRF assignment for filtering
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="1:1"),
+            VRF.objects.create(name="VRF 2", rd="1:2"),
+        )
+        VRFDeviceAssignment.objects.create(device=devices[0], vrf=vrfs[0])
+        VRFDeviceAssignment.objects.create(device=devices[1], vrf=vrfs[1])
 
     def test_special_filters(self):
         # TODO: Not a generic_filter_test because this is a single-value filter

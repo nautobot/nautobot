@@ -2,7 +2,7 @@
 
 ## Key Features and Functionality
 
-- **Multi-vendor Support:** Native compatibility with popular load balancing vendors including F5, Citrix NetScaler, A10 Networks, and Fortinet.
+- **Multi-vendor Support:** Native compatibility with popular load balancing vendors including F5, Citrix NetScaler, A10 Networks, VMware Avi Load Balancer, and Fortinet.
 - **CRUD Operations:** Manage Load Balancer resources directly within Nautobot UI, REST API, and GraphQL.
 - **Integration and Extensibility:** Leverage Nautobot’s extensibility framework for deeper integration with other applications and automation systems.
 - **Configuration Management:** Generate basic load balancing configurations directly from stored data models.
@@ -49,43 +49,63 @@
 
 ## Screenshots Showcasing Load Balancer Data Model
 
-![Virtual Servers List](./images/load-balancer-virtual-server.png)
+![Virtual Servers List](./images/load-balancer/load-balancer-virtual-server-light.png#only-light){ .on-glb }
+![Virtual Servers List](./images/load-balancer/load-balancer-virtual-server-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/`"
 
 A list view of all configured Virtual Servers, including name, load balancer type, protocol, and associated pools.
 
-![Virtual Server Detail](./images/load-balancer-virtual-server-detail.png)
+![Virtual Server Detail](./images/load-balancer/load_balancer-virtual-server-detail-light.png#only-light){ .on-glb }
+![Virtual Server Detail](./images/load-balancer/load-balancer-virtual-server-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/19736556-378c-4a61-b3b8-aaae2f2f422c/`"
 
 Detailed view of a single Virtual Server, showing the VIP, port, protocol, associated Certificate Profile, and linked Load Balancer Pool.
 
-![Load Balancer Pools List](./images/load-balancer-pools.png)
+![Load Balancer Pools List](./images/load-balancer/load-balancer-pools-light.png#only-light){ .on-glb }
+![Load Balancer Pools List](./images/load-balancer/load-balancer-pools-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/`"
 
 A list view of Load Balancer Pools, showing pool names and algorithms.
 
-![Load Balancer Pool Detail](./images/load-balancer-pools-detail.png)
+![Load Balancer Pool Detail](./images/load-balancer/load-balancer-pools-detail-light.png#only-light){ .on-glb }
+![Load Balancer Pools Detail](./images/load-balancer/load-balancer-pools-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/d5097984-9c43-4c33-a6b2-43339dfd65f4/`"
 
 Detailed view of a specific Load Balancer Pool, including load balancing algorithm, associated pool members, and associated Health Check Monitor.
 
-![Load Balancer Pool Members List](./images/load-balancer-pool-member.png)
+![Load Balancer Pool Members List](./images/load-balancer/load-balancer-pool-member-light.png#only-light){ .on-glb }
+![Load Balancer Pool Members List](./images/load-balancer/load-balancer-pool-member-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/`"
 
 A list view of Load Balancer Pool Members, displaying IP Addresses, ports, and status.
 
-![Load Balancer Pool Member Detail](./images/load-balancer-pool-member-detail.png)
+![Load Balancer Pool Member Detail](./images/load-balancer/load-balancer-pool-member-detail-light.png#only-light){ .on-glb }
+![Load Balancer Pool Member Detail](./images/load-balancer/load-balancer-pool-member-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/132759f4-1fa9-47dd-94f3-371abb943dd7/`"
 
 Detailed view of an individual Load Balancer Pool Member, including its linked pool, port, health check monitor configuration, and certificate profile.
 
-![Health Checks List](./images/load-balancer-health-check.png)
+![Health Checks List](./images/load-balancer/load-balancer-health-check-light.png#only-light){ .on-glb }
+![Health Checks List](./images/load-balancer/load-balancer-health-check-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/`"
 
 A list view of a Health Check Monitor showing health check types, port, interval, retry and timeout settings.
 
-![Health Check Detail](./images/load-balancer-health-check-detail.png)
+![Health Check Detail](./images/load-balancer/load-balancer-health-check-detail-light.png#only-light){ .on-glb }
+![Health Check Detail](./images/load-balancer/load-balancer-health-check-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/497deb96-e43b-4408-b3fb-2a1ae6bf7856/`"
 
 Detailed view of a Health Check Monitor including interval, timeout, and target port.
 
-![Certificate Profiles List](./images/load-balancer-cert.png)
+![Certificate Profiles List](./images/load-balancer/load-balancer-cert-light.png#only-light){ .on-glb }
+![Certificate Profiles List](./images/load-balancer/load-balancer-cert-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/`"
 
 A list view of available Certificate Profiles used for SSL/TLS termination, showing certificate type and other optional fields.
 
-![Certificate Profile Detail](./images/load-balancer-cert-detail.png)
+![Certificate Profile Detail](./images/load-balancer/load-balancer-cert-detail-light.png#only-light){ .on-glb }
+![Certificate Profile Detail](./images/load-balancer/load-balancer-cert-detail-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/c80b768a-498d-4111-be42-e9462afe645e/`"
 
 Detailed view for a Certificate Profile, including certificate type, certificate file path, and key file paths.
 
@@ -103,10 +123,12 @@ In this example, we configure:
 
 Ensure the following IP Addresses exist in Nautobot's IPAM:
 
-- **Virtual IP (VIP):** `192.0.2.1`
+- **Virtual IP (VIP):** `10.0.0.1`
 - **Pool Member IP:** `10.0.0.1`
 
-![F5 Simple IP Addresses](./images/load-balancer-f5-simple-1.png)
+![F5 Simple IP Addresses](./images/load-balancer/load-balancer-f5-simple-1-light.png#only-light){ .on-glb }
+![F5 Simple IP Addresses](./images/load-balancer/load-balancer-f5-simple-1-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/ip-addresses/`"
 
 ### 2. Configuring Load Balancer Pool
 
@@ -115,7 +137,9 @@ Ensure the following IP Addresses exist in Nautobot's IPAM:
     - Name: `pool1`
     - Load Balancing Algorithm: `Round Robin`
 
-![F5 Simple Adding Load Balancer Pool](./images/load-balancer-f5-simple-2.png)
+![F5 Simple Adding Load Balancer Pool](./images/load-balancer/load-balancer-f5-simple-3-light.png#only-light){ .on-glb }
+![F5 Simple Adding Load Balancer Pool](./images/load-balancer/load-balancer-f5-simple-3-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 ### 3. Adding a Load Balancer Pool Member
 
@@ -126,7 +150,8 @@ Ensure the following IP Addresses exist in Nautobot's IPAM:
     - Status: Active
     - Port: `80`
 
-![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer-f5-simple-3.png)
+![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer/load-balancer-f5-simple-5-light.png#only-light){ .on-glb }
+![F5 Simple Adding Load Balancer Pool Member](./images/load-balancer/load-balancer-f5-simple-5-dark.png#only-dark){ .on-glb }
 
 ### 4. Creating the Virtual Server
 
@@ -135,12 +160,14 @@ In the Nautobot UI:
 - Navigate to **Load Balancer > Virtual Servers**.
 - Click **Add Virtual Server**.
     - Name: `virtual1`
-    - IP Address (VIP): `192.0.2.1`
+    - IP Address (VIP): `10.0.0.1`
     - Port: `80`
     - Protocol: `TCP`
     - Load Balancer Pool: `pool1`
 
-![F5 Simple Adding Virtual Server](./images/load-balancer-f5-simple-4.png)
+![F5 Simple Adding Virtual Server](./images/load-balancer/load-balancer-f5-simple-2-light.png#only-light){ .on-glb }
+![F5 Simple Adding Virtual Server](./images/load-balancer/load-balancer-f5-simple-2-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 ### 5. Validation and Configuration Snippet
 
@@ -180,7 +207,7 @@ A sample JSON response for that query would look like:
         "port": 80,
         "protocol": "TCP",
         "vip": {
-          "address": "192.0.2.1/32"
+          "address": "10.0.0.1/32"
         },
         "load_balancer_pool": {
           "name": "pool1",
@@ -199,7 +226,9 @@ A sample JSON response for that query would look like:
 }
 ```
 
-![F5 Simple GraphQL](./images/load-balancer-f5-simple-5.png)
+![F5 Simple GraphQL](./images/load-balancer/load-balancer-f5-simple-4-light.png#only-light){ .on-glb }
+![F5 Simple GraphQL](./images/load-balancer/load-balancer-f5-simple-4-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 Using that JSON response, you can then build a Jinja2 template following the data model:
 
@@ -244,15 +273,16 @@ ltm node /Common/{{ member.ip_address.address.split('/')[0] }} {
 Sample output from the template (you can use the Jinja Renderer linked at the bottom of Nautobot):
 
 ```no-highlight
-ltm virtual-address /Common/192.0.2.1 {
-    address 192.0.2.1
+
+ltm virtual-address /Common/10.0.0.1 {
+    address 10.0.0.1
     arp enabled
     mask 255.255.255.255
     route-advertisement selective
 }
 
 ltm virtual /Common/virtual1 {
-    destination /Common/192.0.2.1:80
+    destination /Common/10.0.0.1:80
     ip-protocol tcp
     mask 255.255.255.255
     pool /Common/pool1
@@ -275,7 +305,9 @@ ltm node /Common/10.0.0.1 {
 }
 ```
 
-![F5 Simple Jinja2](./images/load-balancer-f5-simple-6.png)
+![F5 Simple Jinja2](./images/load-balancer/load-balancer-f5-simple-6-light.png#only-light){ .on-glb }
+![F5 Simple Jinja2](./images/load-balancer/load-balancer-f5-simple-6-dark.png#only-dark){ .on-glb }
+[//] : # "`https://next.demo.nautobot.com/render-jinja-template/`"
 
 ## F5 Advanced Load Balancing Use Case
 
@@ -289,16 +321,20 @@ In this advanced configuration scenario, we illustrate:
 
 ### 1. Advanced IPAM Configuration
 
-![F5 Advanced IPAM Configuration](./images/load-balancer-f5-advanced-1.png)
+![F5 Advanced IPAM Configuration](./images/load-balancer/load-balancer-f5-advanced-1-light.png#only-light){ .on-glb }
+![F5 Advanced IPAM Configuration](./images/load-balancer/load-balancer-f5-advanced-1-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/ip-addresses/`"
 
 Ensure these IP Addresses are available in Nautobot's IPAM:
 
-- **Virtual IP (VIP):** `10.230.15.214`
-- **Pool Member IPs:** `10.230.32.121`, `10.230.32.122`, `10.230.32.123`
+- **Virtual IP (VIP):** `10.0.20.1`
+- **Pool Member IPs:** `10.0.20.2`, `10.0.20.3`, `10.0.20.4`
 
 ### 2. Health Check Configuration
 
-![F5 Advanced Health Check](./images/load-balancer-f5-advanced-2.png)
+![F5 Advanced Health Check](./images/load-balancer/load-balancer-f5-advanced-2-light.png#only-light){ .on-glb }
+![F5 Advanced Health Check](./images/load-balancer/load-balancer-f5-advanced-2-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/health-check-monitors/add/`"
 
 Before configuring your pools, set up your health checks:
 
@@ -313,7 +349,9 @@ Before configuring your pools, set up your health checks:
 
 ### 3. Certificate Profile Configuration
 
-![F5 Advanced Certificate Profile](./images/load-balancer-f5-advanced-3.png)
+![F5 Advanced Certificate Profile](./images/load-balancer/load-balancer-f5-advanced-3-light.png#only-light){ .on-glb }
+![F5 Advanced Certificate Profile](./images/load-balancer/load-balancer-f5-advanced-3-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/certificate-profiles/add/`"
 
 Define Certificate Profiles:
 
@@ -327,7 +365,9 @@ Define Certificate Profiles:
 
 ### 4. Configuring Load Balancer Pool
 
-![F5 Advanced Pool Config](./images/load-balancer-f5-advanced-4.png)
+![F5 Advanced Pool Config](./images/load-balancer/load-balancer-f5-advanced-4-light.png#only-light){ .on-glb }
+![F5 Advanced Pool Config](./images/load-balancer/load-balancer-f5-advanced-4-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pools/add/`"
 
 - Navigate to **Load Balancer > Pools**.
 - Click **Add Load Balancer Pool**.
@@ -337,14 +377,16 @@ Define Certificate Profiles:
 
 ### 5. Adding Load Balancer Pool Members
 
-![F5 Advanced Pool Members](./images/load-balancer-f5-advanced-5.png)
+![F5 Advanced Pool Members](./images/load-balancer/load-balancer-f5-advanced-5-light.png#only-light){ .on-glb }
+![F5 Advanced Pool Members](./images/load-balancer/load-balancer-f5-advanced-5-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/load-balancer-pool-members/add/`"
 
 - Navigate to **Load Balancer > Pool Members**.
 - Add each pool member individually:
     - IP Addresses:
-        - `10.230.32.121`
-        - `10.230.32.122`
-        - `10.230.32.123`
+        - `10.0.10.2`
+        - `10.0.10.3`
+        - `10.0.10.4`
     - Load Balancer Pool: `pool_live_ident_admin_web_http`
     - Status: `Active`
     - Port: `9280`
@@ -353,12 +395,14 @@ Define Certificate Profiles:
 
 ### 6. Creating the Virtual Server
 
-![F5 Advanced Virtual Server](./images/load-balancer-f5-advanced-6.png)
+![F5 Advanced Virtual Server](./images/load-balancer/load-balancer-f5-advanced-6-light.png#only-light){ .on-glb }
+![F5 Advanced Virtual Server](./images/load-balancer/load-balancer-f5-advanced-6-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/load-balancers/virtual-servers/add/`"
 
 - Navigate to **Load Balancer > Virtual Servers**.
 - Click **Add Virtual Server**.
     - Name: `vs_live_ident_admin_web_https`
-    - IP Address (VIP): `10.230.15.214`
+    - IP Address (VIP): `10.0.20.1`
     - Protocol: `TCP`
     - Load Balancer Type: `Layer 7`
     - Port: `443`
@@ -404,7 +448,9 @@ Define Certificate Profiles:
 }
 ```
 
-![F5 Advanced GraphQL Response](./images/load-balancer-f5-advanced-7.png)
+![F5 Advanced GraphQL Response](./images/load-balancer/load-balancer-f5-advanced-7-light.png#only-light){ .on-glb }
+![F5 Advanced GraphQL Response](./images/load-balancer/load-balancer-f5-advanced-7-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ```json
 {
@@ -415,15 +461,7 @@ Define Certificate Profiles:
         "port": 443,
         "protocol": "TCP",
         "vip": {
-          "address": "10.230.15.214/32"
-        },
-        "health_check_monitor": {
-          "name": "http",
-          "health_check_type": "HTTP",
-          "port": 80,
-          "interval": 30,
-          "timeout": 5,
-          "retry": 3
+          "address": "10.0.20.1/32"
         },
         "certificate_profiles": [
           {
@@ -447,19 +485,19 @@ Define Certificate Profiles:
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.121/32"
+                "address": "10.0.20.2/32"
               }
             },
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.122/32"
+                "address": "10.0.20.3/32"
               }
             },
             {
               "port": 9280,
               "ip_address": {
-                "address": "10.230.32.123/32"
+                "address": "10.0.20.4/32"
               }
             }
           ]
@@ -470,7 +508,9 @@ Define Certificate Profiles:
 }
 ```
 
-![F5 Advanced Jinja2 Template](./images/load-balancer-f5-advanced-8.png)
+![F5 Advanced Jinja2 Template](./images/load-balancer/load-balancer-f5-advanced-8-light.png#only-light){ .on-glb }
+![F5 Advanced Jinja2 Template](./images/load-balancer/load-balancer-f5-advanced-8-dark.png#only-dark){ .on-glb }
+[//] : # "`https://next.demo.nautobot.com/render-jinja-template/`"
 
 ```jinja2
 {% for virtual_server in data.virtual_servers %}
@@ -536,8 +576,8 @@ ltm node /Common/{{ member.ip_address.address.split('/')[0] }} {
 You can use the Jinja Renderer at the bottom of Nautobot with your JSON output and the sample Jinja2 template:
 
 ```no-highlight
-ltm virtual-address /Common/10.230.15.214 {
-    address 10.230.15.214
+ltm virtual-address /Common/10.0.20.1 {
+    address 10.0.20.1
     arp enabled
     mask 255.255.255.255
     route-advertisement selective
@@ -556,7 +596,7 @@ ltm profile client-ssl /Common/clientssl-fedcheck.app-strong {
 }
 
 ltm virtual /Common/vs_live_ident_admin_web_https {
-    destination /Common/10.230.15.214:443
+    destination /Common/10.0.20.1:443
     ip-protocol tcp
     mask 255.255.255.255
     pool /Common/pool_live_ident_admin_web_http
@@ -574,30 +614,30 @@ ltm virtual /Common/vs_live_ident_admin_web_https {
 
 ltm pool /Common/pool_live_ident_admin_web_http {
     members {
-        /Common/10.230.32.121:9280 {
-            address 10.230.32.121
+        /Common/10.0.20.2:9280 {
+            address 10.0.20.2
         }
-        /Common/10.230.32.122:9280 {
-            address 10.230.32.122
+        /Common/10.0.20.3:9280 {
+            address 10.0.20.3
         }
-        /Common/10.230.32.123:9280 {
-            address 10.230.32.123
+        /Common/10.0.20.4:9280 {
+            address 10.0.20.4
         }
     }
     monitor /Common/http
 }
 
 
-ltm node /Common/10.230.32.121 {
-    address 10.230.32.121
+ltm node /Common/10.0.20.2 {
+    address 10.0.20.2
 }
 
-ltm node /Common/10.230.32.122 {
-    address 10.230.32.122
+ltm node /Common/10.0.20.3 {
+    address 10.0.20.3
 }
 
-ltm node /Common/10.230.32.123 {
-    address 10.230.32.123
+ltm node /Common/10.0.20.4 {
+    address 10.0.20.4
 }
 ```
 
@@ -629,3 +669,64 @@ To capture these, you can define **Custom Fields** in Nautobot on models like `V
 - Use a **JSON Custom Field** to store structured vendor-specific configuration, such as SNAT policies or fallback persistence logic.
 
 Both field types and many more types are defined are defined through Nautobot’s Custom Field system and will appear in the UI, API, and Jinja2 templates. This provides a flexible, vendor-specific extension mechanism without altering the core data model.
+
+## Sample Citrix NetScaler Jinja Template
+
+This simple template for Citrix NetScaler will work with the same data as above.
+
+```jinja2
+{% for virtual_server in data.virtual_servers %}
+
+add ns ip {{ virtual_server.vip.address.split('/')[0] }} 255.255.255.255 -type VIP
+
+{%- if virtual_server.certificate_profiles %}
+add ssl certKey {{ virtual_server.certificate_profiles[0].name }} -cert {{ virtual_server.certificate_profiles[0].certificate_file_path }} -key {{ virtual_server.certificate_profiles[0].key_file_path }}
+{% endif %}
+
+{%- for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+add service svc_{{ virtual_server.load_balancer_pool.name }}_{{ loop.index }} {{ member.ip_address.address.split('/')[0] }} {{ virtual_server.protocol | upper }} {{ member.port }}
+{%- endfor %}
+
+add servicegroup sg_{{ virtual_server.load_balancer_pool.name }} {{ virtual_server.protocol | upper }}
+{% for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+bind servicegroup sg_{{ virtual_server.load_balancer_pool.name }} svc_{{ virtual_server.load_balancer_pool.name }}_{{ loop.index }}
+{%- endfor %}
+
+add lb vserver {{ virtual_server.name }} {{ virtual_server.protocol | upper }} {{ virtual_server.vip.address.split('/')[0] }} {{ virtual_server.port }}
+bind lb vserver {{ virtual_server.name }} -serviceGroupName sg_{{ virtual_server.load_balancer_pool.name }}
+
+{% if virtual_server.certificate_profiles %}
+bind ssl vserver {{ virtual_server.name }} -certkeyName {{ virtual_server.certificate_profiles[0].name }}
+{%- endif %}
+
+{% endfor %}
+```
+
+## Sample A10 Networks Jinja Template
+
+This simple template for A10 Networks will work with the same data as above.
+
+```jinja2
+{% for virtual_server in data.virtual_servers %}
+
+{% for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+slb server realserver{{ loop.index }} {{ member.ip_address.address.split('/')[0] }}
+  port {{ member.port }} tcp
+
+{%- endfor %}
+
+slb service-group {{ virtual_server.load_balancer_pool.name }} tcp
+{%- for member in virtual_server.load_balancer_pool.load_balancer_pool_members %}
+  member realserver{{ loop.index }} {{ member.port }}
+
+{%- endfor %}
+
+slb virtual-server {{ virtual_server.name }} {{ virtual_server.vip.address.split('/')[0] }}
+  port {{ virtual_server.port }} {{ virtual_server.protocol | lower }}
+  service-group {{ virtual_server.load_balancer_pool.name }}
+{% if virtual_server.source_nat_pool is defined %}
+  source-nat pool {{ virtual_server.source_nat_pool }}
+{% endif %}
+
+{% endfor %}
+```

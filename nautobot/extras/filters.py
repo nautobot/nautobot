@@ -23,8 +23,9 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.dcim.models import DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
@@ -385,6 +386,12 @@ class ConfigContextFilterSet(BaseFilterSet):
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device Type (model or ID)",
+    )
+    device_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_families",
+        queryset=DeviceFamily.objects.all(),
+        to_field_name="name",
+        label="Device Family (name or ID)",
     )
     platform_id = ModelMultipleChoiceFilter(
         field_name="platforms",
@@ -1208,10 +1215,15 @@ class ScheduledJobFilterSet(BaseFilterSet):
         label="Time zone",
         null_value="",
     )
+    approval_state = django_filters.MultipleChoiceFilter(
+        field_name="associated_approval_workflows__current_state",
+        label="Approval state",
+        choices=ApprovalWorkflowStateChoices,
+    )
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "name", "total_run_count", "start_time", "last_run_at", "time_zone"]
+        fields = ["id", "name", "enabled", "total_run_count", "start_time", "last_run_at", "time_zone"]
 
 
 #
@@ -1470,6 +1482,11 @@ class SecretFilterSet(
         filter_predicates={
             "name": "icontains",
         },
+    )
+    secrets_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Groups (ID or name)",
+        to_field_name="name",
     )
     # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
     # classes, not database models.

@@ -13,7 +13,8 @@ def update_data_validation_engine_job_module_name(apps, schema_editor):
     """
     Job = apps.get_model("extras", "Job")
     dve_jobs = Job.objects.filter(module_name="nautobot_data_validation_engine.jobs")
-    dve_jobs.update(module_name="nautobot.data_validation.jobs")
+    # Now that the DVE jobs are system jobs, they should be enabled by default
+    dve_jobs.update(module_name="nautobot.core.jobs", enabled=True)
 
 
 def update_data_validation_engine_git_repo_contents(apps, schema_editor):
@@ -170,7 +171,7 @@ def revert_data_validation_engine_job_module_name(apps, schema_editor):
     Revert the `module_name` for the Jobs to match the old location of the data validation engine.
     """
     Job = apps.get_model("extras", "Job")
-    dve_jobs = Job.objects.filter(module_name="nautobot.data_validation.jobs")
+    dve_jobs = Job.objects.filter(module_name="nautobot.core.jobs")
     dve_jobs.update(module_name="nautobot_data_validation_engine.jobs")
 
 

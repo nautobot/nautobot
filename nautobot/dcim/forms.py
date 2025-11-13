@@ -39,7 +39,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
-from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -530,6 +531,17 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         query_params={"ancestors": "$location"},
     )
     comments = CommentField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial value for u_height from Constance config when creating a new rack
+        if not self.instance.present_in_database and not kwargs.get("data"):
+            # Only set initial if this is a new form (not submitted data)
+            config_default = get_settings_or_config("RACK_DEFAULT_U_HEIGHT", fallback=RACK_U_HEIGHT_DEFAULT)
+            self.fields["u_height"].initial = config_default
+            # Override the form's initial dict to ensure it displays the Constance config value
+            # (unconditionally set it, even if already present from model default)
+            self.initial["u_height"] = config_default
 
     class Meta:
         model = Rack
@@ -1479,7 +1491,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
 
 
 class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
-    type = forms.ChoiceField(choices=InterfaceTypeChoices, widget=StaticSelect2())
+    type = forms.ChoiceField(choices=add_blank_choice(InterfaceTypeChoices), widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1555,7 +1567,7 @@ class FrontPortTemplateForm(ModularComponentTemplateForm):
 
 
 class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
-    type = forms.ChoiceField(choices=PortTypeChoices, widget=StaticSelect2())
+    type = forms.ChoiceField(choices=add_blank_choice(PortTypeChoices), widget=StaticSelect2())
     rear_port_template_set = forms.MultipleChoiceField(
         choices=[],
         label="Rear ports",
@@ -1665,7 +1677,7 @@ class RearPortTemplateForm(ModularComponentTemplateForm):
 
 class RearPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     positions = forms.IntegerField(
@@ -3294,7 +3306,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
 class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3423,7 +3435,7 @@ class InterfaceBulkCreateForm(
 ):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3461,7 +3473,7 @@ class ModuleInterfaceBulkCreateForm(
 ):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3666,7 +3678,7 @@ class FrontPortForm(ModularComponentEditForm):
 # TODO: Merge with FrontPortTemplateCreateForm to remove duplicate logic
 class FrontPortCreateForm(ModularComponentCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     rear_port_set = forms.MultipleChoiceField(
@@ -3794,7 +3806,7 @@ class RearPortForm(ModularComponentEditForm):
 
 class RearPortCreateForm(ModularComponentCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     positions = forms.IntegerField(
@@ -5122,7 +5134,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         queryset=InterfaceRedundancyGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices, required=False)
+    protocol = forms.ChoiceField(choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices), required=False)
     description = forms.CharField(required=False)
     virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)

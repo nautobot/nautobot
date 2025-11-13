@@ -484,6 +484,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 table_attribute="images",
                 related_field_name="location",
                 show_table_config_button=False,
+                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -1061,6 +1062,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=InterfaceTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1086,6 +1088,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=FrontPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1111,6 +1114,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=RearPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1136,6 +1140,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ConsolePortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1161,6 +1166,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ConsoleServerPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1186,6 +1192,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=PowerPortTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1211,6 +1218,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=PowerOutletTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1236,6 +1244,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=DeviceBayTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1261,6 +1270,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                             model=ModuleBayTemplate,
                         ),
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),
@@ -1476,6 +1486,7 @@ class ModuleTypeUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    # ObjectDataComplianceViewMixin,  # TODO: enable once converted to UI framework
     ObjectChangeLogViewMixin,
     ObjectNotesViewMixin,
 ):
@@ -2759,6 +2770,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="device",
                 exclude_columns=["related_object_type", "related_object_name"],
+                related_list_url_name="ipam:vrf_list",
                 show_table_config_button=False,
             ),
             object_detail.ObjectsTablePanel(
@@ -2788,6 +2800,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 table_attribute="images",
                 related_field_name="device",
                 show_table_config_button=False,
+                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
@@ -3495,6 +3508,30 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     serializer_class = serializers.ModuleSerializer
     table_class = tables.ModuleTable
     component_model = None
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_module_bay.parent_device"),
+                    should_render=lambda c: c["object"].parent_module_bay is not None
+                    and c["object"].parent_module_bay.parent_device is not None,
+                ),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent_module_bay.parent_module"),
+                    should_render=lambda c: c["object"].parent_module_bay is not None
+                    and c["object"].parent_module_bay.parent_module is not None,
+                ),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent_module_bay")),
+                AncestorsInstanceBreadcrumbItem(
+                    instance=context_object_attr("location"),
+                    ancestor_item=lambda ancestor: InstanceParentBreadcrumbItem(parent_key="location", parent=ancestor),
+                    include_self=True,
+                    should_render=lambda c: c["object"].location is not None,
+                ),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -4579,23 +4616,11 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
                     instance=context_object_attr("parent_device"),
                     should_render=context_object_attr("parent_device"),
                 ),
-                ViewNameBreadcrumbItem(
-                    view_name_key="device_breadcrumb_url",
-                    should_render=lambda c: c["object"].parent_device and c.get("device_breadcrumb_url"),
-                    reverse_kwargs=lambda c: {"pk": c["object"].parent_device.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
-                ),
                 # Breadcrumb path if ModuleBay is linked with module
                 ModelBreadcrumbItem(model=Module, should_render=lambda c: c["object"].parent_device is None),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module"),
                     should_render=lambda c: c["object"].parent_device is None,
-                ),
-                ViewNameBreadcrumbItem(
-                    view_name_key="module_breadcrumb_url",
-                    should_render=lambda c: c["object"].parent_device is None and c.get("module_breadcrumb_url"),
-                    reverse_kwargs=lambda c: {"pk": c["object"].parent_module.pk},
-                    label=lambda c: c["object"]._meta.verbose_name_plural,
                 ),
             ]
         }
@@ -4986,15 +5011,6 @@ class ConsoleConnectionsListView(ConnectionsListView):
     template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Console Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:console_connections_list", label="Console Connections")]}
-    )
-
-    def extra_context(self):
-        return {
-            "title": "Console Connections",
-            "list_url": "dcim:console_connections_list",
-        }
 
 
 class PowerConnectionsListView(ConnectionsListView):
@@ -5005,15 +5021,6 @@ class PowerConnectionsListView(ConnectionsListView):
     template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Power Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={"list": [ViewNameBreadcrumbItem(view_name="dcim:power_connections_list", label="Power Connections")]}
-    )
-
-    def extra_context(self):
-        return {
-            "title": "Power Connections",
-            "list_url": "dcim:power_connections_list",
-        }
 
 
 class InterfaceConnectionsListView(ConnectionsListView):
@@ -5024,11 +5031,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
     template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
     view_titles = Titles(titles={"list": "Interface Connections"})
-    breadcrumbs = Breadcrumbs(
-        items={
-            "list": [ViewNameBreadcrumbItem(view_name="dcim:interface_connections_list", label="Interface Connections")]
-        }
-    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -5053,12 +5055,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
             self.queryset = qs
 
         return self.queryset
-
-    def extra_context(self):
-        return {
-            "title": "Interface Connections",
-            "list_url": "dcim:interface_connections_list",
-        }
 
 
 #
@@ -5171,7 +5167,6 @@ class VirtualChassisUIViewSet(NautobotUIViewSet):
         url_path="add-member",
         url_name="add_member",
         custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_virtualchassis"],
     )
     def add_member(self, request, pk=None):
         virtual_chassis = self.get_object()
@@ -5606,7 +5601,8 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 prefetch_related_fields=["interface"],
                 order_by_fields=["priority"],
                 table_title="Interfaces",
-                related_field_name="interface_redundancy_group",
+                related_field_name="interface_redundancy_groups",
+                related_list_url_name="dcim:interface_list",
                 include_columns=[
                     "interface__device",
                     "interface",
@@ -5959,6 +5955,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
                         select_related_fields=["wireless_network"],
                         exclude_columns=["controller"],
                         include_paginator=True,
+                        enable_related_link=False,
                     ),
                 ),
             ),

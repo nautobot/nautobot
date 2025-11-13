@@ -114,6 +114,7 @@ $dark-border-subtle-dark:      $gray-05-dark;
 /* Options */
 $enable-shadows:          true;
 $enable-caret:            false;
+$enable-smooth-scroll:    false;
 $enable-negative-margins: true;
 
 $prefix: bs-;
@@ -2379,6 +2380,11 @@ ul.nb-tree-hierarchy {
 pre code.hljs {
   background-color: var(--#{$prefix}secondary-bg);
   border-radius: $border-radius;
+}
+
+/* Swagger docs */
+pre.version, pre.version-stamp {
+    background-color: inherit !important;
 }
 
 /* Rendered Markdown */

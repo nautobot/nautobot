@@ -84,7 +84,7 @@ The template for a workflow, specifying which model(s) it applies to, any constr
 Constraints define when a workflow definition should apply to a particular model instance.
 
 - Constraints are stored as a dictionary of **field lookups → values** (e.g. `{"approval_required": True}`).
-- Any valid Django ORM lookup can be used (e.g. `{"name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`, `{"job_model__name__icontains": "Export"}`, `{"total_run_count__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
+- Any valid Django ORM lookup can be used (e.g. `{"job_model__name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`, `{"job_model__name__icontains": "Export"}`, `{"total_run_count__gte": 10}`), since constraints are passed directly into `.filter(**constraints)`.
 - If the instance matches the constraints, the workflow applies.
 - If no constraints are defined, the workflow applies to all instances of the model.
 
@@ -319,6 +319,8 @@ If the parameter is omitted, all stages are returned regardless of approval stat
 
 ## Permissions by Persona
 
+The permissions below include the required permissions to run everything in approval workflows, your Jobs and Scheduled Jobs permissions [remain unchanged](../../user-guide/platform-functionality/jobs/managing-jobs.md#permissions-checklist).
+
 ### Object Operator
 
 Responsible for creating, updating, or running objects, which may trigger an approval workflow. Cannot approve workflows.
@@ -329,6 +331,9 @@ Responsible for creating, updating, or running objects, which may trigger an app
 - `extras.view_approvalworkflowstage` - to view the **My Requests** tab on the Dashboard.
 - `extras.view_approvalworkflowstageresponse` - to view responses for each stage.
 
+!!! tip
+    Provided by object-permission `nautobot-default-scheduledjobs-approver-permissions` and assigned to group `nautobot-default-scheduledjobs-approver` by default.
+
 ### Approver
 
 Responsible for reviewing and making decisions on approval workflow stages assigned to them. Must be a member of one or more approver groups (see [Approval Groups](#approver-groups)).
@@ -336,9 +341,11 @@ Responsible for reviewing and making decisions on approval workflow stages assig
 **Required permissions:**
 
 - All permissions required by the **Object Operator** role.
-- Additional permissions:
-    - `extras.view_approvalworkflowstage`
-    - `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
+- `extras.view_approvalworkflowstage`
+- `extras.change_approvalworkflowstage` - to view the **My Approvals** tab on the Dashboard and take actions such as approve or deny.
+
+!!! tip
+    Provided by object-permission `nautobot-default-scheduledjobs-operator-permissions` and assigned to group `nautobot-default-scheduledjobs-operator` by default.
 
 ### Workflow Architect
 
@@ -347,9 +354,11 @@ Responsible for designing, managing, and configuring approval workflow definitio
 **Required permissions:**
 
 - All permissions required by the **Object Operator** role.
-- Additional permissions:
-    - `extras.view/add/change/delete_approvalworkflowdefinition`
-    - `extras.view/add/change/delete_approvalworkflowstagedefinition`
+- `extras.view/add/change/delete_approvalworkflowdefinition`
+- `extras.view/add/change/delete_approvalworkflowstagedefinition`
+
+!!! tip
+    Provided by object-permission `nautobot-default-scheduledjobs-architect-permissions` and assigned to group `nautobot-default-scheduledjobs-architect` by default.
 
 ### Approver Groups
 
@@ -385,3 +394,19 @@ Affected jobs (Names):
 
 - User can create an `ApprovalWorkflowDefinition` using constraints such as `{"job_model__name__in": ["ExampleDryRunJob", "Example Job of Everything", "Export Object List"]}`. See [Create an Approval Workflow Definition with stages](#create-an-approval-workflow-definition-with-stages)
 - However, constraints today are limited to what can be expressed as a single dictionary of field lookups. More complex logic (e.g., `name=A OR (name=B AND status=active)`) is not possible yet.
+
+### Predefined Approval Workflow
+
+When installing or upgrading to Nautobot v3.0, the following seed data is automatically provisioned:
+
+- Permissions for the three approval workflow personas.
+- Groups for each persona, with permissions assigned (no initial group members).
+- An Approval Workflow definition that references these personas but does not apply to any specific jobs by default.
+
+In order to get like for like workflow, you should do the following:
+
+1. Update the Approval Workflow **Model Constraints** to match the jobs you want to control. By default, a placeholder value (`JobThatDoesNotExist`) is set, replace this with the name of your job (e.g., `BackupJob` or `LogsCleanup`) or any other valid constraint.
+2. Add users who will run jobs requiring approval to the `nautobot-default-scheduledjobs-operator` group.
+3. Add users who can approve these jobs to the `nautobot-default-scheduledjobs-approver` group.
+
+New users should review the [Jobs permission checklist](../../user-guide/platform-functionality/jobs/managing-jobs.md#permissions-checklist) to ensure all necessary permissions are in place.

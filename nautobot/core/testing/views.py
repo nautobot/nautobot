@@ -28,7 +28,9 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
+from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
+from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
@@ -365,18 +367,104 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_custom_actions(self):
-            instance = self._get_queryset().first()
-            for url_name, required_permissions in self.custom_action_required_permissions.items():
-                url = reverse(url_name, kwargs={"pk": instance.pk})
-                self.assertHttpStatus(self.client.get(url), 403)
-                for permission in required_permissions[:-1]:
-                    self.add_permissions(permission)
-                    self.assertHttpStatus(self.client.get(url), 403)
+            base_view = lookup.get_view_for_model(self.model)
+            if not issubclass(base_view, NautobotViewSetMixin):
+                self.skipTest(f"View {base_view} is not using NautobotUIViewSet")
 
-                self.add_permissions(required_permissions[-1])
-                self.assertHttpStatus(self.client.get(url), 200)
-                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
-                self.remove_permissions(*required_permissions)
+            instance = self._get_queryset().first()
+            for action_func in base_view.get_extra_actions():
+                if not action_func.detail:
+                    continue
+                if "get" not in action_func.mapping:
+                    continue
+                if action_func.url_name == "data-compliance" and not getattr(base_view, "object_detail_content", None):
+                    continue
+                with self.subTest(action=action_func.url_name):
+                    if action_func.url_name in self.custom_action_required_permissions:
+                        required_permissions = self.custom_action_required_permissions[action_func.url_name]
+                    else:
+                        base_action = action_func.kwargs.get("custom_view_base_action")
+                        if base_action is None:
+                            if action_func.__name__ not in PERMISSIONS_ACTION_MAP:
+                                self.fail(f"Missing custom_view_base_action for action {action_func.__name__}")
+                            base_action = PERMISSIONS_ACTION_MAP[action_func.__name__]
+
+                        required_permissions = [
+                            f"{self.model._meta.app_label}.{base_action}_{self.model._meta.model_name}"
+                        ]
+                        required_permissions += action_func.kwargs.get("custom_view_additional_permissions", [])
+
+                    try:
+                        url = self._get_url(action_func.url_name, instance)
+                        self.assertHttpStatus(self.client.get(url), [403, 404])
+                        for permission in required_permissions[:-1]:
+                            self.add_permissions(permission)
+                            self.assertHttpStatus(self.client.get(url), [403, 404])
+
+                        self.add_permissions(required_permissions[-1])
+                        self.assertHttpStatus(self.client.get(url), 200)
+                    finally:
+                        # delete the permissions here so that we start from a clean slate on the next loop
+                        self.remove_permissions(*required_permissions)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_body_content_table_list_url(self):
+            """
+            Testing that the badge links on related object panels are working as expected.
+            """
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            if not instance:
+                # We should have a better mechanism to test against an empty instance, but this will remove blocker for now.
+                self.skipTest("No instances to test against.")
+            errors = []
+            model_name = self.model._meta.model_name
+
+            response = self.client.get(instance.get_absolute_url())
+            self.assertHttpStatus(response, 200)
+            context = response.context
+            if not context.get("object_detail_content"):
+                self.skipTest("Model is not using UIViewSet")
+            for tab in context["object_detail_content"].tabs:
+                if not tab.should_render(context):
+                    continue
+                tab_label = f"'{tab.label}'" if tab.label else "main"
+                for panel in tab.panels:
+                    if not isinstance(panel, ObjectsTablePanel) or panel.context_table_key:
+                        continue
+                    extra_context = panel.get_extra_context(context)
+                    list_url = extra_context.get("body_content_table_list_url")
+                    table_title = panel.label or extra_context.get("body_content_table_verbose_name_plural")
+                    if not list_url:
+                        # If `header_extra_content_template_path` is not set,
+                        # we don't render the badge in the header nor the link
+                        if not panel.header_extra_content_template_path or not panel.enable_related_link:
+                            continue
+                        errors.append(
+                            (
+                                f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link does not exist."
+                                " Please ensure the related model has a list view, or override with a custom list URL via 'related_list_url_name=app:model_list'."
+                                " If the link should not be enabled, you must explicitly set 'enable_related_link=False' on the ObjectsTablePanel."
+                            )
+                        )
+                        continue
+                    try:
+                        list_response = self.client.get(list_url)
+                    except Exception as e:
+                        errors.append(
+                            f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {e}"
+                        )
+                    else:
+                        self.assertHttpStatus(list_response, 200)
+                        for error in list_response.context["errors"]:
+                            errors.append(
+                                (
+                                    f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {error}."
+                                )
+                            )
+            if errors:
+                self.fail("\n".join(errors))
 
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """

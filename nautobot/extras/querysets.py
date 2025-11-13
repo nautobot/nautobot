@@ -19,6 +19,9 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
 
+        # `device_family` for Device;
+        device_family = getattr(device_type, "device_family", None)
+
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
@@ -40,6 +43,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(locations__in=locations) | Q(locations=None),
             Q(roles=role) | Q(roles=None),
             Q(device_types=device_type) | Q(device_types=None),
+            Q(device_families=device_family) | Q(device_families=None),
             Q(platforms=obj.platform) | Q(platforms=None),
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
             Q(tenant_groups__in=tenant_groups) | Q(tenant_groups=None),
@@ -136,6 +140,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         if self.model._meta.model_name == "device":
             location_query_string = "location"
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
+            base_query.add((Q(device_families=OuterRef("device_type__device_family")) | Q(device_families=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
@@ -145,6 +150,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             base_query.add((Q(cluster_groups=OuterRef("clusters__cluster_group")) | Q(cluster_groups=None)), Q.AND)
         else:
             location_query_string = "cluster__location"
+            base_query.add(Q(device_types=None), Q.AND)
+            base_query.add(Q(device_families=None), Q.AND)
+            base_query.add(Q(device_redundancy_groups=None), Q.AND)
             # For virtual machines, handle cluster as ForeignKey relationship
             base_query.add((Q(clusters=OuterRef("cluster")) | Q(clusters=None)), Q.AND)
             base_query.add((Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None)), Q.AND)

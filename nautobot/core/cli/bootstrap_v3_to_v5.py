@@ -3,6 +3,8 @@ import logging
 import os
 import re
 
+from .migrate_deprecated_templates import replace_deprecated_templates
+
 logger = logging.getLogger(__name__)
 
 
@@ -647,7 +649,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 # --- File Processing ---
 
 
-def fix_html_files_in_directory(directory: str, resize=False, dry_run=False) -> None:
+def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, skip_templates=False) -> None:
     """
     Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
     and overwrites each file with the fixed content. If resize is True, it will only change the
@@ -749,19 +751,23 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False) -> 
                     if k in totals:
                         totals[k] += v
 
+    templates_replaced = replace_deprecated_templates(directory, dry_run=dry_run) if not skip_templates else 0
+
     # Global summary
     total_issues = sum(totals.values())
     print("=== Global Summary ===")
     print(f"Total issues fixed: {total_issues}")
-    print(f"- Class replacements:          {totals['replacements']}")
-    print(f"- Extra-breadcrumb fixes:      {totals['extra_breadcrumbs']}")
-    print(f"- <li> in <ol.breadcrumb>:     {totals['breadcrumb_items']}")
-    print(f"- <li> in <ul.nav-tabs>:       {totals['nav_items']}")
-    print(f"- <a> in <ul.dropdown-menu>:   {totals['dropdown_items']}")
-    print(f"- Panel class replacements:    {totals['panel_classes']}")
-    print(f"- Resizing breakpoint xs:      {totals['resizing_xs']}")
+    print(f"- Class replacements:            {totals['replacements']}")
+    print(f"- Extra-breadcrumb fixes:        {totals['extra_breadcrumbs']}")
+    print(f"- <li> in <ol.breadcrumb>:       {totals['breadcrumb_items']}")
+    print(f"- <li> in <ul.nav-tabs>:         {totals['nav_items']}")
+    print(f"- <a> in <ul.dropdown-menu>:     {totals['dropdown_items']}")
+    print(f"- Panel class replacements:      {totals['panel_classes']}")
+    print(f"- Resizing breakpoint xs:        {totals['resizing_xs']}")
     print("-------------------------------------")
-    print(f"- Resizing other breakpoints:  {resizing_other}")
+    print(f"- Resizing other breakpoints:    {resizing_other}")
+    print("-------------------------------------")
+    print(f"- Deprecated templates replaced: {templates_replaced}")
 
 
 def main():
@@ -779,9 +785,14 @@ def main():
         help="Show which files would be modified without making any changes.",
     )
     parser.add_argument("path", type=str, help="Path to directory in which to recursively fix all .html files.")
+    parser.add_argument(
+        "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
+    )
     args = parser.parse_args()
 
-    fix_html_files_in_directory(args.path, resize=args.resize, dry_run=args.dry_run)
+    fix_html_files_in_directory(
+        args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
+    )
 
 
 if __name__ == "__main__":
