@@ -42,8 +42,9 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                context_table_key="tenant_table",
                 exclude_columns=["tenant_group"],
+                context_table_key="tenant_table",
+                related_field_name="tenant_group",
             ),
         )
     )
@@ -59,7 +60,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
                 tenant_group__in=instance.descendants(include_self=True)
             )
 
-            tenant_table = tables.TenantTable(tenants)
+            tenant_table = tables.TenantTable(tenants, configurable=True)
             tenant_table.columns.hide("tenant_group")
 
             paginate = {
