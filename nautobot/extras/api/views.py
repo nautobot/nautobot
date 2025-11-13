@@ -425,6 +425,12 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         """Add a comment to the specific stage (without approving or denying)."""
         stage = self.get_object()
 
+        if not stage.is_not_done_stage:
+            return Response(
+                {"detail": f"This stage is in {stage.state} state. Can't comment approved or denied stage."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         comment = request.data.get("comments", "")
         if not comment:
             return Response(
@@ -432,9 +438,12 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        ApprovalWorkflowStageResponse.objects.create(
-            approval_workflow_stage=stage, user=request.user, state=stage.state, comments=comment
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=stage, user=request.user
         )
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        approval_workflow_stage_response.comments = comment
+        approval_workflow_stage_response.save()
 
         serializer = serializers.ApprovalWorkflowStageSerializer(stage, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
