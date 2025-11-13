@@ -123,7 +123,9 @@ def setup_structlog_logging(
         return
 
     django_apps.append("django_structlog")
-    django_middleware.append("django_structlog.middlewares.RequestMiddleware")
+    # Insert the middleware in second to last place so it comes ahead of
+    # django_prometheus.middleware.PrometheusAfterMiddleware, which consumes the request
+    django_middleware.insert(-1, "django_structlog.middlewares.RequestMiddleware")
 
     processors = (
         # Add the log level to the event dict under the level key.
