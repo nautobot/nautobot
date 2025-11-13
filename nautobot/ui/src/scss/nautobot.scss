@@ -804,6 +804,10 @@ button {
         }
       }
     }
+
+    &:not(.orderable) {
+      color: var(--#{$prefix}tertiary-color);
+    }
   }
 
   .nb-actions {
