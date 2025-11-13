@@ -17,14 +17,14 @@ Simply querying the `/api/dcim/devices/` API route provides:
     ```json
     {
       "count": 975,
-      "next": "https://next.demo.nautobot.com/api/dcim/devices/?limit=1&offset=3",
-      "previous": "https://next.demo.nautobot.com/api/dcim/devices/?limit=1&offset=1",
+      "next": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=3",
+      "previous": "https://demo.nautobot.com/api/dcim/devices/?limit=1&offset=1",
       "results": [
         {
           "id": "9fc491bd-e2cc-535d-bcf9-6c1e05284448",
           "object_type": "dcim.device",
           "display": "ams01-dsw-01",
-          "url": "https://next.demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/",
+          "url": "https://demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/",
           "natural_slug": "ams01-dsw-01_emea-net-eng_ams01_netherlands_emea_9fc4",
           "face": {
             "value": "front",
@@ -45,60 +45,60 @@ Simply querying the `/api/dcim/devices/` API route provides:
           "device_type": {
             "id": "d04d0090-752e-5d1c-8a58-f17971b6d39c",
             "object_type": "dcim.devicetype",
-            "url": "https://next.demo.nautobot.com/api/dcim/device-types/d04d0090-752e-5d1c-8a58-f17971b6d39c/"
+            "url": "https://demo.nautobot.com/api/dcim/device-types/d04d0090-752e-5d1c-8a58-f17971b6d39c/"
           },
           "status": {
             "id": "bf03f613-7663-5ed6-bee3-f05d588065cc",
             "object_type": "extras.status",
-            "url": "https://next.demo.nautobot.com/api/extras/statuses/bf03f613-7663-5ed6-bee3-f05d588065cc/"
+            "url": "https://demo.nautobot.com/api/extras/statuses/bf03f613-7663-5ed6-bee3-f05d588065cc/"
           },
           "role": {
             "id": "5c96af63-530e-585c-88fa-de4e4b6000ae",
             "object_type": "extras.role",
-            "url": "https://next.demo.nautobot.com/api/extras/roles/5c96af63-530e-585c-88fa-de4e4b6000ae/"
+            "url": "https://demo.nautobot.com/api/extras/roles/5c96af63-530e-585c-88fa-de4e4b6000ae/"
           },
           "tenant": {
             "id": "13a556d1-be59-5e22-9112-8f77250e6ece",
             "object_type": "tenancy.tenant",
-            "url": "https://next.demo.nautobot.com/api/tenancy/tenants/13a556d1-be59-5e22-9112-8f77250e6ece/"
+            "url": "https://demo.nautobot.com/api/tenancy/tenants/13a556d1-be59-5e22-9112-8f77250e6ece/"
           },
           "platform": {
             "id": "dd6fd4c1-1bc3-5af4-af27-41bc2dea1fbe",
             "object_type": "dcim.platform",
-            "url": "https://next.demo.nautobot.com/api/dcim/platforms/dd6fd4c1-1bc3-5af4-af27-41bc2dea1fbe/"
+            "url": "https://demo.nautobot.com/api/dcim/platforms/dd6fd4c1-1bc3-5af4-af27-41bc2dea1fbe/"
           },
           "location": {
             "id": "ec4c2953-b564-57c4-91df-cd1f4f92b727",
             "object_type": "dcim.location",
-            "url": "https://next.demo.nautobot.com/api/dcim/locations/ec4c2953-b564-57c4-91df-cd1f4f92b727/"
+            "url": "https://demo.nautobot.com/api/dcim/locations/ec4c2953-b564-57c4-91df-cd1f4f92b727/"
           },
           "rack": {
             "id": "2d5fc5b1-b520-5e1f-8687-73888995cfbb",
             "object_type": "dcim.rack",
-            "url": "https://next.demo.nautobot.com/api/dcim/racks/2d5fc5b1-b520-5e1f-8687-73888995cfbb/"
+            "url": "https://demo.nautobot.com/api/dcim/racks/2d5fc5b1-b520-5e1f-8687-73888995cfbb/"
           },
           "primary_ip4": {
             "id": "22ff34cb-3762-546d-bf7d-9979a7eeb282",
             "object_type": "ipam.ipaddress",
-            "url": "https://next.demo.nautobot.com/api/ipam/ip-addresses/22ff34cb-3762-546d-bf7d-9979a7eeb282/"
+            "url": "https://demo.nautobot.com/api/ipam/ip-addresses/22ff34cb-3762-546d-bf7d-9979a7eeb282/"
           },
           "primary_ip6": null,
           "virtual_chassis": {
             "id": "0342aaed-0e9b-4ce9-8d9d-a44603adb702",
             "object_type": "dcim.virtualchassis",
-            "url": "https://next.demo.nautobot.com/api/dcim/virtual-chassis/0342aaed-0e9b-4ce9-8d9d-a44603adb702/"
+            "url": "https://demo.nautobot.com/api/dcim/virtual-chassis/0342aaed-0e9b-4ce9-8d9d-a44603adb702/"
           },
           "device_redundancy_group": null,
           "software_version": {
             "id": "f054d40d-4751-54aa-90c3-61de73867d10",
             "object_type": "dcim.softwareversion",
-            "url": "https://next.demo.nautobot.com/api/dcim/software-versions/f054d40d-4751-54aa-90c3-61de73867d10/"
+            "url": "https://demo.nautobot.com/api/dcim/software-versions/f054d40d-4751-54aa-90c3-61de73867d10/"
           },
           "secrets_group": null,
           "controller_managed_device_group": null,
           "created": "2025-03-11T15:38:40.480047Z",
           "last_updated": "2025-03-11T15:38:58.609687Z",
-          "notes_url": "https://next.demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/notes/",
+          "notes_url": "https://demo.nautobot.com/api/dcim/devices/9fc491bd-e2cc-535d-bcf9-6c1e05284448/notes/",
           "custom_fields": {},
           "tags": [],
           "parent_bay": null
@@ -284,7 +284,7 @@ Now that we've explored how to use the GraphiQL interface to help us create Grap
 ![GraphQL: Swagger](./images/graphql/10-graphql-swagger-dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/api/docs/`"
 
-From the [Nautobot Swagger documentation](https://next.demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
+From the [Nautobot Swagger documentation](https://demo.nautobot.com/api/docs/), we can see that the API calls to `/api/graphql` require a HTTP POST method. In the HTTP POST, the `query` field is required, as it is where we specify the GraphQL query. The `variables` field is optional; it's where we can assign values to any variables included in the query, if we choose to do so.
 
 To simplify the process even more, we'll utilize the [PyNautobot SDK](https://pynautobot.readthedocs.io/en/latest/index.html).
 
