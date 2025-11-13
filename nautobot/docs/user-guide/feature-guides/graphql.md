@@ -272,7 +272,9 @@ You can also paginate the results returned to you when the data set gets larger.
     ```
 
 ??? info "View GraphQL Query Results"
-    ![GraphQL: Query Results](./images/graphql/11-graphql-query-06.png)
+    ![GraphQL: Query Results](./images/graphql/11-graphql-query-06-light.png#only-light){ .on-glb }
+    ![GraphQL: Query Results](./images/graphql/11-graphql-query-06-dark.png#only-dark){ .on-glb }
+    [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
 ## Using the GraphQL API in Nautobot
 
