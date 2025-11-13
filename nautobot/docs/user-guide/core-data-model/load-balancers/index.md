@@ -14,14 +14,15 @@ You are encouraged to leverage the [load balancer feature guide](../../feature-g
 
 When configuring objects with the Load Balancer data models, follow this recommended order (as outlined in the [Quick Walkthrough](../../feature-guides/load-balancers.md#quick-walkthrough)):
 
+1. Virtual Servers (link to VIPs and Pools)
+1. Load Balancer Pool Members (assign them to Pools)
+1. Load Balancer Pools
+1. Certificate Profiles (if needed)
+1. Health Check Monitors
 1. [IP Addresses](../ipam/ipaddress.md)
-2. Health Check Monitors
-3. Certificate Profiles (if needed)
-4. Load Balancer Pools
-5. Load Balancer Pool Members (assign them to Pools)
-6. Virtual Servers (link to VIPs and Pools)
 
-This order ensures all necessary relationships and prerequisites are in place as you build your configuration.
+!!! tip
+    Your actual build out may require you to fill out some of the necessary relationships and prerequisites, however logically working top to bottom helps ensure you are only building what you require.
 
 ## Models Overview
 
@@ -151,6 +152,12 @@ erDiagram
     "load_balancers.CertificateProfile" }o--o| "tenancy.Tenant" : has
 ```
 
+## Practical Diagram
+
+This diagram provides a basic but practical example of how the model is used.
+
+![LB Models](../../../media/models/load-balancer-diagram.png)
+
 ## Vendor Data Mappings
 
 This table will help you map to specific vendor terminology.
@@ -180,3 +187,13 @@ If you need to store vendor-specific configuration elements — such as F5 iRule
 - Custom Fields can be scoped to specific object types (e.g., only `VirtualServer` or `LoadBalancerPoolMember`) to reflect how your load balancer applies these settings.
 
 This design gives you flexibility to tailor the data model to your environment without forcing unsupported abstractions across different load balancer vendors.
+
+### Questions to ask of the data model
+
+Given the data model, what questions would a user ask?
+
+- Given a virtual server, I would like to know which certificates it is using
+- Given a virtual server, I would like to know which device it is on
+- Given a pool, I would like to know all the pool members
+- Given a pool, I would like to know all the virtual servers it is connected to
+- I would like to be able to understand what certificates are going to expire soon
