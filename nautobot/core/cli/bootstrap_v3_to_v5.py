@@ -2,8 +2,11 @@ import argparse
 import logging
 import os
 import re
+import subprocess
 
-from .migrate_deprecated_templates import replace_deprecated_templates
+import yaml
+
+# from .migrate_deprecated_templates import replace_deprecated_templates
 
 logger = logging.getLogger(__name__)
 
@@ -651,7 +654,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 
 def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, skip_templates=False) -> None:
     """
-    Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
+    Recursively finds all .html files in the given direcory, applies convert_bootstrap_classes,
     and overwrites each file with the fixed content. If resize is True, it will only change the
     breakpoints (This should only be done once.).
     """
@@ -770,6 +773,44 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
     print(f"- Deprecated templates replaced: {templates_replaced}")
 
 
+def list_potentially_legacy_code(directory: str):
+    exclude_dirs = [
+        ".ruff_cache",
+        "__pycache__",
+        "development",
+        "dist",
+        "migrations",
+        "monaco-editor-0.52.2",
+        "node_modules",
+    ]
+    exclude_files = [
+        "*.min*",
+        ".djlint_rules.yaml",
+        "bootstrap_v3_to_v5.py",
+        "bootstrap_v3_to_v5_changes.yaml",
+        "search_index.json",
+        "upgrading-from-bootstrap-v3-to-v5.md",
+    ]
+
+    with open("bootstrap_v3_to_v5_changes.yaml") as yaml_file:
+        try:
+            bootstrap_v3_to_v5_changes = yaml.safe_load(yaml_file)
+            for change in bootstrap_v3_to_v5_changes:
+                subprocess.run(
+                    [
+                        "grep",
+                        "-R",
+                        "-P",
+                        change["Search Regex"],
+                        *(item for entry in [["--exclude-dir", dir] for dir in exclude_dirs] for item in entry),
+                        *(item for entry in [["--exclude", file] for file in exclude_files] for item in entry),
+                        directory,
+                    ]
+                )
+        except yaml.YAMLError:
+            print("`bootstrap_v3_to_v5_changes.yaml` file is corrupted.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Bootstrap 3 to 5 HTML fixer.")
     parser.add_argument(
@@ -788,11 +829,15 @@ def main():
     parser.add_argument(
         "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
     )
+    parser.add_argument("-l", "--list", action="store_true", help="List potentially legacy code.")
     args = parser.parse_args()
 
-    fix_html_files_in_directory(
-        args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
-    )
+    if args.list:
+        list_potentially_legacy_code(args.path)
+    else:
+        fix_html_files_in_directory(
+            args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
+        )
 
 
 if __name__ == "__main__":

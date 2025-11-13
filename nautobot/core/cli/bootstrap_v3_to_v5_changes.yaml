@@ -28,7 +28,7 @@
 
 - "Boostrap v3":  close
   "Boostrap v5":  btn-close
-  "Search Regex": (?<class=)("|')([^"']*)(?<=\s|"|')close(?=\s|"|')([^"']*)("|')
+  "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')close(?=\s|"|')([^"']*)("|')
 
 - "Boostrap v3":  col-*-offset-*
   "Boostrap v5":  offset-*-*
@@ -64,7 +64,7 @@
 
 - "Boostrap v3":  label
   "Boostrap v5":  badge
-  "Search Regex": (?<class=)("|')([^"']*)(?<=\s|"|')label(?=\s|"|')([^"']*)("|')
+  "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')label(?=\s|"|')([^"']*)("|')
 
 - "Boostrap v3":  label-default
   "Boostrap v5":  bg-default
@@ -164,7 +164,7 @@
 
 - "Boostrap v3":  description
   "Boostrap v5":  nb-description
-  "Search Regex": ("|')([^"']*)(?<=\s|"|')description(?=\s|"|')([^"']*)("|')
+  "Search Regex": (?<=class=)("|')([^"']*)(?<=\s|"|')description(?=\s|"|')([^"']*)("|')
 
 - "Boostrap v3":  editor-container
   "Boostrap v5":  nb-editor-container
