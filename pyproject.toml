@@ -55,7 +55,7 @@ django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.3.3"
+django-constance = "~4.3.4"
 # Permit cross-domain API requests
 django-cors-headers = "~4.9.0"
 # Store files in the database for background tasks
@@ -169,7 +169,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^37.11.0"
+faker = "^37.12.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -215,7 +215,7 @@ pylint-django = "~2.6.1"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.33"
 # Combination linter and code formatter
-ruff = "~0.14.3"
+ruff = "~0.14.5"
 # YAML linting
 yamllint = "~1.37.1"
 

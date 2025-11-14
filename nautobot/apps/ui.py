@@ -13,6 +13,13 @@ from nautobot.core.ui.breadcrumbs import (
     ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
+from nautobot.core.ui.bulk_buttons import (
+    BaseBulkButton,
+    BulkDeleteButton,
+    BulkDisconnectButton,
+    BulkEditButton,
+    BulkRenameButton,
+)
 from nautobot.core.ui.choices import (
     EChartsThemeColors,
     EChartsTypeChoices,
@@ -49,6 +56,7 @@ from nautobot.core.ui.object_detail import (
     DistinctViewTab,
     DropdownButton,
     EChartsPanel,
+    FormButton,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -61,7 +69,11 @@ from nautobot.core.ui.object_detail import (
     TextPanel,
 )
 from nautobot.core.ui.titles import Titles
-from nautobot.core.ui.utils import render_component_template
+from nautobot.core.ui.utils import (
+    flatten_context,
+    get_absolute_url,
+    render_component_template,
+)
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
 
@@ -71,8 +83,13 @@ __all__ = (
     "Banner",
     "BannerClassChoices",
     "BaseBreadcrumbItem",
+    "BaseBulkButton",
     "BaseTextPanel",
     "Breadcrumbs",
+    "BulkDeleteButton",
+    "BulkDisconnectButton",
+    "BulkEditButton",
+    "BulkRenameButton",
     "Button",
     "ButtonColorChoices",
     "Component",
@@ -83,6 +100,7 @@ __all__ = (
     "EChartsPanel",
     "EChartsThemeColors",
     "EChartsTypeChoices",
+    "FormButton",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
@@ -116,6 +134,8 @@ __all__ = (
     "Titles",
     "ViewNameBreadcrumbItem",
     "context_object_attr",
+    "flatten_context",
+    "get_absolute_url",
     "queryset_to_nested_dict_keys_as_series",
     "queryset_to_nested_dict_records_as_series",
     "render_component_template",
