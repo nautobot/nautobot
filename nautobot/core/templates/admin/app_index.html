@@ -6,9 +6,9 @@
 {% if not is_popup %}
     {% block breadcrumbs %}
         <ol class="breadcrumb">
-            <li><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Admin Home' %}</a></li>
             {% for app in app_list %}
-                <li>{{ app.name }}</li>
+                <li {% if forloop.last %}class="breadcrumb-item active" aria-current="page"{% else %}class="breadcrumb-item"{% endif %}>{{ app.name }}</li>
             {% endfor %}
         </ol>
     {% endblock %}

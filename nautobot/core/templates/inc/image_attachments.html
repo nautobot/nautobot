@@ -1,6 +1,6 @@
 {% comment %}3.0 TODO: Potentially remove this template pending no other references to it.{% endcomment %}
 {% if images %}
-    <table class="table table-hover panel-body">
+    <table class="table table-hover card-body">
         <tr>
             <th>Name</th>
             <th>Size</th>
@@ -10,20 +10,20 @@
         {% for attachment in images %}
             <tr{% if not attachment.size %} class="danger"{% endif %}>
                 <td>
-                    <i class="mdi mdi-file-image"></i>
+                    <span class="mdi mdi-file-image"></span>
                     <a class="image-preview" href="{{ attachment.image.url }}" target="_blank">{{ attachment }}</a>
                 </td>
                 <td>{{ attachment.size|filesizeformat }}</td>
                 <td>{{ attachment.created }}</td>
-                <td class="text-right noprint">
+                <td class="text-end d-print-none">
                     {% if perms.extras.change_imageattachment %}
-                        <a href="{% url 'extras:imageattachment_edit' pk=attachment.pk %}" class="btn btn-warning btn-xs" title="Edit image">
-                            <i class="mdi mdi-pencil" aria-hidden="true"></i>
+                        <a href="{% url 'extras:imageattachment_edit' pk=attachment.pk %}" class="btn btn-warning btn-sm" title="Edit image">
+                            <span class="mdi mdi-pencil" aria-hidden="true"></span>
                         </a>
                     {% endif %}
                     {% if perms.extras.delete_imageattachment %}
-                        <a href="{% url 'extras:imageattachment_delete' pk=attachment.pk %}" class="btn btn-danger btn-xs" title="Delete image">
-                            <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i>
+                        <a href="{% url 'extras:imageattachment_delete' pk=attachment.pk %}" class="btn btn-danger btn-sm" title="Delete image">
+                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
                         </a>
                     {% endif %}
                 </td>
@@ -31,7 +31,7 @@
         {% endfor %}
     </table>
 {% else %}
-    <div class="panel-body">
-        <span class="text-muted">None</span>
+    <div class="card-body">
+        <span class="text-secondary">None</span>
     </div>
 {% endif %}

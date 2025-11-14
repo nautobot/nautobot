@@ -4,23 +4,23 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
                     <strong>Rendered Context</strong>
-                    {% include 'extras/inc/configcontext_format.html' %}
+                    {% include 'extras/inc/configcontext_format.html' with data_format=format %}
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {% include 'extras/inc/json_data.html' with data=rendered_context format=format %}
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
                     <strong>Local Config Context</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {% if object.local_config_context_data %}
                         {% if object.local_config_context_schema %}
                             <span>Schema {{ object.local_config_context_schema|hyperlinked_object }}</span>
@@ -30,24 +30,24 @@
                         {% endif %}
                         {% include 'extras/inc/json_data.html' with data=object.local_config_context_data format=format %}
                     {% else %}
-                        <span class="text-muted">None</span>
+                        <span class="text-secondary">None</span>
                     {% endif %}
                 </div>
-                <div class="panel-footer">
-                    <span class="help-block">
-                        <i class="mdi mdi-information-outline"></i>
+                <div class="card-footer">
+                    <span class="form-text">
+                        <span class="mdi mdi-information-outline"></span>
                         The local config context overwrites all source contexts.
                     </span>
                 </div>
             </div>
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div class="card">
+                <div class="card-header">
                     <strong>Source Contexts</strong>
                 </div>
                 {% for context in source_contexts %}
-                    <div class="panel-body">
-                        <div class="pull-right">
-                            <span class="text-muted">{{ context.weight }}</span>
+                    <div class="card-body">
+                        <div class="float-end">
+                            <span class="text-secondary">{{ context.weight }}</span>
                         </div>
                         {{ context|hyperlinked_object }}
                         {% if context.description %}
@@ -56,8 +56,8 @@
                         {% include 'extras/inc/json_data.html' with data=context.data format=format %}
                     </div>
                 {% empty %}
-                    <div class="panel-body">
-                        <span class="text-muted">None found</span>
+                    <div class="card-body">
+                        <span class="text-secondary">None found</span>
                     </div>
                 {% endfor %}
             </div>

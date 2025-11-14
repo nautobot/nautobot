@@ -40,11 +40,11 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     BannerClassChoices,
     ButtonClassChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
-    CustomLinkButtonClassChoices,
     DynamicGroupOperatorChoices,
     JobExecutionType,
     JobResultStatusChoices,
@@ -67,6 +67,7 @@ from nautobot.ipam.choices import (
 )
 
 __all__ = (
+    "ApprovalWorkflowStateChoices",
     "BannerClassChoices",
     "ButtonActionColorChoices",
     "ButtonActionIconChoices",
@@ -79,7 +80,6 @@ __all__ = (
     "ConsolePortTypeChoices",
     "CustomFieldFilterLogicChoices",
     "CustomFieldTypeChoices",
-    "CustomLinkButtonClassChoices",
     "DeviceFaceChoices",
     "DeviceRedundancyGroupFailoverStrategyChoices",
     "DynamicGroupOperatorChoices",

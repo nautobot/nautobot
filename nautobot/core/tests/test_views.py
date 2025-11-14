@@ -1,16 +1,16 @@
 import json
 import os
+from pathlib import Path
 import re
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import urllib.parse
 
 from django.apps import apps
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, RequestFactory
+from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
@@ -108,39 +108,27 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        # Search bar in nav
-        nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
+        # Search bar in header
+        header_search_bar_pattern = re.compile(
+            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
-        nav_search_bar_result = nav_search_bar_pattern.search(
+        header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        # Global search bar in body/container-fluid wrapper
-        body_search_bar_pattern = re.compile(
-            '<div class="container-fluid wrapper" id="main-content">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>',
-            re.DOTALL,
-        )
-
-        body_search_bar_result = body_search_bar_pattern.search(
-            response.content.decode(response.charset).replace("\n", "")
-        )
-
-        return nav_search_bar_result, body_search_bar_result
+        return header_search_bar_result
 
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
-        self.assertIsNone(nav_search_bar_result)
-        self.assertIsNone(body_search_bar_result)
+        self.assertIsNone(header_search_bar_result)
 
     def test_search_bar_visible_if_user_authenticated(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
+        self.assertIsNotNone(header_search_bar_result)
 
     @override_settings(VERSION="1.2.3")
     def test_footer_version_visible_authenticated_users_only(self):
@@ -148,7 +136,7 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(url)
         response_content = response.content.decode(response.charset).replace("\n", "")
 
-        footer_hostname_version_pattern = re.compile(r'<p class="text-muted">\s+\S+\s+\(v1\.2\.3\)\s+</p>')
+        footer_hostname_version_pattern = re.compile(r"<span>\s+\S+\s+\(v1\.2\.3\)\s+</span>")
         self.assertRegex(response_content, footer_hostname_version_pattern)
 
         self.client.logout()
@@ -187,6 +175,132 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class AppDocsViewTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.test_app_label = "test_app"
+        self.test_base_url = "test-app"
+
+        # Create temp docs dir
+        # I use tearDown to clean up, so this is save
+        self.temp_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        self.docs_path = Path(self.temp_dir.name) / "docs"
+        self.docs_path.mkdir(parents=True)
+        (self.docs_path / "index.html").write_text("<html>Test Index</html>")
+        (self.docs_path / "css/style.css").parent.mkdir(parents=True, exist_ok=True)
+        (self.docs_path / "css/style.css").write_text("body { background: #fff; }")
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        super().tearDown()
+
+    def test_docs_index_redirect(self):
+        """Ensure /docs/<base_url>/ redirects to /docs/<base_url>/index.html."""
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/docs/{self.test_base_url}/index.html")
+
+    def test_docs_index_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+
+        # First, the redirect to /docs/<base_url>/index.html
+        self.assertEqual(response.status_code, 302)
+        redirect_url = f"/docs/{self.test_base_url}/index.html"
+        self.assertEqual(response["Location"], redirect_url)
+
+        # Follow the redirect to AppDocsView, which should require login
+        response = self.client.get(redirect_url)
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={redirect_url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    def test_docs_file_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        # LoginRequiredMixin redirects to /accounts/login/
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_access_denied_path_traversal_attempts(self, mock_resources_files):
+        """Ensure ../ or similar traversal patterns are rejected."""
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+
+        malicious_paths = [
+            "../settings.py",
+            "../../etc/passwd",
+            "docs/../../secret.txt",
+        ]
+
+        for path in malicious_paths:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_index_html_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url, "path": "index.html"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Index")
+        self.assertEqual(response["Content-Type"], "text/html")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_css_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "background: #fff;")
+        self.assertEqual(response["Content-Type"], "text/css")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_index_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": "nonexistent-app"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_file_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": "nonexistent-app", "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_nonexistent_file(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        test_cases = ["/../missing.html", "//../missing.html", "missing.html", "missing_dir/missing.html"]
+        for path in test_cases:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 404)
+                self.assertIn("File", response.json()["detail"])
 
 
 class MediaViewTestCase(TestCase):
@@ -269,28 +383,45 @@ class SearchFieldsTestCase(TestCase):
         # SearchForm will redirect the user to the login Page
         self.assertEqual(response.status_code, 302)
 
-    def test_global_and_model_search_bar(self):
+    def test_global_search_bar_scoped_to_model(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            html=True,
+        )
+        self.assertBodyContains(
+            response,
+            """
+                <span class="badge border" data-nb-link="/dcim/locations/"><!--
+                    -->in: Locations<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
             html=True,
         )
-
-        # Assert global search bar present in UI
-        self.assertContains(  # not using assertBodyContains because this is in the nav
+        self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
+            """
+                <span class="badge border" data-nb-link="/dcim/devices/"><!--
+                    -->in: Devices<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
@@ -300,19 +431,19 @@ class FilterFormsTestCase(TestCase):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
-            <ul id="tabs" class="nav nav-tabs">
-                <li role="presentation" class="active">
-                    <a href="#default-filter" role="tab" data-toggle="tab">
-                        Default
-                    </a>
-                </li>
-                <li role="presentation" class="">
-                    <a href="#advanced-filter" role="tab" data-toggle="tab">
-                        Advanced
-                    </a>
-                </li>
-            </ul>
-            """
+        <ul class="nav nav-tabs" id="filter-tabs">
+            <li class="nav-item" role="presentation">
+                <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
+                    Basic
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link position-relative" data-bs-toggle="tab" href="#advanced-filter" role="tab">
+                    Advanced
+                </a>
+            </li>
+        </ul>
+        """
 
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(response, filter_tabs, html=True)
@@ -356,15 +487,19 @@ class FilterFormsTestCase(TestCase):
         query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        # The important thing here is that the data-nb-value and value are correctly quoted
         self.assertBodyContains(
             response,
             """
-<span class="filter-selection-choice-remove remove-filter-param"
-      data-field-type="child"
-      data-field-parent="location_type"
-      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
->×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            <span class="badge" data-nb-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"><!--
+                --><button class="nb-dynamic-filter-remove" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button><!--
+                -->1 onmouseover=alert(&#x27;hi&#x27;) foo=bar<!--
+                --><input name="location_type" type="hidden" value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar">
+            </span>
+            """,
             html=True,
         )
 
@@ -413,8 +548,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_marketplace_url}"
-                data-item-weight="{self.apps_marketplace_item_weight}">
+            <a class="nb-sidenav-link"
+                data-item-weight="{self.apps_marketplace_item_weight}"
+                href="{self.apps_marketplace_url}">
                 Apps Marketplace
             </a>
             """,
@@ -427,8 +563,9 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.apps_list_url}"
-                data-item-weight="{self.apps_list_item_weight}">
+            <a class="nb-sidenav-link"
+                data-item-weight="{self.apps_list_item_weight}"
+                href="{self.apps_list_url}">
                 Installed Apps
             </a>
             """,
@@ -552,6 +689,7 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
+    @tag("example_app")
     def test_metrics_extensibility(self):
         """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
@@ -574,6 +712,7 @@ class MetricsViewTestCase(TestCase):
             self.query_and_parse_metrics()
             self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
 
+    @tag("example_app")
     @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
     def test_enabled_metrics_cache_enabled(self):
         """Assert that multiple calls to metrics with caching returns expected response."""
@@ -754,10 +893,7 @@ class SilkUIAccessTestCase(TestCase):
 
 
 class ExampleViewWithCustomPermissionsTest(TestCase):
-    @skipIf(
-        "example_app" not in settings.PLUGINS,
-        "example_app not in settings.PLUGINS",
-    )
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_permission_classes_attribute_is_enforced(self):
         """
@@ -807,13 +943,13 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(f"{url}?tab=main")
+        response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
@@ -822,10 +958,11 @@ class TestObjectDetailView(TestCase):
 
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
-        <span class="hover_copy">
+        <span>
             <span id="_value_name">{provider.name}</span>
-            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
-                <span class="mdi mdi-content-copy"></span>
+            <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
             </button>
         </span>"""
         self.assertInHTML(name_copy, response_data)

@@ -3,11 +3,111 @@ Class-modifying mixins that need to be standalone to avoid circular imports.
 """
 
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model, get_user_from_instance
+from nautobot.extras.choices import ApprovalWorkflowStateChoices
+
+
+class ApprovableModelMixin(models.Model):
+    """Abstract mixin for enabling Approval Flow functionality to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_approval_workflow_model = True
+
+    # Reverse relation so that deleting a ApprovableModelMixin automatically deletes any approval workflows related to it.
+
+    associated_approval_workflows = GenericRelation(
+        "extras.ApprovalWorkflow",
+        content_type_field="object_under_review_content_type",
+        object_id_field="object_under_review_object_id",
+        related_query_name="associated_approval_workflows_%(app_label)s_%(class)s",  # e.g. 'associated_object_approval_workflows_dcim_device'
+    )
+
+    def get_approval_workflow_url(self):
+        """Return the approval workflow URL for this object."""
+        route = get_route_for_model(self, "approvalworkflow")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
+
+    def begin_approval_workflow(self):
+        """Find and start the appropriate approval workflow for this object."""
+        from nautobot.extras.models.approvals import (
+            ApprovalWorkflow,
+            ApprovalWorkflowDefinition,
+            ApprovalWorkflowStage,
+            ApprovalWorkflowStageDefinition,
+        )  # because of circular import
+
+        # First check if there's already a pending workflow instance
+        if self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).exists():
+            return self.associated_approval_workflows.filter(current_state=ApprovalWorkflowStateChoices.PENDING).first()
+
+        # Check if there's a relevant workflow definition
+        workflow_definition = ApprovalWorkflowDefinition.objects.find_for_model(self)
+        if not workflow_definition:
+            return None
+
+        approval_workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=ContentType.objects.get_for_model(self),
+            object_under_review_object_id=self.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+            user=get_user_from_instance(self),
+        )
+
+        # Create workflow stages if the definition has any
+        approval_workflow_stage_definitions = ApprovalWorkflowStageDefinition.objects.filter(
+            approval_workflow_definition=workflow_definition
+        )
+
+        ApprovalWorkflowStage.objects.bulk_create(
+            [
+                ApprovalWorkflowStage(
+                    approval_workflow=approval_workflow,
+                    approval_workflow_stage_definition=definition,
+                    state=ApprovalWorkflowStateChoices.PENDING,
+                )
+                for definition in approval_workflow_stage_definitions
+            ]
+        )
+
+        self.on_workflow_initiated(approval_workflow)
+
+        return approval_workflow
+
+    def on_workflow_initiated(self, approval_workflow):
+        """Called when an approval workflow is initiated."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
+
+    def on_workflow_approved(self, approval_workflow):
+        """Called when an approval workflow is approved."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_approved`.")
+
+    def on_workflow_denied(self, approval_workflow):
+        """Called when an approval workflow is denied."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
+
+    def has_approval_workflow_definition(self) -> bool:
+        from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
+
+        return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
 
 
 class ContactMixin(models.Model):
@@ -151,3 +251,31 @@ class SavedViewMixin(models.Model):
         abstract = True
 
     is_saved_view_model = True
+
+
+class DataComplianceModelMixin:
+    """
+    Adds a `get_data_compliance_url` that can be applied to instances.
+    """
+
+    is_data_compliance_model = True
+
+    def get_data_compliance_url(self, api=False):
+        """Return the data compliance URL for a given instance."""
+        # If is_data_compliance_model overridden should allow to opt out
+        if not self.is_data_compliance_model:
+            return None
+        route = get_route_for_model(self, "data-compliance", api=api)
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
+            try:
+                return reverse(route, kwargs={field: getattr(self, field)})
+            except NoReverseMatch:
+                continue
+
+        return None
