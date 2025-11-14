@@ -1,1 +1,0 @@
-Fixed `invoke djlint` and `invoke djhtml` tasks to apply to the example apps as well.

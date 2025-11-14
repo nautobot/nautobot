@@ -1,3 +1,0 @@
-Updated django_tables2 accessors to use preferred dunder methods.
-Linked badges to tables via `related_field_name` and `related_list_url_name`.
-Updated multiple filters to support badge linking to tables.
