@@ -207,10 +207,11 @@ class NamespaceTable(BaseTable):
     name = tables.LinkColumn()
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:namespace_list")
+    actions = ButtonsColumn(Namespace)
 
     class Meta(BaseTable.Meta):
         model = Namespace
-        fields = ("pk", "name", "description", "tenant", "location")
+        fields = ("pk", "name", "description", "tenant", "location", "actions")
 
 
 #
