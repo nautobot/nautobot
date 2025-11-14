@@ -43,7 +43,7 @@ Filters can be defined to restrict the type or selection of objects for either s
 An important note is that the filters have to be defined in **FilterSet** rather than QuerySet format. In practice this means that you can use any of the filters that are valid in the REST API for a given object type, but cannot necessarily use complex nested attribute lookups (such as `interfaces__ip_addresses__mask_length` on a Device, for example).
 
 As an example, let's create a relationship between `Device to VLAN`.
-=In our situation, we want to display the Devices using this VLAN, which is assigned the VLAN role `wireless`.
+In our situation, we want to display the Devices using this VLAN, which is assigned the VLAN role `wireless`.
 
 To prevent the Device Relationship from showing up on any other VLAN, use a JSON filter to limit the Relationship to only VLANs with a Role named `wireless`:
 
@@ -64,13 +64,14 @@ To prevent the Device Relationship from showing up on any other VLAN, use a JSON
 
 For context, here is an image of the entire Relationship:
 
-![Image of Relationship with json filter](../../img/relationship_w_json_filter.png)
+![Image of Relationship with json filter](../../img/relationship_w_json_filter_light.png#only-light){ .on-glb }
+![Image of Relationship with json filter](../../img/relationship_w_json_filter_dark.png#only-dark){ .on-glb }
 
 Now, the Device Relationship field will show up on a VLAN with an `wireless` role:
 
 ![Image of Edge Device Relationships](../../img/edge_dev_circuit_relationship.png)
 
-The Circuit Relationship field will _not_ show up on a Device with a role `leaf`:
+The Circuit Relationship field will _not_ show up on a Device with a role `branch_data`:
 
 ![Image of Leaf Device Relationships](../../img/leaf_dev_no_circuit_relationship.png)
 
