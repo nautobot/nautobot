@@ -420,27 +420,33 @@ class ApprovalWorkflowStageUIViewSet(
         ],
     )
 
-    @action(detail=True, url_path="approve", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="approve",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def approve(self, request, *args, **kwargs):
         """
         Approve the approval workflow stage response.
         """
         instance = self.get_object()
 
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
+        if not (
+            request.user.is_superuser
+            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+        ):
+            messages.error(request, "You are not permitted to approve this workflow stage.")
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(initial={"comments": obj.comments})
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
 
             object_under_review = instance.approval_workflow.object_under_review
             template_name = getattr(object_under_review, "get_approval_template", lambda: None)()
@@ -451,15 +457,19 @@ class ApprovalWorkflowStageUIViewSet(
                 request,
                 template_name,
                 {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
+                    "return_url": self.get_return_url(request, instance),
                     "card_class": "success",
                     "button_class": "success",
                 },
             )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
         approval_workflow_stage_response.save()
@@ -467,40 +477,49 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You approved {instance}.")
         return redirect(self.get_return_url(request))
 
-    @action(detail=True, url_path="deny", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="deny",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def deny(self, request, *args, **kwargs):
         """
         Deny the approval workflow stage response.
         """
         instance = self.get_object()
 
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-                state=ApprovalWorkflowStateChoices.PENDING,
-            )
+        if not (
+            request.user.is_superuser
+            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+        ):
+            messages.error(request, "You are not permitted to deny this workflow stage.")
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(initial={"comments": obj.comments})
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
 
             return render(
                 request,
                 "extras/approval_workflow/deny.html",
                 {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
+                    "return_url": self.get_return_url(request, instance),
                 },
             )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
         approval_workflow_stage_response.save()
@@ -508,7 +527,13 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
-    @action(detail=True, url_path="comment", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="comment",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def comment(self, request, *args, **kwargs):
         """
         Comment the approval workflow stage response.
@@ -521,11 +546,12 @@ class ApprovalWorkflowStageUIViewSet(
             )
             return redirect(self.get_return_url(request, instance))
 
+        # We don't enforce approver-group/superuser check here, anyone can comment, not just an approver.
+
         if request.method == "GET":
-            existing_response = ApprovalWorkflowStageResponse.objects.filter(
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
                 approval_workflow_stage=instance, user=request.user
-            ).first()
-            if existing_response is not None:
+            ).first():
                 form = ApprovalForm(initial={"comments": existing_response.comments})
             else:
                 form = ApprovalForm()
@@ -547,7 +573,6 @@ class ApprovalWorkflowStageUIViewSet(
         approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
             approval_workflow_stage=instance, user=request.user
         )
-
         approval_workflow_stage_response.comments = request.data.get("comments")
         # we don't want to change a state if is approved, denied or canceled
         if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
