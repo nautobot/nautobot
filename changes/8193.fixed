@@ -1,0 +1,1 @@
+Fixed rendering of approve and deny button, now they are rendered only when user is superuser or is in approver group.
