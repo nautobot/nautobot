@@ -441,7 +441,9 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
             approval_workflow_stage=stage, user=request.user
         )
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.comments = comment
         approval_workflow_stage_response.save()
 
