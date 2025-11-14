@@ -64,6 +64,7 @@ class VirtualServerTable(BaseTable):
             "ssl_offload",
             "certificate_profiles_count",
             "tags",
+            "actions",
         )
 
         default_columns = (
@@ -108,6 +109,7 @@ class LoadBalancerPoolTable(BaseTable):
             "load_balancer_pool_member_count",
             "health_check_monitor",
             "tenant",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -153,6 +155,7 @@ class LoadBalancerPoolMemberTable(StatusTableMixin, BaseTable):
             "health_check_monitor",
             "certificate_profiles_count",
             "tenant",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -206,6 +209,7 @@ class HealthCheckMonitorTable(BaseTable):
             "load_balancer_pool_count",
             "load_balancer_pool_member_count",
             "tenant",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -243,6 +247,7 @@ class CertificateProfileTable(BaseTable):
             "expiration_date",
             "cipher",
             "tenant",
+            "actions",
         )
         default_columns = (
             "pk",
