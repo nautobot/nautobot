@@ -5,7 +5,7 @@
 {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
 
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
+    <form id="nb-create-form" action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}

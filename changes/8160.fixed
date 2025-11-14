@@ -1,0 +1,1 @@
+Fixed select2 logic to correctly account for the possibility of multi-value `query_params`.
