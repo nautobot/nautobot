@@ -247,12 +247,15 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8155](https://github.com/nautobot/nautobot/issues/8155) - Fixed a GraphQL query error when executing queries with `limit` or `offset` as a non-superuser.
 - [#8158](https://github.com/nautobot/nautobot/issues/8158) - Fixed bulk-edit form for Interface Redundancy Groups to no longer automatically prepopulate with a `protocol` of `HSRP`.
 - [#8160](https://github.com/nautobot/nautobot/issues/8160) - Fixed select2 logic to correctly account for the possibility of multi-value `query_params`.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Fixed insertion order of middleware for `nautobot.core.settings_funcs.setup_structlog_logging`.
 - [#8171](https://github.com/nautobot/nautobot/issues/8171) - Fixed tables overflow on update/create forms on narrow viewports.
 - [#8178](https://github.com/nautobot/nautobot/issues/8178) - Fixed "Create and Add Another" behavior for UIViewSet-derived views.
 - [#8182](https://github.com/nautobot/nautobot/issues/8182) - Fixed the width of the log filter input in the JobResult detail view.
 - [#8184](https://github.com/nautobot/nautobot/issues/8184) - Fixed issues with creating/editing a Dynamic Group "group of groups" in the UI.
+- [#8186](https://github.com/nautobot/nautobot/issues/8186) - Fixed approval workflows not being checked for when bulk-editing or bulk-deleting records through the UI.
 - [#8189](https://github.com/nautobot/nautobot/issues/8189) - Fixed multiple locations where actions buttons was not included.
 - [#8191](https://github.com/nautobot/nautobot/issues/8191) - Fixed title on Approval Workflow tab and Dynamic Groups view.
+- [#8196](https://github.com/nautobot/nautobot/issues/8196) - Fixed `badge_count_override` - now works correctly when the value is 0.
 
 ### Dependencies in v3.0.0rc2
 
@@ -280,6 +283,8 @@ Added the JavaScript Library ECharts version 6.0.0.
 ### Housekeeping in v3.0.0rc2
 
 - [#8121](https://github.com/nautobot/nautobot/issues/8121) - Updated Nautobot documentation screenshots to reflect the latest UI.
+- [#8127](https://github.com/nautobot/nautobot/issues/8127) - Put the majority of v2 to v3 UI changes in a single list.
+- [#8127](https://github.com/nautobot/nautobot/issues/8127) - Added command to check Python files for legacy HTML to Bootstrap v3 to v5 migration script.
 - [#8154](https://github.com/nautobot/nautobot/issues/8154) - Updated Contact and Team documentation to include 3.0 screenshots.
 - [#8174](https://github.com/nautobot/nautobot/issues/8174) - Fixed `invoke djlint` and `invoke djhtml` tasks to apply to the example apps as well.
 - [#8179](https://github.com/nautobot/nautobot/issues/8179) - Updated Wireless documentation to include 3.0 screenshots.
