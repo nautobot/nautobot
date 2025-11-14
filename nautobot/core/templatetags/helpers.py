@@ -824,7 +824,7 @@ def render_button_class(value):
         value (str): A string representing the button class (e.g., 'primary').
 
     Returns:
-        str: HTML string for a button with the given class.
+        (str): HTML string for a button with the given class.
 
     Example:
         >>> render_button_class("primary")
@@ -848,7 +848,7 @@ def render_job_run_link(value):
         value (Job): The job object.
 
     Returns:
-        str: HTML anchor tag linking to the job's run view.
+        (str): HTML anchor tag linking to the job's run view.
     """
     if hasattr(value, "class_path"):
         url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
@@ -1313,7 +1313,7 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0
         base_depth (int, optional): Starting depth (number of dots to skip rendering).
 
     Returns:
-        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+        (str): A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
              otherwise an empty string.
     """
     if hide_hierarchy_ui or tree_depth == 0:
