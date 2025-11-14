@@ -9,7 +9,9 @@ The [Software Image File](../core-data-model/dcim/softwareimagefile.md) and [Sof
 
 To create a new Software Version, navigate to **Devices > Software Versions** and click **Add**. (`/dcim/software-versions/add/`) The `Platform`, `Version` and `Status` fields are all required. You can use the `Alias` field if you would like to add a friendly name for the Software Version. There are optional fields for `Release Date`, `End of Support Date`, `Documentation URL` and booleans for `Long Term Support` and `Pre-Release`.
 
-![Create a Software Version](images/software-image-files-and-versions/software-version-create.png)
+![Create a Software Version](images/software-image-files-and-versions/ss_software-version-create_light.png#only-light){ .on-glb }
+![Create a Software Version](images/software-image-files-and-versions/ss_software-version-create_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/software-versions/add/`"
 
 ## Create a Software Image File
 
@@ -18,7 +20,9 @@ To create a new Software Version, navigate to **Devices > Software Versions** an
 
 To create a new Software Image File, navigate to **Devices > Software Image Files** and click **Add**. (`/dcim/software-image-files/add/`) The `Software Version`, `Image File Name` and `Status` fields are all required. There are optional fields for `Image File Checksum`, `Hashing Algorithm`, `Image File Size`, `Download URL`, `Default Image`, and `Device Types`.
 
-![Create a Software Image File](images/software-image-files-and-versions/software-image-file-create.png)
+![Create a Software Image File](images/software-image-files-and-versions/ss_software-image-file-create_light.png#only-light){ .on-glb }
+![Create a Software Image File](images/software-image-files-and-versions/ss_software-image-file-create_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/software-image-files/add/`"
 
 ## Assigning Software Image Files to Device Types
 
@@ -28,7 +32,9 @@ Before a Device can be associated to a Software Version, the Software Version mu
 
 Devices, Inventory Items and Virtual Machines may be associated to one Software Version to track their current version. This association can be made in the UI on the Device, Inventory Item or Virtual Machine forms. Through the REST API, the Software Version can be associated on the Device, Inventory Item and Virtual Machine REST API POST/PUT/PATCH views.
 
-![Assign Software Version to Device](images/software-image-files-and-versions/assign-software-version-to-device.png)
+![Assign Software Version to Device](images/software-image-files-and-versions/ss_assign-software-version-to-device_light.png#only-light){ .on-glb }
+![Assign Software Version to Device](images/software-image-files-and-versions/ss_assign-software-version-to-device_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/devices/add/`"
 
 ### Assigning Software Image Files to Devices, Inventory Items and Virtual Machines
 
