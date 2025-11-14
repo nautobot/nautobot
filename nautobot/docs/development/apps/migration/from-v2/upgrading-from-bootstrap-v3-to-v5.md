@@ -7,6 +7,9 @@ The following is a detailed migration guide outlining the steps to help app auth
 !!! note
     This document does not cover all the UI/UX changes brought to Bootstrap and Nautobot components. Instead, this guide scope is narrowed down to only the technicalities concerning HTML element structures and attributes, and CSS class names.
 
+!!! tip
+    You are strongly encouraged to adopt the UI component framework. Migration can be performed incrementally on your 2.4 instance, making future upgrades easier. New features will be added exclusively to this framework. For example, the Data Compliance tab, automatic "copy" buttons in detail views, and collapsible cards or panels are already only available for models using the new UI component framework. The feature set will continue to expand over time.
+
 ## Dependency management
 
 Bootstrap v5.x JavaScript now uses vanilla JavaScript and jQuery dependency has been removed. For now, Nautobot will keep supporting jQuery for backward compatibility, but consider it marked as **deprecated**. Ensure that your custom scripts do not rely on jQuery and jQuery-based Bootstrap v3.4.1 functions.
@@ -493,3 +496,12 @@ By default, [Horizontal rules](https://getbootstrap.com/docs/5.3/content/reboot/
         </li>
     </ul>
     ```
+
+## Additional Considerations
+
+We have covered in detail the common patterns leveraged within the Nautobot ecosystem. While most implementations will follow these patterns, some may have take a more custom approach. Although we cannot address every possible scenario, here are a few additional considerations:
+
+- JavaScript or custom CSS selectors may have changed and could require updates.
+- Some Bootstrap primitives or components used in your scripts may no longer exist or have been renamed.
+- Review any custom integrations or third-party plugins for compatibility with Bootstrap v5.
+- Test your UI thoroughly to ensure all interactive elements and styles function as expected after migration.

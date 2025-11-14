@@ -2,7 +2,22 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block title %}Home{% endblock title %}
+{% block title %}Log In{% endblock title %}
+
+{% block extra_styles %}
+    {{ block.super }}
+
+    <style>
+        /* This is a wrapper element containing page title, breadcrumbs, search bar, and user profile dropdown. */
+        #header :nth-child(2) {
+            display: none;
+        }
+
+        #header .alert:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
     <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
