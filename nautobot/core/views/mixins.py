@@ -76,6 +76,7 @@ PERMISSIONS_ACTION_MAP = {
     "data_compliance": "view",
     "approve": "change",
     "deny": "change",
+    "comment": "change",
 }
 
 
@@ -416,11 +417,11 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         """
         model_permissions = []
         for action in actions:
-            # Append additional object permissions if specified.
-            if self.custom_view_additional_permissions:
-                model_permissions.append(*self.custom_view_additional_permissions)
             # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+        # Append additional object permissions if specified.
+        if self.custom_view_additional_permissions:
+            model_permissions.append(*self.custom_view_additional_permissions)
         return model_permissions
 
     def get_required_permission(self):
@@ -1065,7 +1066,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
                     self.success_url = url
-                self.success_url = request.get_full_path()
+                else:
+                    self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):

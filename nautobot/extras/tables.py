@@ -385,7 +385,9 @@ class ApprovalWorkflowStageTable(BaseTable):
         verbose_name="Actions Needed",
     )
     state = ApprovalChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("detail", "changelog", "approve", "deny"))
+    actions = ApprovalButtonsColumn(
+        ApprovalWorkflowStage, buttons=("detail", "changelog", "comment", "approve", "deny")
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -427,7 +429,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -462,7 +464,7 @@ class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -511,6 +513,9 @@ class ApprovalWorkflowStageResponseTable(BaseTable):
             "comments",
             "state",
         )
+
+    def render_comments(self, value):
+        return render_markdown(value)
 
 
 class RelatedApprovalWorkflowStageResponseTable(ApprovalWorkflowStageResponseTable):
@@ -766,8 +771,8 @@ class DynamicGroupTable(BaseTable):
 class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
-    description = tables.Column(accessor="group.description")
-    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
+    description = tables.Column(accessor="group__description")
+    members = tables.Column(accessor="group__count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -1118,7 +1123,7 @@ class JobTable(BaseTable):
 
     def render_name(self, value):
         return format_html(
-            '<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}',
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
             value,
         )
 
@@ -1853,8 +1858,8 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
-    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
-    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
     actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):

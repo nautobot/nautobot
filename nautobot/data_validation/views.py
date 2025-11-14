@@ -5,12 +5,12 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect, render
 
-from nautobot.apps.ui import Breadcrumbs, Titles, ViewNameBreadcrumbItem
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
+from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
@@ -174,13 +174,6 @@ class DataComplianceUIViewSet(  # pylint: disable=W0223
 class DeviceConstraintsView(GenericView):
     template_name = "data_validation/device_constraints.html"
     view_titles = Titles(titles={"*": "Device Constraints"})
-    breadcrumbs = Breadcrumbs(
-        items={
-            "*": [
-                ViewNameBreadcrumbItem(view_name="data_validation:device-constraints", label="Device Constraints"),
-            ],
-        },
-    )
 
     def get(self, request):
         form = forms.DeviceConstraintsForm(user=request.user)
@@ -190,7 +183,6 @@ class DeviceConstraintsView(GenericView):
             {
                 "form": form,
                 "view_titles": self.get_view_titles(),
-                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 

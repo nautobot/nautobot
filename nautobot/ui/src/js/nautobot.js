@@ -34,6 +34,7 @@ window.jQuery = jQuery;
 window.$ = window.jQuery;
 
 import 'jquery-ui';
+import 'jquery-ui/ui/widgets/sortable.js';
 import 'select2';
 
 import { initializeCheckboxes } from './checkbox.js';
