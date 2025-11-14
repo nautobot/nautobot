@@ -772,7 +772,7 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
     print(f"- Deprecated templates replaced: {templates_replaced}")
 
 
-def list_potentially_legacy_code(directory: str):
+def check_python_files_for_legacy_html(directory: str):
     exclude_dirs = [
         "__pycache__",
         "node_modules",
@@ -840,11 +840,11 @@ def main():
     parser.add_argument(
         "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
     )
-    parser.add_argument("-l", "--list", action="store_true", help="List potentially legacy code.")
+    parser.add_argument("-p", "--check-python-files", action="store_true", help="Check Python files for legacy HTML.")
     args = parser.parse_args()
 
-    if args.list:
-        return list_potentially_legacy_code(args.path)
+    if args.check_python_files:
+        return check_python_files_for_legacy_html(args.path)
     else:
         fix_html_files_in_directory(
             args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
