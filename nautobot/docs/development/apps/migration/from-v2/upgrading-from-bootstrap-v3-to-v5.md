@@ -71,7 +71,7 @@ In the case of the above output snippet, you can see that while the script fixed
     The `nautobot-migrate-bootstrap-v3-to-v5` also, by default, calls the `nautobot-migrate-deprecated-templates` script to replace deprecated template references found in your HTML files. You can skip this additional step by using the `--skip-template-replacement` flag. For more details on the deprecated template script, see [Deprecated Templates](../code-updates.md#deprecated-templates).
 
 <!-- pyml disable-num-lines 2 proper-names -->
-??? info "Full table of Boostrap v3 to v5 and Nautobot UI API changes"
+??? info "Full table of Bootstrap v3 to v5 and Nautobot UI API changes"
     {data-table ../nautobot/core/cli/bootstrap_v3_to_v5_changes.yaml}
 
 ## Overview of High-Level Changes
