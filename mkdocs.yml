@@ -582,6 +582,7 @@ nav:
           - User Interface:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
+              - Search: "user-guide/platform-functionality/user-interface/search.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
@@ -663,6 +664,7 @@ nav:
               - nautobot.apps.querysets: "code-reference/nautobot/apps/querysets.md"
               - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
               - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
+              - nautobot.apps.templatetags: "code-reference/nautobot/apps/templatetags.md"
               - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
               - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
               - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"

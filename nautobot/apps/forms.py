@@ -69,6 +69,11 @@ from nautobot.core.forms.widgets import (
     TimePicker,
 )
 from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -142,6 +147,9 @@ __all__ = (
     "JSONArrayFormField",
     "JSONField",
     "LaxURLField",
+    "LocatableModelBulkEditFormMixin",
+    "LocatableModelFilterFormMixin",
+    "LocatableModelFormMixin",
     "MACAddressField",
     "MultiMatchModelMultipleChoiceField",
     "MultiValueCharField",
