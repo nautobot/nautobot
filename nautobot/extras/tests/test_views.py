@@ -133,12 +133,13 @@ class ApprovalWorkflowDefinitionViewTestCase(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
 
         cls.form_data = {
             "name": "Test Approval Workflow Definition 5",
             "model_content_type": cls.scheduledjob_ct.pk,
-            "model_constraints": '{"name": "Bulk Delete Objects"}',
+            "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
             "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
             "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
@@ -162,6 +163,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
             name="Test Approval Workflow Definition 1",
             model_content_type=cls.scheduledjob_ct,
             weight=10,
+            model_constraints={"job_model__name": "NoSuchJob"},
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
@@ -264,7 +266,10 @@ class ApprovalWorkflowViewTestCase(
         ]
         approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, weight=i
+                name=f"Test Approval Workflow {i}",
+                model_content_type=cls.scheduledjob_ct,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -333,6 +338,7 @@ class ApprovalWorkflowStageViewTestCase(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -739,6 +745,7 @@ class ApprovalWorkflowStageResponseViewTestCase(
                 name=f"Test Approval Workflow {i} Definition",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
