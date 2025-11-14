@@ -365,10 +365,13 @@ Responsible for designing, managing, and configuring approval workflow definitio
 Approval actions are controlled not only by permissions but also by **approver group membership** defined in each workflow definition:
 
 - Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage, how to create user group via the admin UI check [here](users/groups.md)).
-- A user must belong to the stage’s approver group to:
+- A user must belong to the stage’s approver group or be a super user to:
     - See the stage in the **My Approvals** tab.
     - Perform approval or denial actions.
-- If the user has the required permissions but is **not** a member of the approver group, the stage will not appear in their dashboard and no actions will be available.
+- If the user has the required permissions but is **not** either a member of the approver group or a super user, the stage will not appear in their dashboard and no actions will be available.
+
+!!! note
+    A Nautobot super user is considered to be members of all Approval Groups.
 
 ## Upgrade Considerations
 

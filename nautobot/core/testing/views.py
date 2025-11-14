@@ -402,7 +402,7 @@ class ViewTestCases:
                             self.assertHttpStatus(self.client.get(url), [403, 404])
 
                         self.add_permissions(required_permissions[-1])
-                        self.assertHttpStatus(self.client.get(url), 200)
+                        self.assertHttpStatus(self.client.get(url, follow=True), 200)
                     finally:
                         # delete the permissions here so that we start from a clean slate on the next loop
                         self.remove_permissions(*required_permissions)
