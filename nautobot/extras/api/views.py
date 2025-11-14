@@ -311,7 +311,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     def _is_user_approver(self, user, stage):
         """Checks if the user belongs to the group allowed to approve the current stage."""
         approver_group = stage.approval_workflow_stage_definition.approver_group
-        return user in approver_group.user_set.all()
+        return approver_group.user_set.filter(id=user.id).exists()
 
     def _user_already_approved_or_denied(self, user, stage, action_type):
         """Checks if the user has already approved/denied to the current stage."""

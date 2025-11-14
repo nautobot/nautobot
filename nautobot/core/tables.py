@@ -538,7 +538,7 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
         if needs_approval_check and request and request.user:
             can_approve = (
                 request.user.is_superuser
-                or request.user in record.approval_workflow_stage_definition.approver_group.user_set.all()
+                or record.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
             )
 
         self.extra_context["can_approve"] = can_approve
