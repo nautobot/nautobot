@@ -707,6 +707,58 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
         self.assertEqual(new_response.comments, "New comment")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_comment_to_pending_approval(self):
+        """
+        Test editing or adding a comment in the approval stage that already has one approval,
+        but needs two. Only edit the comment don't change the state from APPROVED to COMMENT.
+        """
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # check min_approver to 2
+        approval_workflow_stage.approval_workflow_stage_definition.min_approvers = 2
+        approval_workflow_stage.approval_workflow_stage_definition.save()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="approved comment",
+            state=ApprovalWorkflowStateChoices.APPROVED,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit approved comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        # assert state is still APPROVED
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(edited_response.comments, "Edit approved comment")
+
 
 class ApprovalWorkflowStageResponseViewTestCase(
     ViewTestCases.DeleteObjectViewTestCase,

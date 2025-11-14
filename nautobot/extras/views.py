@@ -549,7 +549,9 @@ class ApprovalWorkflowStageUIViewSet(
         )
 
         approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.save()
         instance.refresh_from_db()
         messages.success(request, f"You commented {instance}.")
