@@ -841,15 +841,18 @@ def main():
         "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
     )
     parser.add_argument("-p", "--check-python-files", action="store_true", help="Check Python files for legacy HTML.")
+    parser.add_argument("--no-fix-html-templates", action="store_true", help="Do not fix HTML template files.")
     args = parser.parse_args()
 
+    exit_code = 0
     if args.check_python_files:
-        return check_python_files_for_legacy_html(args.path)
-    else:
+        exit_code = check_python_files_for_legacy_html(args.path)
+    if not args.no_fix_html_templates:
         fix_html_files_in_directory(
             args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
         )
-        return 0
+
+    return exit_code
 
 
 if __name__ == "__main__":
