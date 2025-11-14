@@ -131,9 +131,7 @@ def setup_structlog_logging(
     except ValueError:
         index_of_prometheus_after_middleware = None
     if index_of_prometheus_after_middleware:
-        django_middleware.insert(
-            index_of_prometheus_after_middleware, "django_structlog.middlewares.RequestMiddleware"
-        )
+        django_middleware.insert(index_of_prometheus_after_middleware, "django_structlog.middlewares.RequestMiddleware")
     else:
         django_middleware.append("django_structlog.middlewares.RequestMiddleware")
 
