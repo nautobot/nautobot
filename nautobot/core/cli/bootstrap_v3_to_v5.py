@@ -653,7 +653,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 
 def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, skip_templates=False) -> None:
     """
-    Recursively finds all .html files in the given direcory, applies convert_bootstrap_classes,
+    Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
     and overwrites each file with the fixed content. If resize is True, it will only change the
     breakpoints (This should only be done once.).
     """
