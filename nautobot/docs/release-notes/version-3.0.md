@@ -255,6 +255,8 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8186](https://github.com/nautobot/nautobot/issues/8186) - Fixed approval workflows not being checked for when bulk-editing or bulk-deleting records through the UI.
 - [#8189](https://github.com/nautobot/nautobot/issues/8189) - Fixed multiple locations where actions buttons was not included.
 - [#8191](https://github.com/nautobot/nautobot/issues/8191) - Fixed title on Approval Workflow tab and Dynamic Groups view.
+- [#8193](https://github.com/nautobot/nautobot/issues/8193) - Fixed rendering of approve and deny button, now they are rendered only when user is superuser or is in approver group.
+- [#8193](https://github.com/nautobot/nautobot/issues/8193) - Editing or adding a comment in an approved/denied/canceled stage no longer reverts the approval state.
 - [#8196](https://github.com/nautobot/nautobot/issues/8196) - Fixed `badge_count_override` - now works correctly when the value is 0.
 
 ### Dependencies in v3.0.0rc2
