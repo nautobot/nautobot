@@ -246,10 +246,6 @@
   "Bootstrap v5": data-bs-toggle
   "Search Regex": data-toggle
 
-- "Bootstrap v3": Dropdowns
-  "Bootstrap v5": Dropdowns
-  "Search Regex": WIP
-
-- "Bootstrap v3": Tabs
-  "Bootstrap v5": Tabs
-  "Search Regex": WIP
+- "Bootstrap v3": Breadcrumbs, Dropdowns, Tabs
+  "Bootstrap v5": breadcrumb-item, dropdown-item, nav-item, nav-link
+  "Search Regex": (?s)<li((?!<li|</li>|breadcrumb-item).)*(?=<a|<button)((?!<li|</li>|breadcrumb-item|dropdown-item|nav-item|nav-link).)*</li>

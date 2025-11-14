@@ -788,6 +788,12 @@ def list_potentially_legacy_code(directory: str):
             print("`bootstrap_v3_to_v5_changes.yaml` file is corrupted.")
             return 1
 
+    def has_multiline_pattern(change):
+        return "(?s)" in change["Search Regex"]
+
+    multiline_pattern_changes = [change for change in bootstrap_v3_to_v5_changes if has_multiline_pattern(change)]
+    standard_pattern_changes = [change for change in bootstrap_v3_to_v5_changes if not has_multiline_pattern(change)]
+
     matches = 0
     for dirpath, dirnames, filenames in os.walk(directory):
         for filename in filenames:
@@ -795,11 +801,19 @@ def list_potentially_legacy_code(directory: str):
                 continue
             with open(os.path.join(dirpath, filename), "rt") as fh:
                 contents = fh.readlines()
+                full_contents = "".join(contents)
 
             for linenum, line in enumerate(contents, start=1):
-                for change in bootstrap_v3_to_v5_changes:
+                for change in standard_pattern_changes:
                     if re.search(change["Search Regex"], line):
                         print(f"{os.path.join(dirpath, filename)}({linenum}):\t{line}\t:\t{change['Bootstrap v5']}")
+                    matches += 1
+            for change in multiline_pattern_changes:
+                multiline_matches = re.finditer(change["Search Regex"], full_contents)
+                for multiline_match in multiline_matches:
+                    linenum = multiline_match.string.count("\n", 0, multiline_match.start()) + 1
+                    substring = multiline_match.string[multiline_match.start() : multiline_match.end()]
+                    print(f"{os.path.join(dirpath, filename)}({linenum}):\t{substring}\n\t:\t{change['Bootstrap v5']}")
                     matches += 1
             for exclude_dir in exclude_dirs:
                 if exclude_dir in dirnames:
