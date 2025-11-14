@@ -1,0 +1,2 @@
+Fixed rendering of approve and deny button, now they are rendered only when user is superuser or is in approver group.
+Editing or adding a comment in an approved/denied/canceled stage no longer reverts the approval state.
