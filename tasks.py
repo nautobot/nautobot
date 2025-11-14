@@ -930,7 +930,7 @@ def prettier(context, fix=False):
 @task
 def djhtml(context, fix=False):
     """Indent Django template files."""
-    command = "djhtml nautobot/*/templates --tabwidth 4"
+    command = "djhtml nautobot/*/templates examples/*/*/templates --tabwidth 4"
     if not fix:
         command += " --check"
     run_command(context, f'bash -c "{command}"')  # needed for glob expansion
@@ -939,7 +939,7 @@ def djhtml(context, fix=False):
 @task
 def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
     """Lint and check Django template files formatting."""
-    command = "djlint . --lint"
+    command = "djlint nautobot examples --lint"
     run_command(context, command)
 
 

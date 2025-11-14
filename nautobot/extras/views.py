@@ -549,7 +549,9 @@ class ApprovalWorkflowStageUIViewSet(
         )
 
         approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.save()
         instance.refresh_from_db()
         messages.success(request, f"You commented {instance}.")
@@ -706,6 +708,9 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "default_time_zone": get_current_timezone(),
                 "stage_table": stage_table,
                 "response_table": response_table,
+                "view_titles": self.get_view_titles(model=obj, view_type=""),
+                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
+                "detail": True,
                 **common_detail_view_context(request, obj),
             },
         )
@@ -1563,8 +1568,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
-    breadcrumbs = Breadcrumbs()
-    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1598,8 +1601,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
-                "breadcrumbs": self.breadcrumbs,
-                "view_titles": self.view_titles,
+                "view_titles": self.get_view_titles(model=obj, view_type=""),
+                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
                 "detail": True,
             },
         )

@@ -8,7 +8,7 @@
         <span class="mdi mdi-history"></span>
     </a>
 {% endif %}
-{% if "approve" in buttons and have_permission and record.is_active_stage %}
+{% if "approve" in buttons and have_permission and record.is_active_stage and can_approve %}
     <span title='{% if request.user in record.users_that_already_approved %}You already approved this stage{% else %}Approve this stage{% endif %}'>
         {% if request.user not in record.users_that_already_approved %}
             <a href="{% url approval_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}"
@@ -22,7 +22,7 @@
         {% endif %}
     </span>
 {% endif %}
-{% if "deny" in buttons and have_permission and record.is_active_stage and request.user not in record.users_that_already_approved %}
+{% if "deny" in buttons and have_permission and record.is_active_stage and request.user not in record.users_that_already_approved and can_approve %}
     <span title='{%if request.user in record.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}'>
         {% if request.user not in record.users_that_already_approved %}
             <a href="{% url deny_route pk=record.pk %}?return_url={{ request.path }}{{ return_url_extra }}"
