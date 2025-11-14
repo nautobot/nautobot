@@ -1,2 +1,1 @@
 Fixed approval workflows not being checked for when bulk-editing or bulk-deleting records through the UI.
-Fixed title of approval-workflow tab on Scheduled Job detail view.

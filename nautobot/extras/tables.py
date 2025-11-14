@@ -771,8 +771,8 @@ class DynamicGroupTable(BaseTable):
 class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
-    description = tables.Column(accessor="group.description")
-    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
+    description = tables.Column(accessor="group__description")
+    members = tables.Column(accessor="group__count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -1469,7 +1469,7 @@ class NoteTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("created", "last_updated", "note", "user_name")
+        fields = ("created", "last_updated", "note", "user_name", "actions")
 
     def render_note(self, value):
         return render_markdown(value)
@@ -1658,7 +1658,7 @@ class RoleTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description", "actions"]
 
 
 class RoleTableMixin(BaseTable):
@@ -1678,6 +1678,7 @@ class SecretTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tags = TagColumn(url_name="extras:secret_list")
+    actions = ButtonsColumn(Secret)
 
     class Meta(BaseTable.Meta):
         model = Secret
@@ -1687,6 +1688,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1694,6 +1696,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
 
     def render_provider(self, value):
@@ -1705,6 +1708,7 @@ class SecretsGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    actions = ButtonsColumn(SecretsGroup)
 
     class Meta(BaseTable.Meta):
         model = SecretsGroup
@@ -1712,11 +1716,13 @@ class SecretsGroupTable(BaseTable):
             "pk",
             "name",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
             "name",
             "description",
+            "actions",
         )
 
 
@@ -1823,6 +1829,7 @@ class WebhookTable(BaseTable):
     type_update = BooleanColumn()
     type_delete = BooleanColumn()
     ssl_verification = BooleanColumn()
+    actions = ButtonsColumn(Webhook)
 
     class Meta(BaseTable.Meta):
         model = Webhook
@@ -1839,6 +1846,7 @@ class WebhookTable(BaseTable):
             "type_delete",
             "ssl_verification",
             "ca_file_path",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1847,6 +1855,7 @@ class WebhookTable(BaseTable):
             "payload_url",
             "http_content_type",
             "enabled",
+            "actions",
         )
 
 
@@ -1858,8 +1867,8 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
-    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
-    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
     actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):

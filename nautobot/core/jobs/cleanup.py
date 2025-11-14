@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import CASCADE
+from django.db.models import CASCADE, PROTECT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
@@ -67,6 +67,18 @@ class LogsCleanup(Job):
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
                 if cascade_queryset.exists():
                     self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
+            elif related_object.on_delete is PROTECT:
+                self.logger.warning(
+                    "Skipping %s records with a protected relationship to %s."
+                    " You must delete the related object(s) first.",
+                    queryset.model._meta.label,
+                    related_object.related_model._meta.label,
+                )
+                items_to_exclude = related_object.related_model.objects.values_list(
+                    related_object.field.name, flat=True
+                )
+                queryset = queryset.exclude(id__in=items_to_exclude)
+                deletion_summary.update({related_object.related_model._meta.label: 0})
 
         genericrelation_related_fields = [
             field for field in queryset.model._meta.private_fields if hasattr(field, "bulk_related_objects")
