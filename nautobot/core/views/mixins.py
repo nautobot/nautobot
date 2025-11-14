@@ -57,7 +57,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
@@ -76,6 +76,7 @@ PERMISSIONS_ACTION_MAP = {
     "data_compliance": "view",
     "approve": "change",
     "deny": "change",
+    "comment": "change",
 }
 
 
@@ -416,11 +417,11 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         """
         model_permissions = []
         for action in actions:
-            # Append additional object permissions if specified.
-            if self.custom_view_additional_permissions:
-                model_permissions.append(*self.custom_view_additional_permissions)
             # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+        # Append additional object permissions if specified.
+        if self.custom_view_additional_permissions:
+            model_permissions.append(*self.custom_view_additional_permissions)
         return model_permissions
 
     def get_required_permission(self):
@@ -1065,7 +1066,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
                     self.success_url = url
-                self.success_url = request.get_full_path()
+                else:
+                    self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1152,6 +1154,19 @@ class BulkEditAndBulkDeleteModelMixin:
         # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
         job_form.is_valid()
         job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
+        # adapted from nautobot/extras/views JobRunView.post() - TODO: deduplicate this code and unify code paths
+        with transaction.atomic():
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                **BulkDeleteObjects.serialize_data(job_kwargs),
+            )
+            if scheduled_job.has_approval_workflow_definition():
+                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
+            else:
+                scheduled_job.delete()
+
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
@@ -1174,6 +1189,19 @@ class BulkEditAndBulkDeleteModelMixin:
         # NOTE: BulkEditObjects cant be invalid, so there is no need for handling invalid error
         job_form.is_valid()
         job_kwargs = BulkEditObjects.prepare_job_kwargs(job_form.cleaned_data)
+        # adapted from nautobot/extras/views JobRunView.post() - TODO: deduplicate this code and unify code paths
+        with transaction.atomic():
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                **BulkEditObjects.serialize_data(job_kwargs),
+            )
+            if scheduled_job.has_approval_workflow_definition():
+                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
+            else:
+                scheduled_job.delete()
+
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,

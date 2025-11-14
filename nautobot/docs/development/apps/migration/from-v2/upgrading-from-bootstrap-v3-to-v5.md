@@ -7,6 +7,9 @@ The following is a detailed migration guide outlining the steps to help app auth
 !!! note
     This document does not cover all the UI/UX changes brought to Bootstrap and Nautobot components. Instead, this guide scope is narrowed down to only the technicalities concerning HTML element structures and attributes, and CSS class names.
 
+!!! tip
+    You are strongly encouraged to adopt the UI component framework. Migration can be performed incrementally on your 2.4 instance, making future upgrades easier. New features will be added exclusively to this framework. For example, the Data Compliance tab, automatic "copy" buttons in detail views, and collapsible cards or panels are already only available for models using the new UI component framework. The feature set will continue to expand over time.
+
 ## Dependency management
 
 Bootstrap v5.x JavaScript now uses vanilla JavaScript and jQuery dependency has been removed. For now, Nautobot will keep supporting jQuery for backward compatibility, but consider it marked as **deprecated**. Ensure that your custom scripts do not rely on jQuery and jQuery-based Bootstrap v3.4.1 functions.
@@ -67,11 +70,26 @@ In the case of the above output snippet, you can see that while the script fixed
 !!! note
     The `nautobot-migrate-bootstrap-v3-to-v5` also, by default, calls the `nautobot-migrate-deprecated-templates` script to replace deprecated template references found in your HTML files. You can skip this additional step by using the `--skip-template-replacement` flag. For more details on the deprecated template script, see [Deprecated Templates](../code-updates.md#deprecated-templates).
 
+!!! note
+    The `nautobot-migrate-bootstrap-v3-to-v5` also, by default, does not check HTML in Python files. You can enable this check with `--check-python-files` flag.
+
+<!-- pyml disable-num-lines 2 proper-names -->
+??? info "Full table of Bootstrap v3 to v5 and Nautobot UI API changes"
+    {data-table ../nautobot/core/cli/bootstrap_v3_to_v5_changes.yaml}
+
 ## Overview of High-Level Changes
 
 ### Bootstrap `data-*` attributes
 
 In Bootstrap v5.x, some reused native HTML attributes became `data-*` attributes for less ambiguity. In addition to that, all custom Bootstrap `data-*` attributes are prefixed with an additional `bs-` for even more clarity. For example, `data-toggle="collapse"` is now `data-bs-toggle="collapse"`, and Tooltip's `title` attribute has been changed to `data-bs-title`.
+
+| Bootstrap v3    | Bootstrap v5       |
+|-----------------|--------------------|
+| `data-backdrop` | `data-bs-backdrop` |
+| `data-dismiss`  | `data-bs-dismiss`  |
+| `data-target`   | `data-bs-target`   |
+| `data-title`    | `data-bs-title`    |
+| `data-toggle`   | `data-bs-toggle`   |
 
 === "Bootstrap v3"
 
@@ -493,3 +511,12 @@ By default, [Horizontal rules](https://getbootstrap.com/docs/5.3/content/reboot/
         </li>
     </ul>
     ```
+
+## Additional Considerations
+
+We have covered in detail the common patterns leveraged within the Nautobot ecosystem. While most implementations will follow these patterns, some may have take a more custom approach. Although we cannot address every possible scenario, here are a few additional considerations:
+
+- JavaScript or custom CSS selectors may have changed and could require updates.
+- Some Bootstrap primitives or components used in your scripts may no longer exist or have been renamed.
+- Review any custom integrations or third-party plugins for compatibility with Bootstrap v5.
+- Test your UI thoroughly to ensure all interactive elements and styles function as expected after migration.

@@ -147,8 +147,8 @@ IMAGEATTACHMENT_NAME = """
 IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
-<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a>
-<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a>
+<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
+<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
 JOB_RESULT_BUTTONS = """
@@ -385,7 +385,9 @@ class ApprovalWorkflowStageTable(BaseTable):
         verbose_name="Actions Needed",
     )
     state = ApprovalChoiceFieldColumn()
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("detail", "changelog", "approve", "deny"))
+    actions = ApprovalButtonsColumn(
+        ApprovalWorkflowStage, buttons=("detail", "changelog", "comment", "approve", "deny")
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -427,7 +429,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -462,7 +464,7 @@ class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Stage",
     )
-    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "deny"))
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -511,6 +513,9 @@ class ApprovalWorkflowStageResponseTable(BaseTable):
             "comments",
             "state",
         )
+
+    def render_comments(self, value):
+        return render_markdown(value)
 
 
 class RelatedApprovalWorkflowStageResponseTable(ApprovalWorkflowStageResponseTable):
@@ -766,8 +771,8 @@ class DynamicGroupTable(BaseTable):
 class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
-    description = tables.Column(accessor="group.description")
-    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
+    description = tables.Column(accessor="group__description")
+    members = tables.Column(accessor="group__count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -1118,7 +1123,7 @@ class JobTable(BaseTable):
 
     def render_name(self, value):
         return format_html(
-            '<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}',
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
             value,
         )
 
@@ -1464,7 +1469,7 @@ class NoteTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("created", "last_updated", "note", "user_name")
+        fields = ("created", "last_updated", "note", "user_name", "actions")
 
     def render_note(self, value):
         return render_markdown(value)
@@ -1653,7 +1658,7 @@ class RoleTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description", "actions"]
 
 
 class RoleTableMixin(BaseTable):
@@ -1673,6 +1678,7 @@ class SecretTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tags = TagColumn(url_name="extras:secret_list")
+    actions = ButtonsColumn(Secret)
 
     class Meta(BaseTable.Meta):
         model = Secret
@@ -1682,6 +1688,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1689,6 +1696,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
 
     def render_provider(self, value):
@@ -1700,6 +1708,7 @@ class SecretsGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    actions = ButtonsColumn(SecretsGroup)
 
     class Meta(BaseTable.Meta):
         model = SecretsGroup
@@ -1707,11 +1716,13 @@ class SecretsGroupTable(BaseTable):
             "pk",
             "name",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
             "name",
             "description",
+            "actions",
         )
 
 
@@ -1818,6 +1829,7 @@ class WebhookTable(BaseTable):
     type_update = BooleanColumn()
     type_delete = BooleanColumn()
     ssl_verification = BooleanColumn()
+    actions = ButtonsColumn(Webhook)
 
     class Meta(BaseTable.Meta):
         model = Webhook
@@ -1834,6 +1846,7 @@ class WebhookTable(BaseTable):
             "type_delete",
             "ssl_verification",
             "ca_file_path",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1842,6 +1855,7 @@ class WebhookTable(BaseTable):
             "payload_url",
             "http_content_type",
             "enabled",
+            "actions",
         )
 
 
@@ -1853,8 +1867,8 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
-    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
-    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
     actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):

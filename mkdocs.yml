@@ -509,8 +509,8 @@ nav:
               - VRF: "user-guide/core-data-model/ipam/vrf.md"
           - Load Balancers:
               - "user-guide/core-data-model/load-balancers/index.md"
-              - Health Check Monitor: "user-guide/core-data-model/load-balancers/healthcheckmonitor.md"
               - Certificate Profile: "user-guide/core-data-model/load-balancers/certificateprofile.md"
+              - Health Check Monitor: "user-guide/core-data-model/load-balancers/healthcheckmonitor.md"
               - Load Balancer Pool: "user-guide/core-data-model/load-balancers/loadbalancerpool.md"
               - Load Balancer Pool Member: "user-guide/core-data-model/load-balancers/loadbalancerpoolmember.md"
               - Virtual Server: "user-guide/core-data-model/load-balancers/virtualserver.md"
@@ -582,6 +582,7 @@ nav:
           - User Interface:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
+              - Search: "user-guide/platform-functionality/user-interface/search.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
@@ -663,6 +664,7 @@ nav:
               - nautobot.apps.querysets: "code-reference/nautobot/apps/querysets.md"
               - nautobot.apps.secrets: "code-reference/nautobot/apps/secrets.md"
               - nautobot.apps.tables: "code-reference/nautobot/apps/tables.md"
+              - nautobot.apps.templatetags: "code-reference/nautobot/apps/templatetags.md"
               - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
               - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
               - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
@@ -671,6 +673,7 @@ nav:
           - Migration Guides:
               - From Nautobot v1: "development/apps/migration/from-v1.md"
               - From Nautobot v2:
+                  - Overview: "development/apps/migration/from-v2/overview.md"
                   - Migrating v2 to v3: "development/apps/migration/from-v2/migrating-v2-to-v3.md"
                   - New Nautobot Custom UI APIs: "development/apps/migration/from-v2/new-nautobot-custom-ui-apis.md"
                   - Upgrading from Bootstrap v3 to v5: "development/apps/migration/from-v2/upgrading-from-bootstrap-v3-to-v5.md"

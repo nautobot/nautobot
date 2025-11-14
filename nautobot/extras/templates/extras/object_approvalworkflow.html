@@ -2,9 +2,6 @@
 {% load approvals %}
 {% load helpers %}
 
-
-{% block title %}{{ block.super }} - Approval Workflow{% endblock %}
-
 {% block content %}
     <div class="row">
         <div class="col-lg-6">
@@ -30,6 +27,8 @@
         </div>
         <div class="col-lg-6">
             {% include 'panel_table.html' with table=stage_table heading="Stages"%}
+        </div>
+        <div class="full-width">
             {% include 'panel_table.html' with table=response_table heading="Responses"%}
         </div>
     </div>

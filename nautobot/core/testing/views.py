@@ -1558,6 +1558,7 @@ class ViewTestCases:
 
             response = self.client.post(self._get_url("bulk_delete"), data)
             job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertIsNotNone(job_result)
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),
@@ -1647,6 +1648,7 @@ class ViewTestCases:
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
             job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertIsNotNone(job_result)
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),

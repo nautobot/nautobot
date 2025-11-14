@@ -133,12 +133,13 @@ class ApprovalWorkflowDefinitionViewTestCase(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
 
         cls.form_data = {
             "name": "Test Approval Workflow Definition 5",
             "model_content_type": cls.scheduledjob_ct.pk,
-            "model_constraints": '{"name": "Bulk Delete Objects"}',
+            "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
             "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
             "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
@@ -162,6 +163,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
             name="Test Approval Workflow Definition 1",
             model_content_type=cls.scheduledjob_ct,
             weight=10,
+            model_constraints={"job_model__name": "NoSuchJob"},
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
@@ -264,7 +266,10 @@ class ApprovalWorkflowViewTestCase(
         ]
         approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, weight=i
+                name=f"Test Approval Workflow {i}",
+                model_content_type=cls.scheduledjob_ct,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -333,6 +338,7 @@ class ApprovalWorkflowStageViewTestCase(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -444,6 +450,51 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(response, "Approval Date")  # Assert the approval date is present
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_stage_with_existing_comment_endpoint(self):
+        """Test the approve stage with existing comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
+        self.assertBodyContains(response, "existing comment")
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Approved!"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # Response should be updated
+        new_response.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(new_response.comments, "Approved!")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_endpoint(self):
         """Test the deny endpoint."""
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
@@ -478,6 +529,235 @@ class ApprovalWorkflowStageViewTestCase(
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, "Denial Date")  # Assert the denial date is present
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_stage_with_existing_comment_endpoint(self):
+        """Test the deny stage with existing comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
+        self.assertBodyContains(response, "existing comment")
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Denied!"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # Response should be updated
+        new_response.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertEqual(new_response.comments, "Denied!")
+        self.assertBodyContains(
+            response, f"You denied {approval_workflow_stage}."
+        )  # Assert the denial message is present
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_comment_endpoint(self):
+        """Test the comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        expected_object_button = '<button type="submit" name="_confirm" class="btn btn-info"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Comment</button>'
+        self.assertContains(response, expected_object_button, html=True)  # Assert button Comment
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "It is just a comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # New response should be created
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(new_response.comments, "It is just a comment")
+        self.assertBodyContains(
+            response, f"You commented {approval_workflow_stage}."
+        )  # Assert the comment message is present
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "It is just a comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_comment_endpoint(self):
+        """Test the edit comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit existing comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(edited_response.comments, "Edit existing comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_new_comment_from_different_user(self):
+        """Test the add comment if different user add it."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # create new response with a comment
+        second_user = User.objects.last()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=second_user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=second_user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+        self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "New comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(ApprovalWorkflowStageResponse.objects.all().count(), 2)
+
+        old_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=second_user
+        )
+        self.assertEqual(old_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(old_response.comments, "existing comment")
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(new_response.comments, "New comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_comment_to_pending_approval(self):
+        """
+        Test editing or adding a comment in the approval stage that already has one approval,
+        but needs two. Only edit the comment don't change the state from APPROVED to COMMENT.
+        """
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # check min_approver to 2
+        approval_workflow_stage.approval_workflow_stage_definition.min_approvers = 2
+        approval_workflow_stage.approval_workflow_stage_definition.save()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="approved comment",
+            state=ApprovalWorkflowStateChoices.APPROVED,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit approved comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        # assert state is still APPROVED
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(edited_response.comments, "Edit approved comment")
 
 
 class ApprovalWorkflowStageResponseViewTestCase(
@@ -517,6 +797,7 @@ class ApprovalWorkflowStageResponseViewTestCase(
                 name=f"Test Approval Workflow {i} Definition",
                 model_content_type=cls.scheduledjob_ct,
                 weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]

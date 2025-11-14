@@ -81,7 +81,7 @@
                         </span>
                     {% endif %}
                 </div>
-                <div class="tab-pane" id="children-form">
+                <div class="tab-pane overflow-auto" id="children-form">
                     {% if children.errors %}
                         <div class="text-danger">
                             Please correct the error(s) below:
@@ -192,7 +192,7 @@
         });
 
     // Instead of re-weight on every input change, just do it before we submit the form.
-        $('form.form').submit((e) => {
+        $('#nb-create-form').submit((e) => {
             $(e.target).find('#children-form').each((i, cf) => { update_weights(cf) });
         });
     </script>

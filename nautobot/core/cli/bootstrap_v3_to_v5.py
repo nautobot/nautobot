@@ -3,6 +3,8 @@ import logging
 import os
 import re
 
+import yaml
+
 from .migrate_deprecated_templates import replace_deprecated_templates
 
 logger = logging.getLogger(__name__)
@@ -770,6 +772,56 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
     print(f"- Deprecated templates replaced: {templates_replaced}")
 
 
+def check_python_files_for_legacy_html(directory: str):
+    exclude_dirs = [
+        "__pycache__",
+        "node_modules",
+    ]
+    exclude_files = [
+        "bootstrap_v3_to_v5.py",
+    ]
+
+    with open(os.path.join(os.path.dirname(__file__), "bootstrap_v3_to_v5_changes.yaml")) as yaml_file:
+        try:
+            bootstrap_v3_to_v5_changes = yaml.safe_load(yaml_file)
+        except yaml.YAMLError:
+            print("`bootstrap_v3_to_v5_changes.yaml` file is corrupted.")
+            return 1
+
+    def has_multiline_pattern(change):
+        return "(?s)" in change["Search Regex"][1:-2]
+
+    multiline_pattern_changes = [change for change in bootstrap_v3_to_v5_changes if has_multiline_pattern(change)]
+    standard_pattern_changes = [change for change in bootstrap_v3_to_v5_changes if not has_multiline_pattern(change)]
+
+    matches = 0
+    for dirpath, dirnames, filenames in os.walk(directory):
+        for filename in filenames:
+            if filename in exclude_files or not filename.endswith(".py"):
+                continue
+            with open(os.path.join(dirpath, filename), "rt") as fh:
+                contents = fh.readlines()
+                full_contents = "".join(contents)
+
+            for linenum, line in enumerate(contents, start=1):
+                for change in standard_pattern_changes:
+                    if re.search(change["Search Regex"][1:-2], line):
+                        print(f"{os.path.join(dirpath, filename)}({linenum}):\t{line}\t:\t{change['Bootstrap v5']}")
+                    matches += 1
+            for change in multiline_pattern_changes:
+                multiline_matches = re.finditer(change["Search Regex"][1:-2], full_contents)
+                for multiline_match in multiline_matches:
+                    linenum = multiline_match.string.count("\n", 0, multiline_match.start()) + 1
+                    substring = multiline_match.string[multiline_match.start() : multiline_match.end()]
+                    print(f"{os.path.join(dirpath, filename)}({linenum}):\t{substring}\n\t:\t{change['Bootstrap v5']}")
+                    matches += 1
+            for exclude_dir in exclude_dirs:
+                if exclude_dir in dirnames:
+                    dirnames.remove(exclude_dir)
+
+    return matches
+
+
 def main():
     parser = argparse.ArgumentParser(description="Bootstrap 3 to 5 HTML fixer.")
     parser.add_argument(
@@ -788,11 +840,19 @@ def main():
     parser.add_argument(
         "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
     )
+    parser.add_argument("-p", "--check-python-files", action="store_true", help="Check Python files for legacy HTML.")
+    parser.add_argument("--no-fix-html-templates", action="store_true", help="Do not fix HTML template files.")
     args = parser.parse_args()
 
-    fix_html_files_in_directory(
-        args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
-    )
+    exit_code = 0
+    if args.check_python_files:
+        exit_code = check_python_files_for_legacy_html(args.path)
+    if not args.no_fix_html_templates:
+        fix_html_files_in_directory(
+            args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
+        )
+
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -285,7 +285,9 @@ class RelationshipModel(models.Model):
                             Q(**side_query_params) | Q(**peer_side_query_params)
                         ).distinct()
                         if not relationship.has_many(peer_side):
-                            resp[side][relationship] = resp[side][relationship].first()
+                            resp[RelationshipSideChoices.SIDE_PEER][relationship] = resp[
+                                RelationshipSideChoices.SIDE_PEER
+                            ][relationship].first()
                 else:
                     # Maybe an uninstalled App?
                     # We can't provide a relevant queryset, but we can provide a descriptive string

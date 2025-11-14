@@ -134,80 +134,76 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
         const content_type = element.getAttribute('data-contenttype');
 
         // Attach any extra query parameters
-        const extra_query_parameters = Object.fromEntries(
-          [...element.attributes]
-            .filter((attribute) => attribute.name.includes('data-query-param-'))
-            .flatMap((attribute) => {
-              const [, param_name] = attribute.name.split('data-query-param-');
+        const extra_query_parameters_array = [...element.attributes]
+          .filter((attribute) => attribute.name.includes('data-query-param-'))
+          .flatMap((attribute) => {
+            const [, param_name] = attribute.name.split('data-query-param-');
 
-              const values = (() => {
-                try {
-                  return JSON.parse(attribute.value);
-                  // eslint-disable-next-line no-unused-vars
-                } catch (exception) {
-                  return [];
-                }
-              })();
+            const values = (() => {
+              try {
+                return JSON.parse(attribute.value);
+                // eslint-disable-next-line no-unused-vars
+              } catch (exception) {
+                return [];
+              }
+            })();
 
-              return values.flatMap((value) => {
-                const has_ref_field = value.startsWith('$');
+            return values.flatMap((value) => {
+              const has_ref_field = value.startsWith('$');
 
-                // Referencing the value of another form field.
-                const ref_field = has_ref_field
-                  ? (() => {
-                      const name = value.slice(1);
+              // Referencing the value of another form field.
+              const ref_field = has_ref_field
+                ? (() => {
+                    const name = value.slice(1);
 
-                      if (element.id.includes('id_form-')) {
-                        const [id_prefix] = element.id.match(/id_form-[0-9]+-/i, '');
-                        return document.querySelector(`#${id_prefix}${name}`);
-                      }
+                    if (element.id.includes('id_form-')) {
+                      const [id_prefix] = element.id.match(/id_form-[0-9]+-/i, '');
+                      return document.querySelector(`#${id_prefix}${name}`);
+                    }
 
-                      /*
-                       * If the element is in a table row with a class containing "dynamic-formset" we need to find the
-                       * reference field in the same row.
-                       */
-                      if (element.closest('tr')?.classList.contains('dynamic-formset')) {
-                        return element.closest('tr').querySelector(`select[id*="${name}"]`);
-                      }
+                    /*
+                     * If the element is in a table row with a class containing "dynamic-formset" we need to find the
+                     * reference field in the same row.
+                     */
+                    if (element.closest('tr')?.classList.contains('dynamic-formset')) {
+                      return element.closest('tr').querySelector(`select[id*="${name}"]`);
+                    }
 
-                      return document.querySelector(`#id_${name}`);
-                    })()
-                  : null;
+                    return document.querySelector(`#id_${name}`);
+                  })()
+                : null;
 
-                const ref_field_value = ref_field
-                  ? (() => {
-                      const field_value = getValue(ref_field);
-                      const style = window.getComputedStyle(ref_field);
+              const ref_field_value = ref_field
+                ? (() => {
+                    const field_value = getValue(ref_field);
+                    const style = window.getComputedStyle(ref_field);
 
-                      if (field_value && style.opacity !== '0' && style.visibility !== 'hidden') {
-                        return field_value;
-                      }
+                    if (field_value && style.opacity !== '0' && style.visibility !== 'hidden') {
+                      return field_value;
+                    }
 
-                      if (ref_field.getAttribute('required') && ref_field.getAttribute('data-null-option')) {
-                        return 'null';
-                      }
+                    if (ref_field.getAttribute('required') && ref_field.getAttribute('data-null-option')) {
+                      return 'null';
+                    }
 
-                      return undefined;
-                    })()
-                  : null;
+                    return undefined;
+                  })()
+                : null;
 
-                const param_value = has_ref_field ? ref_field_value : value;
-                return param_value !== null && param_value !== undefined
-                  ? [[param_name, ref_field_value || value]]
-                  : [];
-              });
-            }),
-        );
+              const param_value = has_ref_field ? ref_field_value : value;
+              return param_value !== null && param_value !== undefined ? [[param_name, ref_field_value || value]] : [];
+            });
+          });
 
-        const parameters = {
-          depth: String(depth),
-          limit: String(limit),
-          offset: String(offset),
-          ...(api_version ? { api_version } : undefined),
-          ...(content_type ? { content_type } : undefined),
-          ...(q ? { [search_field]: q } : undefined),
-          ...extra_query_parameters,
-        };
+        const parameters = [
+          ['depth', String(depth)],
+          ['limit', String(limit)],
+          ['offset', String(offset)],
+          ...(api_version ? [['api_version', api_version]] : []),
+          ...(content_type ? [['content_type', content_type]] : []),
+          ...(q ? [[search_field, q]] : []),
+          ...extra_query_parameters_array,
+        ];
 
         // This will handle params with multiple values (i.e. for list filter forms).
         return new URLSearchParams(parameters).toString();

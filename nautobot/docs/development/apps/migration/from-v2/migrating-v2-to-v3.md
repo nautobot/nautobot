@@ -1,20 +1,11 @@
-# Migrating v2.x to v3.0
+# Migration Path
 
-Most migrations outside of the UI updates are minimal. However, for completeness, we will review the UI changes and several niche changes that may affect your app. As a high level, you can safely skip these steps if you:
-
-- Do not have any custom apps
-- Do have custom apps and can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run` with no changes and do not have any HTML in Python files.
-- Do have custom apps and can run `nautobot-migrate-deprecated-templates <path> --dry-run` with no changes.
-- Do have custom apps and can run `pylint --disable=all --enable=nb-deprecated-class --load-plugins=pylint_nautobot --rcfile=/dev/null <path>` with no errors.
-- Do have custom apps and do not have a reference to `DataComplianceRule` or `ComplianceError` in your code.
-- Do have custom apps and do not have a reference to `execute_query` or `execute_saved_query` in your code.
-- Can run `nautobot-server validate_models extras.dynamicgroup` with no output.
-- Do not use the REST API (minor change if using pynautobot required to keep same behavior).
+In the previous section, we provided a high-level overview of the migration steps. This section contains detailed instructions for each step.
 
 ## UI Migrations
 
 !!! tip
-    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run` against your custom app without any fixes suggested and do not have any HTML inside of any Python files.
+    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run --check-python-files` against your custom app without any fixes suggested. Note that HTML in Python search algorithm is greedy and occasionally may output false positives.
 
 Nautobot v3.0 introduces many modernizations and improvements to building user interfaces. Although we did our best to make the migration as smooth as possible for app developers, we were not able to avoid some of the **breaking changes**. Below is a list of guides explaining how to upgrade respective UI parts.
 
@@ -23,6 +14,9 @@ Overall, there are three pillars of v3.0 UI:
 1. [Usage of UI component framework introduced in 2.4.](../ui-component-framework/index.md)
 2. [Bootstrap v3.4.1 to v5.x upgrade.](./upgrading-from-bootstrap-v3-to-v5.md)
 3. [New Nautobot custom UI APIs.](./new-nautobot-custom-ui-apis.md)
+
+!!! tip
+    You are strongly encouraged to adopt the UI component framework. Migration can be performed incrementally on your 2.4 instance, making future upgrades easier. New features will be added exclusively to this framework. For example, the Data Compliance tab, automatic "copy" buttons in detail views, and collapsible cards or panels are already only available for models using the new UI component framework. The feature set will continue to expand over time.
 
 Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize`.
 

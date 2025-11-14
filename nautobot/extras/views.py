@@ -325,7 +325,7 @@ class ApprovalWorkflowUIViewSet(
                 table_title="Responses",
                 table_class=tables.RelatedApprovalWorkflowStageResponseTable,
                 table_filter="approval_workflow_stage__approval_workflow",
-                section=SectionChoices.RIGHT_HALF,
+                section=SectionChoices.FULL_WIDTH,
                 exclude_columns=["approval_workflow"],
                 add_button_route=None,
                 enable_related_link=False,
@@ -412,7 +412,7 @@ class ApprovalWorkflowStageUIViewSet(
                 weight=200,
                 table_class=tables.ApprovalWorkflowStageResponseTable,
                 table_filter="approval_workflow_stage",
-                section=SectionChoices.RIGHT_HALF,
+                section=SectionChoices.FULL_WIDTH,
                 exclude_columns=["approval_workflow_stage"],
                 table_title="Responses",
                 enable_related_link=False,
@@ -506,6 +506,55 @@ class ApprovalWorkflowStageUIViewSet(
         approval_workflow_stage_response.save()
         instance.refresh_from_db()
         messages.success(request, f"You denied {instance}.")
+        return redirect(self.get_return_url(request))
+
+    @action(detail=True, url_path="comment", methods=["get", "post"])
+    def comment(self, request, *args, **kwargs):
+        """
+        Comment the approval workflow stage response.
+        """
+        instance = self.get_object()
+
+        if not instance.is_not_done_stage:
+            messages.error(
+                request, f"This stage is in {instance.state} state. Can't comment on an approved or denied stage."
+            )
+            return redirect(self.get_return_url(request, instance))
+
+        if request.method == "GET":
+            existing_response = ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first()
+            if existing_response is not None:
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
+
+            template_name = "extras/approval_workflow/comment.html"
+
+            return render(
+                request,
+                template_name,
+                {
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
+                    "form": form,
+                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
+                    "return_url": self.get_return_url(request, instance),
+                },
+            )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
+
+        approval_workflow_stage_response.comments = request.data.get("comments")
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        approval_workflow_stage_response.save()
+        instance.refresh_from_db()
+        messages.success(request, f"You commented {instance}.")
         return redirect(self.get_return_url(request))
 
 
@@ -659,6 +708,9 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "default_time_zone": get_current_timezone(),
                 "stage_table": stage_table,
                 "response_table": response_table,
+                "view_titles": self.get_view_titles(model=obj, view_type=""),
+                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
+                "detail": True,
                 **common_detail_view_context(request, obj),
             },
         )
@@ -1516,8 +1568,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
-    breadcrumbs = Breadcrumbs()
-    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1551,8 +1601,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
-                "breadcrumbs": self.breadcrumbs,
-                "view_titles": self.view_titles,
+                "view_titles": self.get_view_titles(model=obj, view_type=""),
+                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
                 "detail": True,
             },
         )
