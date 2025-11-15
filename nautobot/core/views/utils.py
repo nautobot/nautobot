@@ -591,9 +591,9 @@ def get_bulk_queryset_from_view(
 
     queryset = view_class.queryset.restrict(user, action)
 
-    # The filterset_class is determined from model on purpose, as filterset_class the view as a param, will not work
-    # with a job. It is better to be consistent with each with sending the same params that will
-    # always be available from to the confirmation page and to the job.
+    # The filterset_class is determined from model on purpose versus getting it from the view itself. This is
+    # because the filterset_class on the view as a param, will not work with a job. It is better to be consistent
+    # with each with sending the same params that will always be available from to the confirmation page and to the job.
     filterset_class = get_filterset_for_model(model)
 
     if not filterset_class:
@@ -661,7 +661,7 @@ def get_bulk_queryset_from_view(
     # This covers the case where there is a saved view but no additional filter parameters.
     if is_all and saved_view_filter_params:
         log.debug(f"Filtering by saved view parameters: {saved_view_filter_params}")
-        inner_queryset = filterset_class(saved_view_filter_params, queryset).qs.values("pk")
+        inner_queryset = saved_view_obj.get_filtered_queryset(user).values("pk")
         # We take this approach because filterset.qs has already applied .distinct(),
         # and performing a .delete directly on a queryset with .distinct applied is not allowed.
         return queryset.filter(pk__in=inner_queryset)

@@ -35,7 +35,7 @@ class BulkEditObjects(Job):
     pk_list = JSONVar(description="List of objects pks to edit", required=False)
     edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
-    saved_view = ObjectVar(model=SavedView, required=False)
+    saved_view_id = ObjectVar(model=SavedView, required=False)
 
     class Meta:
         name = "Bulk Edit Objects"
@@ -127,9 +127,9 @@ class BulkEditObjects(Job):
         raise RunJobTaskFailed("Bulk Edit not fully successful, see logs")
 
     def run(  # pylint: disable=arguments-differ
-        self, *, content_type, form_data, pk_list=None, edit_all=False, filter_query_params=None, saved_view=None
+        self, *, content_type, form_data, pk_list=None, edit_all=False, filter_query_params=None, saved_view_id=None
     ):
-        saved_view_id = saved_view.pk if saved_view is not None else None
+        saved_view_id = saved_view_id.pk if saved_view_id is not None else None
         if not filter_query_params:
             filter_query_params = {}
 
@@ -189,7 +189,7 @@ class BulkDeleteObjects(Job):
     pk_list = JSONVar(description="List of objects pks to delete", required=False)
     delete_all = BooleanVar(description="Delete all (filtered) objects instead of a list of PKs", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
-    saved_view = ObjectVar(model=SavedView, required=False)
+    saved_view_id = ObjectVar(model=SavedView, required=False)
 
     class Meta:
         name = "Bulk Delete Objects"
@@ -200,9 +200,9 @@ class BulkDeleteObjects(Job):
         hidden = True
 
     def run(  # pylint: disable=arguments-differ
-        self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view=None
+        self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None, saved_view_id=None
     ):
-        saved_view_id = saved_view.pk if saved_view is not None else None
+        saved_view_id = saved_view_id.pk if saved_view_id is not None else None
         if not filter_query_params:
             filter_query_params = {}
         if not self.user.has_perm(f"{content_type.app_label}.delete_{content_type.model}"):
