@@ -1060,6 +1060,70 @@ class BulkEditTestCase(TransactionTestCase):
         )
         self.assertEqual(IPAddress.objects.all().count(), IPAddress.objects.filter(status=active_status).count())
 
+    def test_bulk_edit_objects_with_saved_view(self):
+        """
+        Bulk edit Status objects using a SavedView filter.
+        """
+        self.add_permissions("extras.change_status", "extras.view_status")
+        saved_view = SavedView.objects.create(
+            name="Save View for Statuses",
+            owner=self.user,
+            view="extras:status_list",
+            config={"filter_params": {"name__isw": ["A"]}},
+        )
+
+        # Confirm the SavedView filter matches some but not all Statuses
+        self.assertTrue(
+            0 < saved_view.get_filtered_queryset(self.user).count() < Status.objects.exclude(color="aa1409").count()
+        )
+        delta_count = (
+            Status.objects.exclude(color="aa1409").count() - saved_view.get_filtered_queryset(self.user).count()
+        )
+
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            username=self.user.username,
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+            form_data={"color": "aa1409", "_all": "True"},
+        )
+
+        self.assertEqual(delta_count, Status.objects.exclude(color="aa1409").count())
+
+    def test_bulk_edit_objects_with_saved_view_with_all_filters_removed(self):
+        """
+        Bulk edit Status objects using a SavedView filter but overwriting the saved field.
+        """
+        self.add_permissions("extras.change_status", "extras.view_status")
+        saved_view = SavedView.objects.create(
+            name="Save View for Statuses",
+            owner=self.user,
+            view="extras:status_list",
+            config={"filter_params": {"name__isw": ["A"]}},
+        )
+
+        self.assertTrue(
+            0 < saved_view.get_filtered_queryset(self.user).count() < Status.objects.exclude(color="aa1409").count()
+        )
+
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            username=self.user.username,
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={"all_filters_removed": [True]},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+            form_data={"color": "aa1409", "_all": "True"},
+        )
+
+        self.assertEqual(0, Status.objects.exclude(color="aa1409").count())
+
 
 class BulkDeleteTestCase(TransactionTestCase):
     """
@@ -1249,6 +1313,59 @@ class BulkDeleteTestCase(TransactionTestCase):
             saved_view_id=None,
         )
         self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
+
+    def test_bulk_delete_objects_with_saved_view(self):
+        """
+        Delete objects using a SavedView filter.
+        """
+        self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
+        saved_view = SavedView.objects.create(
+            name="Save View for Circuits",
+            owner=self.user,
+            view="circuits:circuit_list",
+            config={"filter_params": {"cid__isw": "Circuit "}},
+        )
+
+        # we assert that the saved view filter actually filters some circuits and there are others not filtered out
+        self.assertTrue(0 < saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(Circuit).id,
+            delete_all=True,
+            filter_query_params={},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+        )
+        self.assertTrue(Circuit.objects.exists())
+        self.assertFalse(saved_view.get_filtered_queryset(self.user).exists())
+
+    def test_bulk_delete_objects_with_saved_view_with_all_filters_removed(self):
+        """
+        Delete Objects using a SavedView filter, but ignore the filter if all_filters_removed is set.
+        """
+        self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
+        saved_view = SavedView.objects.create(
+            name="Save View for Circuits",
+            owner=self.user,
+            view="circuits:circuit_list",
+            config={"filter_params": {"cid__isw": "Circuit "}},
+        )
+
+        # we assert that the saved view filter actually filters some circuits and there are others not filtered out
+        self.assertTrue(0 < saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(Circuit).id,
+            delete_all=True,
+            filter_query_params={"all_filters_removed": [True]},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+        )
+        self.assertFalse(Circuit.objects.all().exists())
 
 
 class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
