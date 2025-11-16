@@ -210,6 +210,12 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.0 (2025-11-17)
+
+### Fixed in v3.0.0
+
+- [#8201](https://github.com/nautobot/nautobot/issues/8201) - Improved permissions enforcement on approval workflows.
+
 ## v3.0.0rc2 (2025-11-14)
 
 ### Added in v3.0.0rc2
