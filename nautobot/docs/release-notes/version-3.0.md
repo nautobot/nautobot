@@ -10,7 +10,7 @@ This document describes all new features and changes in Nautobot 3.0.
 - The `approval_required` field from `extras.Job` model has been removed. This is a breaking change for any custom Jobs or applications that reference this field. This functionality has been replaced by a new approval workflow system. For more information on how the new approach works, see [approval workflow documentation](../user-guide/platform-functionality/approval-workflow.md)
     - If you're upgrading from Nautobot 2.x, a management command, `nautobot-server check_job_approval_status` is available in 2.x to help identify jobs and scheduled jobs that still have `approval_required=True`. Running this command prior to upgrading can help you detect and address these cases by either clearing scheduled jobs or defining approval workflows for Jobs.
     - To maintain a similar approval process, see the steps in [predefined approval workflow](../user-guide/platform-functionality/approval-workflow.md#predefined-approval-workflow).
-- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups.
+- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup extras.savedview` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups or Saved Views.
 
 ### Job Authors & App Developers
 

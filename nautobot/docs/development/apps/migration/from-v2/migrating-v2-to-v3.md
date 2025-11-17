@@ -80,9 +80,9 @@ Code that calls the GraphQL `execute_query()` and `execute_saved_query()` functi
 ## Minor Filtering Changes
 
 !!! tip
-    You can safely skip this section if `nautobot-server validate_models extras.dynamicgroup` runs without error.
+    You can safely skip this section if `nautobot-server validate_models extras.dynamicgroup extras.savedview` runs without error.
 
-A small number of breaking [filter field changes](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups. The models include:
+A small number of breaking [filter field changes](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup extras.savedview` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups or Saved Views. The models include:
 
 - Front Port Templates `rear_port_template` filter
 - Power Outlets `power_port` filter

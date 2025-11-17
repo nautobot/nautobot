@@ -51,7 +51,7 @@ extras.DynamicGroup
 ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
 ```
 
-More on this topic you can find in the [Release Notes of 3.0](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889).
+More on this topic you can find in the [Release Notes of 3.0](#filter-standardization-improvements-1889).
 
 ## Default to Exclude M2M
 
