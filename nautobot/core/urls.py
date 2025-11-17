@@ -16,6 +16,7 @@ from nautobot.core.views import (
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
+    VueAppView,
     WorkerStatusView,
 )
 from nautobot.extras.plugins.urls import (
@@ -32,6 +33,8 @@ urlpatterns = [
     path("", HomeView.as_view(), name="home"),
     path("about/", AboutView.as_view(), name="about"),
     path("search/", SearchView.as_view(), name="search"),
+    # Vue 3 Frontend
+    path("vue/", VueAppView.as_view(), name="vue_app"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),

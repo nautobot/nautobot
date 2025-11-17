@@ -1,6 +1,7 @@
 'use strict'
 
 import path from 'node:path';
+import { VueLoaderPlugin } from 'vue-loader';
 import autoprefixer from 'autoprefixer';
 import CopyPlugin from 'copy-webpack-plugin';
 import miniCssExtractPlugin from 'mini-css-extract-plugin'
@@ -154,6 +155,81 @@ export default [
                 {
                     test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
                     type: 'asset/resource'
+                }
+            ]
+        }
+    },
+    {
+        mode: 'production',
+        devtool: 'source-map',
+        entry: {
+            "nautobot-vue": path.resolve('src', 'js', 'vue', 'main.js')
+        },
+        output: {
+            filename: 'js/[name].js',
+            path: path.resolve(__dirname, '..', 'project-static', 'dist')
+        },
+        resolve: {
+            alias: {
+                vue: 'vue/dist/vue.esm-bundler.js'
+            },
+            extensions: ['.js', '.vue', '.json']
+        },
+        optimization: {
+            splitChunks: {
+                chunks: 'all',
+                name: 'vue-libraries'
+            }
+        },
+        plugins: [
+            new VueLoaderPlugin(),
+            new miniCssExtractPlugin({
+                filename: 'css/[name].css'
+            })
+        ],
+        module: {
+            rules: [
+                {
+                    test: /\.vue$/,
+                    loader: 'vue-loader'
+                },
+                {
+                    test: /\.js$/,
+                    loader: 'babel-loader',
+                    exclude: /node_modules/,
+                    options: {
+                        presets: ['@babel/preset-env']
+                    }
+                },
+                {
+                    test: /\.(s?css)$/,
+                    use: [
+                        {
+                            loader: miniCssExtractPlugin.loader
+                        },
+                        {
+                            loader: 'css-loader'
+                        },
+                        {
+                            loader: 'postcss-loader',
+                            options: {
+                                postcssOptions: {
+                                    plugins: [
+                                        autoprefixer
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            loader: 'sass-loader',
+                            options: {
+                                sassOptions: {
+                                    quietDeps: true,
+                                    silenceDeprecations: ['import']
+                                }
+                            }
+                        }
+                    ]
                 }
             ]
         }

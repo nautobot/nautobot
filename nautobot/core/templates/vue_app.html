@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load helpers %}
+
+{% block title %}Vue 3 Frontend{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'dist/css/nautobot-vue.css' %}">
+{% endblock %}
+
+{% block content %}
+    {# Vue app mount point #}
+    <div id="nautobot-vue-app"></div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    {# Configure Vue app with Django context #}
+    <script>
+        window.nautobot = {
+            apiPath: '{% url "api-root" %}',
+            csrfToken: '{{ csrf_token }}',
+            basePath: '{% url "vue_app" %}',
+            staticUrl: '{% static "" %}'
+        };
+    </script>
+    
+    {# Load Vue libraries and app #}
+    <script src="{% static 'dist/js/vue-libraries.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=dist/js/vue-libraries.js'"></script>
+    <script src="{% static 'dist/js/nautobot-vue.js' %}"
+            onerror="window.location='{% url 'media_failure' %}?filename=dist/js/nautobot-vue.js'"></script>
+{% endblock %}
+

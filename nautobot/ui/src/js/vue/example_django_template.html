@@ -1,0 +1,52 @@
+{% comment %} Example Django template showing how to integrate the Vue 3
+frontend into Nautobot. This template can be used as a reference for integrating
+Vue components into Django templates. {% endcomment %} {% load static %}
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="csrf-token" content="{{ csrf_token }}" />
+        <title>Nautobot Vue 3 Frontend</title>
+
+        {# Bootstrap CSS (already included in Nautobot, but shown for reference)
+        #}
+        <link rel="stylesheet" href="{% static 'dist/css/nautobot.css' %}" />
+        <link
+            rel="stylesheet"
+            href="{% static 'dist/css/nautobot-vue.css' %}"
+        />
+
+        {# Material Design Icons #}
+        <link
+            rel="stylesheet"
+            href="{% static 'dist/css/materialdesignicons.css' %}"
+        />
+    </head>
+    <body>
+        {# Option 1: Full SPA - Mount Vue app to replace entire page content #}
+        <div id="nautobot-vue-app"></div>
+
+        {# Option 2: Embedded component - Mount Vue component within Django
+        template #} {#
+        <div id="device-list-vue-app"></div>
+        #} {# Django template content can coexist with Vue #} {% if not
+        vue_spa_mode %}
+        <div class="django-content">
+            {# Your Django template content here #}
+        </div>
+        {% endif %} {# Configure Vue app with Django context #}
+        <script>
+            window.nautobot = {
+                apiPath: '{% url "api-root" %}',
+                csrfToken: '{{ csrf_token }}',
+                basePath: '{% url "home" %}',
+                staticUrl: '{% static "" %}',
+            };
+        </script>
+
+        {# Load Vue libraries and app #}
+        <script src="{% static 'dist/js/vue-libraries.js' %}"></script>
+        <script src="{% static 'dist/js/nautobot-vue.js' %}"></script>
+    </body>
+</html>

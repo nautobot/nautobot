@@ -571,6 +571,11 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
+class VueAppView(AccessMixin, TemplateView):
+    """View for Vue 3 frontend application."""
+    template_name = "vue_app.html"
+
+
 class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
     """
     Nautobot About View which displays general information about Nautobot and contact details
