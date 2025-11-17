@@ -160,8 +160,8 @@ For users of the UI and REST API, this is purely a feature enhancement to the ab
 
 For users of GraphQL, this is also a feature enhancement, as queries using the above filters can now specify either a single value (`job_log_entries (job_result: "<uuid>") { message }`) as before, or can now be updated to specify a list of values instead (`job_log_entries (job_result: ["<uuid1>", "<uuid2>"]) { message }`) if desired.
 
-!!! warning "Impact to Dynamic Groups"
-    For Dynamic Groups using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
+!!! warning "Impact to Dynamic Groups and Saved Views"
+    For Dynamic Groups and Saved Views using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
 
     ```no-highlight
     {"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"}
@@ -173,10 +173,10 @@ For users of GraphQL, this is also a feature enhancement, as queries using the a
     {"rear_port_template": ["74aac78c-fabb-468c-a036-26c46c56f27a"]}
     ```
 
-    You can identify impacted Dynamic Groups by running the `nautobot-server validate_models extras.dynamicgroup` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
+    You can identify impacted records by running the `nautobot-server validate_models extras.dynamicgroup extras.savedview` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
 
     ```no-highlight
-    # nautobot-server validate_models extras.dynamicgroup
+    # nautobot-server validate_models extras.dynamicgroup extras.savedview
     Validating 1 models.
     extras.DynamicGroup
     ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
