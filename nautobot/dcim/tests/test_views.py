@@ -968,6 +968,7 @@ power-outlets:
 interfaces:
   - name: Interface 1
     type: 1000base-t
+    port_type: 8p8c
     mgmt_only: true
   - name: Interface 2
     type: 1000base-t
@@ -1051,6 +1052,7 @@ module-bays:
         iface1 = dt.interface_templates.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
+        self.assertEqual(iface1.port_type, PortTypeChoices.TYPE_8P8C)
         self.assertTrue(iface1.mgmt_only)
 
         self.assertEqual(dt.rear_port_templates.count(), 3)
@@ -1380,6 +1382,7 @@ power-outlets:
 interfaces:
   - name: Interface 1
     type: 1000base-t
+    port_type: 8p8c
     mgmt_only: true
   - name: Interface 2
     type: 1000base-t
@@ -1457,6 +1460,7 @@ module-bays:
         iface1 = mt.interface_templates.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
+        self.assertEqual(iface1.port_type, PortTypeChoices.TYPE_8P8C)
         self.assertTrue(iface1.mgmt_only)
 
         self.assertEqual(mt.rear_port_templates.count(), 3)
@@ -1810,6 +1814,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": devicetypes[1].pk,
             "name": "Interface Template X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "mgmt_only": True,
         }
 
@@ -1820,11 +1825,13 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "label_pattern": "Interface Template Label [3-5]",
             "description": "View Test Bulk Create Interfaces",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "mgmt_only": True,
         }
 
         cls.bulk_edit_data = {
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_LC_APC,
             "mgmt_only": True,
         }
 
@@ -1834,6 +1841,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
             "type": test_instance.type,
+            "port_type": test_instance.port_type,
             "label": "new test label",
             "description": "new test description",
         }
@@ -3309,6 +3317,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "device": device.pk,
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": False,
             "status": status_active.pk,
             "role": role.pk,
@@ -3329,6 +3338,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "label_pattern": "Interface Number [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": False,
             "bridge": interfaces[4].pk,
             "lag": interfaces[3].pk,
@@ -3353,6 +3363,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": True,
             "mtu": 1500,
             "mgmt_only": False,
@@ -3364,6 +3375,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.bulk_edit_data = {
             "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "port_type": PortTypeChoices.TYPE_LC_APC,
             "enabled": True,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
@@ -3385,6 +3397,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
             "status": test_instance.status.pk,
             "type": test_instance.type,
+            "port_type": test_instance.port_type,
             "label": "new test label",
             "description": "new test description",
         }
@@ -3395,6 +3408,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.add_permissions("dcim.add_interface")
         form_data = self.form_data.copy()
         del form_data["name"]
+        del form_data["port_type"]  # Virtual (LAG) interfaces cannot have a port type
         form_data["name_pattern"] = "LAG.0"
         form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
         form_data["parent_interface"] = self.lag_interface
@@ -3423,6 +3437,24 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertBodyContains(response, valid_ipaddress_link)
         response_content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn(invalid_ipaddress_link, response_content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_virtual_interface_with_port_type_fails(self):
+        """Test that a virtual interface cannot have a port type"""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        del form_data["lag"]
+        form_data["name_pattern"] = "VIRTUAL.0"
+        form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        response_content = extract_page_body(response.content.decode(response.charset))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("Virtual and wireless interfaces cannot have a port type.", response_content)
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
