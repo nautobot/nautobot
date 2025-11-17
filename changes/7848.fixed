@@ -1,1 +1,0 @@
-Fixed the Logs Cleanup job to skip records with a protected relationship instead of raising an error.

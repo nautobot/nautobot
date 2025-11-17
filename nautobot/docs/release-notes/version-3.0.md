@@ -210,6 +210,102 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.0 (2025-11-17)
+
+### Fixed in v3.0.0
+
+- [#8201](https://github.com/nautobot/nautobot/issues/8201) - Improved permissions enforcement on approval workflows.
+
+## v3.0.0rc2 (2025-11-14)
+
+### Added in v3.0.0rc2
+
+- [#8139](https://github.com/nautobot/nautobot/issues/8139) - Added default data for Approval Workflow.
+- [#8167](https://github.com/nautobot/nautobot/issues/8167) - Added ability to comment the approval workflow without having to approve or deny.
+- [#8174](https://github.com/nautobot/nautobot/issues/8174) - Added documentation about the enhanced Search functionality in Nautobot 3.0, and a corresponding link in the UI header.
+- [#8189](https://github.com/nautobot/nautobot/issues/8189) - Added missing imports into `nautobot.apps.*`.
+
+### Changed in v3.0.0rc2
+
+- [#8110](https://github.com/nautobot/nautobot/issues/8110) - Updated breadcrumbs & titles for Modules.
+- [#8110](https://github.com/nautobot/nautobot/issues/8110) - Updated breadcrumbs on Data Validation to be consistent with other views.
+- [#8147](https://github.com/nautobot/nautobot/issues/8147) - Updated theme screenshots (light, dark, system) to match the 3.0 UI.
+- [#8149](https://github.com/nautobot/nautobot/issues/8149) - Disabled smooth scroll in order to display "Please fill out this field" tooltip on required fields which are not in the viewport during form submission.
+- [#8158](https://github.com/nautobot/nautobot/issues/8158) - Changed behavior of Interface and Interface Template creation forms to no longer prefill automatically with a `type` of `Virtual`.
+- [#8158](https://github.com/nautobot/nautobot/issues/8158) - Changed behavior of Front Port, Front Port Template, Rear Port, and Rear Port Template creation forms to no longer prefill automatically with a `type` of `8P8C`.
+- [#8168](https://github.com/nautobot/nautobot/issues/8168) - Changed logged in user thumbnail to MDI account icon.
+- [#8169](https://github.com/nautobot/nautobot/issues/8169) - Changed run job button to circle in job list and tiles view.
+- [#8170](https://github.com/nautobot/nautobot/issues/8170) - Grayed out non-sortable table column headers.
+- [#8172](https://github.com/nautobot/nautobot/issues/8172) - Changed `<code>` tags background and text color to gray and enlarged their font size.
+- [#8176](https://github.com/nautobot/nautobot/issues/8176) - Hid global page header on the Log In page.
+
+### Fixed in v3.0.0rc2
+
+- [#7336](https://github.com/nautobot/nautobot/issues/7336) - Fixed Prefix filter UI to permit `prefix_length=0`.
+- [#7848](https://github.com/nautobot/nautobot/issues/7848) - Fixed the Logs Cleanup job to skip records with a protected relationship instead of raising an error.
+- [#8025](https://github.com/nautobot/nautobot/issues/8025) - Fixed a `KeyError` when viewing a record with a symmetric one-to-one `Relationship` defined.
+- [#8120](https://github.com/nautobot/nautobot/issues/8120) - Fixed Prefix filter UI to permit `prefix_length=128`.
+- [#8132](https://github.com/nautobot/nautobot/issues/8132) - Fixed theme flashing if LocalStorage, Cookie, and Browser diagree.
+- [#8136](https://github.com/nautobot/nautobot/issues/8136) - Fixed the ability to configure the Tenant panel table on the Tenant Group detail view.
+- [#8138](https://github.com/nautobot/nautobot/issues/8138) - Fixed viewset additional permissions potentially being processed multiple times.
+- [#8150](https://github.com/nautobot/nautobot/issues/8150) - Added 65535 as maximum value for port attribute in Load Balancer models.
+- [#8152](https://github.com/nautobot/nautobot/issues/8152) - Fixed object list checkbox handlers. Refactored object list checkbox event flow logic so it is more consistent and less prone to errors.
+- [#8155](https://github.com/nautobot/nautobot/issues/8155) - Fixed a GraphQL query error when executing queries with `limit` or `offset` as a non-superuser.
+- [#8158](https://github.com/nautobot/nautobot/issues/8158) - Fixed bulk-edit form for Interface Redundancy Groups to no longer automatically prepopulate with a `protocol` of `HSRP`.
+- [#8160](https://github.com/nautobot/nautobot/issues/8160) - Fixed select2 logic to correctly account for the possibility of multi-value `query_params`.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Fixed insertion order of middleware for `nautobot.core.settings_funcs.setup_structlog_logging`.
+- [#8171](https://github.com/nautobot/nautobot/issues/8171) - Fixed tables overflow on update/create forms on narrow viewports.
+- [#8178](https://github.com/nautobot/nautobot/issues/8178) - Fixed "Create and Add Another" behavior for UIViewSet-derived views.
+- [#8182](https://github.com/nautobot/nautobot/issues/8182) - Fixed the width of the log filter input in the JobResult detail view.
+- [#8184](https://github.com/nautobot/nautobot/issues/8184) - Fixed issues with creating/editing a Dynamic Group "group of groups" in the UI.
+- [#8186](https://github.com/nautobot/nautobot/issues/8186) - Fixed approval workflows not being checked for when bulk-editing or bulk-deleting records through the UI.
+- [#8189](https://github.com/nautobot/nautobot/issues/8189) - Fixed multiple locations where actions buttons was not included.
+- [#8191](https://github.com/nautobot/nautobot/issues/8191) - Fixed title on Approval Workflow tab and Dynamic Groups view.
+- [#8193](https://github.com/nautobot/nautobot/issues/8193) - Fixed rendering of approve and deny button, now they are rendered only when user is superuser or is in approver group.
+- [#8193](https://github.com/nautobot/nautobot/issues/8193) - Editing or adding a comment in an approved/denied/canceled stage no longer reverts the approval state.
+- [#8196](https://github.com/nautobot/nautobot/issues/8196) - Fixed `badge_count_override` - now works correctly when the value is 0.
+
+### Dependencies in v3.0.0rc2
+
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `@graphiql/toolkit` to `^0.11.3`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `bootstrap` to `^5.3.8`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `clipboard` to `2.0.11`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `flatpickr` to `4.6.13`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `htmx.org` to `^2.0.8`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated dependency `whatwg-fetch` to `3.6.20`.
+- [#8188](https://github.com/nautobot/nautobot/issues/8188) - Updated dependency `django-constance` to `~4.3.4`.
+
+### Documentation in v3.0.0rc2
+
+- [#8134](https://github.com/nautobot/nautobot/issues/8134) - Added a documentation fragment for disabling add button on table panels
+- [#8145](https://github.com/nautobot/nautobot/issues/8145) - Updated Saved View documentation to include 3.0 screenshots.
+- [#8147](https://github.com/nautobot/nautobot/issues/8147) - Documented best practices/standards for documentation media.
+- [#8147](https://github.com/nautobot/nautobot/issues/8147) - Consolidated Draw.io diagrams into a single file.
+- [#8148](https://github.com/nautobot/nautobot/issues/8148) - Updated documentation for the release management process.
+- [#8157](https://github.com/nautobot/nautobot/issues/8157) - Updated graphql documentation to include 3.0 screenshots.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Enhanced Load Balancer documentation with a diagram and additional model details.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Simplified migration guide by adding an overview and recommending the UI Component framework.
+- [#8173](https://github.com/nautobot/nautobot/issues/8173) - Updated CustomField documentation to include 3.0 screenshots.
+- [#8183](https://github.com/nautobot/nautobot/issues/8183) - Updated Request Profiling documentation to include 3.0 screenshots.
+
+### Housekeeping in v3.0.0rc2
+
+- [#8121](https://github.com/nautobot/nautobot/issues/8121) - Updated Nautobot documentation screenshots to reflect the latest UI.
+- [#8127](https://github.com/nautobot/nautobot/issues/8127) - Put the majority of v2 to v3 UI changes in a single list.
+- [#8127](https://github.com/nautobot/nautobot/issues/8127) - Added command to check Python files for legacy HTML to Bootstrap v3 to v5 migration script.
+- [#8154](https://github.com/nautobot/nautobot/issues/8154) - Updated Contact and Team documentation to include 3.0 screenshots.
+- [#8174](https://github.com/nautobot/nautobot/issues/8174) - Fixed `invoke djlint` and `invoke djhtml` tasks to apply to the example apps as well.
+- [#8179](https://github.com/nautobot/nautobot/issues/8179) - Updated Wireless documentation to include 3.0 screenshots.
+- [#8181](https://github.com/nautobot/nautobot/issues/8181) - Updated `django_tables2` accessors to use preferred dunder methods.
+- [#8181](https://github.com/nautobot/nautobot/issues/8181) - Linked badges to tables via `related_field_name` and `related_list_url_name`.
+- [#8181](https://github.com/nautobot/nautobot/issues/8181) - Updated multiple filters to support badge linking to tables.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated development dependency `autoprefixer` to `^10.4.22`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated development dependency `mini-css-extract-plugin` to `^2.9.4`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated development dependency `postcss` to `^8.5.6`.
+- [#8187](https://github.com/nautobot/nautobot/issues/8187) - Updated development dependency `sass-loader` to `^16.0.6`.
+- [#8188](https://github.com/nautobot/nautobot/issues/8188) - Updated development dependency `faker` to `^37.12.0`.
+- [#8188](https://github.com/nautobot/nautobot/issues/8188) - Updated development dependency `ruff` to `~0.14.5`.
+
 ## v3.0.0rc1 (2025-11-11)
 
 ### Breaking Changes in v3.0.0rc1
