@@ -10,4 +10,4 @@ A template for a network interface that will be created on all instantiations of
     * `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
 
 +++ 3.0.0
-    Interfaces now have an optional `port_type` field which describes the physical connector.
+    Interfaces now have an optional `port_type` field which describes the physical connector. It is only applicable to physical interfaces; virtual and wireless interface types (including LAGs) cannot have a `port_type` set and attempting to do so will result in a validation error.

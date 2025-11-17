@@ -16,7 +16,7 @@ The following operational statuses are available by default:
 * `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
 * `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
 
-### Validation rules
+### Validation rules for speed/duplex
 
 * LAG interfaces: do not support `speed` or `duplex`.
 * Virtual and wireless interfaces: do not support `speed` or `duplex`.
@@ -24,10 +24,11 @@ The following operational statuses are available by default:
 * Copper twisted‑pair types: `duplex` and `speed` may be set.
 
 ## Port type
+
 +++ 3.0.0
 Interfaces now have an optional `port_type` field which describes the physical connector.
-    
-### Validation rules
+
+### Validation rules for port type
 
 * Only applicable to physical interfaces; setting `port_type` on virtual or wireless interface types (including LAGs) will result in a validation error.
 

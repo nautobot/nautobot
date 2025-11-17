@@ -356,7 +356,9 @@ class InterfaceTemplate(ModularComponentTemplateModel):
         blank=True,
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
-    port_type = models.CharField(max_length=50, choices=PortTypeChoices, blank=True, help_text="Physical connector type")
+    port_type = models.CharField(
+        max_length=50, choices=PortTypeChoices, blank=True, help_text="Physical connector type"
+    )
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
     speed = models.PositiveIntegerField(null=True, blank=True)
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
