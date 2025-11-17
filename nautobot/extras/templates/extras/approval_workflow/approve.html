@@ -8,8 +8,11 @@
 {% block message %}
     {% block message_extra %}{% endblock %}
     <p>Are you sure you want to approve</p>
-    <ul><li>Stage <strong>{{ obj.approval_workflow_stage_definition.name }}</strong></li><li>from Workflow <strong>{{ obj.approval_workflow_stage_definition.approval_workflow_definition.name }}</strong></li>
-        <li>for {{ object_under_review|meta:"verbose_name"|bettertitle }} <strong>{{ object_under_review|hyperlinked_object}}</strong>?</li></ul>
+    <ul>
+        <li>Stage <strong>{{ obj.approval_workflow_stage_definition.name }}</strong></li>
+        <li>from Workflow <strong>{{ obj.approval_workflow_stage_definition.approval_workflow_definition.name }}</strong></li>
+        <li>for {{ object_under_review|meta:"verbose_name"|bettertitle }} <strong>{{ object_under_review|hyperlinked_object}}</strong>?</li>
+    </ul>
     <p>You can leave optional comments here.</p>
     {% render_field form.comments %}
 {% endblock %}
