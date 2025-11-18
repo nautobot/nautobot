@@ -289,25 +289,25 @@ def worker_shutdown(**_):
 class LivenessProbe(bootsteps.StartStopStep):
     requires = {"celery.worker.components:Timer"}
 
-    def __init__(self, worker, **kwargs):
+    def __init__(self, parent, **kwargs):
         self.requests = []
         self.tref = None
         self.WORKER_HEARTBEAT_FILE = Path(settings.CELERY_WORKER_HEARTBEAT_FILE)
 
-    def start(self, worker):
+    def start(self, parent):
         if not settings.CELERY_HEALTH_PROBES_AS_FILES:
             return
-        self.tref = worker.timer.call_repeatedly(
+        self.tref = parent.timer.call_repeatedly(
             1.0,
             self.update_worker_heartbeat_file,
-            (worker,),
+            (parent,),
             priority=10,
         )
 
-    def stop(self, worker):
+    def stop(self, parent):
         self.WORKER_HEARTBEAT_FILE.unlink(missing_ok=True)
 
-    def update_worker_heartbeat_file(self, worker):
+    def update_worker_heartbeat_file(self, parent):
         self.WORKER_HEARTBEAT_FILE.touch(exist_ok=True)
 
 
