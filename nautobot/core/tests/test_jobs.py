@@ -1163,6 +1163,19 @@ class BulkDeleteTestCase(TransactionTestCase):
             circuit_type=circuit_type,
             status=statuses[0],
         )
+        Circuit.objects.create(
+            cid="Not Circuit",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=statuses[0],
+        )
+
+        self.saved_view = SavedView.objects.create(
+            name="Save View for Circuits",
+            owner=self.user,
+            view="circuits:circuit_list",
+            config={"filter_params": {"cid__isw": "Circuit "}},
+        )
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
         self.assertJobResultStatus(job_result)
@@ -1319,15 +1332,9 @@ class BulkDeleteTestCase(TransactionTestCase):
         Delete objects using a SavedView filter.
         """
         self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
-        saved_view = SavedView.objects.create(
-            name="Save View for Circuits",
-            owner=self.user,
-            view="circuits:circuit_list",
-            config={"filter_params": {"cid__isw": "Circuit "}},
-        )
 
         # we assert that the saved view filter actually filters some circuits and there are others not filtered out
-        self.assertTrue(0 < saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        self.assertTrue(0 < self.saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
         create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
@@ -1336,25 +1343,19 @@ class BulkDeleteTestCase(TransactionTestCase):
             delete_all=True,
             filter_query_params={},
             pk_list=[],
-            saved_view_id=saved_view.id,
+            saved_view_id=self.saved_view.id,
         )
         self.assertTrue(Circuit.objects.exists())
-        self.assertFalse(saved_view.get_filtered_queryset(self.user).exists())
+        self.assertFalse(self.saved_view.get_filtered_queryset(self.user).exists())
 
     def test_bulk_delete_objects_with_saved_view_with_all_filters_removed(self):
         """
         Delete Objects using a SavedView filter, but ignore the filter if all_filters_removed is set.
         """
         self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
-        saved_view = SavedView.objects.create(
-            name="Save View for Circuits",
-            owner=self.user,
-            view="circuits:circuit_list",
-            config={"filter_params": {"cid__isw": "Circuit "}},
-        )
 
         # we assert that the saved view filter actually filters some circuits and there are others not filtered out
-        self.assertTrue(0 < saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        self.assertTrue(0 < self.saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
         create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
@@ -1363,7 +1364,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             delete_all=True,
             filter_query_params={"all_filters_removed": [True]},
             pk_list=[],
-            saved_view_id=saved_view.id,
+            saved_view_id=self.saved_view.id,
         )
         self.assertFalse(Circuit.objects.all().exists())
 

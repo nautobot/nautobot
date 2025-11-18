@@ -31,6 +31,9 @@ class BulkEditObjects(Job):
         model=ContentType,
         description="Type of objects to update",
     )
+    # The names of the job inputs must match the parameters of `key_params` and get_bulk_queryset_from_view
+    # This may be confusing for the saved_view_id since the job input is an ObjectVar but the key_param is a PK
+    # But it is the lesser of two evils.
     form_data = JSONVar(description="BulkEditForm data")
     pk_list = JSONVar(description="List of objects pks to edit", required=False)
     edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
@@ -186,6 +189,9 @@ class BulkDeleteObjects(Job):
         model=ContentType,
         description="Type of objects to delete",
     )
+    # The names of the job inputs must match the parameters of `key_params` and get_bulk_queryset_from_view
+    # This may be confusing for the saved_view_id since the job input is an ObjectVar but the key_param is a PK
+    # But it is the lesser of two evils.
     pk_list = JSONVar(description="List of objects pks to delete", required=False)
     delete_all = BooleanVar(description="Delete all (filtered) objects instead of a list of PKs", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
