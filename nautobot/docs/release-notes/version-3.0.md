@@ -10,7 +10,7 @@ This document describes all new features and changes in Nautobot 3.0.
 - The `approval_required` field from `extras.Job` model has been removed. This is a breaking change for any custom Jobs or applications that reference this field. This functionality has been replaced by a new approval workflow system. For more information on how the new approach works, see [approval workflow documentation](../user-guide/platform-functionality/approval-workflow.md)
     - If you're upgrading from Nautobot 2.x, a management command, `nautobot-server check_job_approval_status` is available in 2.x to help identify jobs and scheduled jobs that still have `approval_required=True`. Running this command prior to upgrading can help you detect and address these cases by either clearing scheduled jobs or defining approval workflows for Jobs.
     - To maintain a similar approval process, see the steps in [predefined approval workflow](../user-guide/platform-functionality/approval-workflow.md#predefined-approval-workflow).
-- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups.
+- A small number of breaking [filter field changes](#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup extras.savedview` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups or Saved Views.
 
 ### Job Authors & App Developers
 
@@ -160,8 +160,8 @@ For users of the UI and REST API, this is purely a feature enhancement to the ab
 
 For users of GraphQL, this is also a feature enhancement, as queries using the above filters can now specify either a single value (`job_log_entries (job_result: "<uuid>") { message }`) as before, or can now be updated to specify a list of values instead (`job_log_entries (job_result: ["<uuid1>", "<uuid2>"]) { message }`) if desired.
 
-!!! warning "Impact to Dynamic Groups"
-    For Dynamic Groups using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
+!!! warning "Impact to Dynamic Groups and Saved Views"
+    For Dynamic Groups and Saved Views using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
 
     ```no-highlight
     {"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"}
@@ -173,10 +173,10 @@ For users of GraphQL, this is also a feature enhancement, as queries using the a
     {"rear_port_template": ["74aac78c-fabb-468c-a036-26c46c56f27a"]}
     ```
 
-    You can identify impacted Dynamic Groups by running the `nautobot-server validate_models extras.dynamicgroup` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
+    You can identify impacted records by running the `nautobot-server validate_models extras.dynamicgroup extras.savedview` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
 
     ```no-highlight
-    # nautobot-server validate_models extras.dynamicgroup
+    # nautobot-server validate_models extras.dynamicgroup extras.savedview
     Validating 1 models.
     extras.DynamicGroup
     ~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
