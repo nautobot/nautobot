@@ -2,7 +2,7 @@
 
 Sometimes it is desirable to create a new kind of relationship between one (or more) objects in your source of truth to reflect business logic or other relationships that may be useful to you but that haven't been defined. This is where the Relationships feature comes in: like defining custom fields to hold attributes specific to your use cases, relationships define specific links between objects that might be specific to your network or data.
 
-To create a relationship, from the left sidebar menu select **Extensibility > Data Model> Relationships**
+To create a relationship, from the left sidebar menu select **Extensibility > Data Model > Relationships**
 
 !!! tip
     Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key. If not explicitly specified, the `key` attribute is derived from the `label` attribute (unique for all Relationship instances).
@@ -64,8 +64,8 @@ To prevent the Device Relationship from showing up on any other VLAN, use a JSON
 
 For context, here is an image of the entire Relationship:
 
-![Image of Relationship with json filter](../../img/relationship_w_json_filter_light.png#only-light){ .on-glb }
-![Image of Relationship with json filter](../../img/relationship_w_json_filter_dark.png#only-dark){ .on-glb }
+![Image of Relationship with json filter](../../img/relationship_w_json_filter_light.png#only-light){: style="width: 50%" .on-glb }
+![Image of Relationship with json filter](../../img/relationship_w_json_filter_dark.png#only-dark){: style="width: 50%" .on-glb }
 [//]: # "`https://next.demo.nautobot.com/extras/relationships/cedcf63b-002f-570d-a2f0-4d0550d56e91/`"
 
 Now, the Device Relationship field will show up on a VLAN with an `wireless` role:
@@ -91,7 +91,7 @@ It's also possible to hide the relationship from either side of the connection.
 
 ## Creating New Relationships
 
-Relationships can be added through the UI under Extensibility > Data Model> Relationships
+Relationships can be added through the UI under Extensibility > Data Model > Relationships
 
 Each relationship must have a Label, Key, Type, Source Object(s), and Destination Object(s). Optionally, Source Labels, Source Filters, Destination Labels, and Destination Filters may be configured.
 
