@@ -1,1 +1,0 @@
-Fixed a `KeyError` when viewing a record with a symmetric one-to-one `Relationship` defined.

@@ -1,1 +1,0 @@
-Fixed object list checkbox handlers. Refactored object list checkbox event flow logic so it is more consistent and less prone to errors.

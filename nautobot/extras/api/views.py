@@ -311,7 +311,7 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     def _is_user_approver(self, user, stage):
         """Checks if the user belongs to the group allowed to approve the current stage."""
         approver_group = stage.approval_workflow_stage_definition.approver_group
-        return user in approver_group.user_set.all()
+        return approver_group.user_set.filter(id=user.id).exists()
 
     def _user_already_approved_or_denied(self, user, stage, action_type):
         """Checks if the user has already approved/denied to the current stage."""
@@ -441,7 +441,9 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
             approval_workflow_stage=stage, user=request.user
         )
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.comments = comment
         approval_workflow_stage_response.save()
 

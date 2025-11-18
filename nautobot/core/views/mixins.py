@@ -74,9 +74,6 @@ PERMISSIONS_ACTION_MAP = {
     "changelog": "view",
     "notes": "view",
     "data_compliance": "view",
-    "approve": "change",
-    "deny": "change",
-    "comment": "change",
 }
 
 
