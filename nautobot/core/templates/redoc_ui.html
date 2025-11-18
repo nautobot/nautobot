@@ -58,6 +58,9 @@
         [data-bs-theme="dark"] .redoc-wrap .menu-content .operation-type {
             filter: hue-rotate(180deg) invert(1);
         }
+
+        {# Revert default Nautobot `<code>` element styles in `<div class="redoc-json">` blocks. #}
+        div.redoc-json code { background: none; color: inherit; border-radius: 0; padding: 0; }
     </style>
 {% endblock extra_styles %}
 
