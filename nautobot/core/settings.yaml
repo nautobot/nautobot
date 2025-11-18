@@ -335,6 +335,21 @@ properties:
     description: "A file touched by Celery Beat during health check."
     environment_variable: "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE"
     type: "string"
+  CELERY_WORKER_HEARTBEAT_FILE:
+    default: "/tmp/nautobot_celery_worker_heartbeat"
+    description: "A file touched by each Celery worker during health check."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE"
+    type: "string"
+  CELERY_WORKER_READINESS_FILE:
+    default: "/tmp/nautobot_celery_worker_ready"
+    description: "A file touched by each Celery worker during health check."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_READINESS_FILE"
+    type: "string"
+  CELERY_HEALTH_PROBES_AS_FILES:
+    default: false
+    description: "Optional configuration for Celery workers to use file-based health probes."
+    environment_variable: "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES"
+    type: "boolean"
   CELERY_BROKER_TRANSPORT_OPTIONS:
     additionalProperties: true
     default: {}

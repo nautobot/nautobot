@@ -961,7 +961,7 @@ CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
 
 # Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
 CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
-    "NAUTOBOT_CELERY_BEAT_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+    "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
 )
 
 # Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
