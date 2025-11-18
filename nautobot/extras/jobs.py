@@ -29,6 +29,7 @@ from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 import netaddr
+from prometheus_client import Counter
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
@@ -88,6 +89,27 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+started_jobs_counter = Counter(
+    name="nautobot_worker_started_jobs",
+    documentation="Job executions that started running",
+    labelnames=("job_class_name", "module_name"),
+)
+finished_jobs_counter = Counter(
+    name="nautobot_worker_finished_jobs",
+    documentation="Job executions that finished running",
+    labelnames=("job_class_name", "module_name", "status"),
+)
+exception_jobs_counter = Counter(
+    name="nautobot_worker_exception_jobs",
+    documentation="Job executions that raised an exception",
+    labelnames=("job_class_name", "module_name", "exception_type"),
+)
+singleton_conflict_counter = Counter(
+    name="nautobot_worker_singleton_conflict",
+    documentation="Job executions that ran into a singleton lock",
+    labelnames=("job_class_name", "module_name"),
+)
 
 
 class RunJobTaskFailed(Exception):
@@ -1194,6 +1216,9 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
                     extra={"object": job.job_model, "grouping": "initialization"},
                 )
             else:
+                singleton_conflict_counter.labels(
+                    job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+                ).inc()
                 # TODO 3.0: maybe change to logger.failure() and return cleanly, as this is an "acceptable" failure?
                 job.logger.error(
                     "Job %s is a singleton and already running.",
@@ -1277,6 +1302,9 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     result = None
     status = None
+    started_jobs_counter.labels(
+        job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+    ).inc()
     try:
         before_start_result = job.before_start(self.request.id, args, kwargs)
         if not job._failed:
@@ -1293,6 +1321,9 @@ def run_job(self, job_class_path, *args, **kwargs):
             job.on_success(result, self.request.id, args, kwargs)
         else:
             job.on_failure(result, self.request.id, args, kwargs, None)
+        finished_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name, status=status
+        ).inc()
 
         job.after_return(status, result, self.request.id, args, kwargs, None)
 
@@ -1309,11 +1340,21 @@ def run_job(self, job_class_path, *args, **kwargs):
         # We don't want to overwrite the manual state update that we did above, so:
         raise Ignore()
 
-    except Reject:
+    except Reject as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_REJECTED
         raise
 
-    except Ignore:
+    except Ignore as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_IGNORED
         raise
 
@@ -1326,6 +1367,11 @@ def run_job(self, job_class_path, *args, **kwargs):
             "exc_type": type(exc).__name__,
             "exc_message": sanitize(str(exc)),
         }
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         raise
 
     finally:

@@ -60,6 +60,20 @@ Nautobot makes use of the [`django-prometheus`](https://github.com/korfuri/djang
 - Django middleware latency histograms
 - Other Django related metadata metrics
 
+Additionally, there are a number of metrics custom to Nautobot specifically:
+
+| Name                                 | Description                                                                | Type    | Exposed By |
+|--------------------------------------|----------------------------------------------------------------------------|---------|------------|
+| `health_check_database_info`         | Result of the last database health check                                   | Gauge   | Web Server |
+| `health_check_redis_backend_info`    | Result of the last redis health check                                      | Gauge   | Web Server |
+| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps     | Gauge   | Web Server |
+| `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | Worker     |
+| `nautobot_worker_finished_jobs`      | The amount of jobs that were finished (incl. status label)                 | Counter | Worker     |
+| `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
+| `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
+
+These for example give you the option to identify the individual failure/exception rates of specific jobs.
+
 For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance.
 
 ## Multi Processing Notes
