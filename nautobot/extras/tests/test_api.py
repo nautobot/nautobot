@@ -645,6 +645,36 @@ class ApprovalWorkflowStageTest(
                 self.assertEqual(stage.approval_workflow_stage_responses.count(), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_state_unchanged_when_comment_added_to_approved_stage(self):
+        for case in self.approval_workflow_content_type_cases:
+            content_type = case["content_type"]
+            with self.subTest(case=content_type):
+                stage = case["stage"]
+                # set min 2 approvers
+                stage.approval_workflow_stage_definition.min_approvers = 2
+                stage.approval_workflow_stage_definition.save()
+                url = reverse("extras-api:approvalworkflowstage-comment", kwargs={"pk": stage.pk})
+                self.add_permissions("extras.change_approvalworkflowstage")
+
+                ApprovalWorkflowStageResponse.objects.create(
+                    approval_workflow_stage=stage,
+                    user=self.user,
+                    state=ApprovalWorkflowStateChoices.APPROVED,
+                    comments="Approved comment",
+                )
+
+                data = {"comments": "Edit approved comment."}
+                response = self.client.post(url, data=data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+
+                stage.refresh_from_db()
+                self.assertEqual(stage.approval_workflow_stage_responses.count(), 1)
+                self.assertEqual(stage.approval_workflow_stage_responses.first().comments, "Edit approved comment.")
+                self.assertEqual(
+                    stage.approval_workflow_stage_responses.first().state, ApprovalWorkflowStateChoices.APPROVED
+                )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_pending_my_approvals(self):
         base_url = reverse("extras-api:approvalworkflowstage-list")
         query_params = urlencode({"pending_my_approvals": "true"})

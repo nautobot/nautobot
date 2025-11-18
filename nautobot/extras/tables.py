@@ -147,8 +147,8 @@ IMAGEATTACHMENT_NAME = """
 IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
-<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a>
-<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a>
+<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
+<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
 JOB_RESULT_BUTTONS = """
@@ -336,19 +336,19 @@ class ApprovalWorkflowTable(BaseTable):
         model = ApprovalWorkflow
         fields = (
             "pk",
-            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
-            "current_state",
             "user",
+            "current_state",
+            "approval_workflow_definition",
         )
         default_columns = (
             "pk",
-            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
-            "current_state",
             "user",
+            "current_state",
+            "approval_workflow_definition",
             "actions",
         )
 
@@ -426,6 +426,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Current Stage",
     )
+    approval_workflow__object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
@@ -437,6 +438,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         model = ApprovalWorkflowStage
         fields = (
             "pk",
+            "approval_workflow__object_under_review_content_type",
             "object_under_review",
             "approval_workflow",
             "approval_workflow_stage",
@@ -446,9 +448,10 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         )
         default_columns = (
             "pk",
-            "approval_workflow_stage",
-            "approval_workflow",
+            "approval_workflow__object_under_review_content_type",
             "object_under_review",
+            "approval_workflow",
+            "approval_workflow_stage",
             "actions_needed",
             "state",
             "actions",

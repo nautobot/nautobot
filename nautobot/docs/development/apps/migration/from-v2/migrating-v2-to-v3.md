@@ -5,7 +5,7 @@ In the previous section, we provided a high-level overview of the migration step
 ## UI Migrations
 
 !!! tip
-    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run` against your custom app without any fixes suggested and do not have any HTML inside of any Python files.
+    You can safely skip this section if you do not have any custom apps or can run `nautobot-migrate-bootstrap-v3-to-v5 <path> --dry-run --check-python-files` against your custom app without any fixes suggested. Note that HTML in Python search algorithm is greedy and occasionally may output false positives.
 
 Nautobot v3.0 introduces many modernizations and improvements to building user interfaces. Although we did our best to make the migration as smooth as possible for app developers, we were not able to avoid some of the **breaking changes**. Below is a list of guides explaining how to upgrade respective UI parts.
 

@@ -528,6 +528,22 @@ class ApprovalButtonsColumn(django_tables2.TemplateColumn):
             }
         )
 
+    def render(self, record, table, value, bound_column, **kwargs):
+        active_buttons = self.extra_context.get("buttons", self.buttons)
+        needs_approval_check = "approve" in active_buttons or "deny" in active_buttons
+
+        can_approve = False
+
+        request = table.context.get("request")
+        if needs_approval_check and request and request.user:
+            can_approve = (
+                request.user.is_superuser
+                or record.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+            )
+
+        self.extra_context["can_approve"] = can_approve
+        return super().render(record, table, value, bound_column, **kwargs)
+
     def header(self):  # pylint: disable=invalid-overridden-method
         return ""
 
