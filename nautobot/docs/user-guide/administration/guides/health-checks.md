@@ -38,7 +38,7 @@ In addition to monitoring the existence of a given Celery worker process ID, you
 !!! tip
     A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
 
-Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
+Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the (optional)  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) settings in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
 
 ```shell
 [ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false
@@ -157,6 +157,8 @@ livenessProbe:
     command:
       - "/bin/bash"
       - "-c"
+      # This is set to check if the file was changed in the last minute (-mmin -1),
+      # but you can use fractional minutes as well such as 0.1 for every 6 seconds
       - "[ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false"
   periodSeconds: 60
   timeoutSeconds: 10
