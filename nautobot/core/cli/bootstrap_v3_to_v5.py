@@ -549,6 +549,61 @@ def _fix_breadcrumbs_block(html_string: str, stats: dict) -> str:
     return block_pattern.sub(process_match, html_string)
 
 
+# --- Grid Breakpoints Resize Function ---
+
+
+def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict, file_path=None) -> str:
+    # Define the breakpoint mapping
+    breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
+
+    # Resize all given grid `breakpoints` in `string` according to defined `breakpoint_map`
+    def resize_breakpoints(string, breakpoints=None):
+        # Replace with regex, e.g., col-xs-12 → col-sm-12
+        regex = re.compile(rf"\b(col|offset)-({'|'.join(breakpoints)})([a-zA-Z0-9-]*)")
+
+        def regex_repl(match):
+            new_breakpoint = breakpoint_map[match.group(2)]
+            return f"{match.group(1)}-{new_breakpoint}{match.group(3)}"
+
+        return regex.sub(regex_repl, string)
+
+    # Resize given `class_combinations` and create an additional joint array from the two. This is required to determine
+    # whether a known class combination is present in certain element class list and handle one of the following cases:
+    #   1. No: generic md -> lg breakpoint replacement.
+    #   2. Yes, but has not been resized yet: resize with proper combination.
+    #   3. Yes, and has already been resized: do nothing.
+    resized_class_combinations = [
+        resize_breakpoints(class_combination, list(breakpoint_map.keys())) for class_combination in class_combinations
+    ]
+    known_class_combinations = [*class_combinations, *resized_class_combinations]
+
+    def grid_breakpoints_replacer(match):
+        classes = match.group(1)
+
+        # Check whether given class list contains any of the known class combinations.
+        known_class_combination = None
+        for class_combination in known_class_combinations:
+            if all(cls in classes for cls in class_combination.split()):
+                known_class_combination = class_combination
+                break
+
+        if known_class_combination is None:
+            # Class combination has not been found: do generic md -> lg breakpoint replacement.
+            return resize_breakpoints(classes, ["md"])
+        elif known_class_combination not in resized_class_combinations:
+            # Class combination has been found, but has not been resized yet: resize with proper combination.
+            resized_classes = resized_class_combinations[class_combinations.index(known_class_combination)].split()
+
+            def repl(m):
+                current_class = m.group(0)
+                return resized_classes[known_class_combination.split().index(current_class)]
+
+            return re.compile("|".join(known_class_combination.split())).sub(repl, classes)
+
+    pattern = re.compile(r'class="([^"]*)"')
+    return pattern.sub(grid_breakpoints_replacer, html_string)
+
+
 # --- Main Conversion Function ---
 
 
@@ -630,6 +685,23 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "data-backdrop": "data-bs-backdrop",  # Bootstrap 5 uses data-bs-* attributes
     }
 
+    standard_grid_breakpoint_combinations = [
+        "col-md-6 col-sm-6 col-xs-12",
+        "col-sm-3 col-md-2 col-md-offset-1",
+        "col-sm-3 col-md-2 offset-md-1",
+        "col-sm-4 col-sm-offset-4",
+        "col-sm-4 offset-sm-4",
+        "col-sm-4 col-md-3",
+        "col-sm-8 col-md-9",
+        "col-sm-9 col-md-8",
+        "col-md-5 col-sm-12",
+        "col-md-7 col-sm-12",
+        "col-sm-12 col-md-12",
+        "col-lg-6 col-md-6",
+        "col-lg-8 col-lg-offset-2",
+        "col-lg-8 offset-lg-2",
+    ]
+
     current_html = _replace_attributes(current_html, attribute_replacements, stats)
     current_html = _replace_classes(current_html, class_replacements, stats, file_path=file_path)
     current_html = _fix_extra_breadcrumbs_block(current_html, stats)
@@ -644,6 +716,9 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
     current_html = _convert_hover_copy_buttons(current_html, stats)
     current_html = _fix_nav_tabs_items(current_html, stats, file_path=file_path)
     current_html = _fix_dropdown_items(current_html, stats, file_path=file_path)
+    current_html = _resize_grid_breakpoints(
+        current_html, standard_grid_breakpoint_combinations, stats, file_path=file_path
+    )
 
     return current_html, stats
 
@@ -651,11 +726,10 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 # --- File Processing ---
 
 
-def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, skip_templates=False) -> None:
+def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=False) -> None:
     """
     Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
-    and overwrites each file with the fixed content. If resize is True, it will only change the
-    breakpoints (This should only be done once.).
+    and overwrites each file with the fixed content.
     """
 
     totals = {
@@ -682,9 +756,6 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
     else:
         only_filename = None
 
-    # Define the breakpoint mapping
-    breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
-
     for root, _, files in os.walk(directory):
         for filename in files:
             if only_filename and only_filename != filename:
@@ -696,29 +767,6 @@ def fix_html_files_in_directory(directory: str, resize=False, dry_run=False, ski
                     original_content = f.read()
 
                 content = original_content
-
-                if resize:
-                    # If resize is True, we only change the breakpoints
-                    # This is a one-time operation to adjust the breakpoints.
-                    logger.info("Resizing Breakpoints: %s", file_path)
-
-                    resizing_other = 0
-
-                    # Iterate from the highest breakpoint to the lowest
-                    for bkpt in ["xl", "lg", "md", "sm", "xs"]:
-                        # Replace with regex, e.g., col-xs-12 → col-sm-12
-                        regex = re.compile(rf"(\bcol-{bkpt})([a-zA-Z0-9-]*)")
-
-                        def regex_repl(m, captured_bkpt=bkpt):
-                            nonlocal resizing_other
-                            if captured_bkpt == "xs":
-                                totals["resizing_xs"] += 1
-                            else:
-                                resizing_other += 1
-                            new_bkpt = breakpoint_map[captured_bkpt]
-                            return f"col-{new_bkpt}{m.group(2)}"
-
-                        content = regex.sub(regex_repl, content)
 
                 fixed_content, stats = convert_bootstrap_classes(content, file_path=file_path)
 
@@ -825,12 +873,6 @@ def check_python_files_for_legacy_html(directory: str):
 def main():
     parser = argparse.ArgumentParser(description="Bootstrap 3 to 5 HTML fixer.")
     parser.add_argument(
-        "-r",
-        "--resize",
-        action="store_true",
-        help="Change column breakpoints to be one level higher, such as 'col-xs-*' to 'col-sm-*'",
-    )
-    parser.add_argument(
         "-d",
         "--dry-run",
         action="store_true",
@@ -848,9 +890,7 @@ def main():
     if args.check_python_files:
         exit_code = check_python_files_for_legacy_html(args.path)
     if not args.no_fix_html_templates:
-        fix_html_files_in_directory(
-            args.path, resize=args.resize, dry_run=args.dry_run, skip_templates=args.skip_template_replacement
-        )
+        fix_html_files_in_directory(args.path, dry_run=args.dry_run, skip_templates=args.skip_template_replacement)
 
     return exit_code
 
