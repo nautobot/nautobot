@@ -6,6 +6,11 @@
 *.map binary
 *.pack.js binary
 nautobot/project-static/materialdesignicons-6.5.95/preview.html binary
+nautobot/project-static/dist/css/nautobot.css binary
+nautobot/project-static/dist/js/graphql-libraries.js binary
+nautobot/project-static/dist/js/libraries.js binary
+nautobot/project-static/dist/js/nautobot.js binary
+nautobot/project-static/dist/js/nautobot-graphiql.js binary
 
 *.html text=auto
 *.py text=auto

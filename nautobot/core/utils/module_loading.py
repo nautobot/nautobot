@@ -8,9 +8,30 @@ import pkgutil
 import sys
 import threading
 
+from django.utils.module_loading import import_string
+
 logger = logging.getLogger(__name__)
 
 _import_lock = threading.RLock()
+
+
+def import_string_optional(dotted_path):
+    """An extension/wrapper of Django's `import_string()` that returns `None` if no such dotted path exists."""
+    try:
+        return import_string(dotted_path)
+    except ModuleNotFoundError as err:
+        # No such module
+        module_name, _ = dotted_path.rsplit(".", 1)
+        if module_name.startswith(err.name):  # tried to import foo.bar.baz but couldn't find foo.bar, etc.
+            return None
+        # Some import *from within* the given module couldn't find what it was looking for?
+        raise
+    except ImportError as err:
+        if "does not define" in str(err):
+            # Exception raised by Django if the module exists but has no such attribute
+            return None
+        # Maybe a legitimate problem with the import?
+        raise
 
 
 @contextmanager
@@ -81,6 +102,7 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     else:
         module_prefix = ".".join(module_path)
 
+    loaded_modules = []
     with _import_lock, _temporarily_add_to_sys_path(path):
         for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
             if module_prefix and not (
@@ -118,7 +140,10 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                 else:
                     module = importlib.import_module(discovered_module_name)
                 importlib.reload(module)
+                loaded_modules.append(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
                 if not ignore_import_errors:
                     raise
+
+    return loaded_modules

@@ -39,6 +39,7 @@ from nautobot.core.forms import (
     JSONField,
 )
 from nautobot.core.forms.widgets import ClearableFileInput
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
@@ -108,7 +109,6 @@ class BaseJob:
 
         - name (str)
         - description (str)
-        - approval_required (bool)
         - dryrun_default (bool)
         - field_order (list)
         - has_sensitive_variables (bool)
@@ -262,7 +262,7 @@ class BaseJob:
     @classproperty
     def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
         """Cache key for singleton jobs."""
-        return f"nautobot.extras.jobs.running.{cls.class_path}"
+        return construct_cache_key(cls, method_name="running", branch_aware=False, class_path=cls.class_path)
 
     @final
     @classproperty
@@ -355,11 +355,6 @@ class BaseJob:
 
     @final
     @classproperty
-    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
-
-    @final
-    @classproperty
     def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
@@ -400,7 +395,6 @@ class BaseJob:
             "name": cls.name,
             "grouping": cls.grouping,
             "description": cls.description,
-            "approval_required": cls.approval_required,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
@@ -474,6 +468,7 @@ class BaseJob:
             label="Profile job execution",
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
+        form.fields["_profile"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -490,6 +485,7 @@ class BaseJob:
                 label="Ignore singleton lock",
                 help_text="Allow this singleton job to run even when another instance is already running",
             )
+            form.fields["_ignore_singleton_lock"].widget.attrs["class"] = "form-check-input"
 
         if job_model is not None:
             job_queue_queryset = JobQueue.objects.filter(jobs=job_model)

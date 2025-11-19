@@ -159,6 +159,20 @@ class DeviceStatusChoices(ChoiceSet):
     )
 
 
+class DeviceUniquenessChoices(ChoiceSet):
+    LOCATION_TENANT_NAME = "location_tenant_name"
+    NAME = "name"
+    NONE = "none"
+
+    DEFAULT = LOCATION_TENANT_NAME
+
+    CHOICES = [
+        (LOCATION_TENANT_NAME, "Location + Tenant + Name"),
+        (NAME, "Device name must be globally unique"),
+        (NONE, "No enforced uniqueness"),
+    ]
+
+
 #
 # ConsolePorts
 #
@@ -764,6 +778,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
+    TYPE_TUNNEL = "tunnel"
 
     # Ethernet
     TYPE_100ME_FX = "100base-fx"
@@ -932,6 +947,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_VIRTUAL, "Virtual"),
                 (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
+                (TYPE_TUNNEL, "Tunnel"),
             ),
         ),
         (

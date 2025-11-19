@@ -11,6 +11,7 @@ Currently images are pushed for the following Python versions:
 * 3.10
 * 3.11
 * 3.12
+* 3.13
 
 +++ 2.3.0 "Added Python 3.12"
     Python 3.12 was added to the set of published images and is now the default version.
@@ -20,6 +21,9 @@ Currently images are pushed for the following Python versions:
 
 --- 2.4.20 "Removed Python 3.9"
     Python 3.9 was removed from the set of published images as Python 3.9 is now end-of-life.
+
++++ 3.0.0 "Added Python 3.13"
+    Python 3.13 was added to the set of published images and is now the default version.
 
 ## Platforms
 

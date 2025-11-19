@@ -3,9 +3,9 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Interface</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Interface</strong></div>
+        <div class="card-body">
             {% render_field form.device %}
             {% render_field form.name %}
             {% render_field form.label %}
@@ -27,9 +27,9 @@
             {% render_field form.ip_addresses %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>802.1Q Switching</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>802.1Q Switching</strong></div>
+        <div class="card-body">
             {% render_field form.mode %}
             {% render_field form.untagged_vlan %}
             {% render_field form.tagged_vlans %}
@@ -40,11 +40,26 @@
 
 {% block buttons %}
     {% if editing %}
-        <button type="submit" name="_update" class="btn btn-primary">Update</button>
-        <button type="submit" formaction="?return_url={% url 'dcim:interface_edit' pk=obj.pk %}" class="btn btn-primary">Update and Continue Editing</button>
+        <button type="submit" name="_update" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Update
+        </button>
+        <button type="submit" formaction="?return_url={% url 'dcim:interface_edit' pk=obj.pk %}" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Update and Continue Editing
+        </button>
     {% else %}
-        <button type="submit" name="_create" class="btn btn-primary">Create</button>
-        <button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>
+        <button type="submit" name="_create" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create
+        </button>
+        <button type="submit" name="_addanother" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create and Add Another
+        </button>
     {% endif %}
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
 {% endblock %}
