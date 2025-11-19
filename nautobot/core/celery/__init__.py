@@ -297,6 +297,7 @@ class LivenessProbe(bootsteps.StartStopStep):
     def start(self, parent):
         if not settings.CELERY_HEALTH_PROBES_AS_FILES:
             return
+        # This is a 1-second interval.
         self.tref = parent.timer.call_repeatedly(
             1.0,
             self.update_worker_heartbeat_file,
