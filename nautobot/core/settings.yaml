@@ -435,7 +435,7 @@ properties:
     type: "integer"
   CELERY_WORKER_HEARTBEAT_FILE:
     default: "/tmp/nautobot_celery_worker_heartbeat"
-    description: "A file touched by each Celery worker during health check."
+    description: "A file touched by the Celery worker every second while it is alive, suitable for health checks."
     environment_variable: "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE"
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
@@ -470,7 +470,7 @@ properties:
     version_added: "1.5.10"
   CELERY_WORKER_READINESS_FILE:
     default: "/tmp/nautobot_celery_worker_ready"
-    description: "A file touched by the Celery worker every second while it is alive, suitable for health checks."
+    description: "A file touched by the Celery worker when it starts and is ready to accept tasks."
     environment_variable: "NAUTOBOT_CELERY_WORKER_READINESS_FILE"
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
