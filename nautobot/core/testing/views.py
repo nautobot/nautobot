@@ -407,7 +407,7 @@ class ViewTestCases:
                         # delete the permissions here so that we start from a clean slate on the next loop
                         self.remove_permissions(*required_permissions)
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_body_content_table_list_url(self):
             """
             Testing that the badge links on related object panels are working as expected.
