@@ -76,7 +76,9 @@ An object is considered a member of an set-based Dynamic Group if it matches the
 
 When editing a set-based Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows you to select other Dynamic Groups of the same Content Type to be "children" of this "parent" group and how they will be used to select or exclude candidate objects from the "parent" group's members.
 
-![Child Groups](../../media/models/dynamicgroup_filtering_01.png)
+![Child Groups](../../media/models/ss_dynamicgroup_filtering_01_light.png#only-light){ .on-glb }
+![Child Groups](../../media/models/ss_dynamicgroup_filtering_01_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/68d133c5-1882-5eab-a0b5-e0724571ba1b/edit/`"
 
 ### Static-Assignment-Based Dynamic Groups
 
@@ -95,13 +97,19 @@ Let's say you want to create a Dynamic Group that contains all production Device
 1. a Location of either "AMS01" or "BKK01"
 2. a Status of "Active" or "Offline"
 
-![Setting Filter Fields for a Basic Dynamic Group](../../media/models/dynamicgroup_workflow_basic_01.png)
+![Setting Filter Fields for a Basic Dynamic Group](../../media/models/ss_dynamicgroup_workflow_basic_01_light.png#only-light){ .on-glb }
+![Setting Filter Fields for a Basic Dynamic Group](../../media/models/ss_dynamicgroup_workflow_basic_01_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/118c6091-2aed-5c9b-bbc3-9db7df66bdd6/edit/`"
 
 After clicking "Update", you will be returned to the detail view for this Dynamic Group, where you can verify the filter logic that results, and click the "Members" tab to see the set of Devices that it contains.
 
-![Resulting Basic Dynamic Group](../../media/models/dynamicgroup_workflow_basic_02.png)
+![Resulting Basic Dynamic Group](../../media/models/ss_dynamicgroup_workflow_basic_02_light.png#only-light){ .on-glb }
+![Resulting Basic Dynamic Group](../../media/models/ss_dynamicgroup_workflow_basic_02_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/118c6091-2aed-5c9b-bbc3-9db7df66bdd6/`"
 
-![Basic Group Members](../../media/models/dynamicgroup_workflow_basic_03.png)
+![Basic Group Members](../../media/models/ss_dynamicgroup_workflow_basic_03_light.png#only-light){ .on-glb }
+![Basic Group Members](../../media/models/ss_dynamicgroup_workflow_basic_03_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/118c6091-2aed-5c9b-bbc3-9db7df66bdd6/?tab=members`"
 
 A key to understand here is that generally, within a single Dynamic Group, additional values specified for the _same_ filter field (here, "Location") will _broaden_ the group to _include_ additional objects that match those additional values, while specifying values for _additional filter fields_ (here, "Status") will _narrow_ the group to match only the objects that match this additional filter. This is expressed in the "Filter Query Logic" panel by the use of `OR` and `AND` operators - the logic for this Dynamic Group is:
 
@@ -140,23 +148,33 @@ This logic is too complex to express directly via a single Dynamic Group, but fe
 
 First, create a new "Devices of Interest" group, again of Content Type "dcim | device", but this time select "Set-based membership" as the Group Type. Edit this group, and instead of specifying **Filter Fields**, you will instead use the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Locations A and B", and update the group.
 
-![Creating a Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_01.png)
+![Creating a Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_01_light.png#only-light){ .on-glb }
+![Creating a Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_01_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/add/`"
 
 In the new group's detail view, you can see that it now contains one child group, "Devices at Locations A and B", and its members are exactly the same as those of that group. But we're not done yet!
 
-![Resulting Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_02.png)
+![Resulting Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_02_light.png#only-light){ .on-glb }
+![Resulting Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_02_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/`"
 
 Next, you'll create another group to represent the other part of your desired logic. Call this group "Location C So Far", and set its **Filter Fields** to match Location "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Location C.
 
-![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_1_03.png)
+![Another Child Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_03_light.png#only-light){ .on-glb }
+![Another Child Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_03_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/f5aab116-8e9b-461b-b759-4dc8cb3beb65/`"
 
 Now, we'll add this group into the "Devices of Interest" parent group. Navigate back to the **Dynamic Groups** list view, and edit this group. Under the **Child Groups** tab, add another "Include (OR)" operator and select group "Location C So Far":
 
-![Adding Another Child Group to Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_04.png)
+![Adding Another Child Group to Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_04_light.png#only-light){ .on-glb }
+![Adding Another Child Group to Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_04_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/edit/`"
 
 Now things are getting interesting!
 
-![Updated Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_05.png)
+![Updated Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_05_light.png#only-light){ .on-glb }
+![Updated Parent Group](../../media/models/ss_dynamicgroup_workflow_advanced_1_05_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/`"
 
 The "Devices of Interest" Dynamic Group now contains the filtered Devices from both of its child groups, and the "Filter Query Logic" matches our intent as we stated it earlier:
 
@@ -180,29 +198,39 @@ Next, let's say you add a fourth location to your network. This location is in b
 
 First, you will create an "Location D All Devices" group. This will simply match Devices at Location "DEL01", regardless of their status.
 
-![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_2_01.png)
+![Another Child Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_01_light.png#only-light){ .on-glb }
+![Another Child Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_01_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/1f57c137-d555-4208-aa4a-4c2b90d4dd63/`"
 
 Then create a "Location D Decommissioning Devices" group, which matches Location "DEL01" and Status "Decommissioning".
 
-![A Child Group To Negate](../../media/models/dynamicgroup_workflow_advanced_2_02.png)
+![A Child Group To Negate](../../media/models/ss_dynamicgroup_workflow_advanced_2_02_light.png#only-light){ .on-glb }
+![A Child Group To Negate](../../media/models/ss_dynamicgroup_workflow_advanced_2_02_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/8e49ed65-2e3e-4c32-9ab5-a734d724f17b/`"
 
 Next create a "Location D Devices of Interest" group, and set its **Child Groups** to:
 
 1. Operator "Include (OR)", group "Location D All Devices"
 2. Operator "Exclude (NOT)", group "Location D Decommissioning Devices"
 
-![Defining a Group With Negation](../../media/models/dynamicgroup_workflow_advanced_2_03.png)
+![Defining a Group With Negation](../../media/models/ss_dynamicgroup_workflow_advanced_2_03_light.png#only-light){ .on-glb }
+![Defining a Group With Negation](../../media/models/ss_dynamicgroup_workflow_advanced_2_03_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/add/`"
 
 !!! warning
     In general, but especially when using the AND and NOT operators, you must pay close attention to the order of the child groups. In this example, if you were to reverse the order of these two child groups, you would **not** get the desired final result!
 
 You can check this group and confirm that it contains the expected restricted subset of Devices.
 
-![The Resulting Group](../../media/models/dynamicgroup_workflow_advanced_2_04.png)
+![The Resulting Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_04_light.png#only-light){ .on-glb }
+![The Resulting Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_04_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/ad25dcbc-1bec-4ecf-9718-a56d609b8f78/?tab=members`"
 
 Finally, you can edit the parent "Devices of Interest" group and add a third **Child Groups** entry, "Include (OR)" on "Location D Devices of Interest". The final result is a Dynamic Group that contains the desired set of Devices across all four of your Locations.
 
-![The Final Combined Group](../../media/models/dynamicgroup_workflow_advanced_2_05.png)
+![The Final Combined Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_05_light.png#only-light){ .on-glb }
+![The Final Combined Group](../../media/models/ss_dynamicgroup_workflow_advanced_2_05_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/`"
 
 You can see the filter logic that this combination of groups results in:
 
@@ -226,11 +254,15 @@ You can see the filter logic that this combination of groups results in:
 
 You can also see the hierarchy of nested groups that are being used to derive the "Devices of Interest" group:
 
-![Nested Group Hierarchy](../../media/models/dynamicgroup_workflow_advanced_2_06.png)
+![Nested Group Hierarchy](../../media/models/ss_dynamicgroup_workflow_advanced_2_06_light.png#only-light){ .on-glb }
+![Nested Group Hierarchy](../../media/models/ss_dynamicgroup_workflow_advanced_2_06_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/`"
 
 Most importantly, you now have a Dynamic Group that contains exactly the set of Devices you need!
 
-![Final Group Members](../../media/models/dynamicgroup_workflow_advanced_2_07.png)
+![Final Group Members](../../media/models/ss_dynamicgroup_workflow_advanced_2_07_light.png#only-light){ .on-glb }
+![Final Group Members](../../media/models/ss_dynamicgroup_workflow_advanced_2_07_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/dynamic-groups/600a79ad-98bd-4af7-a707-d48ad9f2fe34/?tab=members`"
 
 ## Technical Details
 
