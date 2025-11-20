@@ -38,6 +38,7 @@ Screenshots are essential for demonstrating product functionality. Follow these 
     ```
 
 - To highlight specific areas in a screenshot, use a red line with a thickness of 3 pixels.
+- After adding or modifying any screenshots, run `poetry run invoke compress-images --fix --path ...` to automatically optimize the images in the given directory for file size. We may add a CI check to enforce this in the future.
 
 ## Instructions Standards
 
