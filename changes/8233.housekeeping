@@ -1,0 +1,2 @@
+Added `invoke compress-images` task to auto-compress images in documentation and others.
+Run `invoke compress-images` against current documentation images.
