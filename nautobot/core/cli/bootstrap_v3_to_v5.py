@@ -552,14 +552,18 @@ def _fix_breadcrumbs_block(html_string: str, stats: dict) -> str:
 # --- Grid Breakpoints Resize Function ---
 
 
-def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict) -> str:
+def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict, file_path: str) -> str:
     """
     Resizes grid breakpoints in `col-*` and `offset-*` classes one step up. Uses given `class_combinations` for known
-    class pattern replacements and otherwise does generic xs → sm and md → lg breakpoint resize.
+    class pattern replacements and otherwise does generic xs → sm and md → lg breakpoint resize. In case class list
+    contains grid breakpoints other than xs and md, flags it for manual review.
     """
     # Define the breakpoint mapping
     breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
     breakpoint_map_keys = list(breakpoint_map.keys())
+
+    if "manual_grid_template_lines" not in stats:
+        stats["manual_grid_template_lines"] = []
 
     def create_grid_class_regex(breakpoints=breakpoint_map_keys):  # pylint: disable=dangerous-default-value
         # Create regex matching Bootstrap grid classes, i.e. `col-*` and `offset-*`, within given breakpoints.
@@ -579,9 +583,10 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
 
     # Resize given `class_combinations` and create an additional joint array from the two. This is required to determine
     # whether a known class combination is present in certain element class list and handle one of the following cases:
-    #   1. No: generic xs → sm and md → lg breakpoint replacement.
-    #   2. Yes, but has not been resized yet: resize with proper combination.
-    #   3. Yes, and has already been resized: do nothing.
+    #   1. No, but identified grid breakpoints other than xs and md: flag for manual review.
+    #   2. No, and only xs and md grid breakpoints found: generic xs → sm and md → lg replacement.
+    #   3. Yes, but has not been resized yet: resize with proper combination.
+    #   4. Yes, and has already been resized: do nothing.
     resized_class_combinations = [resize_breakpoints(class_combination) for class_combination in class_combinations]
     known_class_combinations = [*class_combinations, *resized_class_combinations]
 
@@ -604,8 +609,17 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
                 break
 
         if known_class_combination is None:
-            # Class combination has not been found: do generic xs → sm and md → lg breakpoint replacement.
-            return f'class="{resize_breakpoints(classes, breakpoints=["xs", "md"], count_stats=True)}"'
+            # Class combination has not been found.
+            if any("xs" not in grid_class and "md" not in grid_class for grid_class in grid_classes):
+                # Class list contains grid breakpoints other than xs and md, require manual review.
+                linenum = match.string.count("\n", 0, match.start()) + 1
+                stats["manual_grid_template_lines"].append(
+                    f"{file_path}:{linenum} - Please review manually '{match.group(0)}'"
+                )
+            else:
+                # Class list contains only xs and md grid breakpoints, do generic xs → sm and md → lg replacement
+                return f'class="{resize_breakpoints(classes, breakpoints=["xs", "md"], count_stats=True)}"'
+
         elif known_class_combination not in resized_class_combinations:
             # Class combination has been found, but has not been resized yet: resize with proper combination.
             resized_classes = resized_class_combinations[class_combinations.index(known_class_combination)].split()
@@ -645,6 +659,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "panel_classes": 0,
         "grid_breakpoints": 0,
         "manual_nav_template_lines": [],
+        "manual_grid_template_lines": [],
     }
 
     # --- Stage 1: Apply rules that work directly on the HTML string (simple string/regex replacements) ---
@@ -742,7 +757,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
     current_html = _convert_hover_copy_buttons(current_html, stats)
     current_html = _fix_nav_tabs_items(current_html, stats, file_path=file_path)
     current_html = _fix_dropdown_items(current_html, stats, file_path=file_path)
-    current_html = _resize_grid_breakpoints(current_html, standard_grid_breakpoint_combinations, stats)
+    current_html = _resize_grid_breakpoints(current_html, standard_grid_breakpoint_combinations, stats, file_path)
 
     return current_html, stats
 
@@ -820,6 +835,10 @@ def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=Fa
                 if stats.get("manual_nav_template_lines"):
                     print("  !!! Manual review needed for nav-item fixes at:")
                     for line in stats["manual_nav_template_lines"]:
+                        print(f"    - {line}")
+                if stats.get("manual_grid_template_lines"):
+                    print("  !!! Manual review needed for non-standard grid breakpoints at:")
+                    for line in stats["manual_grid_template_lines"]:
                         print(f"    - {line}")
                 for k, v in stats.items():
                     if k in totals:
