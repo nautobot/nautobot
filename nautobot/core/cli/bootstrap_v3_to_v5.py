@@ -594,11 +594,11 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
             # Class combination has been found, but has not been resized yet: resize with proper combination.
             resized_classes = resized_class_combinations[class_combinations.index(known_class_combination)].split()
 
-            def repl(m):
+            def class_replacer(m):
                 current_class = m.group(0)
                 return resized_classes[known_class_combination.split().index(current_class)]
 
-            return re.compile("|".join(known_class_combination.split())).sub(repl, classes)
+            return re.compile("|".join(known_class_combination.split())).sub(class_replacer, classes)
 
     pattern = re.compile(r'class="([^"]*)"')
     return pattern.sub(grid_breakpoints_replacer, html_string)
