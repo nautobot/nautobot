@@ -18,7 +18,7 @@ Overall, there are three pillars of v3.0 UI:
 !!! tip
     You are strongly encouraged to adopt the UI component framework. Migration can be performed incrementally on your 2.4 instance, making future upgrades easier. New features will be added exclusively to this framework. For example, the Data Compliance tab, automatic "copy" buttons in detail views, and collapsible cards or panels are already only available for models using the new UI component framework. The feature set will continue to expand over time.
 
-Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize`.
+Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path>`.
 
 Some common use cases to have HTML embedded within Python include `views.py`, `template_content.py`, `templatetags.py` and `tables.py`.
 
