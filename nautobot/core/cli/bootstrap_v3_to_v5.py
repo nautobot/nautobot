@@ -686,20 +686,21 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
     }
 
     standard_grid_breakpoint_combinations = [
-        "col-md-6 col-sm-6 col-xs-12",
-        "col-sm-3 col-md-2 col-md-offset-1",
+        "col-md-6 col-sm-6 col-xs-12",  # Rack elevation container
+        "col-sm-3 col-md-2 col-md-offset-1",  # Legacy user page nav pills container
         "col-sm-3 col-md-2 offset-md-1",
-        "col-sm-4 col-sm-offset-4",
+        "col-sm-4 col-sm-offset-4",  # Selected centered panel containers, e.g. on 404 and 500 error pages and legacy login page
         "col-sm-4 offset-sm-4",
-        "col-sm-4 col-md-3",
-        "col-sm-8 col-md-9",
-        "col-sm-9 col-md-8",
-        "col-md-5 col-sm-12",
-        "col-md-7 col-sm-12",
-        "col-sm-12 col-md-12",
-        "col-lg-6 col-md-6",
-        "col-lg-8 col-lg-offset-2",
-        "col-lg-8 offset-lg-2",
+        "col-sm-4 col-md-3",  # Legacy header search form container
+        "col-sm-8 col-md-9 col-sm-12 col-md-12",  # Legacy breadcrumbs container variation on change list page
+        "col-sm-8 col-md-9 col-md-12",  # Legacy breadcrumbs container variation on generic object list view page
+        "col-sm-8 col-md-9",  # Legacy breadcrumbs container
+        "col-sm-9 col-md-8",  # Legacy user page content container
+        "col-md-5 col-sm-12",  # Cable trace form left-hand side container
+        "col-md-7 col-sm-12",  # Cable trace form right-hand side container
+        "col-lg-6 col-md-6",  # Jinja template/rendered template panel containers
+        "col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1",  # Standard centered form container, e.g. on generic object create page
+        "col-lg-8 offset-lg-2 col-md-10 offset-md-1",
     ]
 
     current_html = _replace_attributes(current_html, attribute_replacements, stats)
