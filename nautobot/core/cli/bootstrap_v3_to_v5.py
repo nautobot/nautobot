@@ -555,10 +555,9 @@ def _fix_breadcrumbs_block(html_string: str, stats: dict) -> str:
 def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict) -> str:
     # Define the breakpoint mapping
     breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
-    breakpoint_list = list(breakpoint_map.keys())
 
     # Resize all given grid `breakpoints` in `string` according to defined `breakpoint_map`
-    def resize_breakpoints(string, breakpoints=breakpoint_list, count_stats=False):
+    def resize_breakpoints(string, breakpoints=list(breakpoint_map.keys()), count_stats=False):  # pylint: disable=dangerous-default-value
         # Replace with regex, e.g., col-xs-12 → col-sm-12
         regex = re.compile(rf"\b(col|offset)-({'|'.join(breakpoints)})([a-zA-Z0-9-]*)")
 
@@ -572,7 +571,7 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
 
     # Resize given `class_combinations` and create an additional joint array from the two. This is required to determine
     # whether a known class combination is present in certain element class list and handle one of the following cases:
-    #   1. No: generic md -> lg breakpoint replacement.
+    #   1. No: generic xs → sm and md → lg breakpoint replacement.
     #   2. Yes, but has not been resized yet: resize with proper combination.
     #   3. Yes, and has already been resized: do nothing.
     resized_class_combinations = [resize_breakpoints(class_combination) for class_combination in class_combinations]
@@ -589,8 +588,8 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
                 break
 
         if known_class_combination is None:
-            # Class combination has not been found: do generic md -> lg breakpoint replacement.
-            return f'class="{resize_breakpoints(classes, breakpoints=["md"], count_stats=True)}"'
+            # Class combination has not been found: do generic xs → sm and md → lg breakpoint replacement.
+            return f'class="{resize_breakpoints(classes, breakpoints=["xs", "md"], count_stats=True)}"'
         elif known_class_combination not in resized_class_combinations:
             # Class combination has been found, but has not been resized yet: resize with proper combination.
             resized_classes = resized_class_combinations[class_combinations.index(known_class_combination)].split()
@@ -747,11 +746,9 @@ def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=Fa
             "nav_items",
             "dropdown_items",
             "panel_classes",
-            "resizing_xs",
+            "grid_breakpoints",
         ]
     }
-    # Breakpoints that are not xs do not count as failures in djlint, so we keep a separate counter
-    resizing_other = 0
 
     if not os.path.exists(directory):
         raise FileNotFoundError(directory)
@@ -821,9 +818,7 @@ def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=Fa
     print(f"- <li> in <ul.nav-tabs>:         {totals['nav_items']}")
     print(f"- <a> in <ul.dropdown-menu>:     {totals['dropdown_items']}")
     print(f"- Panel class replacements:      {totals['panel_classes']}")
-    print(f"- Resizing breakpoint xs:        {totals['resizing_xs']}")
-    print("-------------------------------------")
-    print(f"- Resizing other breakpoints:    {resizing_other}")
+    print(f"- Grid breakpoint resizes:       {totals['grid_breakpoints']}")
     print("-------------------------------------")
     print(f"- Deprecated templates replaced: {templates_replaced}")
 
