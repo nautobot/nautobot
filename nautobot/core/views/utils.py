@@ -661,7 +661,7 @@ def get_bulk_queryset_from_view(
     # This covers the case where there is a saved view but no additional filter parameters.
     if is_all and saved_view_filter_params:
         log.debug(f"Filtering by saved view parameters: {saved_view_filter_params}")
-        inner_queryset = saved_view_obj.get_filtered_queryset(user).values("pk")
+        inner_queryset = filterset_class(saved_view_filter_params, queryset).qs.values("pk")
         # We take this approach because filterset.qs has already applied .distinct(),
         # and performing a .delete directly on a queryset with .distinct applied is not allowed.
         return queryset.filter(pk__in=inner_queryset)

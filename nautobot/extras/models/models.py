@@ -25,7 +25,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
-from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
     WebhookHttpMethodChoices,
@@ -924,14 +924,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
         """
         Return the model class associated with this SavedView, based on the 'view' field.
         """
-        if ":" not in self.view or not self.view.endswith("_list"):
-            return None
-        try:
-            app_label, model_view = self.view.split(":")
-            model_name = model_view.replace("_list", "")
-            return get_model_from_name(f"{app_label}.{model_name}")
-        except LookupError:
-            return None
+        return get_model_for_view_name(self.view)
 
     def get_filtered_queryset(self, user):
         """
