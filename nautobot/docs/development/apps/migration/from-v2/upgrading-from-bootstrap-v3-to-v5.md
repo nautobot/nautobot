@@ -23,13 +23,6 @@ Otherwise, you will need to individually review whether the packages and/or modu
 When Nautobot v3.x is installed, in addition to the `nautobot-server` CLI command, it now also provides a `nautobot-migrate-bootstrap-v3-to-v5` CLI command. This command can be run against your App's `templates` directory in order to autocorrect and/or flag for manual correction many of the below-documented required changes to your CSS and HTML.
 
 ```no-highlight
-nautobot-migrate-bootstrap-v3-to-v5 my_app/templates/ --resize
-```
-
-!!! tip "The `--resize` flag"
-    The first time you run `nautobot-migrate-bootstrap-v3-to-v5`, you should use the `--resize` optional parameter, which will resize all Bootstrap column breakpoints in your templates to use the next larger breakpoint. (See [Columns](#columns) below for the details of why this is recommended.) This is the only part of the script that is not idempotent and should not be rerun repeatedly, as each time the script is run with `--resize`, it will adjust the breakpoints upward again. Therefore, on all subsequent runs of the script against your app, you should omit this parameter. Besides this special case, it is otherwise safe to run the script multiple times if desired.
-
-```no-highlight
 nautobot-migrate-bootstrap-v3-to-v5 my_app/templates/
 ```
 
@@ -60,7 +53,7 @@ Total issues fixed: 417
 - <li> in <ol.breadcrumb>:     5
 - <li> in <ul.nav-tabs>:       6
 - Panel class replacements:    257
-- Resizing breakpoint xs:      0
+- Grid breakpoint resizes:     57
 -------------------------------------
 - Resizing other breakpoints:  0
 ```
