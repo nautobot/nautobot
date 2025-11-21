@@ -2,6 +2,7 @@ from django.shortcuts import HttpResponse, render
 from django.utils.html import format_html
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 
 from nautobot.apps import ui, utils, views
 from nautobot.circuits.models import Circuit
@@ -360,6 +361,15 @@ class AnotherExampleModelUIViewSet(
             ]
         }
     )
+
+    @action(
+        detail=True,
+        url_path="custom-action-permissions-test",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_location", "dcim.add_location", "dcim.change_location"],
+    )
+    def custom_action_permissions_test(self, request, *args, **kwargs):
+        return Response({})
 
 
 class ViewToBeOverridden(views.GenericView):

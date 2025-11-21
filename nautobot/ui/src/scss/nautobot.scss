@@ -1459,13 +1459,14 @@ textarea {
 }
 
 /* Code */
-code:not(.hljs) {
+:not(pre) > code:not(.hljs) { /* Select only `code` which are not immediate children of `pre`, that is _inline code_. */
   @extend kbd;
 }
 
 pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
   background: var(--#{$prefix}secondary-bg);
   border-radius: $border-radius;
+  color: $kbd-color;
   padding-block: map.get($spacers, 8);
   padding-inline: map.get($spacers, 10);
 }

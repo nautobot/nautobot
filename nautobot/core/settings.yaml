@@ -383,6 +383,14 @@ properties:
     see_also:
       "Celery documentation": "https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-broker_use_ssl"
     type: "object"
+  CELERY_HEALTH_PROBES_AS_FILES:
+    default: false
+    description: "Optional configuration for Celery workers to use file-based health probes."
+    environment_variable: "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES"
+    see_also:
+      "`CELERY_WORKER_HEARTBEAT_FILE`": "#celery_worker_heartbeat_file"
+      "`CELERY_WORKER_READINESS_FILE`": "#celery_worker_readiness_file"
+    type: "boolean"
   CELERY_REDIS_BACKEND_USE_SSL:
     default: false
     description: "Optional configuration for Celery to use custom SSL certificates to connect to Redis."
@@ -425,6 +433,13 @@ properties:
     see_also:
       "`CELERY_TASK_SOFT_TIME_LIMIT`": "#celery_task_soft_time_limit"
     type: "integer"
+  CELERY_WORKER_HEARTBEAT_FILE:
+    default: "/tmp/nautobot_celery_worker_heartbeat"
+    description: "A file touched by the Celery worker every second while it is alive, suitable for health checks."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE"
+    see_also:
+      "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
+    type: "string"
   CELERY_WORKER_PREFETCH_MULTIPLIER:
     default: 4
     description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
@@ -453,6 +468,13 @@ properties:
       type: "integer"
     type: "array"
     version_added: "1.5.10"
+  CELERY_WORKER_READINESS_FILE:
+    default: "/tmp/nautobot_celery_worker_ready"
+    description: "A file touched by the Celery worker when it starts and is ready to accept tasks."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_READINESS_FILE"
+    see_also:
+      "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
+    type: "string"
   CELERY_WORKER_REDIRECT_STDOUTS:
     default: true
     description: "If enabled stdout and stderr of running jobs will be redirected to the task logger."
