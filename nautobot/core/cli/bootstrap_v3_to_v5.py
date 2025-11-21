@@ -553,20 +553,28 @@ def _fix_breadcrumbs_block(html_string: str, stats: dict) -> str:
 
 
 def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict) -> str:
+    """
+    Resizes grid breakpoints in `col-*` and `offset-*` classes one step up. Uses given `class_combinations` for known
+    class pattern replacements and otherwise does generic xs → sm and md → lg breakpoint resize.
+    """
     # Define the breakpoint mapping
     breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
+    breakpoint_map_keys = list(breakpoint_map.keys())
+
+    def create_grid_class_regex(breakpoints=breakpoint_map_keys):  # pylint: disable=dangerous-default-value
+        # Create regex matching Bootstrap grid classes, i.e. `col-*` and `offset-*`, within given breakpoints.
+        return re.compile(rf"\b(col|offset)-({'|'.join(breakpoints)})([a-zA-Z0-9-]*)")
 
     # Resize all given grid `breakpoints` in `string` according to defined `breakpoint_map`
-    def resize_breakpoints(string, breakpoints=list(breakpoint_map.keys()), count_stats=False):  # pylint: disable=dangerous-default-value
-        # Replace with regex, e.g., col-xs-12 → col-sm-12
-        regex = re.compile(rf"\b(col|offset)-({'|'.join(breakpoints)})([a-zA-Z0-9-]*)")
-
+    def resize_breakpoints(string, breakpoints=breakpoint_map_keys, count_stats=False):  # pylint: disable=dangerous-default-value
         def regex_repl(match):
             new_breakpoint = breakpoint_map[match.group(2)]
             if count_stats:
                 stats["grid_breakpoints"] += 1
             return f"{match.group(1)}-{new_breakpoint}{match.group(3)}"
 
+        # Replace with regex, e.g., col-xs-12 → col-sm-12
+        regex = create_grid_class_regex(breakpoints)
         return regex.sub(regex_repl, string)
 
     # Resize given `class_combinations` and create an additional joint array from the two. This is required to determine
@@ -579,11 +587,19 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
 
     def grid_breakpoints_replacer(match):
         classes = match.group(1)
+        # Remove Django template tag blocks, variables and comments and split individual classes into separate strings.
+        raw_classes = re.compile(r"{{?((?!{|}).)*}}?").sub(" ", classes).split()
+        # Filter out all non-grid classes, keep only `col-*` and `offset-*`.
+        grid_class_regex = create_grid_class_regex()
+        grid_classes = [cls for cls in raw_classes if grid_class_regex.search(cls)]
 
-        # Check whether given class list contains any of the known class combinations.
+        # Check whether given class list consists of any of the known class combinations.
         known_class_combination = None
         for class_combination in known_class_combinations:
-            if all(cls in classes for cls in class_combination.split()):
+            # Look for an exact match, when all classes from given combination are included in element classes and vice versa.
+            if all(cls in classes for cls in class_combination.split()) and all(
+                grid_class in class_combination for grid_class in grid_classes
+            ):
                 known_class_combination = class_combination
                 break
 
@@ -599,10 +615,13 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
                 stats["grid_breakpoints"] += 1
                 return resized_classes[known_class_combination.split().index(current_class)]
 
+            # Replace all classes from given combination by mapping them individually to their resized equivalents.
             return f'class="{re.compile("|".join(known_class_combination.split())).sub(class_replacer, classes)}"'
 
+        # Return unchanged string if conditions above are not satisfied, i.e. do nothing.
         return match.group(0)
 
+    # Find all `class="..."` matches and execute grid breakpoint replacement on them.
     pattern = re.compile(r'class="([^"]*)"')
     return pattern.sub(grid_breakpoints_replacer, html_string)
 
