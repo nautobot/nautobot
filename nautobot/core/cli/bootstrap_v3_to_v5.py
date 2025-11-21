@@ -552,17 +552,20 @@ def _fix_breadcrumbs_block(html_string: str, stats: dict) -> str:
 # --- Grid Breakpoints Resize Function ---
 
 
-def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict, file_path=None) -> str:
+def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], stats: dict) -> str:
     # Define the breakpoint mapping
     breakpoint_map = {"xs": "sm", "sm": "md", "md": "lg", "lg": "xl", "xl": "xxl"}
+    breakpoint_list = list(breakpoint_map.keys())
 
     # Resize all given grid `breakpoints` in `string` according to defined `breakpoint_map`
-    def resize_breakpoints(string, breakpoints=None):
+    def resize_breakpoints(string, breakpoints=breakpoint_list, count_stats=False):
         # Replace with regex, e.g., col-xs-12 → col-sm-12
         regex = re.compile(rf"\b(col|offset)-({'|'.join(breakpoints)})([a-zA-Z0-9-]*)")
 
         def regex_repl(match):
             new_breakpoint = breakpoint_map[match.group(2)]
+            if count_stats:
+                stats["grid_breakpoints"] += 1
             return f"{match.group(1)}-{new_breakpoint}{match.group(3)}"
 
         return regex.sub(regex_repl, string)
@@ -572,9 +575,7 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
     #   1. No: generic md -> lg breakpoint replacement.
     #   2. Yes, but has not been resized yet: resize with proper combination.
     #   3. Yes, and has already been resized: do nothing.
-    resized_class_combinations = [
-        resize_breakpoints(class_combination, list(breakpoint_map.keys())) for class_combination in class_combinations
-    ]
+    resized_class_combinations = [resize_breakpoints(class_combination) for class_combination in class_combinations]
     known_class_combinations = [*class_combinations, *resized_class_combinations]
 
     def grid_breakpoints_replacer(match):
@@ -589,16 +590,19 @@ def _resize_grid_breakpoints(html_string: str, class_combinations: list[str], st
 
         if known_class_combination is None:
             # Class combination has not been found: do generic md -> lg breakpoint replacement.
-            return resize_breakpoints(classes, ["md"])
+            return f'class="{resize_breakpoints(classes, breakpoints=["md"], count_stats=True)}"'
         elif known_class_combination not in resized_class_combinations:
             # Class combination has been found, but has not been resized yet: resize with proper combination.
             resized_classes = resized_class_combinations[class_combinations.index(known_class_combination)].split()
 
             def class_replacer(m):
                 current_class = m.group(0)
+                stats["grid_breakpoints"] += 1
                 return resized_classes[known_class_combination.split().index(current_class)]
 
-            return re.compile("|".join(known_class_combination.split())).sub(class_replacer, classes)
+            return f'class="{re.compile("|".join(known_class_combination.split())).sub(class_replacer, classes)}"'
+
+        return match.group(0)
 
     pattern = re.compile(r'class="([^"]*)"')
     return pattern.sub(grid_breakpoints_replacer, html_string)
@@ -621,6 +625,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
         "nav_items": 0,
         "dropdown_items": 0,
         "panel_classes": 0,
+        "grid_breakpoints": 0,
         "manual_nav_template_lines": [],
     }
 
@@ -719,9 +724,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
     current_html = _convert_hover_copy_buttons(current_html, stats)
     current_html = _fix_nav_tabs_items(current_html, stats, file_path=file_path)
     current_html = _fix_dropdown_items(current_html, stats, file_path=file_path)
-    current_html = _resize_grid_breakpoints(
-        current_html, standard_grid_breakpoint_combinations, stats, file_path=file_path
-    )
+    current_html = _resize_grid_breakpoints(current_html, standard_grid_breakpoint_combinations, stats)
 
     return current_html, stats
 
@@ -794,6 +797,8 @@ def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=Fa
                         print(f"{stats['dropdown_items']} dropdown-items, ", end="")
                     if stats["panel_classes"]:
                         print(f"{stats['panel_classes']} panel replacements, ", end="")
+                    if stats["grid_breakpoints"]:
+                        print(f"{stats['grid_breakpoints']} grid breakpoint replacements, ", end="")
                     print()
 
                 if stats.get("manual_nav_template_lines"):
