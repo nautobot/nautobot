@@ -997,3 +997,27 @@ class SearchRobotsTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
         self.assertNotContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
+
+
+@tag("example_app")
+class ViewSetCustomActionsTestCase(TestCase):
+    """Tests for NautobotUIViewSet custom actions."""
+
+    def test_custom_view_base_action(self):
+        """Assert that all of the permissions in a custom action's custom_view_base_action are enforced."""
+        from example_app.models import AnotherExampleModel
+
+        self.add_permissions("example_app.view_anotherexamplemodel", "dcim.view_location")
+        self.remove_permissions("dcim.add_location", "dcim.change_location")
+
+        example_model = AnotherExampleModel.objects.create(name="test")
+        url = reverse(
+            "plugins:example_app:anotherexamplemodel_custom-action-permissions-test",
+            kwargs={"pk": example_model.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        self.add_permissions("dcim.add_location", "dcim.change_location")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
