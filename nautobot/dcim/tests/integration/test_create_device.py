@@ -19,16 +19,14 @@ class CreateDeviceTestCase(SeleniumTestCase):
         - Device
 
         """
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
         # Manufacturer
         self.click_navbar_entry("Devices", "Manufacturers")
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:manufacturer_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:manufacturer_add"))
-        self.browser.fill("name", "Test Manufacturer 1")
+        self.fill_input("name", "Test Manufacturer 1")
         self.click_edit_form_create_button()
 
         # Device Type
@@ -37,7 +35,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:devicetype_add"))
         self.fill_select2_field("manufacturer", "Test Manufacturer 1")
-        self.browser.fill("model", "Test Device Type 1")
+        self.fill_input("model", "Test Device Type 1")
         self.click_edit_form_create_button()
 
         # LocationType
@@ -46,7 +44,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_add"))
         self.fill_select2_multiselect_field("content_types", "dcim | device")
-        self.browser.fill("name", "Test Location Type 1")
+        self.fill_input("name", "Test Location Type 1")
         self.click_edit_form_create_button()
 
         # Location
@@ -56,7 +54,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_add"))
         self.fill_select2_field("location_type", "Test Location Type 1")
         self.fill_select2_field("status", "")  # pick first status
-        self.browser.fill("name", "Test Location 1")
+        self.fill_input("name", "Test Location 1")
         self.click_edit_form_create_button()
 
         # Role
@@ -64,7 +62,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_add"))
-        self.browser.fill("name", "Test Role 1")
+        self.fill_input("name", "Test Role 1")
         self.fill_select2_multiselect_field("content_types", "dcim | device")
         self.click_edit_form_create_button()
 
@@ -73,7 +71,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_add"))
-        self.browser.fill("name", "Test Device Integration Test 1")
+        self.fill_input("name", "Test Device Integration Test 1")
         self.fill_select2_field("role", "Test Role 1")
         self.fill_select2_field("device_type", "Test Device Type 1")
         self.fill_select2_field("location", "Test Location 1")

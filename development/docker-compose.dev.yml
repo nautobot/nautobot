@@ -19,3 +19,11 @@ services:
   mkdocs:
     volumes:
       - ../:/source
+  ui_build:
+    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
+    entrypoint: "bash -c 'npm --prefix /source/nautobot/ui run build:watch'"
+    healthcheck:
+      disable: true
+    tty: true
+    volumes:
+      - ../:/source

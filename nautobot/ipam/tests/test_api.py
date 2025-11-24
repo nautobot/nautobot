@@ -40,6 +40,7 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -57,21 +58,27 @@ class NamespaceTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.first()
+        tenant = Tenant.objects.first()
         cls.create_data = [
             {
                 "name": "Purple Monkey Namespace 1",
-                "description": "A perfectly cromulent namespace.",
+                "description": "A namespace with a tenant and location.",
                 "location": location.pk,
+                "tenant": tenant.pk,
             },
             {
                 "name": "Purple Monkey Namespace 2",
-                "description": "A secondarily cromulent namespace.",
-                "location": location.pk,
+                "description": "A namespace with a tenant and no location.",
+                "tenant": tenant.pk,
             },
             {
                 "name": "Purple Monkey Namespace 3",
-                "description": "A third cromulent namespace.",
+                "description": "A namespace with no tenant but with a location.",
                 "location": location.pk,
+            },
+            {
+                "name": "Purple Monkey Namespace 4",
+                "description": "A namespace with no tenant and no location.",
             },
         ]
         cls.bulk_update_data = {
@@ -124,7 +131,13 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vrfs = VRF.objects.all()
+        cls.vrfs = (
+            VRF.objects.create(name="Test VRF 1", rd="65000:1", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 2", rd="65000:2", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 3", rd="65000:3", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 4", rd="65000:4", namespace=Namespace.objects.first()),
+            VRF.objects.create(name="Test VRF 5", rd="65000:5", namespace=Namespace.objects.first()),
+        )
         cls.devices = Device.objects.all()
         cls.vdcs = VirtualDeviceContext.objects.all()
         locations = Location.objects.filter(location_type__name="Campus")
@@ -188,7 +201,7 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "virtual_device_context": cls.vdcs[0].pk,
+                "virtual_device_context": cls.vdcs[1].pk,
             },
         ]
         cls.bulk_update_data = {
@@ -1613,7 +1626,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
         response = self.client.get(
-            self._get_detail_url(nat_inside) + "?depth=1",
+            self._get_detail_url(nat_inside) + "?depth=1&exclude_m2m=false",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)

@@ -166,6 +166,55 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.22 (2025-11-10)
+
+### Security in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `Django` to `~4.2.26` to mitigate CVE-2025-64459.
+
+### Added in v2.4.22
+
+- [#6979](https://github.com/nautobot/nautobot/issues/6979) - Added support for speed and duplex on `Interface` objects.
+- [#8048](https://github.com/nautobot/nautobot/issues/8048) - Added Constance configuration setting `RACK_DEFAULT_U_HEIGHT` to configure the default height (in rack units) displayed in the Rack creation form.
+- [#8135](https://github.com/nautobot/nautobot/issues/8135) - Added `get_detail_view_components_context_for_model()` helper API for use by apps implementing DistinctViewTabs.
+
+### Changed in v2.4.22
+
+- [#6979](https://github.com/nautobot/nautobot/issues/6979) - Changed the `humanize_speed` template filter to now return a decimalized value instead of finding an integer value (e.g. 2.5 Gbps instead of 2500 Mbps).
+
+### Fixed in v2.4.22
+
+- [#6852](https://github.com/nautobot/nautobot/issues/6852) - Fixed unintended dependency on `django-debug-toolbar` when enabling the `theme-preview/` view.
+- [#8039](https://github.com/nautobot/nautobot/issues/8039) - Fixed issue where device components added via table footer button did not return to the same page.
+- [#8042](https://github.com/nautobot/nautobot/issues/8042) - Fixed incorrect `base_template` on Git Repository Synchronization Status page.
+- [#8059](https://github.com/nautobot/nautobot/issues/8059) - Fixed the Wireless Networks tab on the Controller detail page.
+- [#8073](https://github.com/nautobot/nautobot/issues/8073) - Added missing call to `super().get_extra_context()` in `LocationUIViewSet`, `ModuleTypeUIViewSet`.
+- [#8077](https://github.com/nautobot/nautobot/issues/8077) - Fixed the rendering of the min and max version fields in the App detail view when they are not set.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect permissions requirement to view Virtual Machine config context tab.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed incorrect field name in Config Context filter form.
+- [#8126](https://github.com/nautobot/nautobot/issues/8126) - Fixed leftover use of legacy views in Relationship "notes" and "changelog" tabs.
+
+### Dependencies in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `django-constance` to `~4.3.3`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated dependency `nh3` to `~0.3.2`.
+
+### Documentation in v2.4.22
+
+- [#8068](https://github.com/nautobot/nautobot/issues/8068) - Updated documentation to include information about the latest deprecated HTML templates in v3.0.
+
+### Housekeeping in v2.4.22
+
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-glightbox` to `~0.5.2`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.4.1`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated documentation dependency `mkdocs-material` to `~9.6.23`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated development dependency `pymarkdownlnt` to `~0.9.33`.
+- [#7981](https://github.com/nautobot/nautobot/issues/7981) - Updated development dependency `ruff` to `~0.14.3`.
+- [#8047](https://github.com/nautobot/nautobot/issues/8047) - Fixed incorrect logic in `nautobot.virtualization.tests.test_models.VMInterfaceTestCase` that could lead to test failures.
+- [#8068](https://github.com/nautobot/nautobot/issues/8068) - Updated deprecated HTML templates migration script to handle more cases.
+- [#8113](https://github.com/nautobot/nautobot/issues/8113) - Fixed live reloading when serving development documentation with mkdocs.
+- [#8114](https://github.com/nautobot/nautobot/issues/8114) - Set `INSTALLATION_METRICS_ENABLED=False` explicitly in the testing `nautobot_config.py` to avoid inadvertently sending metrics when running tests.
+
 ## v2.4.21 (2025-10-27)
 
 ### Added in v2.4.21

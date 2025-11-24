@@ -1,8 +1,17 @@
+from constance.test import override_config
 from django.test import TestCase
 
 from nautobot.core.testing.forms import FormTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceModeChoices, InterfaceTypeChoices, RackWidthChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    InterfaceDuplexChoices,
+    InterfaceModeChoices,
+    InterfaceSpeedChoices,
+    InterfaceTypeChoices,
+    RackWidthChoices,
+)
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
     DeviceFilterForm,
     DeviceForm,
@@ -327,24 +336,56 @@ class RackTestCase(TestCase):
         form = RackForm(data=data, instance=racks[0])
         self.assertTrue(form.is_valid())
 
+    def test_rack_form_initial_u_height_default(self):
+        """Test that RackForm sets initial u_height from default Constance config (42)."""
+        # Create a new form (not bound to an instance)
+        form = RackForm()
+
+        # The initial value should be 42 (default Constance config)
+        self.assertEqual(form.fields["u_height"].initial, RACK_U_HEIGHT_DEFAULT)
+
+    @override_config(RACK_DEFAULT_U_HEIGHT=48)
+    def test_rack_form_initial_u_height_custom(self):
+        """Test that RackForm sets initial u_height from custom Constance config."""
+        # Create a new form (not bound to an instance)
+        form = RackForm()
+
+        # The initial value should be 48 (from Constance config)
+        self.assertEqual(form.fields["u_height"].initial, 48)
+
+    def test_rack_form_initial_u_height_not_set_on_edit(self):
+        """Test that RackForm does NOT override u_height when editing an existing rack."""
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        status = Status.objects.get(name="Active")
+
+        # Create a rack with u_height of 24
+        rack = Rack.objects.create(name="Test Rack", location=location, status=status, u_height=24)
+
+        # Create a form bound to the existing rack
+        form = RackForm(instance=rack)
+
+        # The initial value should NOT be overridden - it should use the rack's actual value
+        # (The form will show the model instance's value, not the Constance config)
+        self.assertEqual(form.initial["u_height"], 24)
+
 
 class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.device = Device.objects.first()
-        status = Status.objects.get_for_model(Interface).first()
+        cls.status = Status.objects.get_for_model(Interface).first()
         cls.interface = Interface.objects.create(
             device=cls.device,
             name="test interface form 0.0",
             type=InterfaceTypeChoices.TYPE_2GFC_SFP,
-            status=status,
+            status=cls.status,
         )
         cls.vlan = VLAN.objects.first()
         cls.data = {
             "device": cls.device.pk,
             "name": "test interface form 0.0",
             "type": InterfaceTypeChoices.TYPE_2GFC_SFP,
-            "status": status.pk,
+            "status": cls.status.pk,
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "tagged_vlans": [cls.vlan.pk],
         }
@@ -394,7 +435,6 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
         Assert that untagged_vlans field dropdown are populated correctly in InterfaceForm and InterfaceBulkEditForm,
         and that the queryset is the same for both forms.
         """
-        status = Status.objects.get_for_model(Interface).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         devices = Device.objects.all()[:3]
         for device in devices:
@@ -405,19 +445,19 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
                 device=devices[0],
                 name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_2GFC_SFP,
-                status=status,
+                status=self.status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_LAG,
-                status=status,
+                status=self.status,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_100ME_FIXED,
-                status=status,
+                status=self.status,
             ),
         )
         edit_form = InterfaceForm(data=self.data, instance=interfaces[0])
@@ -429,3 +469,65 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             edit_form.fields["untagged_vlan"].queryset,
             bulk_edit_form.fields["untagged_vlan"].queryset,
         )
+
+    def test_interface_form_fields_and_blank(self):
+        data = {
+            "device": self.device.pk,
+            "name": self.interface.name,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": self.status.pk,
+            "speed": "",  # blank should coerce to None
+            "duplex": "",  # blank allowed
+        }
+        form = InterfaceForm(data=data, instance=self.interface)
+        self.assertIn("speed", form.fields)
+        self.assertIn("duplex", form.fields)
+        self.assertTrue(form.is_valid())
+        self.assertIsNone(form.cleaned_data["speed"])  # TypedChoiceField(empty->None)
+        self.assertEqual(form.cleaned_data["duplex"], "")
+
+    def test_interface_form_speed_choice_coerces_int(self):
+        speed_choice = InterfaceSpeedChoices.SPEED_10G
+        data = {
+            "device": self.device.pk,
+            "name": self.interface.name,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": self.status.pk,
+            # Posted value is a string; TypedChoiceField should coerce to int
+            "speed": str(speed_choice),
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        form = InterfaceForm(data=data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+        self.assertIsInstance(form.cleaned_data["speed"], int)
+        self.assertEqual(form.cleaned_data["speed"], speed_choice)
+        self.assertEqual(form.cleaned_data["duplex"], InterfaceDuplexChoices.DUPLEX_FULL)
+
+    def test_interface_create_form_blank_and_choice(self):
+        # Blank speed
+        data_blank = {
+            "device": self.device.pk,
+            "name_pattern": "eth1",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "speed": "",
+            "duplex": "",
+        }
+        form_blank = InterfaceCreateForm(data_blank)
+        self.assertTrue(form_blank.is_valid())
+        self.assertIsNone(form_blank.cleaned_data["speed"])  # TypedChoiceField(empty->None)
+
+        # With a specific choice
+        speed_choice = InterfaceSpeedChoices.SPEED_1G
+        data_choice = {
+            "device": self.device.pk,
+            "name_pattern": "eth2",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "speed": str(speed_choice),
+            "duplex": InterfaceDuplexChoices.DUPLEX_AUTO,
+        }
+        form_choice = InterfaceCreateForm(data_choice)
+        self.assertTrue(form_choice.is_valid())
+        self.assertEqual(form_choice.cleaned_data["speed"], speed_choice)
+        self.assertEqual(form_choice.cleaned_data["duplex"], InterfaceDuplexChoices.DUPLEX_AUTO)

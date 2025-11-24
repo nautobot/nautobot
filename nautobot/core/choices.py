@@ -242,7 +242,7 @@ class ButtonActionIconChoices(ChoiceSet):
     LOCK = "mdi-lock"
     MAGNIFY = "mdi-magnify"
     NOTE = "mdi-note-text"
-    RENAME = "mdi-pencil"
+    RENAME = "mdi-rename"
     SWAP = "mdi-swap-vertical"
     TRASH = "mdi-trash-can-outline"
 

@@ -67,7 +67,7 @@ class Tag(
         ordering = ["name"]
 
     def get_color_display(self):
-        return format_html('<span class="label color-block" style="background-color: #{}">&nbsp;</span>', self.color)
+        return format_html('<span class="label nb-color-block" style="background-color: #{}">&nbsp;</span>', self.color)
 
     def validate_content_types_removal(self, content_types_id):
         """Validate content_types to be removed are not tagged to a model"""
