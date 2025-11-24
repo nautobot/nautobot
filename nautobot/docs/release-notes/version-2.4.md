@@ -170,7 +170,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Added in v2.4.23
 
-- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Added additional celery worker metrics.
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Added additional Celery worker metrics.
 
 ### Fixed in v2.4.23
 
