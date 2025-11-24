@@ -5,11 +5,11 @@
 {% block title %}Create {{ component_type }}{% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>{{ component_type|title }}</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% for field in form.hidden_fields %}{{ field }}{% endfor %}
             {% render_field form.device %}
             {% render_field form.parent %}
@@ -17,10 +17,12 @@
             {% render_field form.label_pattern %}
             {% render_field form.manufacturer %}
             {% render_field form.software_version %}
-            <div class="form-group" id="software_version_image_container" style="display:none">
-                <div class="col-md-3"></div>
-                <div class="col-md-9">
-                    <span class="help-block">
+            <div class="mb-10 d-flex justify-content-center"
+                 id="software_version_image_container"
+                 style="display:none !important">{# !important is required to override d-flex #}
+                <div class="col-lg-3"></div>
+                <div class="col-lg-9">
+                    <span class="form-text">
                         <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
                         <ul id="software_version_image_list">
                             <li> Software images for the selected software version will appear here </li>
@@ -38,9 +40,18 @@
     {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 {% endblock %}
 {% block buttons %}
-    <button type="submit" name="_create" class="btn btn-primary">Create</button>
-    <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create
+    </button>
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create and Add More
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
 {% endblock %}
 
 {% block javascript %}

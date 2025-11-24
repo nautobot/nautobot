@@ -18,12 +18,18 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
 MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
+    "approval_workflow_definitions": "approval_workflows",
     "cables": "cable_terminations",
-    "metadata_types": "metadata",
-    "object_metadata": "metadata",
+    "data_compliance": "custom_validators",
     "location_types": "locations",
-    "static_group_associations": "dynamic_groups",
+    "metadata_types": "metadata",
+    "min_max_validation_rules": "custom_validators",
+    "object_metadata": "metadata",
+    "regular_expression_validation_rules": "custom_validators",
     "relationship_associations": "relationships",
+    "required_validation_rules": "custom_validators",
+    "static_group_associations": "dynamic_groups",
+    "unique_validation_rules": "custom_validators",
 }
 
 
@@ -101,6 +107,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         BOOLEAN_CHOICES,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
+        MultiValueCharInput,
         StaticSelect2,
         StaticSelect2Multiple,
     )
@@ -121,7 +128,16 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
-        form_field = forms.IntegerField()
+        # If "choices" are passed, then when 'exact' is used in an Advanced
+        # Filter, render a dropdown of choices instead of a free integer input
+        if field.lookup_expr == "exact" and getattr(field, "choices", None):
+            # Use a multi-value widget that allows both preset choices and free-form entries
+            form_field = forms.MultipleChoiceField(
+                choices=field.choices,
+                widget=MultiValueCharInput,
+            )
+        else:
+            form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         if getattr(field, "prefers_id", False):
             to_field_name = "id"

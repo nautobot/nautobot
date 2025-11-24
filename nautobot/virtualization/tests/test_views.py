@@ -63,11 +63,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
-        location_status = Status.objects.get_for_model(Location).first()
-        locations = (
-            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
-            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
-        )
+        locations = list(Location.objects.filter(location_type=location_type)[:2])
 
         clustergroups = ClusterGroupFactory.create_batch(2)
 
@@ -98,6 +94,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "devices": list(Device.objects.filter(location=locations[1]).values_list("pk", flat=True)[:3]),
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
@@ -107,6 +104,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "add_devices": list(Device.objects.filter(location=locations[1]).values_list("pk", flat=True)[:3]),
             "comments": "New comments",
         }
 

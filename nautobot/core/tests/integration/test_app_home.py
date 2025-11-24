@@ -1,44 +1,48 @@
+from django.test import tag
+
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, PowerFeed, PowerPanel
 from nautobot.tenancy.models import Tenant
 
-from example_app.models import ExampleModel
 
-
+@tag("example_app")
 class AppHomeTestCase(SeleniumTestCase):
     """Integration test the Example App homepage extensions."""
 
-    layout = {
-        "Organization": {
-            "Locations": {"model": Location, "permission": "dcim.view_location"},
-            "Example Models": {"model": ExampleModel, "permission": "example_app.view_examplemodel"},
-            "Tenants": {"model": Tenant, "permission": "tenancy.view_tenant"},
-        },
-        "Example App Standard Panel": {
-            "Example App Custom Item": {"permission": "example_app.view_examplemodel"},
-        },
-        "Power": {
-            "Power Feeds": {"model": PowerFeed, "permission": "dcim.view_powerfeed"},
-            "Power Panel": {"model": PowerPanel, "permission": "dcim.view_powerpanel"},
-        },
-        "Circuits": {
-            "Providers": {"model": Provider, "permission": "circuits.view_provider"},
-            "Circuits": {"model": Circuit, "permission": "circuits.view_circuit"},
-        },
-    }
-
-    custom_panel_examplemodel = {
-        "name": "Example App Custom Panel",
-        "items": [
-            "Example 1",
-            "Example 2",
-            "Example 3",
-        ],
-    }
-
     def setUp(self):
         super().setUp()
+
+        from example_app.models import ExampleModel
+
+        self.layout = {
+            "Organization": {
+                "Locations": {"model": Location, "permission": "dcim.view_location"},
+                "Example Models": {"model": ExampleModel, "permission": "example_app.view_examplemodel"},
+                "Tenants": {"model": Tenant, "permission": "tenancy.view_tenant"},
+            },
+            "Example App Standard Panel": {
+                "Example App Custom Item": {"permission": "example_app.view_examplemodel"},
+            },
+            "Power": {
+                "Power Feeds": {"model": PowerFeed, "permission": "dcim.view_powerfeed"},
+                "Power Panel": {"model": PowerPanel, "permission": "dcim.view_powerpanel"},
+            },
+            "Circuits": {
+                "Providers": {"model": Provider, "permission": "circuits.view_provider"},
+                "Circuits": {"model": Circuit, "permission": "circuits.view_circuit"},
+            },
+        }
+
+        self.custom_panel_examplemodel = {
+            "name": "Example App Custom Panel",
+            "items": [
+                "Example 1",
+                "Example 2",
+                "Example 3",
+            ],
+        }
+
         self.login(self.user.username, self.password)
 
     def tearDown(self):
@@ -55,7 +59,7 @@ class AppHomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
@@ -71,7 +75,7 @@ class AppHomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
@@ -88,7 +92,7 @@ class AppHomeTestCase(SeleniumTestCase):
         """
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
@@ -105,7 +109,7 @@ class AppHomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
 
         for item_name in self.custom_panel_examplemodel["items"]:
@@ -122,7 +126,7 @@ class AppHomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//*[contains(text(), '{panel_name}')]")
             for item_name, item_details in panel_details.items():
