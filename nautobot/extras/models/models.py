@@ -26,6 +26,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
     WebhookHttpMethodChoices,
@@ -902,6 +903,24 @@ class SavedView(BaseModel, ChangeLoggedModel):
             self.is_shared = True
 
         super().save(*args, **kwargs)
+
+    @property
+    def model(self):
+        """
+        Return the model class associated with this SavedView, based on the 'view' field.
+        """
+        return get_model_for_view_name(self.view)
+
+    def get_filtered_queryset(self, user):
+        """
+        Return a queryset for the associated model, filtered by this SavedView's filter_params.
+        """
+        model = self.model
+        if model is None:
+            return None
+        filter_params = self.config.get("filter_params", {})
+        filterset_class = get_filterset_for_model(model)
+        return filterset_class(filter_params, model.objects.restrict(user)).qs
 
 
 @extras_features("graphql")
