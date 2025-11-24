@@ -166,6 +166,28 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.23 (2025-11-24)
+
+### Added in v2.4.23
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Added additional celery worker metrics.
+
+### Fixed in v2.4.23
+
+- [#7848](https://github.com/nautobot/nautobot/issues/7848) - Fixed the Logs Cleanup job to skip records with a protected relationship instead of raising an error.
+- [#8025](https://github.com/nautobot/nautobot/issues/8025) - Fixed a `KeyError` when viewing a record with a symmetric one-to-one `Relationship` defined.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Fixed insertion order of middleware for `nautobot.core.settings_funcs.setup_structlog_logging`.
+- [#8178](https://github.com/nautobot/nautobot/issues/8178) - Fixed "Create and Add Another" behavior for UIViewSet-derived views.
+- [#8202](https://github.com/nautobot/nautobot/issues/8202) - Fixed Bulk operations when using Saved View and selecting all.
+
+### Documentation in v2.4.23
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Updated prometheus metrics documentation.
+
+### Housekeeping in v2.4.23
+
+- [#8162](https://github.com/nautobot/nautobot/issues/8162) - Updated GitHub Actions definitions for ltm-2.4 branch.
+
 ## v2.4.22 (2025-11-10)
 
 ### Security in v2.4.22
