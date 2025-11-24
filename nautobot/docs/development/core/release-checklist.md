@@ -19,7 +19,7 @@ We use [Renovate](https://docs.renovatebot.com/) and [Dependabot](https://docs.g
 
 Use the [`poetry add`](https://python-poetry.org/docs/cli/#add) command as appropriate to update the range of versions permitted in `pyproject.toml` for a direct Python dependency of Nautobot. For example, `poetry add 'netutils^1.14.0'` or `poetry add --optional --extras=saml 'social-auth-core~4.8.1'`.
 
-Use the [`poetry update`](https://python-poetry.org/docs/cli/#update) command as appropriate to update the `poetry.lock` file to use the latest versions of all Python dependencies of Nautobot (within the constraints specified in `pyproject.toml`). 
+Use the [`poetry update`](https://python-poetry.org/docs/cli/#update) command as appropriate to update the `poetry.lock` file to use the latest versions of all Python dependencies of Nautobot (within the constraints specified in `pyproject.toml`).
 
 After making any changes to `pyproject.toml` or `poetry.lock` with the above commands, you should of course commit the changes and re-run Nautobot tests and CI to verify that the dependency updates have not broken anything before proceeding with the release preparation.
 
@@ -115,7 +115,7 @@ Example output:
 4.0.0
 ```
 
-The `invoke version [-v <version>]` command internally runs the [`poetry version`]((https://python-poetry.org/docs/cli/#version)) command to handle the versioning process. However, there might be cases where you need to manually configure the version. Refer to the Poetry documentation linked above for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
+The `invoke version [-v <version>]` command internally runs the [`poetry version`](https://python-poetry.org/docs/cli/#version) command to handle the versioning process. However, there might be cases where you need to manually configure the version. Refer to the Poetry documentation linked above for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
 
 After updating the version correctly, be sure to `git add pyproject.toml`. You'll commit it after the next step.
 
@@ -130,9 +130,9 @@ Run `invoke markdownlint` to make sure the generated release notes pass the lint
 
 Check the git diff to verify the changes are correct (`git diff --cached`). You should see:
 
-- a one-line change to `pyproject.toml` updating the version number (from the previous step)
-- release-notes added to `nautobot/docs/release-notes/version-<major.minor>.md`
-- all change fragments removed from the `changes/` folder
+* a one-line change to `pyproject.toml` updating the version number (from the previous step)
+* release-notes added to `nautobot/docs/release-notes/version-<major.minor>.md`
+* all change fragments removed from the `changes/` folder
 
 Commit (the traditional commit message is "Towncrier and version bump" but that's not required) and push the staged changes upstream to GitHub.
 
@@ -161,8 +161,8 @@ Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with th
     4. Change the entries under the **Contributors** heading to be a list of the usernames of the contributors, for example `* Updated dockerfile by @nautobot_user in https://github.com/nautobot/nautobot/pull/123` --> `* @nautobot_user`, removing duplicate usernames as you go.
     5. Leave the **New Contributors** list (if any) at the end of the release note as is.
     6. When done, the release note should look similar to any other recent Nautobot release, for example [v2.4.22](https://github.com/nautobot/nautobot/releases/tag/v2.4.22)
- * **Set as the latest release** should be checked if this release will be the latest for Nautobot. It should **not** be checked for prereleases or for releases from an LTM (long-term maintenance) branch such as `ltm-2.4`.
- * **Create a discussion for this release** should be checked as well.
+* **Set as the latest release** should be checked if this release will be the latest for Nautobot. It should **not** be checked for prereleases or for releases from an LTM (long-term maintenance) branch such as `ltm-2.4`.
+* **Create a discussion for this release** should be checked as well.
 
 Once you have verified that all of the above is correct, publish the release and wait for the release CI to run in GitHub Actions.
 
