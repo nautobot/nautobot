@@ -941,7 +941,7 @@ def compress_images(context, path=None, fix=False):
                         unoptimized += 1
 
     if unoptimized > 0:
-        raise Exit("Some files are not optimized", code=unoptimized)
+        raise Exit(f"Found {unoptimized} image files that are not optimized", code=1)
 
 
 @task
