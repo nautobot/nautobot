@@ -18,7 +18,7 @@ Overall, there are three pillars of v3.0 UI:
 !!! tip
     You are strongly encouraged to adopt the UI component framework. Migration can be performed incrementally on your 2.4 instance, making future upgrades easier. New features will be added exclusively to this framework. For example, the Data Compliance tab, automatic "copy" buttons in detail views, and collapsible cards or panels are already only available for models using the new UI component framework. The feature set will continue to expand over time.
 
-Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path> --resize`.
+Remember to follow our [UI Best Practices](../../../core/ui-best-practices.md) and to run the command `nautobot-migrate-bootstrap-v3-to-v5 <path>`.
 
 Some common use cases to have HTML embedded within Python include `views.py`, `template_content.py`, `templatetags.py` and `tables.py`.
 
@@ -80,9 +80,9 @@ Code that calls the GraphQL `execute_query()` and `execute_saved_query()` functi
 ## Minor Filtering Changes
 
 !!! tip
-    You can safely skip this section if `nautobot-server validate_models extras.dynamicgroup` runs without error.
+    You can safely skip this section if `nautobot-server validate_models extras.dynamicgroup extras.savedview` runs without error.
 
-A small number of breaking [filter field changes](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups. The models include:
+A small number of breaking [filter field changes](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889) may impact Dynamic Group filter definitions; you are recommended to run `nautobot-server validate_models extras.dynamicgroup extras.savedview` (or the newly added `Validate Model Data` system Job) after the upgrade to identify any impacted Dynamic Groups or Saved Views. The models include:
 
 - Front Port Templates `rear_port_template` filter
 - Power Outlets `power_port` filter
