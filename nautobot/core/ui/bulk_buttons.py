@@ -1,5 +1,6 @@
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.ui import object_detail
+from nautobot.core.utils.lookup import get_route_for_model
 
 
 class BaseBulkButton(object_detail.FormButton):
@@ -12,9 +13,7 @@ class BaseBulkButton(object_detail.FormButton):
     weight = None
 
     def __init__(self, *, form_id: str, model, **kwargs):
-        model_name = model.__name__.lower()
-        app_label = model._meta.app_label
-        link_name = f"{app_label}:{model_name}_bulk_{self.action}"
+        link_name = get_route_for_model(model, f"bulk_{self.action}")
 
         super().__init__(
             link_name=link_name,
