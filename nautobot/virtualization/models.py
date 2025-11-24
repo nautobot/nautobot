@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager
@@ -9,7 +9,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.models import BaseInterface, Device
+from nautobot.dcim.models import BaseInterface
 from nautobot.extras.models import (
     ConfigContextModel,
     RoleField,
@@ -139,24 +139,6 @@ class Cluster(PrimaryModel):
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
-                )
-
-        # Likewise, verify that host Devices match Location of this Cluster if any
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to create a Cluster with
-        # the parent Location or the child location of host Device?
-        if self.present_in_database and self.location is not None:
-            nonlocation_devices = (
-                Device.objects.filter(cluster=self)
-                .exclude(location=self.location)
-                .exclude(location__isnull=True)
-                .count()
-            )
-            if nonlocation_devices:
-                raise ValidationError(
-                    {
-                        "location": f"{nonlocation_devices} devices are assigned as hosts for this cluster "
-                        f'but belong to a location other than "{self.location}".'
-                    }
                 )
 
 
@@ -399,73 +381,6 @@ class VMInterface(PrimaryModel, BaseInterface):
             virtual_machine = None
 
         return super().to_objectchange(action, related_object=virtual_machine, **kwargs)
-
-    def add_ip_addresses(
-        self,
-        ip_addresses,
-        is_source=False,
-        is_destination=False,
-        is_default=False,
-        is_preferred=False,
-        is_primary=False,
-        is_secondary=False,
-        is_standby=False,
-    ):
-        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-            is_source (bool, optional): Is source address. Defaults to False.
-            is_destination (bool, optional): Is destination address. Defaults to False.
-            is_default (bool, optional): Is default address. Defaults to False.
-            is_preferred (bool, optional): Is preferred address. Defaults to False.
-            is_primary (bool, optional): Is primary address. Defaults to False.
-            is_secondary (bool, optional): Is secondary address. Defaults to False.
-            is_standby (bool, optional): Is standby address. Defaults to False.
-
-        Returns:
-            Number of instances added.
-        """
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                instance = self.ip_addresses.through(
-                    ip_address=ip,
-                    vm_interface=self,
-                    is_source=is_source,
-                    is_destination=is_destination,
-                    is_default=is_default,
-                    is_preferred=is_preferred,
-                    is_primary=is_primary,
-                    is_secondary=is_secondary,
-                    is_standby=is_standby,
-                )
-                instance.validated_save()
-        return len(ip_addresses)
-
-    add_ip_addresses.alters_data = True
-
-    def remove_ip_addresses(self, ip_addresses):
-        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-
-        Returns:
-            Number of instances removed.
-        """
-        count = 0
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                qs = self.ip_addresses.through.objects.filter(ip_address=ip, vm_interface=self)
-                deleted_count, _ = qs.delete()
-                count += deleted_count
-        return count
-
-    remove_ip_addresses.alters_data = True
 
     @property
     def parent(self):

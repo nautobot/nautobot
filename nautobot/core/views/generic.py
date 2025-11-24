@@ -36,11 +36,10 @@ from nautobot.core.forms import (
     CSVFileField,
     ImportForm,
     restrict_form_fields,
-    SearchForm,
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -114,6 +113,7 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             (dict): Additional context data
         """
         return {
+            "object_detail_content": self.object_detail_content,
             "active_tab": request.GET.get("tab", "main"),
         }
 
@@ -227,6 +227,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
         resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         skip_user_and_global_default_saved_view = False
@@ -237,30 +238,35 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 self.filterset(),
             )
 
-        # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
-            # Check if there is a default for this view for this specific user
-            if not isinstance(user, AnonymousUser):
-                try:
-                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=list_url
-                    ).saved_view.pk
-                    # Saved view should either belong to the user or be public
-                    SavedView.objects.get(
-                        Q(pk=user_default_saved_view_pk),
-                        Q(owner=user) | Q(is_shared=True),
-                    )
-                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    pass
-
-            # Check if there is a global default for this view
+        # Check if there is a default for this view for this specific user
+        user_default_saved_view = None
+        if not isinstance(user, AnonymousUser):
             try:
-                global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
-                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+                user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                    user=user, view_name=list_url
+                ).saved_view.pk
+                # Saved view should either belong to the user or be public
+                user_default_saved_view = SavedView.objects.get(
+                    Q(pk=user_default_saved_view_pk),
+                    Q(owner=user) | Q(is_shared=True),
+                )
             except ObjectDoesNotExist:
                 pass
+
+        # Check if there is a global default for this view
+        global_saved_view = None
+        try:
+            global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
+            if user_default_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": user_default_saved_view.pk}))
+
+            if global_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset is not None:
             filter_params = self.get_filter_params(request)
@@ -354,6 +360,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
+                configurable=True,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
@@ -372,10 +379,6 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                     f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
                 )
 
-        # For the search form field, use a custom placeholder.
-        q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-        search_form = SearchForm(data=filter_params, q_placeholder=q_placeholder)
-
         valid_actions = self.validate_action_buttons(request)
 
         # Query SavedViews for dropdown button
@@ -390,11 +393,12 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             "filter_params": display_filter_params,
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
-            "search_form": search_form,
             "list_url": list_url,
             "new_changes_not_applied": new_changes_not_applied,
             "current_saved_view": current_saved_view,
             "saved_views": saved_views,
+            "user_default_saved_view": user_default_saved_view,
+            "global_saved_view": global_saved_view,
             "model": model,
             "verbose_name_plural": model._meta.verbose_name_plural,
             "view_action": "list",
@@ -490,6 +494,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
+                "view_action": "update" if obj.present_in_database else "create",
+                "breadcrumbs": self.get_breadcrumbs(),
                 "editing": obj.present_in_database,
                 **self.get_extra_context(request, obj),
             },
@@ -564,6 +570,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
+                "view_action": "update" if obj.present_in_database else "create",
+                "breadcrumbs": self.get_breadcrumbs(),
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
                 **self.get_extra_context(request, obj),
@@ -580,7 +588,7 @@ class ObjectDeleteView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionReq
     """
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_delete.html"
+    template_name = "generic/object_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")
@@ -1037,7 +1045,7 @@ class BulkEditView(
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_bulk_edit.html"
+    template_name = "generic/object_bulk_update.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -1239,7 +1247,7 @@ class BulkDeleteView(
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None
-    template_name = "generic/object_bulk_delete.html"
+    template_name = "generic/object_bulk_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")

@@ -17,7 +17,7 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -57,7 +57,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
@@ -73,6 +73,7 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "data_compliance": "view",
 }
 
 
@@ -260,52 +261,57 @@ class UIComponentsMixin:
     breadcrumbs: ClassVar[Optional[Breadcrumbs]] = None
     view_titles: ClassVar[Optional[Titles]] = None
 
-    def get_view_titles(self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
+    @classmethod
+    def get_view_titles(cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
         """
         Resolve and return the `Titles` component instance.
 
         Resolution order:
-          1) If `self.view_titles` is set on the current view, use it.
-          2) Else, if `model` is provided, copy the `view_titles` from the view
-             class associated with that model via `lookup.get_view_for_model(model, action)`.
+          1) If `.view_titles` is set on the current view, use it.
+          2) Else, if `model` is provided, copy the `view_titles` from the view class associated with that model
+             via `lookup.get_view_for_model(model, action)`.
           3) Else, instantiate and return the default `Titles()`.
 
         Args:
             model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-            view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+            view_type: Logical view type used by `lookup.get_view_for_model()`
+                (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
             Titles: A concrete `Titles` component instance ready to use.
         """
-        return self._resolve_component("view_titles", Titles, model, view_type)
+        return cls._resolve_component("view_titles", Titles, model, view_type)
 
+    @classmethod
     def get_breadcrumbs(
-        self, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
+        cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
     ) -> Breadcrumbs:
         """
         Resolve and return the `Breadcrumbs` component instance.
 
         Resolution order mirrors `get_view_titles()`:
-         1) Use `self.breadcrumbs` if set locally.
-         2) Else, if `model` is provided, copy the `breadcrumbs` from the view
-             class associated with that model via `lookup.get_view_for_model(model, action)`.
+         1) Use `.breadcrumbs` if set locally.
+         2) Else, if `model` is provided, copy the `breadcrumbs` from the view class associated with that model
+            via `lookup.get_view_for_model(model, action)`.
          3) Else return a new default `Breadcrumbs()`.
 
         Args:
            model: A Django model **class**, **instance**, dotted name string, or `None`.
                 Passed to `lookup.get_view_for_model()` to find the related view class.
                 If `None`, only local/default resolution is used.
-           view_type: Logical view type used by `lookup.get_view_for_model()` (e.g., `"List"` or empty to construct `"DeviceView"` string).
+           view_type: Logical view type used by `lookup.get_view_for_model()`
+                (e.g., `"List"` or empty to construct `"DeviceView"` string).
 
         Returns:
            Breadcrumbs: A concrete `Breadcrumbs` component instance.
         """
-        return self._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
+        return cls._resolve_component("breadcrumbs", Breadcrumbs, model, view_type)
 
+    @classmethod
     def _resolve_component(
-        self,
+        cls,
         attr_name: str,
         default_cls: Type[Union[Breadcrumbs, Titles]],
         model: Union[None, str, Type[Model], Model] = None,
@@ -326,14 +332,14 @@ class UIComponentsMixin:
         Returns:
             Breadcrumbs/Title instance.
         """
-        local = getattr(self, attr_name, None)
+        local = getattr(cls, attr_name, None)
         if local is not None:
-            return self._instantiate_if_needed(local, default_cls)
+            return cls._instantiate_if_needed(local, default_cls)
 
         if model is not None:
             view_class = lookup.get_view_for_model(model, view_type)
             view_component = getattr(view_class, attr_name, None)
-            return self._instantiate_if_needed(view_component, default_cls)
+            return cls._instantiate_if_needed(view_component, default_cls)
 
         return default_cls()
 
@@ -402,16 +408,17 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         """
         Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
 
-        :param model: A model or instance
-        :param actions: A list of actions to perform on the model
+        Args:
+            model (Union[type(Model), Model]): A model or instance
+            actions (List[str]): A list of actions to perform on the model
         """
         model_permissions = []
         for action in actions:
-            # Append additional object permissions if specified.
-            if self.custom_view_additional_permissions:
-                model_permissions.append(*self.custom_view_additional_permissions)
             # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+        # Append additional object permissions if specified.
+        if self.custom_view_additional_permissions:
+            model_permissions.extend(self.custom_view_additional_permissions)
         return model_permissions
 
     def get_required_permission(self):
@@ -529,7 +536,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         form.add_error(None, msg)
         return form
 
-    def _handle_not_implemented_error(self):
+    def _handle_not_implemented_error(self, error):
+        self.logger.debug(f"NotImplementedError raised on action {self.action} resulting in error: {error}")
         # Blanket handler for NotImplementedError raised by form helper functions
         msg = "Please provide the appropriate mixin before using this helper function"
         messages.error(self.request, msg)
@@ -564,8 +572,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self._handle_validation_error(e)
         except ObjectDoesNotExist:
             form = self._handle_object_does_not_exist(form)
-        except NotImplementedError:
-            self._handle_not_implemented_error()
+        except NotImplementedError as error:
+            self._handle_not_implemented_error(error)
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
@@ -683,7 +691,10 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             default_tab = "main"
             if hasattr(self, "action") and self.action != "retrieve":
                 default_tab = self.action
-            return {"active_tab": request.GET.get("tab", default_tab)}
+            return {
+                "object_detail_content": getattr(self, "object_detail_content", None),
+                "active_tab": request.GET.get("tab", default_tab),
+            }
         return {}
 
     def get_template_name(self):
@@ -724,7 +735,11 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
                     except TemplateDoesNotExist:
                         # Try a different detail view template format
                         template_name = f"{app_label}/{model_opts.model_name}.html"
-                        select_template([template_name])
+                        try:
+                            select_template([template_name])
+                        except TemplateDoesNotExist:
+                            # Catch-all fallback to just object_retrieve.html
+                            template_name = "generic/object_retrieve.html"
         return template_name
 
     def get_form(self, *args, **kwargs):
@@ -914,35 +929,42 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 self.filterset_class(),
             )
 
-        # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
-            # Check if there is a default for this view for this specific user
-            app_label, model_name = queryset.model._meta.label.split(".")
-            view_name = f"{app_label}:{model_name.lower()}_list"
-            user = request.user
-            if not isinstance(user, AnonymousUser):
-                try:
-                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=view_name
-                    ).saved_view.pk
-                    # Saved view should either belong to the user or be public
-                    SavedView.objects.get(
-                        Q(pk=user_default_saved_view_pk),
-                        Q(owner=user) | Q(is_shared=True),
-                    )
-                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    pass
+        resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
+        view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
-            # Check if there is a global default for this view
+        # Check if there is a default for this view for this specific user
+        user_default_saved_view = None
+        user = request.user
+        if not isinstance(user, AnonymousUser):
             try:
-                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+                user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                    user=user, view_name=view_name
+                ).saved_view.pk
+                # Saved view should either belong to the user or be public
+                user_default_saved_view = SavedView.objects.get(
+                    Q(pk=user_default_saved_view_pk),
+                    Q(owner=user) | Q(is_shared=True),
+                )
             except ObjectDoesNotExist:
                 pass
 
-        return Response({})
+        # Check if there is a global default for this view
+        global_saved_view = None
+        try:
+            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
+            if user_default_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": user_default_saved_view.pk}))
+
+            if global_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+
+        return Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -1043,7 +1065,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
                     self.success_url = url
-                self.success_url = request.get_full_path()
+                else:
+                    self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
                 if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1130,6 +1153,19 @@ class BulkEditAndBulkDeleteModelMixin:
         # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
         job_form.is_valid()
         job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
+        # adapted from nautobot/extras/views JobRunView.post() - TODO: deduplicate this code and unify code paths
+        with transaction.atomic():
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                **BulkDeleteObjects.serialize_data(job_kwargs),
+            )
+            if scheduled_job.has_approval_workflow_definition():
+                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
+            else:
+                scheduled_job.delete()
+
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
@@ -1152,6 +1188,19 @@ class BulkEditAndBulkDeleteModelMixin:
         # NOTE: BulkEditObjects cant be invalid, so there is no need for handling invalid error
         job_form.is_valid()
         job_kwargs = BulkEditObjects.prepare_job_kwargs(job_form.cleaned_data)
+        # adapted from nautobot/extras/views JobRunView.post() - TODO: deduplicate this code and unify code paths
+        with transaction.atomic():
+            scheduled_job = ScheduledJob.create_schedule(
+                job_model,
+                request.user,
+                **BulkEditObjects.serialize_data(job_kwargs),
+            )
+            if scheduled_job.has_approval_workflow_definition():
+                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
+            else:
+                scheduled_job.delete()
+
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
@@ -1487,7 +1536,9 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(
+        detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_objectchange"]
+    )
     def changelog(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1508,7 +1559,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     base_template: Optional[str] = None
 
-    @drf_action(detail=True)
+    @drf_action(detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_note"])
     def notes(self, request, *args, **kwargs):
         model = self.get_queryset().model
         data = {
@@ -1516,3 +1567,13 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "active_tab": "notes",
         }
         return Response(data)
+
+
+class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for a DataCompliance to show up for a given object.
+    """
+
+    @drf_action(detail=True, url_path="data-compliance")
+    def data_compliance(self, request, *args, **kwargs):
+        return Response({})

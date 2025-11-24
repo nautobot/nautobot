@@ -6,17 +6,10 @@
 {% load plugins %}
 {% load tz %}
 
-{% block buttons %}
-    {% plugin_buttons object %}
-    {% if user|can_delete:object %}
-        {% delete_button object %}
-    {% endif %}
-{% endblock buttons %}
-
 {% block content %}
     {% if not job_class_found %}
         <div class="alert alert-danger">
-            <i class="mdi mdi-alert"></i>
+            <span class="mdi mdi-alert"></span>
             This job source for this scheduled job is no longer installed.
             This scheduled job will fail to run unless reinstalled at the original location.
         </div>
@@ -24,12 +17,22 @@
     {{ block.super }}
 {% endblock content %}
 
+{% block extra_nav_tabs %}
+    {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.exists %}
+        {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
+            <li class="nav-item" role="presentation">
+                <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %}">Approval Workflow</a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduled Job</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>
@@ -63,24 +66,18 @@
                 <td>{{ object.approval_required | render_boolean }}</td>
             </tr>
             <tr>
-                <td>Approver</td>
+                <td>Decision Date</td>
                 <td>
-                    {{ object.approved_by_user | placeholder }}
-                </td>
-            </tr>
-            <tr>
-                <td>Approved At</td>
-                <td>
-                    {{ object.approved_at | placeholder }}
+                    {{ object.decision_date | placeholder }}
                 </td>
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduling</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Enabled?</td>
                 <td>{{ object.enabled | render_boolean }}</td>
@@ -105,7 +102,8 @@
                 <td>
                     {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% if default_time_zone != object.time_zone %}
-                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }}
+                        {{ object.time_zone }}
+                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                     {% endif %}
                 </td>
             </tr>
@@ -115,7 +113,8 @@
                     {% if object.last_run_at %}
                         {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                         {% if default_time_zone != object.time_zone %}
-                            <br>{{ object.last_run_at|timezone:default_time_zone|date:SHORT_DATETIME_FORMAT }}
+                            {{ object.time_zone }}
+                            <br>{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                         {% endif %}
                     {% else %}
                         {{ object.last_run_at|placeholder }}
@@ -133,11 +132,11 @@
 {% endblock %}
 {% block content_right_page %}
     {% if job_class_found %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>User Inputs</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 {% for key, value in object.kwargs.items %}
                     <tr>
                         <td>{{ labels|get_item:key }}</td>
@@ -149,11 +148,11 @@
             </table>
         </div>
     {% endif %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Celery Keyword Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>

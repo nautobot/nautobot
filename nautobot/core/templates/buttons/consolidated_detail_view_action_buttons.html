@@ -1,9 +1,9 @@
 {% if detail_view_action_buttons|length > 1 %}
-    <div class="btn-group">
+    <div class="btn-group" role="group" aria-label="Detail view button group">
         {% for button in detail_view_action_buttons %}
             {{ button }}
             {% if forloop.first %}
-                <ul class="dropdown-menu pull-right" role="menu">
+                <ul class="dropdown-menu float-end" role="menu">
             {% endif %}
         {% endfor %}
     </ul>
