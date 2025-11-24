@@ -43,7 +43,12 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.extras.views import check_and_call_git_repository_function, ObjectDynamicGroupsView, ObjectNotesView
+from nautobot.extras.views import (
+    check_and_call_git_repository_function,
+    ObjectApprovalWorkflowView,
+    ObjectDynamicGroupsView,
+    ObjectNotesView,
+)
 
 __all__ = (
     "AdminRequiredMixin",
@@ -62,6 +67,7 @@ __all__ = (
     "NautobotHTMLRenderer",
     "NautobotUIViewSet",
     "NautobotViewSetMixin",
+    "ObjectApprovalWorkflowView",
     "ObjectBulkCreateViewMixin",  # 3.0 TODO: remove this
     "ObjectBulkDestroyViewMixin",
     "ObjectBulkUpdateViewMixin",

@@ -14,4 +14,7 @@ class Command(BaseCommand):
         dynamic_groups = DynamicGroup.objects.all()
 
         for dynamic_group in dynamic_groups:
-            dynamic_group.update_cached_members()
+            try:
+                dynamic_group.update_cached_members()
+            except Exception as err:
+                self.stderr.write(self.style.ERROR(f"Error while refreshing {dynamic_group}: {err}"))

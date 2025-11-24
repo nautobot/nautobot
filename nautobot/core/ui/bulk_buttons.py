@@ -32,7 +32,7 @@ class BaseBulkButton(object_detail.FormButton):
 class BulkRenameButton(BaseBulkButton):
     action = "rename"
     color = ButtonActionColorChoices.RENAME
-    icon = "mdi-pencil"
+    icon = "mdi-rename"
     label = "Rename"
     weight = 200
 

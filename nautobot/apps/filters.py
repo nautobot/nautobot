@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     MACAddressFilter,
     MappedPredicatesFilterMixin,
+    ModelMultipleChoiceFilter,
     multivalue_field_factory,
     MultiValueBigNumberFilter,
     MultiValueCharFilter,
@@ -27,24 +28,22 @@ from nautobot.core.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.extras.filters import (
+from nautobot.extras.filter_mixins import (
+    ConfigContextRoleFilter,
     CreatedUpdatedModelFilterSetMixin,
     CustomFieldModelFilterSetMixin,
-    NautobotFilterSet,
-    RelationshipModelFilterSetMixin,
-    StatusModelFilterSetMixin,
-)
-from nautobot.extras.filters.mixins import (
-    ConfigContextRoleFilter,
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
+    RelationshipModelFilterSetMixin,
     RoleFilter,
     RoleModelFilterSetMixin,
     StatusFilter,
+    StatusModelFilterSetMixin,
 )
+from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.plugins import FilterExtension
-from nautobot.ipam.filters import PrefixFilter
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.ipam.filter_mixins import PrefixFilter
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 __all__ = (
     "BaseFilterSet",
@@ -59,6 +58,7 @@ __all__ = (
     "LocalContextModelFilterSetMixin",
     "MACAddressFilter",
     "MappedPredicatesFilterMixin",
+    "ModelMultipleChoiceFilter",
     "MultiValueBigNumberFilter",
     "MultiValueCharFilter",
     "MultiValueDateFilter",

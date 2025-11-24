@@ -1,12 +1,12 @@
-{% extends 'dcim/device_component.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Device Bay</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Device</td>
                 <td>{{ object.device|hyperlinked_object }}</td>
@@ -28,13 +28,13 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Installed Device</strong>
         </div>
         {% if object.installed_device %}
             {% with device=object.installed_device %}
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     <tr>
                         <td>Device</td>
                         <td>{{ device|hyperlinked_object }}</td>
@@ -46,7 +46,7 @@
                 </table>
             {% endwith %}
         {% else %}
-            <div class="panel-body text-muted">
+            <div class="card-body text-secondary">
                 None
             </div>
         {% endif %}

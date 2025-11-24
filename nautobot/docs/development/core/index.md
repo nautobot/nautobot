@@ -13,13 +13,18 @@ The Nautobot Core Team is responsible for the direction and execution of the cod
 Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
 
 * `circuits`: Communications circuits and providers (not to be confused with power circuits)
+* `cloud`: Cloud infrastructure resources and integrations (e.g., cloud providers, networks, and services)
+* `data validation`: Data validation rules and enforcement mechanisms to ensure data integrity
 * `dcim`: Datacenter infrastructure management (locations, racks, and devices)
 * `extras`: Additional features not considered part of the core data model
 * `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
+* `load balancers`: LB models including virtual servers, pools, monitors, etc.
 * `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned
 * `users`: Authentication and user preferences
 * `utilities`: Resources which are not user-facing (extendable classes, etc.)
 * `virtualization`: Virtual machines and clusters
+* `vpn`: Virtual Private Network resources, including tunnels, endpoints, etc.
+* `wireless`: Wireless LANs, access points, and related wireless networking components
 
 ## Release Management
 
@@ -80,7 +85,7 @@ The guiding principals behind Nautobot's SemVer strategy is scoped to adhering t
     * Status and error codes
     * The HTTP verbs
 * GraphQL data structures
-* URL structures for primary navigation and feature access
+* Navigation of the UI and it's elements
 * Any Django model and their relationships for models provided by Nautobot
 * Functions, classes, and modules in `nautobot.apps.*` and their backwards-compatible signatures
 * Any management commands provided by Nautobot
@@ -95,6 +100,7 @@ While anything not explicitly stated above should be not be considered scoped to
 * Any functions, classes, and modules **not** in `nautobot.apps.*`.
 * Any modules, classes, functions, or features that are explicitly marked as "internal" or "experimental" in the documentation
 * Any features or functionalities that are not part of the official documentation should not be relied upon
+* Reliance on UI URL structures as they are subject to change, generally accompanied with a redirect
 
 ### Release Schedule
 
@@ -145,7 +151,7 @@ For the sake of abundance in clarity, we are officially naming what is sometimes
 
 New users who may choose to install an "LTS" release because it is assumed to be more stable, may almost immediately be presented with breaking changes upon their next upgrade to a "stable" Nautobot release. We want to avoid any confusion that may arise between the term "stable" representing our latest stable release compared to "long term support" which is commonly interpreted to represent a stable release.
 
-Our LTM release will be the last minor version of the previous major release train. At the time of this writing `1.6` will be our maintenance release train of Nautobot for the `1.y` release cycle. Version 1 of Nautobot had an extended release cycle as it was our first major release of the platform. Going forward it can be expected that the `x.3` version of the platform will be the maintenance train of any major version.
+Our LTM release will be the last minor version of the previous major release train. At the time of this writing `2.4` will be our maintenance release train of Nautobot for the `2.y` release cycle.
 
 With this schedule you can expect a few things per major/minor release:
 
@@ -161,7 +167,7 @@ With this schedule you can expect a few things per major/minor release:
     * Maintenance release candidate.
     * Features may be added in `x.3.0` but nothing further in this cycle.
 
-A release will only be marked as "In Maintenance" when the next major release is published. Active bug fixes will be applied to a `x.3` until that time. Once a new major release has been published, the following will apply to the `x.3` codebase:
+A release will only be marked as "In Maintenance" when the next major release is published. Active bug fixes will be applied to a LTM until that time. Once a new major release has been published, the following will apply to the LTM codebase:
 
 * Dependencies are frozen/pinned to a specific release; will only be upgraded if addressing a security vulnerability.
 * Data loss and CVE-related fixes will be back ported from the new active release cycle. All other fixes will be back ported on a case-by-case basis.
@@ -174,7 +180,7 @@ A maintenance release will be actively maintained until the next maintenance rel
 
 At the time of this writing we are in the active development of Nautobot 1.6. This will be our last minor release of the v1 series of releases and therefore become our first "Long Term Maintenance" (LTM) release of Nautobot. We will be actively applying the normal category of bug fixes (including UI tweaks, display bugs, etc.) to this release train until the release of Nautobot 2.0.
 
-Once we launch Nautobot 2.0, 1.6 will go into maintenance mode and be considered LTM, continuing to receive data loss and CVE-related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.6 will continue to receive such fixes until the release of Nautobot 2.3, where we will end the maintenance of Nautobot 1.6 and it will formally become "End of Life" (EOL). Nautobot 2.3 will then become the LTM release until Nautobot 3.3 is published the following year.
+Once we launch Nautobot 2.0, 1.6 will go into maintenance mode and be considered LTM, continuing to receive data loss and CVE-related fixes. At that time we will encourage users to migrate to v2 as they are ready. Nautobot 1.6 will continue to receive such fixes until the release of Nautobot 2.4, where we will end the maintenance of Nautobot 1.6 and it will formally become "End of Life" (EOL). Nautobot 2.4 will then become the LTM release until Nautobot 3.3 is published the following year.
 
 If for any reason the next maintenance release is delayed, we will continue to support the current maintenance release. There is no time limitation for this. We want to ensure our users always have a maintenance release available.
 

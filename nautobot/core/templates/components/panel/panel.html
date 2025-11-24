@@ -1,15 +1,18 @@
-<div class="panel panel-{{ css_class|default:"default"}}">
+<div class="card{% if css_class %} border-{{ css_class }}{% endif %}">
     {% if label.strip or header_extra_content.strip %}
-        <div class="panel-heading">
+        <div class="card-header{% if css_class %} bg-{{ css_class }}-subtle border-{{ css_class }}{% endif %}">
             {% if label %}
                 <strong>{{ label }}</strong>
             {% endif %}
+            <a class="btn stretched-link nb-collapse-toggle" data-bs-toggle="collapse" panel-id="{{body_id}}" href="#{{body_id}}" role="button" aria-expanded="true" aria-controls="{{body_id}}">
+                <span class="mdi mdi-chevron-down"></span>
+            </a>
             {{ header_extra_content }}
         </div>
     {% endif %}
     {{ body }}
     {% if footer_content.strip %}
-        <div class="panel-footer">
+        <div class="card-footer{% if css_class %} bg-{{ css_class }}-subtle border-{{ css_class }}{% endif %}">
             {{ footer_content }}
         </div>
     {% endif %}
