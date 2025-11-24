@@ -227,6 +227,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
         resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         skip_user_and_global_default_saved_view = False
