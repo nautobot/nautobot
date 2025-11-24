@@ -1,7 +1,41 @@
 from celery import states
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowStateChoices(ChoiceSet):
+    """
+    Choices for:
+    1. current_state field on the ApprovalWorkflow model.
+    2. state field on the ApprovalWorkflowStage model.
+    3. state field on the ApprovalWorkflowStageResponse model.
+    """
+
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    DENIED = "Denied"
+    CANCELED = "Canceled"
+    COMMENT = "Comment"
+
+    CHOICES = (
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (DENIED, "Denied"),
+        (CANCELED, "Canceled"),
+        (COMMENT, "Comment"),
+    )
+    CSS_CLASSES = {
+        PENDING: "info",
+        APPROVED: "success",
+        DENIED: "danger",
+        CANCELED: "warning",
+        COMMENT: "info",
+    }
+
 
 #
 # Banners (currently plugin-specific)
@@ -127,7 +161,7 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 class ButtonClassChoices(ChoiceSet):
-    CLASS_DEFAULT = "default"
+    CLASS_DEFAULT = "default"  # maps to "secondary" in v3 UI, but kept for backwards compatibility
     CLASS_PRIMARY = "primary"
     CLASS_SUCCESS = "success"
     CLASS_INFO = "info"
@@ -139,21 +173,11 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DEFAULT, "Default"),
         (CLASS_PRIMARY, "Primary (blue)"),
         (CLASS_SUCCESS, "Success (green)"),
-        (CLASS_INFO, "Info (aqua)"),
+        (CLASS_INFO, "Info (blue)"),
         (CLASS_WARNING, "Warning (orange)"),
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),
     )
-
-
-#
-# CustomLinks
-#
-
-
-@class_deprecated_in_favor_of(ButtonClassChoices)
-class CustomLinkButtonClassChoices(ButtonClassChoices):
-    pass
 
 
 #

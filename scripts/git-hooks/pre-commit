@@ -44,6 +44,12 @@ invoke ruff || EXIT=1
 echo "Check static analysis via pylint..."
 invoke pylint || EXIT=1
 
+echo "Check JavaScript files code style via ESLint..."
+invoke eslint || EXIT=1
+
+echo "Check JavaScript files code style via Prettier..."
+invoke prettier || EXIT=1
+
 echo "Check Django template file indentations via DjHTML..."
 invoke djhtml || EXIT=1
 

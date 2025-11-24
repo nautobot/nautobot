@@ -170,6 +170,14 @@ class User(BaseModel, AbstractUser):
 
     clear_config.alters_data = True
 
+    @property
+    def navbar_favorites(self):
+        return self.get_config("navbar_favorites", [])
+
+    @property
+    def navbar_favorites_link_list(self):
+        return [item.get("link") for item in self.navbar_favorites]
+
 
 #
 # Proxy models for admin

@@ -1,0 +1,27 @@
+<ul class="list-unstyled">
+    {% for item in request.user.navbar_favorites %}
+        {% if item.link and item.name %}
+            <li class="nb-sidenav-link-wrapper" id="sidenav-favorite-link-{{ forloop.counter }}">
+                <a class="nb-sidenav-link flat vstack align-items-start" href="{{ item.link }}">
+                    {{ item.name }}
+                    <small class="text-secondary text-truncate">{{ item.tab_name }}</small>
+                </a>
+                <button class="nb-sidenav-favorite active"
+                        type="button"
+                        hx-post="{% url "user:navbar_favorites_delete" %}"
+                        hx-vals='{"link": "{{ item.link }}", "name": "{{ item.name }}", "tab_name": "{{ item.tab_name }}", "group_name": "{{ item.group_name }}", "remove": true}'
+                        hx-target="#sidenav-favorite-link-{{ forloop.counter }}"
+                        hx-swap="delete"
+                >
+                    <span class="visually-hidden">
+                        Remove from favorites
+                    </span>
+                </button>
+            </li>
+        {% endif %}
+    {% empty %}
+        <li class="nb-sidenav-link-group text-center" style="text-transform: none;">
+            You don't have any favorite pages yet.
+        </li>
+    {% endfor %}
+</ul>

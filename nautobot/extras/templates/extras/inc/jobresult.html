@@ -8,11 +8,11 @@
 {% load plugins %}
 {% load static %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>Summary of Results</strong>
     </div>
-    <table class="table table-hover panel-body">
+    <table class="table table-hover card-body">
         <tr>
             <td>Job Description</td>
             <td>{{ result.job_model.description | render_markdown | placeholder }}</td>
@@ -85,11 +85,11 @@
 </div>
 
 
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <strong>Logs</strong>
-        <div class="pull-right noprint">
-            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
+        <div class="float-end d-print-none">
+            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px; width: 190px;" />
         </div>
     </div>
     {% if result and result.pk %}

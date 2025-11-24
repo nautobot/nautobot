@@ -4,7 +4,7 @@ import uuid
 from django.core.cache import cache
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Device, LocationType
+from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.models import JobQueue
 from nautobot.extras.registry import registry
@@ -23,11 +23,10 @@ class UtilsTestCase(TestCase):
             self.assertEqual(get_base_template("dcim/device/base.html", Device), "dcim/device/base.html")
 
         with self.subTest("<model>.html wins over <model>_retrieve.html"):
-            # TODO: why do we even have both locationtype.html and locationtype_retrieve.html?
-            self.assertEqual(get_base_template(None, LocationType), "dcim/locationtype.html")
+            self.assertEqual(get_base_template(None, PowerPort), "dcim/powerport.html")
 
         with self.subTest("<model>_retrieve.html is used if present"):
-            self.assertEqual(get_base_template(None, JobQueue), "extras/jobqueue_retrieve.html")
+            self.assertEqual(get_base_template(None, Cable), "dcim/cable_retrieve.html")
 
         with self.subTest("generic/object_retrieve.html is used as a fallback"):
             self.assertEqual(get_base_template(None, Token), "generic/object_retrieve.html")
@@ -35,10 +34,12 @@ class UtilsTestCase(TestCase):
     @mock.patch("celery.app.control.Inspect.active_queues")
     def test_get_celery_queues(self, mock_active_queues):
         with self.subTest("No queues"):
+            cache.clear()
             mock_active_queues.return_value = None
             self.assertDictEqual(get_celery_queues(), {})
 
         with self.subTest("1 worker 1 queue"):
+            cache.clear()
             mock_active_queues.return_value = {"celery@worker": [{"name": "queue1"}]}
             self.assertDictEqual(get_celery_queues(), {"queue1": 1})
 
