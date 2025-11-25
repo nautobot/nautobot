@@ -1137,6 +1137,7 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+    is_version_controlled = False
     is_data_compliance_model = False
 
     def __str__(self):
