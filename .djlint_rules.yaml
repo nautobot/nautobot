@@ -1,0 +1,404 @@
+- rule:
+    name: S001
+    flags: re.DOTALL
+    message: <i> tags just for icons goes against the style guide. Use <span> or <svg> instead.
+    patterns:
+      - <i .*class="[^"]*(?<!-)\bmdi\b(?!-)[^"]*"
+- rule:
+    name: B071
+    message: .pull-left is now .float-start
+    flags: re.DOTALL
+    patterns:
+      - \.pull-left
+      - pull-left
+- rule:
+    name: B072
+    message: .pull-right is now .float-end
+    flags: re.DOTALL
+    patterns:
+      - \.pull-right
+      - pull-right
+- rule:
+    name: B073
+    message: .center-block is now .mx-auto
+    flags: re.DOTALL
+    patterns:
+      - \.center-block
+      - center-block
+- rule:
+    name: B081
+    message: data-toggle is now data-bs-toggle
+    flags: re.DOTALL
+    patterns:
+      - data-toggle
+- rule:
+    name: B082
+    message: data-dismiss is now data-bs-dismiss
+    flags: re.DOTALL
+    patterns:
+      - data-dismiss
+- rule:
+    name: B083
+    message: data-target is now data-bs-target
+    flags: re.DOTALL
+    patterns:
+      - data-target
+- rule:
+    name: B084
+    message: data-title is now data-bs-title
+    flags: re.DOTALL
+    patterns:
+      - data-title
+- rule:
+    name: B085
+    message: data-backdrop is now data-bs-backdrop
+    flags: re.DOTALL
+    patterns:
+      - data-backdrop
+- rule:
+    name: B011
+    message: btn-default is now btn-secondary
+    flags: re.DOTALL
+    patterns:
+      - \.btn-default
+      - btn-default
+- rule:
+    name: B012
+    message: close is now btn-close
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)close\b[^"]*"
+- rule:
+    name: B013
+    message: btn-xs no longer exists. btn-sm is the smallest size.
+    flags: re.DOTALL
+    patterns:
+      - \.btn-xs
+      - btn-xs
+- rule:
+    name: B014
+    message: text-muted is now text-secondary
+    flags: re.DOTALL
+    patterns:
+      - \.text-muted
+      - text-muted
+- rule:
+    name: B015
+    message: caret removed; use an icon from icon library instead.
+    flags: re.DOTALL
+    patterns:
+      - \.caret
+      - caret
+- rule:
+    name: B016
+    message: sr-only is now visually-hidden
+    flags: re.DOTALL
+    patterns:
+      - \.sr-only
+      - sr-only
+- rule:
+    name: B017
+    message: sr-only-focusable is now visually-hidden-focusable
+    flags: re.DOTALL
+    patterns:
+      - \.sr-only-focusable
+      - sr-only-focusable
+- rule:
+    name: B018
+    message: text-hide should be removed
+    flags: re.DOTALL
+    patterns:
+      - \.text-hide
+      - text-hide
+- rule:
+    name: B021
+    message: hidden is now d-none
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<![-_.])hidden\b[^"]*"
+- rule:
+    name: B022
+    message: visible- is replaced by d-{value}-{breakpoint}. Value can be block, inline, inline-block, table, flex, etc. Breakpoint can be sm, md, lg, or xl.
+    flags: re.DOTALL
+    patterns:
+      - visible-.*
+- rule:
+    name: B023
+    message: hidden-xs is replaced by d-sm-none (hide on extra small).
+    flags: re.DOTALL
+    patterns:
+      - hidden-xs
+- rule:
+    name: B024
+    message: visible-xs is replaced by d-sm-{value} (show on extra small). Value can be block, inline, inline-block, table, flex, etc.
+    flags: re.DOTALL
+    patterns:
+      - visible-xs
+- rule:
+    name: B025
+    message: hidden- is replaced by d-{breakpoint}. Value can be sm, md, lg, or xl.
+    flags: re.DOTALL
+    patterns:
+      - (?<!-)hidden-.*
+- rule:
+    name: B032
+    message: The contextual classes (e.g., label-primary, label-success) now use the general-purpose classes bg-primary, bg-success, etc.
+    flags: re.DOTALL
+    patterns:
+      - label-default
+      - label-primary
+      - label-success
+      - label-warning
+      - label-danger
+      - label-info
+      - label-transparent
+- rule:
+    name: B061
+    message: panel is no longer available; use card instead.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)\bpanel\b(?!-)[^"]*"
+- rule:
+    name: B062
+    message: panel-heading is no longer available; use card-header instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-heading
+- rule:
+    name: B063
+    message: panel-body is no longer available; use card-body instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-body
+- rule:
+    name: B064
+    message: panel-footer is no longer available; use card-footer instead.
+    flags: re.DOTALL
+    patterns:
+      - panel-footer
+- rule:
+    name: B001
+    message: Breadcrumb Item is changed from <li> to <li class="breadcrumb-item">
+    python_module: scripts.djlint_b001
+- rule:
+    name: B002
+    message: Active breadcrumb item is changed from <li class="active">Data</li> to <li class="breadcrumb-item active" aria-current="page">Data</li>
+    python_module: scripts.djlint_b002
+- rule:
+    name: B041
+    message: Nav Item is changed from <li> to <li class="nav-item">
+    python_module: scripts.djlint_b041
+- rule:
+    name: B042
+    message: Nav Link is changed from <a href> to <a class="nav-link" href>
+    python_module: scripts.djlint_b042
+- rule:
+    name: B043
+    message: Active Nav Link is changed from <a class="active" href> to <a class="nav-link active" href>
+    python_module: scripts.djlint_b043
+- rule:
+    name: B051
+    message: Pagination Page Item is changed from <li> to <li class="page-item">
+    python_module: scripts.djlint_b051
+- rule:
+    name: B052
+    message: Pagination Page Link is changed from <a> to <a class="page-link">
+    python_module: scripts.djlint_b052
+- rule:
+    name: B053
+    message: Pagination Page Link Active/Disabled is set on the <li> not the <a>.
+    python_module: scripts.djlint_b053
+- rule:
+    name: B054
+    message: Replace <i class="mdi mdi-chevron-double-left"></i> with <span aria-hidden="true">&laquo;</span>
+    python_module: scripts.djlint_b054
+- rule:
+    name: B055
+    message: Replace <i class="mdi mdi-chevron-double-right"></i> with <span aria-hidden="true">&raquo;</span>
+    python_module: scripts.djlint_b055
+- rule:
+    name: B100
+    message: Replace accordion-toggle with nb-collapse-toggle
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*accordion-toggle[\s"]
+- rule:
+    name: B101
+    message: Remove accordion-toggle-all, see New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*accordion-toggle-all[^"]*"
+- rule:
+    name: B102
+    message: Replace banner-bottom with nb-banner-bottom
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)banner-bottom\b(?!-)[^"]*"
+- rule:
+    name: B103
+    message: Replace btn-inline with nb-btn-inline-hover and refer to New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*btn-inline\b(?!-)[^"]*"
+- rule:
+    name: B104
+    message: Remove hover_copy, refer to Hover Copy Buttons section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*hover_copy\b(?!_)[^"]*"
+- rule:
+    name: B105
+    message: Remove hover_copy_button, refer to Hover Copy Buttons section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*hover_copy_button\b(?!_)[^"]*"
+- rule:
+    name: B106
+    message: Replace cable-trace with nb-cable-trace
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)cable-trace\b(?!-)[^"]*
+- rule:
+    name: B107
+    message: Replace color-block with nb-color-block
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)color-block\b(?!-)[^"]*"
+- rule:
+    name: B108
+    message: Remove inline-color-block
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*inline-color-block\b(?!-)[^"]*"
+- rule:
+    name: B109
+    message: Replace editor-container with nb-editor-container
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)editor-container\b(?!-)[^"]*"
+- rule:
+    name: B110
+    message: Remove filter-container, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*filter-container\b(?!-)[^"]*"
+- rule:
+    name: B111
+    message: Remove display-inline (scoped to filters), refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*display-inline\b(?!-)[^"]*"
+- rule:
+    name: B112
+    message: Remove filter-selection, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*filter-selection\b(?!-)[^"]*"
+- rule:
+    name: B113
+    message: Remove filter-selection-choice, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*filter-selection-choice\b(?!-)[^"]*"
+- rule:
+    name: B114
+    message: Remove filter-selection-choice-remove, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*filter-selection-choice-remove\b(?!-)[^"]*"
+- rule:
+    name: B115
+    message: Remove filter-selection-rendered, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*filter-selection-rendered\b(?!-)[^"]*"
+- rule:
+    name: B116
+    message: Remove remove-filter-param, refer to Multi-badge section in New Nautobot Custom UI APIs documentation for details.
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*remove-filter-param\b(?!-)[^"]*"
+- rule:
+    name: B117
+    message: Replace noprint with d-print-none
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*noprint\b(?!-)[^"]*"
+- rule:
+    name: B118
+    message: Remove powered-by-nautobot
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*powered-by-nautobot\b(?!-)[^"]*"
+- rule:
+    name: B119
+    message: Replace report-stats with nb-report-stats
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)report-stats\b(?!-)[^"]*"
+- rule:
+    name: B120
+    message: Replace right-side-panel with nb-right-side-panel
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)right-side-panel\b(?!-)[^"]*"
+- rule:
+    name: B121
+    message: Replace software-image-hierarchy with nb-software-image-hierarchy
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)software-image-hierarchy\b(?!-)[^"]*"
+- rule:
+    name: B122
+    message: Replace tree-hierarchy with nb-tree-hierarchy
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tree-hierarchy\b(?!-)[^"]*"
+- rule:
+    name: B123
+    message: Replace tiles with nb-tiles
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tiles\b(?!-)[^"]*"
+- rule:
+    name: B124
+    message: Replace tile with nb-tile
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tile\b(?!-)[^"]*"
+- rule:
+    name: B125
+    message: Replace tile-description with nb-tile-description
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tile-description\b(?!-)[^"]*"
+- rule:
+    name: B126
+    message: Replace tile-footer with nb-tile-footer
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tile-footer\b(?!-)[^"]*"
+- rule:
+    name: B127
+    message: Replace tile-header with nb-tile-header
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)tile-header\b(?!-)[^"]*"
+- rule:
+    name: B128
+    message: Replace table-headings with nb-table-headings
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)table-headings\b(?!-)[^"]*"
+- rule:
+    name: B129
+    message: Replace description with nb-description
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)description\b(?!-)[^"]*"
+- rule:
+    name: B130
+    message: Replace style-line with nb-style-line
+    flags: re.DOTALL
+    patterns:
+      - class="[^"]*(?<!-)style-line\b(?!-)[^"]*"

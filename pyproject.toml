@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.22b1"
+version = "3.0.2b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 packages = [
     {include = "nautobot"}
@@ -32,7 +33,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.10,<3.14"
 # Background task processing
 celery = "~5.5.3"
 # Cryptographic recipes and primitives.
@@ -40,7 +41,7 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~46.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.25"
+Django = "~4.2.26"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -54,7 +55,7 @@ django-celery-beat = "~2.7.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.6.0"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.3.2"
+django-constance = "~4.3.4"
 # Permit cross-domain API requests
 django-cors-headers = "~4.9.0"
 # Store files in the database for background tasks
@@ -96,11 +97,9 @@ emoji = "~2.15.0"
 # Git integrations for Python
 GitPython = "~3.1.45"
 # GraphQL support
-# NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~2.16.0"
+graphene-django = "~3.2.3"
 # Graphene Optimizer
-# NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.8.0"
+graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
@@ -120,7 +119,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.3.1"
+nh3 = "~0.3.2"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -170,7 +169,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^37.11.0"
+faker = "^37.12.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -190,11 +189,11 @@ markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Image lightboxing in mkdocs
-mkdocs-glightbox = "~0.5.1"
+mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.4.0"
+mkdocs-macros-plugin = "~1.4.1"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.22"
+mkdocs-material = "~9.6.23"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -214,15 +213,15 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.32"
+pymarkdownlnt = "~0.9.33"
 # Combination linter and code formatter
-ruff = "~0.14.0"
+ruff = "~0.14.5"
 # YAML linting
 yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
-# Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
-coverage = "<=6.4.0"
+# Test code coverage measurement
+coverage = "~7.10.6"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
@@ -240,6 +239,7 @@ time-machine = "~2.19.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
 nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
 
 [build-system]
@@ -418,7 +418,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.4.md"
+filename = "nautobot/docs/release-notes/version-3.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

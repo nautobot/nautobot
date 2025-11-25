@@ -1,6 +1,5 @@
-from django.test import TestCase
-
 from nautobot.core.models.querysets import count_related
+from nautobot.core.testing import TestCase
 from nautobot.dcim.models.locations import Location
 from nautobot.ipam.models import Prefix
 from nautobot.ipam.tables import PrefixTable

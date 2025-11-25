@@ -1,3 +1,4 @@
+import contextvars
 import logging
 import operator
 from typing import Optional
@@ -48,6 +49,9 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+default_namespace_pk = contextvars.ContextVar("default_namespace_pk", default=None)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -68,6 +72,13 @@ class Namespace(PrimaryModel):
         blank=True,
         null=True,
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="namespaces",
+        blank=True,
+        null=True,
+    )
 
     @property
     def ip_addresses(self):
@@ -80,9 +91,17 @@ class Namespace(PrimaryModel):
     def __str__(self):
         return self.name
 
+    def delete(self, *args, **kwargs):
+        if self.name == "Global":
+            default_namespace_pk.set(None)
+        super().delete(*args, **kwargs)
+
 
 def get_default_namespace():
-    """Return the Global namespace."""
+    """Return the Global namespace.
+
+    Because this has no access to historical models, this MUST NOT be called during migrations.
+    """
     obj, _ = Namespace.objects.get_or_create(
         name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
     )
@@ -91,7 +110,15 @@ def get_default_namespace():
 
 def get_default_namespace_pk():
     """Return the PK of the Global namespace for use in default value for foreign keys."""
-    return get_default_namespace().pk
+    pk = default_namespace_pk.get()
+    if pk is None:
+        # MUST NEVER HAPPEN DURING MIGRATIONS, because get_default_namespace() doesn't use historical models.
+        # This is accommodated in migration ipam__0030 to directly set default_namespace_pk *from* the historical model
+        # but any other migrations using this function may need to implement similar workarounds.
+        pk = get_default_namespace().pk
+        default_namespace_pk.set(pk)
+
+    return pk
 
 
 @extras_features(

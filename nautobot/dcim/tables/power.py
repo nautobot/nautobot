@@ -2,6 +2,7 @@ import django_tables2 as tables
 
 from nautobot.core.tables import (
     BaseTable,
+    ButtonsColumn,
     ChoiceFieldColumn,
     LinkedCountColumn,
     TagColumn,
@@ -38,6 +39,7 @@ class PowerPanelTable(BaseTable):
         verbose_name="Feeds",
     )
     tags = TagColumn(url_name="dcim:powerpanel_list")
+    actions = ButtonsColumn(PowerPanel)
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
@@ -83,6 +85,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
+    actions = ButtonsColumn(PowerFeed)
 
     class Meta(BaseTable.Meta):
         model = PowerFeed

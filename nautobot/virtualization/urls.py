@@ -15,17 +15,6 @@ router.register("cluster-types", views.ClusterTypeUIViewSet)
 router.register("virtual-machines", views.VirtualMachineUIViewSet)
 
 urlpatterns = [
-    # Clusters
-    path(
-        "clusters/<uuid:pk>/devices/add/",
-        views.ClusterAddDevicesView.as_view(),
-        name="cluster_add_devices",
-    ),
-    path(
-        "clusters/<uuid:pk>/devices/remove/",
-        views.ClusterRemoveDevicesView.as_view(),
-        name="cluster_remove_devices",
-    ),
     # VM interfaces
     path("interfaces/", views.VMInterfaceListView.as_view(), name="vminterface_list"),
     path("interfaces/add/", views.VMInterfaceCreateView.as_view(), name="vminterface_add"),

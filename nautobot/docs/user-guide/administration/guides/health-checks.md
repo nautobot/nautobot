@@ -38,6 +38,12 @@ In addition to monitoring the existence of a given Celery worker process ID, you
 !!! tip
     A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
 
+Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the (optional)  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) settings in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
+
+```shell
+[ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false
+```
+
 ### Nautobot Celery Beat
 
 In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
@@ -128,6 +134,32 @@ livenessProbe:
       - "/bin/bash"
       - "-c"
       - "nautobot-server celery inspect ping --destination celery@$HOSTNAME"
+  periodSeconds: 60
+  timeoutSeconds: 10
+  failureThreshold: 3
+```
+
+It is advised though to enable the custom [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting in order to use files for probes in Kubernetes. That way even if you have concurrency of `1` in your environment, probes will still work:
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      - "[ $(find $CELERY_WORKER_READINESS_FILE | wc -l) -eq 1 ] || false"
+  periodSeconds: 60
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+livenessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      # This is set to check if the file was changed in the last minute (-mmin -1),
+      # but you can use fractional minutes as well such as 0.1 for every 6 seconds
+      - "[ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false"
   periodSeconds: 60
   timeoutSeconds: 10
   failureThreshold: 3

@@ -9,6 +9,7 @@ from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as Tree
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache
+from nautobot.core.utils.cache import construct_cache_key
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -94,7 +95,7 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
 
     @property
     def max_depth_cache_key(self):
-        return f"nautobot.{self.model._meta.concrete_model._meta.label_lower}.max_depth"
+        return construct_cache_key(self, method_name="max_depth", branch_aware=True)
 
     @property
     def max_depth(self):
@@ -102,10 +103,11 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
 
         Generally TreeManagers are persistent objects while TreeQuerySets are not, hence the difference in behavior.
         """
-        max_depth = cache.get(self.max_depth_cache_key)
+        cache_key = self.max_depth_cache_key
+        max_depth = cache.get(cache_key)
         if max_depth is None:
             max_depth = self.max_tree_depth()
-            cache.set(self.max_depth_cache_key, max_depth)
+            cache.set(cache_key, max_depth)
         return max_depth
 
 
@@ -128,7 +130,7 @@ class TreeModel(TreeNode):
         """
         if not hasattr(self, "name"):
             raise NotImplementedError("default TreeModel.display implementation requires a `name` attribute!")
-        cache_key = f"nautobot.{self._meta.concrete_model._meta.label_lower}.{self.id}.display"
+        cache_key = construct_cache_key(self, method_name="display", branch_aware=True)
         display_str = cache.get(cache_key, "")
         if display_str:
             return display_str

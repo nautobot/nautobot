@@ -77,8 +77,9 @@ class TenantTable(BaseTable):
     name = tables.Column(linkify=True)
     tenant_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
+    actions = ButtonsColumn(Tenant)
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "tenant_group", "description", "tags")
-        default_columns = ("pk", "name", "tenant_group", "description")
+        fields = ("pk", "name", "tenant_group", "description", "tags", "actions")
+        default_columns = ("pk", "name", "tenant_group", "description", "actions")

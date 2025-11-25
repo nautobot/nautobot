@@ -1,0 +1,35 @@
+{% extends base_template %}
+{% load approvals %}
+{% load helpers %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Approval Workflow</strong>
+                </div>
+                <table class="table table-hover card-body attr-table">
+                    <tr>
+                        <td>Approval Workflow Definition</td>
+                        <td>{{ approval_workflow.approval_workflow_definition | hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ verbose_name }}</td>
+                        <td>{{ approval_workflow.object_under_review | hyperlinked_object  }}</td>
+                    </tr>
+                    <tr>
+                        <td>Current State</td>
+                        <td>{{ approval_workflow.current_state | render_approval_workflow_state  }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            {% include 'panel_table.html' with table=stage_table heading="Stages"%}
+        </div>
+        <div class="full-width">
+            {% include 'panel_table.html' with table=response_table heading="Responses"%}
+        </div>
+    </div>
+{% endblock %}
