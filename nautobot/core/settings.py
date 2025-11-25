@@ -959,6 +959,19 @@ CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
 )
 
+# Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
+CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+)
+
+# Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
+CELERY_WORKER_READINESS_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_ready")
+)
+
+# Celery health probes as files - if enabled, Celery worker health probes will be implemented as files
+CELERY_HEALTH_PROBES_AS_FILES = is_truthy(os.getenv("NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES", "False"))
+
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
