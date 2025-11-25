@@ -1,7 +1,9 @@
 from celery import states
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
+from nautobot.core.branching import BranchContext
 from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 
@@ -101,6 +103,8 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         }
         from nautobot.extras.models.jobs import Job
 
+        User = get_user_model()
+
         # Need to have a try/except block here
         # because sometimes job_model_id will be None.
         try:
@@ -114,28 +118,33 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         if "date_started" in kwargs:
             fields["date_started"] = kwargs["date_started"]
 
-        obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
+        with BranchContext(
+            branch_name=celery_kwargs.get("nautobot_job_branch_name", None),
+            user=User.objects.get(id=user_id) if user_id else None,
+            using=using,
+        ):
+            obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
-        if not created:
-            # Make sure `date_done` is allowed to stay null until the task reaches a ready state.
-            #
-            # Default behavior in `django-celery-results` has this field as a
-            # `DateField(auto_now=True)` which just automatically updates the `date_done` field on every
-            # state transition. This is different than Celery's default behavior (and the current
-            # behavior of Nautobot) to keep it null until there is a state transition to a ready state
-            # (e.g. `SUCCESS`, `REVOKED`, `FAILURE`).
-            if fields["status"] in states.READY_STATES:
-                fields["date_done"] = timezone.now()
+            if not created:
+                # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
+                #
+                # Default behavior in `django-celery-results` has this field as a
+                # `DateField(auto_now=True)` which just automatically updates the `date_done` field on every
+                # state transition. This is different than Celery's default behavior (and the current
+                # behavior of Nautobot) to keep it null until there is a state transition to a ready state
+                # (e.g. `SUCCESS`, `REVOKED`, `FAILURE`).
+                if fields["status"] in states.READY_STATES:
+                    fields["date_done"] = timezone.now()
 
-            # Always make sure the Job `name` is set.
-            if not obj.name and fields["task_name"]:
-                fields["name"] = fields["task_name"]
+                # Always make sure the Job `name` is set.
+                if not obj.name and fields["task_name"]:
+                    fields["name"] = fields["task_name"]
 
-            # Set the field values on the model instance.
-            for k, v in fields.items():
-                setattr(obj, k, v)
+                # Set the field values on the model instance.
+                for k, v in fields.items():
+                    setattr(obj, k, v)
 
-            obj.save(using=using)
+                obj.save(using=using)
 
         return obj
 

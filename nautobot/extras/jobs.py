@@ -29,6 +29,7 @@ from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 import netaddr
+from prometheus_client import Counter
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
@@ -39,6 +40,7 @@ from nautobot.core.forms import (
     JSONField,
 )
 from nautobot.core.forms.widgets import ClearableFileInput
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
@@ -88,6 +90,27 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+started_jobs_counter = Counter(
+    name="nautobot_worker_started_jobs",
+    documentation="Job executions that started running",
+    labelnames=("job_class_name", "module_name"),
+)
+finished_jobs_counter = Counter(
+    name="nautobot_worker_finished_jobs",
+    documentation="Job executions that finished running",
+    labelnames=("job_class_name", "module_name", "status"),
+)
+exception_jobs_counter = Counter(
+    name="nautobot_worker_exception_jobs",
+    documentation="Job executions that raised an exception",
+    labelnames=("job_class_name", "module_name", "exception_type"),
+)
+singleton_conflict_counter = Counter(
+    name="nautobot_worker_singleton_conflict",
+    documentation="Job executions that ran into a singleton lock",
+    labelnames=("job_class_name", "module_name"),
+)
+
 
 class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
@@ -108,7 +131,6 @@ class BaseJob:
 
         - name (str)
         - description (str)
-        - approval_required (bool)
         - dryrun_default (bool)
         - field_order (list)
         - has_sensitive_variables (bool)
@@ -262,7 +284,7 @@ class BaseJob:
     @classproperty
     def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
         """Cache key for singleton jobs."""
-        return f"nautobot.extras.jobs.running.{cls.class_path}"
+        return construct_cache_key(cls, method_name="running", branch_aware=False, class_path=cls.class_path)
 
     @final
     @classproperty
@@ -355,11 +377,6 @@ class BaseJob:
 
     @final
     @classproperty
-    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
-
-    @final
-    @classproperty
     def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
@@ -400,7 +417,6 @@ class BaseJob:
             "name": cls.name,
             "grouping": cls.grouping,
             "description": cls.description,
-            "approval_required": cls.approval_required,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
@@ -474,6 +490,7 @@ class BaseJob:
             label="Profile job execution",
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
+        form.fields["_profile"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -490,6 +507,7 @@ class BaseJob:
                 label="Ignore singleton lock",
                 help_text="Allow this singleton job to run even when another instance is already running",
             )
+            form.fields["_ignore_singleton_lock"].widget.attrs["class"] = "form-check-input"
 
         if job_model is not None:
             job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
@@ -1198,6 +1216,9 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
                     extra={"object": job.job_model, "grouping": "initialization"},
                 )
             else:
+                singleton_conflict_counter.labels(
+                    job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+                ).inc()
                 # TODO 3.0: maybe change to logger.failure() and return cleanly, as this is an "acceptable" failure?
                 job.logger.error(
                     "Job %s is a singleton and already running.",
@@ -1281,6 +1302,9 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     result = None
     status = None
+    started_jobs_counter.labels(
+        job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+    ).inc()
     try:
         before_start_result = job.before_start(self.request.id, args, kwargs)
         if not job._failed:
@@ -1297,6 +1321,9 @@ def run_job(self, job_class_path, *args, **kwargs):
             job.on_success(result, self.request.id, args, kwargs)
         else:
             job.on_failure(result, self.request.id, args, kwargs, None)
+        finished_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name, status=status
+        ).inc()
 
         job.after_return(status, result, self.request.id, args, kwargs, None)
 
@@ -1313,11 +1340,21 @@ def run_job(self, job_class_path, *args, **kwargs):
         # We don't want to overwrite the manual state update that we did above, so:
         raise Ignore()
 
-    except Reject:
+    except Reject as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_REJECTED
         raise
 
-    except Ignore:
+    except Ignore as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_IGNORED
         raise
 
@@ -1330,6 +1367,11 @@ def run_job(self, job_class_path, *args, **kwargs):
             "exc_type": type(exc).__name__,
             "exc_message": sanitize(str(exc)),
         }
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         raise
 
     finally:

@@ -16,7 +16,7 @@ from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, FrontPortTemplate, Location, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.models import (
@@ -35,7 +35,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, User
 
 
 class ExportObjectListTest(TransactionTestCase):
@@ -1060,6 +1060,70 @@ class BulkEditTestCase(TransactionTestCase):
         )
         self.assertEqual(IPAddress.objects.all().count(), IPAddress.objects.filter(status=active_status).count())
 
+    def test_bulk_edit_objects_with_saved_view(self):
+        """
+        Bulk edit Status objects using a SavedView filter.
+        """
+        self.add_permissions("extras.change_status", "extras.view_status")
+        saved_view = SavedView.objects.create(
+            name="Save View for Statuses",
+            owner=self.user,
+            view="extras:status_list",
+            config={"filter_params": {"name__isw": ["A"]}},
+        )
+
+        # Confirm the SavedView filter matches some but not all Statuses
+        self.assertTrue(
+            0 < saved_view.get_filtered_queryset(self.user).count() < Status.objects.exclude(color="aa1409").count()
+        )
+        delta_count = (
+            Status.objects.exclude(color="aa1409").count() - saved_view.get_filtered_queryset(self.user).count()
+        )
+
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            username=self.user.username,
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+            form_data={"color": "aa1409", "_all": "True"},
+        )
+
+        self.assertEqual(delta_count, Status.objects.exclude(color="aa1409").count())
+
+    def test_bulk_edit_objects_with_saved_view_with_all_filters_removed(self):
+        """
+        Bulk edit Status objects using a SavedView filter but overwriting the saved field.
+        """
+        self.add_permissions("extras.change_status", "extras.view_status")
+        saved_view = SavedView.objects.create(
+            name="Save View for Statuses",
+            owner=self.user,
+            view="extras:status_list",
+            config={"filter_params": {"name__isw": ["A"]}},
+        )
+
+        self.assertTrue(
+            0 < saved_view.get_filtered_queryset(self.user).count() < Status.objects.exclude(color="aa1409").count()
+        )
+
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            username=self.user.username,
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={"all_filters_removed": [True]},
+            pk_list=[],
+            saved_view_id=saved_view.id,
+            form_data={"color": "aa1409", "_all": "True"},
+        )
+
+        self.assertEqual(0, Status.objects.exclude(color="aa1409").count())
+
 
 class BulkDeleteTestCase(TransactionTestCase):
     """
@@ -1098,6 +1162,19 @@ class BulkDeleteTestCase(TransactionTestCase):
             provider=provider,
             circuit_type=circuit_type,
             status=statuses[0],
+        )
+        Circuit.objects.create(
+            cid="Not Circuit",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=statuses[0],
+        )
+
+        self.saved_view = SavedView.objects.create(
+            name="Save View for Circuits",
+            owner=self.user,
+            view="circuits:circuit_list",
+            config={"filter_params": {"cid__isw": "Circuit "}},
         )
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
@@ -1250,12 +1327,51 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
         self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
 
+    def test_bulk_delete_objects_with_saved_view(self):
+        """
+        Delete objects using a SavedView filter.
+        """
+        self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
+
+        # we assert that the saved view filter actually filters some circuits and there are others not filtered out
+        self.assertTrue(0 < self.saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(Circuit).id,
+            delete_all=True,
+            filter_query_params={},
+            pk_list=[],
+            saved_view_id=self.saved_view.id,
+        )
+        self.assertTrue(Circuit.objects.exists())
+        self.assertFalse(self.saved_view.get_filtered_queryset(self.user).exists())
+
+    def test_bulk_delete_objects_with_saved_view_with_all_filters_removed(self):
+        """
+        Delete Objects using a SavedView filter, but ignore the filter if all_filters_removed is set.
+        """
+        self.add_permissions("circuits.delete_circuit", "circuits.view_circuit")
+
+        # we assert that the saved view filter actually filters some circuits and there are others not filtered out
+        self.assertTrue(0 < self.saved_view.get_filtered_queryset(self.user).count() < Circuit.objects.all().count())
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(Circuit).id,
+            delete_all=True,
+            filter_query_params={"all_filters_removed": [True]},
+            pk_list=[],
+            saved_view_id=self.saved_view.id,
+        )
+        self.assertFalse(Circuit.objects.all().exists())
+
 
 class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
-    def setUp(self):
-        super().setUp()
-        self.job_module = "nautobot.core.jobs.groups"
-        self.job_name = "RefreshDynamicGroupCacheJobButtonReceiver"
+    job_module = "nautobot.core.jobs.groups"
+    job_name = "RefreshDynamicGroupCacheJobButtonReceiver"
 
     def test_successful_cache_refresh(self):
         LocationType.objects.create(name="DG Test LT 1")
@@ -1322,3 +1438,72 @@ class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
             log_fail.message,
             "The members of this Dynamic Group are statically defined and do not need to be recalculated.",
         )
+
+
+class ValidateModelDataTestCase(TransactionTestCase):
+    job_module = "nautobot.core.jobs"
+    job_name = "ValidateModelData"
+
+    def test_successful_validation(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(Status).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+
+    def test_failure_on_invalid_dg(self):
+        dg = DynamicGroup(
+            name="Legacy rear_port_template filter",
+            filter={"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"},
+            content_type=ContentType.objects.get_for_model(FrontPortTemplate),
+        )
+        dg.save(update_cached_members=False)
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(DynamicGroup).pk],
+            verbose=False,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertIn("Enter a list of values", log_fail.message)
+
+    def test_warning_without_permission(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_types=[ContentType.objects.get_for_model(Status).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        log_warn = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+        self.assertEqual("No statuses found", log_warn.message)
+        self.assertIsNone(
+            JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_SUCCESS, message="Validated successfully"
+            ).first()
+        )
+
+    def test_no_restrict_superuser(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            content_types=[ContentType.objects.get_for_model(User).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+
+    def test_no_restrict_non_superuser(self):
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_types=[ContentType.objects.get_for_model(User).pk],
+            verbose=True,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
+        self.assertIn("Unable to apply access permissions to users.user", log_fail.message)

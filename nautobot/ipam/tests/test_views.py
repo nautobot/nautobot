@@ -51,17 +51,7 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class NamespaceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Namespace
     custom_action_required_permissions = {
         "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
@@ -72,11 +62,18 @@ class NamespaceTestCase(
     @classmethod
     def setUpTestData(cls):
         locations = Location.objects.get_for_model(Namespace)
+        tenants = Tenant.objects.all()[:2]
 
-        cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
+        cls.form_data = {
+            "name": "Namespace X",
+            "location": locations[0].pk,
+            "tenant": tenants[0].pk,
+            "description": "A new Namespace",
+        }
 
         cls.bulk_edit_data = {
             "description": "New description",
+            "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
 
@@ -165,7 +162,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 if count > 1:
                     self.assertBodyContains(
                         response,
-                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
@@ -250,7 +247,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 count = prefix.locations.count()
                 if count > 1:
                     self.assertBodyContains(
-                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                        response,
+                        f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
@@ -312,12 +310,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = (
-            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
-        )
+        ip_address_tab = f'<li class="nav-item" role="presentation"><a class="nav-link active" aria-current="page" href="{url}" aria-controls="ip-addresses" role="tab">IP Addresses <span class="badge bg-primary">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
         # Checks if the button is in the content.
-        self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address""", content)
+        add_ip_link = (
+            reverse("ipam:ipaddress_add")
+            + "?"
+            + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
+        )
+        add_ip_button = f'<a href="{add_ip_link}" class="btn btn-primary"><span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address</a>'
+        self.assertInHTML(add_ip_button, content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_child_prefixes_table_list(self):
@@ -341,8 +343,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.0/30", strip_tags(content))
-        ip_address_tab = f'<li role="presentation" class="active"><a href="{url}">Child Prefixes <span class="badge">1</span></a></li>'
-        self.assertInHTML(ip_address_tab, content)
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Child Prefixes <span class="badge bg-primary">1</span></a></li>'
+        self.assertInHTML(prefixes_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
 
@@ -752,6 +754,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         self.add_permissions("ipam.change_ipaddress")
         num_ips_before = IPAddress.objects.all().count()
         ips = IPAddress.objects.all().exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk])
+        self.assertGreaterEqual(len(ips), 6)
         ip_ct = ContentType.objects.get_for_model(IPAddress)
         locations = Location.objects.all()
         location_ct = ContentType.objects.get_for_model(Location)
@@ -1203,6 +1206,6 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            ' <strong>Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
             response_content,
         )

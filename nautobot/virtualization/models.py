@@ -9,7 +9,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.models import BaseInterface, Device
+from nautobot.dcim.models import BaseInterface
 from nautobot.extras.models import (
     ConfigContextModel,
     RoleField,
@@ -139,24 +139,6 @@ class Cluster(PrimaryModel):
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Clusters may not associate to locations of type "{self.location.location_type}".'}
-                )
-
-        # Likewise, verify that host Devices match Location of this Cluster if any
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to create a Cluster with
-        # the parent Location or the child location of host Device?
-        if self.present_in_database and self.location is not None:
-            nonlocation_devices = (
-                Device.objects.filter(cluster=self)
-                .exclude(location=self.location)
-                .exclude(location__isnull=True)
-                .count()
-            )
-            if nonlocation_devices:
-                raise ValidationError(
-                    {
-                        "location": f"{nonlocation_devices} devices are assigned as hosts for this cluster "
-                        f'but belong to a location other than "{self.location}".'
-                    }
                 )
 
 

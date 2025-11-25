@@ -143,7 +143,7 @@ class NautobotAutoSchema(AutoSchema):
                             "name": "exclude_m2m",
                             "required": False,
                             "description": "Exclude many-to-many fields from the response",
-                            "schema": {"type": "boolean", "default": False},
+                            "schema": {"type": "boolean"},
                         }
                     )
                 # TODO: add "include" parameter to the schema where relevant - nautobot/nautobot#685

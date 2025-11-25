@@ -14,9 +14,7 @@ class TagFilterTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
 
         # Dynamic model dropdowns like TagFilter default to 50 items at a time from the API
         provider_ct = ContentType.objects.get_for_model(Provider)
@@ -24,14 +22,9 @@ class TagFilterTestCase(SeleniumTestCase):
             self.tag = Tag.objects.create(name=f"A Provider Tag {i:02d}")
             self.tag.content_types.add(provider_ct)
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
     def test_tag_matching_content_type(self):
         # Navigate to the Provider list view
-        self.browser.links.find_by_partial_text("Circuits").click()
-        self.browser.links.find_by_partial_text("Providers").click()
+        self.click_navbar_entry("Circuits", "Providers")
 
         # Open the filter form
         self.browser.find_by_id("id__filterbtn").click()
@@ -49,8 +42,7 @@ class TagFilterTestCase(SeleniumTestCase):
 
     def test_tag_not_matching_content_type(self):
         # Navigate to the Location list view
-        self.browser.links.find_by_partial_text("Organization").click()
-        self.browser.links.find_by_partial_text("Locations").click()
+        self.click_navbar_entry("Organization", "Locations")
 
         # Open the filter form
         self.browser.find_by_id("id__filterbtn").click()

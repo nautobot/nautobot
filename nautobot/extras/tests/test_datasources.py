@@ -502,7 +502,7 @@ class GitTest(TransactionTestCase):
                     )
                     failure_logs.get(
                         grouping="graphql queries",
-                        message__contains="Error processing GraphQL query file 'bad_device_names.gql': Syntax Error GraphQL (4:5) Expected Name, found }",
+                        message__contains="Error processing GraphQL query file 'bad_device_names.gql': Syntax Error: Expected Name, found '}'",
                     )
 
                 except (AssertionError, JobLogEntry.DoesNotExist):

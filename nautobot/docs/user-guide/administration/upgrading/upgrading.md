@@ -53,7 +53,7 @@ Please see the [official MySQL documentation on migrating collation encoding set
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v2.4.20 and later requires the following:
+Nautobot v3.0.0 and later requires the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
