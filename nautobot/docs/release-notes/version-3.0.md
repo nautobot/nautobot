@@ -210,6 +210,36 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.1 (2025-11-24)
+
+### Added in v3.0.1
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Added additional Celery worker metrics.
+- [#7970](https://github.com/nautobot/nautobot/issues/7970) - Detailed test cases for Dynamic Groups with Custom Fields filters.
+- [#8215](https://github.com/nautobot/nautobot/issues/8215) - Custom Celery worker health probes based on files.
+
+### Fixed in v3.0.1
+
+- [#8202](https://github.com/nautobot/nautobot/issues/8202) - Fixed Bulk operations when using Saved View and selecting all.
+- [#8211](https://github.com/nautobot/nautobot/issues/8211) - Fixed unwanted `<code>` elements coloring in special views.
+- [#8221](https://github.com/nautobot/nautobot/issues/8221) - Fixed NautobotUIViewSet custom action additional permissions being limited to one additional permission.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to set a default saved view for list views defined in an App.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to use UI Component Framework `BulkButton` for a model defined in an App.
+
+### Documentation in v3.0.1
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Updated prometheus metrics documentation.
+- [#8195](https://github.com/nautobot/nautobot/issues/8195) - Updated the RelationshipModel and UserGroup documentation to include the 3.0 screenshots.
+- [#8209](https://github.com/nautobot/nautobot/issues/8209) - Clean up migration and impact docs to include Saved Views as well.
+- [#8220](https://github.com/nautobot/nautobot/issues/8220) - Updated the homepage documentation to include the 3.0 screenshots.
+
+### Housekeeping in v3.0.1
+
+- [#8206](https://github.com/nautobot/nautobot/issues/8206) - Removed `card-body` from `body_wrapper_generic_table.html`, because it doesn't work when the class is a table.
+- [#8207](https://github.com/nautobot/nautobot/issues/8207) - Updated ip-address-merge-tool documentation to include 3.0 screenshots.
+- [#8208](https://github.com/nautobot/nautobot/issues/8208) - Improved message in approve/deny confirmation form.
+- [#8226](https://github.com/nautobot/nautobot/issues/8226) - Update grid resizing in Bootstrap migration script, making it is more constrained but idempotent.
+
 ## v3.0.0 (2025-11-17)
 
 ### Fixed in v3.0.0
