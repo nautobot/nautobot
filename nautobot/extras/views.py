@@ -2836,6 +2836,50 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         # Remove "Advanced" tab while keeping the main.
         self.object_detail_content.tabs = self.object_detail_content.tabs[:1]
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Change",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=(
+                    "time",
+                    "user_name",
+                    "action",
+                    "changed_object_type",
+                    "display_changed_object",
+                    "request_id",
+                    "change_context",
+                    "change_context_detail",
+                ),
+                key_transforms={"display_changed_object": "Object"},
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="object_data",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.TextPanel(
+                label="Differences",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                context_field="difference_markdown",
+                render_as=object_detail.TextPanel.RenderOptions.MARKDOWN,
+            ),
+            object_detail.ObjectsTablePanel(
+                label="Related Changes",
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="related_changes_table",
+                add_button_route=None,
+                include_paginator=True,
+                max_display_count=50,
+            ),
+        )
+    )
+
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
@@ -2867,6 +2911,11 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 data=related_changes[:50],  # Limit for performance
                 orderable=False,
             )
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(related_changes_table)
             snapshots = instance.get_snapshots()
 
             context.update(
