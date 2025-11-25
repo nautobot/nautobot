@@ -915,12 +915,14 @@ class RackUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 table_class=ImageAttachmentTable,
                 table_attribute="image_attachments",
-                related_field_name="object_id",
+                related_field_name="rack",
                 weight=400,
                 include_columns=["actions"],
                 add_permissions=[
                     "extras.add_imageattachment",
                 ],
+                enable_related_link=False,
+                show_table_config_button=False,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
