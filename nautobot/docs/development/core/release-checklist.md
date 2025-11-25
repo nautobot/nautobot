@@ -2,6 +2,26 @@
 
 This document is intended for Nautobot maintainers and covers the steps to perform when releasing new versions.
 
+## Summary
+
+1. For new minor/major versions (recommended but not required for patch versions):
+    1. [Update Python Dependencies](#update-python-dependencies)
+    2. [Update UI Libraries](#update-ui-libraries)
+    3. [Link to the New Release Notes Page](#link-to-the-new-release-notes-page)
+    4. [Verify and Revise the Install Documentation](#verify-and-revise-the-install-documentation)
+2. [Verify CI Build Status](#verify-ci-build-status)
+3. [Create a Release Branch](#create-a-release-branch)
+4. [Bump the Version](#bump-the-version)
+5. [Update the Changelog](#update-the-changelog)
+6. [Submit Release Pull Request](#submit-release-pull-request)
+7. [Merge Release Pull Request](#merge-release-pull-request)
+8. [Create a New Release](#create-a-new-release)
+9. If needed due to CI failures:
+    1. [Publish to PyPI Manually (if needed)](#publish-to-pypi-manually-if-needed)
+    2. [Publish Docker Images Manually (if needed)](#publish-docker-images-manually-if-needed)
+10. [Bump the Development Version in `develop`](#bump-the-development-version-in-develop)
+11. [Sync Changes into `next`](#sync-changes-into-next)
+
 ## Prerequisites for New Minor or Major Versions
 
 ### Update Python Dependencies
@@ -233,24 +253,27 @@ done
 
 ### Bump the Development Version in `develop`
 
-Create a new branch off of `main` (typically named `main-to-develop-post-<x.y.z>`) and use `poetry version prepatch` to bump the version in preparation for developing the next release. Then open a pull request to the `develop` branch to update the version and sync the release notes and changelog fragment updates from `main`.
+Create a new branch off of `main` (typically named `main-to-develop-post-<x.y.z>`) and use `invoke version -v prepatch` to bump the version in preparation for developing the next release. Then open a pull request from this branch to the `develop` branch to update the version and sync the release notes and changelog fragment updates from `main`.
 
-For example, if you just released `v1.1.0`:
+For example, if you just released `v3.0.1`:
 
 ```no-highlight
-poetry version prepatch
+invoke version -v prepatch
 ```
 
 Example output:
 
 ```no-highlight
-Bumping version from 1.1.0 to 1.1.1-alpha.0
+Bumping version from 3.0.1 to 3.0.2a0
 ```
+
+!!! tip
+    We normally use `beta` version numbers rather than `alpha` versions for `develop`, so you may need to manually edit `pyproject.toml` after the above, for example to change `"3.0.2a0"` to `"3.0.2b1"` to follow our convention.
 
 !!! important
     Do not squash merge this branch into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.
 
-### Sync changes into `next`
+### Sync Changes into `next`
 
 After the main-to-develop pull request is merged into `develop`, create a new branch off of `next` (typically named `develop-to-next-post-<x.y.z>`) and `git merge develop`. Resolve any merge conflicts as appropriate (if you're lucky, there may only be one, a version number clash in `pyproject.toml`), then open a pull request to `next`.
 
