@@ -26,6 +26,7 @@ from nautobot.dcim.choices import (
     InterfaceDuplexChoices,
     InterfaceSpeedChoices,
     InterfaceTypeChoices,
+    PortTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
     RackTypeChoices,
@@ -716,7 +717,7 @@ class PowerOutletTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetM
 class InterfaceTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = InterfaceTemplate
-        fields = ["type", "mgmt_only"]
+        fields = ["type", "port_type", "mgmt_only"]
 
 
 class FrontPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
@@ -1137,6 +1138,7 @@ class InterfaceFilterSet(
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    port_type = django_filters.MultipleChoiceFilter(choices=PortTypeChoices, null_value=None)
     duplex = django_filters.MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
     speed = MultiValueNumberFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1171,6 +1173,7 @@ class InterfaceFilterSet(
             "id",
             "name",
             "type",
+            "port_type",
             "duplex",
             "speed",
             "enabled",
