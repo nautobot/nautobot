@@ -1,34 +1,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load static %}
-
-{% block extra_buttons %}
-    {% if prev_rack %}
-        <a href="{% url 'dcim:rack' pk=prev_rack.pk %}" class="btn btn-primary">
-            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
-        </a>
-    {% else %}
-        <a aria-disabled="true" class="btn btn-primary disabled">
-            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous Rack
-        </a>
-    {% endif %}
-    {% if next_rack %}
-        <a href="{% url 'dcim:rack' pk=next_rack.pk %}" class="btn btn-primary">
-            <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
-        </a>
-    {% else %}
-        <a aria-disabled="true" class="btn btn-primary disabled">
-            <span class="mdi mdi-chevron-right" aria-hidden="true"></span> Next Rack
-        </a>
-    {% endif %}
-    <button class="btn btn-secondary toggle-fullname" selected="selected">
-        <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Device Full Name
-    </button>
-    <button class="btn btn-secondary toggle-images" selected="selected">
-        <span class="mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
-    </button>
-{% endblock extra_buttons %}
-
 {% block javascript %}
     {{block.super}}
     <script src="{% versioned_static 'js/rack_elevations.js' %}"></script>

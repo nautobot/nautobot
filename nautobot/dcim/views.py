@@ -31,7 +31,7 @@ from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -824,6 +824,53 @@ class RackUIViewSet(NautobotUIViewSet):
             params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
             return f"{reverse('dcim:device_add')}?{urlencode(params)}"
 
+    class RackNavigationButton(object_detail.Button):
+        def __init__(self, *, direction, **kwargs):
+            self.direction = direction
+            label = "Previous Rack" if direction == "prev" else "Next Rack"
+            icon = "mdi mdi-chevron-left" if direction == "prev" else "mdi mdi-chevron-right"
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.BLUE,
+                template_path="dcim/inc/rack_nav.html",
+                **kwargs,
+            )
+
+        def get_link(self, context: Context):
+            target = context.get(f"{self.direction}_rack")
+            if target:
+                return reverse("dcim:rack", kwargs={"pk": target.pk})
+            return None
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes") or {}
+            if not extra_context["link"]:
+                attributes.update({"aria-disabled": "true", "disabled": "disabled"})
+            extra_context["attributes"] = attributes
+            return extra_context
+
+    class RackToggleButton(object_detail.Button):
+        def __init__(self, *, label, icon, extra_classes, **kwargs):
+            self.extra_classes = extra_classes
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.GREY,
+                template_path="dcim/inc/rack_toggle.html",
+                attributes={"selected": "selected"},
+                **kwargs,
+            )
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes", {}) or {}
+            attributes.setdefault("selected", "selected")
+            extra_context["attributes"] = attributes
+            extra_context["extra_classes"] = self.extra_classes
+            return extra_context
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             RackObjectFieldsPanel(
@@ -870,6 +917,7 @@ class RackUIViewSet(NautobotUIViewSet):
                 table_attribute="image_attachments",
                 related_field_name="object_id",
                 weight=400,
+                include_columns=["actions"],
                 add_permissions=[
                     "extras.add_imageattachment",
                 ],
@@ -882,6 +930,7 @@ class RackUIViewSet(NautobotUIViewSet):
                 exclude_columns=["pk", "reservation", "location", "rack"],
                 include_columns=[
                     "created",
+                    "actions",
                 ],
             ),
             object_detail.Panel(
@@ -907,7 +956,23 @@ class RackUIViewSet(NautobotUIViewSet):
                 include_columns=["parent_device"],
                 list_url_extra_params={"position__isnull": True},
             ),
-        )
+        ),
+        extra_buttons=(
+            RackNavigationButton(direction="prev", weight=20),
+            RackNavigationButton(direction="next", weight=30),
+            RackToggleButton(
+                label="Show Device Full Name",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-fullname",
+                weight=40,
+            ),
+            RackToggleButton(
+                label="Show Images",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-images",
+                weight=50,
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
