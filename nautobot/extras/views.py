@@ -1385,7 +1385,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 related_field_name="descendants",
                 table_title="Descendants",
                 add_button_route=None,
-                related_list_url_name="extras:dynamicgroup_list"
+                related_list_url_name="extras:dynamicgroup_list",
             ),
         ]
     )
