@@ -342,16 +342,27 @@ class FilterTestCases:
             # Create random lowercase string to use for icontains lookup
             max_length = obj_field.max_length or CHARFIELD_MAX_LENGTH
             randomized_attr_value = "".join(random.choices(string.ascii_lowercase, k=max_length))  # noqa: S311 # pseudo-random generator
+            is_dolt = getattr(self.filterset.declared_filters.get("q"), "label", None) == "DoltSearch"
             try:
-                setattr(obj, obj_field_name, randomized_attr_value)
-                obj.save()
+                # dolt tables aren't editable
+                if not is_dolt:
+                    setattr(obj, obj_field_name, randomized_attr_value)
+                    obj.save()
 
                 # if lookup_method is iexact use the full updated attr
                 if lookup_method == "iexact":
-                    lookup = randomized_attr_value.upper()
+                    if not is_dolt:
+                        lookup = randomized_attr_value.upper()
+                    else:
+                        # dolt table fields are case sensitive
+                        lookup = original_value
                     model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
                 else:
-                    lookup = randomized_attr_value[1:].upper()
+                    if not is_dolt:
+                        lookup = randomized_attr_value[1:].upper()
+                    else:
+                        # dolt table fields are case sensitive
+                        lookup = original_value
                     model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
                 params = {"q": lookup}
                 filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
@@ -364,8 +375,10 @@ class FilterTestCases:
                     msg=lookup,
                 )
             finally:
-                setattr(obj, obj_field_name, original_value)
-                obj.save()
+                # dolt tables aren't editable
+                if not is_dolt:
+                    setattr(obj, obj_field_name, original_value)
+                    obj.save()
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):
             """Gets the relevant queryset based on filter parameters."""
