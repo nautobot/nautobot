@@ -1,0 +1,13 @@
+{% if diff_added or diff_removed %}
+    <div
+        class="nb-editor-container"
+        data-mode="diff"
+        data-lang="json"
+        data-original="{{ diff_removed|default:'{}' }}"
+        data-modified="{{ diff_added|default:'{}' }}"
+    ></div>
+    <noscript>
+        <pre class="mb-0"><code>{{ diff_removed }}</code></pre>
+        <pre class="mb-0"><code>{{ diff_added }}</code></pre>
+    </noscript>
+{% endif %}
