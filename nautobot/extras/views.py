@@ -1731,7 +1731,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.needs_approved()
+    queryset = ScheduledJob.objects.filter(approval_required=True, decision_date__isnull=True)
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -2165,7 +2165,7 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.needs_approved()
+    queryset = ScheduledJob.objects.filter(approval_required=True, decision_date__isnull=True)
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
