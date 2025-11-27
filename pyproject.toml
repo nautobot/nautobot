@@ -41,7 +41,7 @@ celery = "~5.5.3"
 # Added as an explicit dependency to protect against various CVEs in older versions.
 cryptography = "~46.0.3"
 # Fundamental web framework for Nautobot
-Django = "~4.2.26"
+Django = "~5.2.8"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -105,7 +105,7 @@ Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
 # Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^33.1.0"
+kubernetes = "^34.1.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.8.2"
 # MySQL database adapter
@@ -161,7 +161,7 @@ sso = ["social-auth-core"]
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 # Currently pinned to 5.2.0 due to https://github.com/django-commons/django-debug-toolbar/issues/2168
-django-debug-toolbar = "~5.2.0"
+django-debug-toolbar = "~6.1.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -169,7 +169,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^37.12.0"
+faker = "^38.2.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -199,9 +199,9 @@ mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.1"
+mkdocstrings = "~1.0.0"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.18.2"
+mkdocstrings-python = "~2.0.0"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -209,7 +209,7 @@ djhtml = "~3.0.10"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
-pylint = "~3.3.9"
+pylint = "~4.0.3"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
@@ -235,7 +235,7 @@ splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.1.0"
 # Time travel for testing, used in ScheduledJob tests etc.
-time-machine = "~2.19.0"
+time-machine = "~3.1.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
