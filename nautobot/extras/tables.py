@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
+from jsonschema import Draft7Validator, SchemaError
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.tables import (
@@ -578,6 +579,7 @@ class ConfigContextTable(BaseTable):
     name = tables.LinkColumn()
     owner = tables.LinkColumn()
     is_active = BooleanColumn(verbose_name="Active")
+    actions = ButtonsColumn(ConfigContext)
 
     class Meta(BaseTable.Meta):
         model = ConfigContext
@@ -596,6 +598,7 @@ class ConfigContextTable(BaseTable):
             "tenant_groups",
             "tenants",
             "dynamic_groups",
+            "actions",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -624,19 +627,37 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     """
 
     def __init__(self, validator, data_field, *args, **kwargs):
+        kwargs.setdefault("orderable", False)
+        kwargs.setdefault("accessor", None)
+        kwargs.setdefault("exclude_from_export", True)
+        kwargs.setdefault("empty_values", ())
+
         super().__init__(*args, **kwargs)
+
         self.validator = validator
         self.data_field = data_field
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        data = getattr(record, self.data_field)
-        try:
-            self.validator.validate(data)
-        except JSONSchemaValidationError as e:
-            # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
+        data = getattr(record, self.data_field, None)
 
-        # Return a green check (like a boolean column)
+        try:
+            if hasattr(record, "local_config_context_schema") and record.local_config_context_schema is not None:
+                validator = Draft7Validator(record.local_config_context_schema.data_schema)
+            elif hasattr(record, "config_context_schema") and record.config_context_schema is not None:
+                validator = Draft7Validator(record.config_context_schema.data_schema)
+            else:
+                validator = {}
+        except SchemaError:
+            validator = {}
+        # only call validate if this is a real validator
+        if not isinstance(validator, Draft7Validator):
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
+
+        try:
+            validator.validate(data)
+
+        except JSONSchemaValidationError as e:
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)
 
 

@@ -1,6 +1,5 @@
-from functools import partial
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import parse_qs
 
 from django.conf import settings
@@ -16,24 +15,25 @@ from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
-from jsonschema.validators import Draft7Validator
+from jsonschema import Draft7Validator, SchemaError
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.forms import ApprovalForm, restrict_form_fields
+from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import pretty_print_query
-from nautobot.core.tables import ButtonsColumn
+from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
@@ -61,7 +61,6 @@ from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -70,7 +69,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
+from nautobot.core.views.utils import get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -82,24 +81,15 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.templatetags.approvals import render_approval_workflow_state
-from nautobot.extras.utils import (
-    fixup_filterset_query_params,
-    get_base_template,
-    get_pending_approval_workflow_stages,
-    get_worker_count,
-)
+from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
-from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
-from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
 
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
-    ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -112,11 +102,6 @@ from .datasources import (
 )
 from .jobs import get_job
 from .models import (
-    ApprovalWorkflow,
-    ApprovalWorkflowDefinition,
-    ApprovalWorkflowStage,
-    ApprovalWorkflowStageDefinition,
-    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -157,588 +142,6 @@ from .models import (
 from .registry import registry
 
 logger = logging.getLogger(__name__)
-
-#
-# Approval Workflows
-#
-
-
-class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
-    """ViewSet for ApprovalWorkflowDefinition."""
-
-    bulk_update_form_class = forms.ApprovalWorkflowDefinitionBulkEditForm
-    filterset_class = filters.ApprovalWorkflowDefinitionFilterSet
-    filterset_form_class = forms.ApprovalWorkflowDefinitionFilterForm
-    form_class = forms.ApprovalWorkflowDefinitionForm
-    queryset = ApprovalWorkflowDefinition.objects.all()
-    serializer_class = serializers.ApprovalWorkflowDefinitionSerializer
-    table_class = tables.ApprovalWorkflowDefinitionTable
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=100,
-                table_class=tables.ApprovalWorkflowStageDefinitionTable,
-                table_filter="approval_workflow_definition",
-                section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow_definition", "actions"],
-                add_button_route=None,
-                table_title="Stages",
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=200,
-                table_class=tables.ApprovalWorkflowTable,
-                table_filter="approval_workflow_definition",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["object_under_review_content_type", "approval_workflow_definition"],
-                add_button_route=None,
-                table_title="Workflows",
-            ),
-        ],
-    )
-
-    def get_extra_context(self, request, instance):
-        ctx = super().get_extra_context(request, instance)
-        if self.action in ("create", "update"):
-            if request.POST:
-                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(data=request.POST, instance=instance)
-            else:
-                ctx["stages"] = forms.ApprovalWorkflowStageDefinitionFormSet(instance=instance)
-
-        return ctx
-
-    def form_save(self, form, **kwargs):
-        obj = super().form_save(form, **kwargs)
-
-        # Process the formset for stages
-        ctx = self.get_extra_context(self.request, obj)
-        stages = ctx["stages"]
-        if stages.is_valid():
-            stages.save()
-        else:
-            raise ValidationError(stages.errors)
-
-        return obj
-
-
-class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
-    """ViewSet for ApprovalWorkflowStageDefinition."""
-
-    bulk_update_form_class = forms.ApprovalWorkflowStageDefinitionBulkEditForm
-    filterset_class = filters.ApprovalWorkflowStageDefinitionFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageDefinitionFilterForm
-    form_class = forms.ApprovalWorkflowStageDefinitionForm
-    queryset = ApprovalWorkflowStageDefinition.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageDefinitionSerializer
-    table_class = tables.ApprovalWorkflowStageDefinitionTable
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-            ),
-        ],
-    )
-
-
-class ApprovalWorkflowUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectNotesViewMixin,
-):
-    """ViewSet for ApprovalWorkflow."""
-
-    filterset_class = filters.ApprovalWorkflowFilterSet
-    filterset_form_class = forms.ApprovalWorkflowFilterForm
-    queryset = ApprovalWorkflow.objects.all()
-    serializer_class = serializers.ApprovalWorkflowSerializer
-    table_class = tables.ApprovalWorkflowTable
-    action_buttons = ()
-
-    class ApprovalWorkflowPanel(object_detail.ObjectFieldsPanel):
-        def __init__(self, **kwargs):
-            super().__init__(
-                fields=(
-                    "approval_workflow_definition",
-                    "object_under_review",
-                    "current_state",
-                    "decision_date",
-                    "user",
-                ),
-                value_transforms={
-                    "current_state": [render_approval_workflow_state],
-                },
-                hide_if_unset=("decision_date"),
-                **kwargs,
-            )
-
-        def render_key(self, key, value, context):
-            obj = get_obj_from_context(context)
-
-            if key == "object_under_review":
-                return helpers.bettertitle(obj.object_under_review_content_type.model_class()._meta.verbose_name)
-            if key == "user":
-                return "Requesting User"
-            if key == "decision_date":
-                if obj.current_state == ApprovalWorkflowStateChoices.APPROVED:
-                    return "Approval Date"
-                elif obj.current_state == ApprovalWorkflowStateChoices.DENIED:
-                    return "Denial Date"
-
-            return super().render_key(key, value, context)
-
-        def render_value(self, key, value, context):
-            obj = get_obj_from_context(context)
-            if key == "user":
-                if not obj.user:
-                    return obj.user_name
-
-            return super().render_value(key, value, context)
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            ApprovalWorkflowPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=200,
-                table_title="Stages",
-                table_class=tables.RelatedApprovalWorkflowStageTable,
-                table_filter="approval_workflow",
-                section=SectionChoices.RIGHT_HALF,
-                exclude_columns=["approval_workflow"],
-                add_button_route=None,
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=200,
-                table_title="Responses",
-                table_class=tables.RelatedApprovalWorkflowStageResponseTable,
-                table_filter="approval_workflow_stage__approval_workflow",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["approval_workflow"],
-                add_button_route=None,
-                enable_related_link=False,
-            ),
-        ],
-    )
-
-
-class ApprovalWorkflowStageUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectNotesViewMixin,
-):
-    """ViewSet for ApprovalWorkflowStage."""
-
-    filterset_class = filters.ApprovalWorkflowStageFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
-    queryset = ApprovalWorkflowStage.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageSerializer
-    table_class = tables.ApprovalWorkflowStageTable
-    action_buttons = ()
-
-    class ApprovalWorkflowStagePanel(object_detail.ObjectFieldsPanel):
-        def __init__(self, **kwargs):
-            super().__init__(
-                fields=(
-                    "approval_workflow",
-                    "state",
-                    "decision_date",
-                    "approver_group",
-                    "min_approvers",
-                ),
-                value_transforms={
-                    "state": [render_approval_workflow_state],
-                },
-                hide_if_unset=("decision_date"),
-                ignore_nonexistent_fields=True,
-                **kwargs,
-            )
-
-        def render_key(self, key, value, context):
-            obj = get_obj_from_context(context)
-
-            if key == "approval_workflow":
-                return "Approval Workflow"
-            if key == "decision_date":
-                if obj.state == ApprovalWorkflowStateChoices.APPROVED:
-                    return "Approval Date"
-                elif obj.state == ApprovalWorkflowStateChoices.DENIED:
-                    return "Denial Date"
-            if key == "min_approvers":
-                return "Minimum Number of Approvers Needed"
-
-            return super().render_key(key, value, context)
-
-        def render_value(self, key, value, context):
-            if key == "approver_group":
-                user_html = format_html(
-                    "<span>{}</span><ul>{}</ul>",
-                    value,
-                    format_html_join("\n", "<li>{}</li>", ((user,) for user in value.user_set.all())),
-                )
-                return user_html
-
-            return super().render_value(key, value, context)
-
-        def get_data(self, context):
-            obj = get_obj_from_context(context)
-            data = super().get_data(context)
-            data["approver_group"] = obj.approval_workflow_stage_definition.approver_group
-            data["min_approvers"] = obj.approval_workflow_stage_definition.min_approvers
-            return data
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            ApprovalWorkflowStagePanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=200,
-                table_class=tables.ApprovalWorkflowStageResponseTable,
-                table_filter="approval_workflow_stage",
-                section=SectionChoices.FULL_WIDTH,
-                exclude_columns=["approval_workflow_stage"],
-                table_title="Responses",
-                enable_related_link=False,
-            ),
-        ],
-    )
-
-    @action(
-        detail=True,
-        url_path="approve",
-        methods=["get", "post"],
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
-    )
-    def approve(self, request, *args, **kwargs):
-        """
-        Approve the approval workflow stage response.
-        """
-        instance = self.get_object()
-
-        if not (
-            request.user.is_superuser
-            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
-        ):
-            messages.error(request, "You are not permitted to approve this workflow stage.")
-            return redirect(self.get_return_url(request, instance))
-
-        if request.method == "GET":
-            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
-                approval_workflow_stage=instance, user=request.user
-            ).first():
-                form = ApprovalForm(initial={"comments": existing_response.comments})
-            else:
-                form = ApprovalForm()
-
-            object_under_review = instance.approval_workflow.object_under_review
-            template_name = getattr(object_under_review, "get_approval_template", lambda: None)()
-            if not template_name:
-                template_name = "extras/approval_workflow/approve.html"
-
-            return render(
-                request,
-                template_name,
-                {
-                    "obj": instance,
-                    "object_under_review": instance.approval_workflow.object_under_review,
-                    "form": form,
-                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, instance),
-                    "card_class": "success",
-                    "button_class": "success",
-                },
-            )
-
-        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
-            approval_workflow_stage=instance, user=request.user
-        )
-        approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
-        approval_workflow_stage_response.save()
-        instance.refresh_from_db()
-        messages.success(request, f"You approved {instance}.")
-        return redirect(self.get_return_url(request))
-
-    @action(
-        detail=True,
-        url_path="deny",
-        methods=["get", "post"],
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
-    )
-    def deny(self, request, *args, **kwargs):
-        """
-        Deny the approval workflow stage response.
-        """
-        instance = self.get_object()
-
-        if not (
-            request.user.is_superuser
-            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
-        ):
-            messages.error(request, "You are not permitted to deny this workflow stage.")
-            return redirect(self.get_return_url(request, instance))
-
-        if request.method == "GET":
-            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
-                approval_workflow_stage=instance, user=request.user
-            ).first():
-                form = ApprovalForm(initial={"comments": existing_response.comments})
-            else:
-                form = ApprovalForm()
-
-            return render(
-                request,
-                "extras/approval_workflow/deny.html",
-                {
-                    "obj": instance,
-                    "object_under_review": instance.approval_workflow.object_under_review,
-                    "form": form,
-                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, instance),
-                },
-            )
-
-        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
-            approval_workflow_stage=instance, user=request.user
-        )
-        approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
-        approval_workflow_stage_response.save()
-        instance.refresh_from_db()
-        messages.success(request, f"You denied {instance}.")
-        return redirect(self.get_return_url(request))
-
-    @action(
-        detail=True,
-        url_path="comment",
-        methods=["get", "post"],
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
-    )
-    def comment(self, request, *args, **kwargs):
-        """
-        Comment the approval workflow stage response.
-        """
-        instance = self.get_object()
-
-        if not instance.is_not_done_stage:
-            messages.error(
-                request, f"This stage is in {instance.state} state. Can't comment on an approved or denied stage."
-            )
-            return redirect(self.get_return_url(request, instance))
-
-        # We don't enforce approver-group/superuser check here, anyone can comment, not just an approver.
-
-        if request.method == "GET":
-            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
-                approval_workflow_stage=instance, user=request.user
-            ).first():
-                form = ApprovalForm(initial={"comments": existing_response.comments})
-            else:
-                form = ApprovalForm()
-
-            template_name = "extras/approval_workflow/comment.html"
-
-            return render(
-                request,
-                template_name,
-                {
-                    "obj": instance,
-                    "object_under_review": instance.approval_workflow.object_under_review,
-                    "form": form,
-                    "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, instance),
-                },
-            )
-
-        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
-            approval_workflow_stage=instance, user=request.user
-        )
-        approval_workflow_stage_response.comments = request.data.get("comments")
-        # we don't want to change a state if is approved, denied or canceled
-        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
-            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
-        approval_workflow_stage_response.save()
-        instance.refresh_from_db()
-        messages.success(request, f"You commented {instance}.")
-        return redirect(self.get_return_url(request))
-
-
-class ApprovalWorkflowStageResponseUIViewSet(
-    ObjectBulkDestroyViewMixin,
-    ObjectDestroyViewMixin,
-):
-    """ViewSet for ApprovalWorkflowStageResponse."""
-
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    table_class = tables.ApprovalWorkflowStageResponseTable
-    object_detail_content = None
-
-
-class ApproverDashboardView(ObjectListViewMixin):
-    """
-    View for the dashboard of approval workflow stages waiting for the current user to approve.
-    """
-
-    queryset = ApprovalWorkflowStage.objects.all()
-    filterset_class = filters.ApprovalWorkflowStageFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageFilterForm
-    table_class = tables.ApproverDashboardTable
-    template_name = "extras/approval_dashboard.html"
-    action_buttons = ()
-
-    def get_template_name(self):
-        """
-        Override the template names to use the custom dashboard template.
-        """
-        return self.template_name
-
-    def get_extra_context(self, request, instance):
-        """
-        Get the extra context for the dashboard view.
-        """
-        context = super().get_extra_context(request, instance)
-        context["title"] = "My Approvals"
-        context["approval_view"] = True
-        return context
-
-    def get_queryset(self):
-        """
-        Filter the queryset to only include approval workflow stages that are pending approval
-        and are assigned to the current user for approval.
-        """
-        return get_pending_approval_workflow_stages(self.request.user, super().get_queryset())
-
-    def list(self, request, *args, **kwargs):
-        """
-        Override the list method to display a helpful message regarding the page.
-        """
-        messages.info(
-            request,
-            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
-        )
-        return super().list(request, *args, **kwargs)
-
-
-class ApproveeDashboardView(ObjectListViewMixin):
-    """
-    View for the dashboard of approval workflows trigger by the current user.
-    """
-
-    queryset = ApprovalWorkflow.objects.all()
-    filterset_class = filters.ApprovalWorkflowFilterSet
-    filterset_form_class = forms.ApprovalWorkflowFilterForm
-    table_class = tables.ApprovalWorkflowTable
-    template_name = "extras/approval_dashboard.html"
-    action_buttons = ()
-
-    def get_template_name(self):
-        """
-        Override the template names to use the custom dashboard template.
-        """
-        return self.template_name
-
-    def get_extra_context(self, request, instance):
-        """
-        Get the extra context for the dashboard view.
-        """
-        context = super().get_extra_context(request, instance)
-        context["title"] = "My Requests"
-        return context
-
-    def get_queryset(self):
-        """
-        Filter the queryset to only include workflows that triggered by the current users.
-        """
-        user = self.request.user
-        if user.is_anonymous:
-            return ApprovalWorkflow.objects.none()
-        queryset = super().get_queryset()
-        return queryset.filter(user=user).order_by("created")
-
-    def list(self, request, *args, **kwargs):
-        """
-        Override the list method to display a helpful message regarding the page.
-        """
-        messages.info(
-            request,
-            "You are viewing a dashboard of approval workflows that are requested by you.",
-        )
-        return super().list(request, *args, **kwargs)
-
-
-class ObjectApprovalWorkflowView(generic.GenericView):
-    """
-    Present an pending approval workflow attached to a particular object.
-
-    base_template: Specify to explicitly identify the base object detail template to render.
-        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
-        will be used, as per `get_base_template()`.
-    """
-
-    base_template: Optional[str] = None
-
-    def get(self, request, model, **kwargs):
-        # Handle QuerySet restriction of parent object if needed
-
-        if hasattr(model.objects, "restrict"):
-            obj = get_object_or_404(model.objects.restrict(request.user, "view"), **kwargs)
-        else:
-            obj = get_object_or_404(model, **kwargs)
-
-        # Gather all changes for this object (and its related objects)
-        approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
-        stage_table = tables.RelatedApprovalWorkflowStageTable(
-            ApprovalWorkflowStage.objects.filter(approval_workflow=approval_workflow),
-        )
-        stage_table.columns.hide("approval_workflow")
-        response_table = tables.RelatedApprovalWorkflowStageResponseTable(
-            ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage__approval_workflow=approval_workflow)
-        )
-
-        base_template = get_base_template(self.base_template, model)
-
-        return render(
-            request,
-            "extras/object_approvalworkflow.html",
-            {
-                "object": obj,
-                "verbose_name": helpers.bettertitle(obj._meta.verbose_name),
-                "verbose_name_plural": obj._meta.verbose_name_plural,
-                "approval_workflow": approval_workflow,
-                "base_template": base_template,
-                "active_tab": "approval_workflow",
-                "default_time_zone": get_current_timezone(),
-                "stage_table": stage_table,
-                "response_table": response_table,
-                "view_titles": self.get_view_titles(model=obj, view_type=""),
-                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
-                "detail": True,
-                **common_detail_view_context(request, obj),
-            },
-        )
 
 
 #
@@ -838,7 +241,6 @@ class ConfigContextUIViewSet(NautobotUIViewSet):
                     "locations",
                     "roles",
                     "device_types",
-                    "device_families",
                     "platforms",
                     "cluster_groups",
                     "clusters",
@@ -900,6 +302,25 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
+class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
+    def __init__(self, *, extra_columns=None, **kwargs):
+        self.extra_columns = extra_columns or []
+
+        # Inject extra columns directly into the table_class.base_columns before initialization
+        table_class = kwargs.get("table_class")
+        if table_class:
+            for name, column in self.extra_columns:
+                # Add to base_columns only if not already present
+                if name not in table_class.base_columns:
+                    table_class.base_columns[name] = column
+
+        super().__init__(**kwargs)
+
+    def get_extra_context(self, context: Dict[str, Any]):
+        # No need to mutate columns here anymore
+        return super().get_extra_context(context)
+
+
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -908,6 +329,128 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
+
+    def get_object_detail_content(self, instance: ConfigContextSchema):
+        """Dynamically construct panels with validation logic using the instance's data_schema."""
+
+        # Shared panels used in both cases
+        panels_common = (
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data_schema",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=["owner"],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Data Schema",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
+                body_content_template_path="extras/inc/configcontextschema_data.html",
+            ),
+        )
+
+        # Bail out early if no usable schema
+        if instance is None or not isinstance(instance.data_schema, dict):
+            return object_detail.ObjectDetailContent(panels=panels_common)
+
+        try:
+            validator = Draft7Validator(instance.data_schema)
+        except SchemaError:
+            validator = {}
+        extra_tabs = (
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="validation",
+                label="Validation",
+                url_name="extras:configcontextschema_validation",
+                panels=(
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Config Contexts",
+                        table_class=tables.ConfigContextTable,
+                        table_filter="config_context_schema",
+                        related_field_name="schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                            ),
+                        ],
+                        include_columns=["validation_state", "actions"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=200,
+                        table_title="Devices",
+                        table_class=DeviceTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=["validation_state"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=300,
+                        table_title="Virtual Machines",
+                        table_class=VirtualMachineTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "dynamic_group_count",
+                                tables.LinkedCountColumn(
+                                    viewname="extras:dynamicgroup_list",
+                                    url_params={"member_id": "pk"},
+                                    verbose_name="Dynamic Groups",
+                                    reverse_lookup="static_group_associations__associated_object_id",
+                                ),
+                            ),
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=[
+                            "name",
+                            "status",
+                            "cluster",
+                            "role",
+                            "tenant",
+                            "vcpus",
+                            "memory",
+                            "disk",
+                            "dynamic_group_count",
+                            "validation_state",
+                        ],
+                    ),
+                ),
+            ),
+        )
+
+        return object_detail.ObjectDetailContent(
+            panels=panels_common,
+            extra_tabs=extra_tabs,
+        )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -921,90 +464,14 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         else:
             context["data_format"] = "json"
 
+        if instance:
+            context["object_detail_content"] = self.get_object_detail_content(instance)
+
         return context
 
-
-class ConfigContextSchemaObjectValidationView(generic.ObjectView):
-    """
-    This view renders a detail tab that shows tables of objects that utilize the given schema object
-    and their validation state.
-    """
-
-    queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema_validation.html"
-
-    def get_extra_context(self, request, instance):
-        """
-        Reuse the model tables for config context, device, and virtual machine but inject
-        the `ConfigContextSchemaValidationStateColumn` and an object edit action button.
-        """
-        # Prep the validator with the schema so it can be reused for all records
-        validator = Draft7Validator(instance.data_schema)
-
-        # Config context table
-        config_context_table = tables.ConfigContextTable(
-            data=instance.config_contexts.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
-                ),
-                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(config_context_table)
-
-        # Device table
-        device_table = DeviceTable(
-            data=instance.devices.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        # Virtual machine table
-        virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(virtual_machine_table)
-
-        return {
-            "config_context_table": config_context_table,
-            "device_table": device_table,
-            "virtual_machine_table": virtual_machine_table,
-            "active_tab": "validation",
-        }
+    @action(detail=True, url_path="validation")
+    def validation(self, request, *args, **kwargs):
+        return Response({})
 
 
 #
@@ -1049,7 +516,6 @@ class ContactUIViewSet(NautobotUIViewSet):
                 table_filter="contact",
                 table_title="Contact For",
                 add_button_route=None,
-                enable_related_link=False,
             ),
         ),
     )
@@ -1068,7 +534,6 @@ class ContactAssociationUIViewSet(
     serializer_class = serializers.ContactAssociationSerializer
     table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
-    object_detail_content = None
 
 
 class ObjectContactTeamMixin:
@@ -1593,6 +1058,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
     """
 
     base_template: Optional[str] = None
+    breadcrumbs = Breadcrumbs()
+    view_titles = Titles()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1626,8 +1093,8 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "table": dynamicgroups_table,
                 "base_template": base_template,
                 "active_tab": "dynamic-groups",
-                "view_titles": self.get_view_titles(model=obj, view_type=""),
-                "breadcrumbs": self.get_breadcrumbs(model=obj, view_type=""),
+                "breadcrumbs": self.breadcrumbs,
+                "view_titles": self.view_titles,
                 "detail": True,
             },
         )
@@ -1837,7 +1304,6 @@ class GraphQLQueryUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
     ObjectNotesViewMixin,
 ):
     filterset_form_class = forms.GraphQLQueryFilterForm
@@ -1982,42 +1448,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return job_model
 
-    def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
-        """Handle response for jobs requiring approval workflow."""
-        messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
-        return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
-
-    def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
-        """Handle response for successfully scheduled jobs."""
-        messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
-        return redirect(return_url or "extras:scheduledjob_list")
-
-    def _handle_immediate_execution(
-        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
-    ):
-        """Handle immediate job execution."""
-        job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
-        job_result = JobResult.enqueue_job(
-            job_model,
-            request.user,
-            profile=profile,
-            ignore_singleton_lock=ignore_singleton_lock,
-            job_queue=job_queue,
-            **job_class.serialize_data(job_kwargs),
-        )
-
-        if return_url:
-            messages.info(
-                request,
-                format_html(
-                    'Job enqueued. <a href="{}">Click here for the results.</a>',
-                    job_result.get_absolute_url(),
-                ),
-            )
-            return redirect(return_url)
-
-        return redirect("extras:jobresult", pk=job_result.pk)
-
     def get(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
@@ -2104,6 +1534,13 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif job_model.has_sensitive_variables and job_model.approval_required:
+            messages.error(
+                request,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
+                "One of these two flags must be removed before this job can be scheduled or run.",
+            )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
             if job_queue is None:
@@ -2124,7 +1561,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            with transaction.atomic():
+            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 scheduled_job = ScheduledJob.create_schedule(
                     job_model,
                     request.user,
@@ -2132,58 +1569,43 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                    approval_required=job_model.approval_required,
                     job_queue=job_queue,
                     profile=profile,
                     ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
-                scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
-                is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
-                if job_model.has_sensitive_variables and scheduled_job_has_approval_workflow:
-                    messages.error(
-                        request,
-                        "Unable to run or schedule job: "
-                        "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
-                        "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
-                    )
-                    scheduled_job.delete()
-                    scheduled_job = None
+
+                if job_model.approval_required:
+                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
+                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
                 else:
-                    if dryrun and not is_scheduled:
-                        # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
-                        scheduled_job.delete()
-                        scheduled_job = None
-                        return self._handle_immediate_execution(
-                            request,
-                            job_model,
-                            job_class,
-                            job_form,
-                            profile,
-                            ignore_singleton_lock,
-                            job_queue,
-                            return_url,
-                        )
-                    # Step 1: Check if approval is required
-                    if scheduled_job_has_approval_workflow:
-                        return self._handle_approval_workflow_response(request, scheduled_job, return_url)
+                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+                    return redirect(return_url or "extras:scheduledjob_list")
 
-                    # Step 3: If approval is not required
-                    if is_scheduled:
-                        return self._handle_scheduled_job_response(request, scheduled_job, return_url)
+            else:
+                # Enqueue job for immediate execution
+                job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
+                job_result = JobResult.enqueue_job(
+                    job_model,
+                    request.user,
+                    profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
+                    job_queue=job_queue,
+                    **job_class.serialize_data(job_kwargs),
+                )
 
-                    # Step 4: Immediate execution (no schedule, no approval)
-                    scheduled_job.delete()
-                    scheduled_job = None
-                    return self._handle_immediate_execution(
+                if return_url:
+                    messages.info(
                         request,
-                        job_model,
-                        job_class,
-                        job_form,
-                        profile,
-                        ignore_singleton_lock,
-                        job_queue,
-                        return_url,
+                        format_html(
+                            'Job enqueued. <a href="{}">Click here for the results.</a>',
+                            job_result.get_absolute_url(),
+                        ),
                     )
+                    return redirect(return_url)
+
+                return redirect("extras:jobresult", pk=job_result.pk)
 
         if return_url:
             return redirect(return_url)
@@ -2232,23 +1654,20 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.LEFT_HALF,
                 label="Job",
                 fields=["grouping", "name", "description", "enabled"],
-                value_transforms={
-                    "description": [helpers.render_markdown],
-                },
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.JobResultTable,
-                table_title="Job Results",
-                table_filter="job_model",
-                exclude_columns=["name", "job_model"],
+                table_title="JobResults",
+                table_filter=["job_model"],
             ),
             jobs_ui.JobObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
+                    "approval_required",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
@@ -2302,6 +1721,140 @@ class JobBulkDeleteView(generic.BulkDeleteView):
     queryset = JobModel.objects.all()
     filterset = filters.JobFilterSet
     table = tables.JobTable
+
+
+class JobApprovalRequestView(generic.ObjectView):
+    """
+    This view handles requests to view and approve a Job execution request.
+    It renders the Job's form in much the same way as `JobView` except all
+    form fields are disabled and actions on the form relate to approval of the
+    job's execution, rather than initial job form input.
+    """
+
+    queryset = ScheduledJob.objects.filter(approval_required=True, decision_date__isnull=True)
+    template_name = "extras/job_approval_request.html"
+    additional_permissions = ("extras.view_job",)
+
+    def get_extra_context(self, request, instance):
+        """
+        Render the job form with data from the scheduled_job instance, but mark all fields as disabled.
+        We don't care to actually get any data back from the form as we will not ever change it.
+        Instead, we offer the user three submit buttons, dry-run, approve, and deny, which we act upon in the post.
+        """
+        job_model = instance.job_model
+        if job_model is not None:
+            job_class = get_job(job_model.class_path, reload=True)
+        else:
+            # 2.0 TODO: remove this fallback?
+            job_class = get_job(instance.job_class)
+
+        if job_class is not None:
+            # Render the form with all fields disabled
+            initial = instance.kwargs
+            initial["_job_queue"] = instance.job_queue
+            initial["_profile"] = instance.celery_kwargs.get("profile", False)
+            job_form = job_class().as_form(initial=initial, approval_view=True)
+        else:
+            job_form = None
+
+        return {"job_form": job_form, **super().get_extra_context(request, instance)}
+
+    def post(self, request, pk):
+        """
+        Act upon one of the 3 submit button actions from the user.
+
+        dry-run will immediately enqueue the job with commit=False and send the user to the normal JobResult view
+        deny will delete the scheduled_job instance
+        approve will mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+        """
+        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+
+        post_data = request.POST
+
+        deny = "_deny" in post_data
+        approve = "_approve" in post_data
+        force_approve = "_force_approve" in post_data
+        dry_run = "_dry_run" in post_data
+
+        job_model = scheduled_job.job_model
+        job_class = get_job(job_model.class_path, reload=True)
+
+        if dry_run:
+            # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
+            if job_model is None:
+                messages.error(request, "There is no job associated with this request? Cannot run it!")
+            elif not job_model.runnable:
+                messages.error(request, "This job cannot be run at this time")
+            elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
+                messages.error(request, "You do not have permission to run this job")
+            elif not job_model.supports_dryrun:
+                messages.error(request, "This job does not support dryrun")
+            else:
+                # Immediately enqueue the job and send the user to the normal JobResult view
+                job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
+                job_kwargs["dryrun"] = True
+                job_result = JobResult.enqueue_job(
+                    job_model,
+                    request.user,
+                    celery_kwargs=scheduled_job.celery_kwargs,
+                    **job_class.serialize_data(job_kwargs),
+                )
+
+                return redirect("extras:jobresult", pk=job_result.pk)
+        elif deny:
+            if not (
+                self.queryset.check_perms(request.user, instance=scheduled_job, action="delete")
+                and job_model is not None
+                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+            ):
+                messages.error(request, "You do not have permission to deny this request.")
+            else:
+                # Delete the scheduled_job instance
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+                scheduled_job.delete()
+                if request.user == scheduled_job.user:
+                    messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
+                else:
+                    messages.error(request, f"Approval of {scheduled_job.name} was denied")
+
+                publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
+
+                return redirect("extras:scheduledjob_approval_queue_list")
+
+        elif approve or force_approve:
+            if job_model is None:
+                messages.error(request, "There is no job associated with this request? Cannot run it!")
+            elif not (
+                self.queryset.check_perms(request.user, instance=scheduled_job, action="change")
+                and JobModel.objects.check_perms(request.user, instance=job_model, action="approve")
+            ):
+                messages.error(request, "You do not have permission to approve this request.")
+            elif request.user == scheduled_job.user:
+                # The requestor *cannot* approve their own job
+                messages.error(request, "You cannot approve your own job request!")
+            else:
+                # Mark the scheduled_job as approved, allowing the schedular to schedule the job execution task
+                if scheduled_job.one_off and scheduled_job.start_time < timezone.now() and not force_approve:
+                    return render(request, "extras/job_approval_confirmation.html", {"scheduled_job": scheduled_job})
+                scheduled_job.approved_by_user = request.user
+                scheduled_job.approved_at = timezone.now()
+                scheduled_job.save()
+
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+                publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+                messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
+
+                return redirect("extras:scheduledjob_approval_queue_list")
+
+        return render(
+            request,
+            self.get_template_name(),
+            {
+                "object": scheduled_job,
+                **self.get_extra_context(request, scheduled_job),
+            },
+        )
 
 
 class JobQueueUIViewSet(NautobotUIViewSet):
@@ -2598,7 +2151,7 @@ class SavedViewUIViewSet(
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.all()
+    queryset = ScheduledJob.objects.enabled()
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -2611,49 +2164,34 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.ScheduledJobFilterSet
 
 
+class ScheduledJobApprovalQueueListView(generic.ObjectListView):
+    queryset = ScheduledJob.objects.filter(approval_required=True, decision_date__isnull=True)
+    table = tables.ScheduledJobApprovalQueueTable
+    filterset = filters.ScheduledJobFilterSet
+    filterset_form = forms.ScheduledJobFilterForm
+    action_buttons = ()
+    template_name = "extras/scheduled_jobs_approval_queue_list.html"
+
+
 class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        # Add job class labels
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
-                labels[name] = field.label or pretty_name(name)
-
-        context.update(
-            {
-                "labels": labels,
-                "job_class_found": (job_class is not None),
-                "default_time_zone": get_current_timezone(),
-            }
-        )
-
-        # Add approval workflow table
-        approval_workflows = instance.associated_approval_workflows.all()
-        approval_workflows_count = approval_workflows.count()
-        approval_workflow_table = tables.ApprovalWorkflowTable(
-            data=approval_workflows,
-            user=request.user,
-            exclude=["object_under_review", "object_under_review_content_type"],
-        )
-
-        RequestConfig(
-            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        ).configure(approval_workflow_table)
-
-        context.update(
-            {
-                "approval_workflows_count": approval_workflows_count,
-                "approval_workflow_table": approval_workflow_table,
-            }
-        )
-
-        return context
+                if field.label:
+                    labels[name] = field.label
+                else:
+                    labels[name] = pretty_name(name)
+        return {
+            "labels": labels,
+            "job_class_found": (job_class is not None),
+            "default_time_zone": get_current_timezone(),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -2829,12 +2367,6 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     serializer_class = serializers.ObjectChangeSerializer
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.object_detail_content = object_detail.ObjectDetailContent()
-        # Remove "Advanced" tab while keeping the main.
-        self.object_detail_content.tabs = self.object_detail_content.tabs[:1]
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
@@ -3020,12 +2552,7 @@ class ObjectMetadataUIViewSet(
 
 
 class NoteUIViewSet(
-    ObjectDestroyViewMixin,
-    ObjectDetailViewMixin,
-    ObjectEditViewMixin,
-    ObjectListViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
+    ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectDetailViewMixin, ObjectEditViewMixin, ObjectListViewMixin
 ):
     filterset_class = filters.NoteFilterSet
     filterset_form_class = forms.NoteFilterForm
@@ -3311,30 +2838,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 vdc_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vdc_table)
                 context["vdc_table"] = vdc_table
-            if ContentType.objects.get_for_model(VPN) in context["content_types"]:
-                vpns = instance.vpns.restrict(request.user, "view")
-                vpn_table = VPNTable(vpns)
-                vpn_table.columns.hide("role")
-                RequestConfig(request, paginate).configure(vpn_table)
-                context["vpn_table"] = vpn_table
-            if ContentType.objects.get_for_model(VPNProfile) in context["content_types"]:
-                vpn_profiles = instance.vpn_profiles.restrict(request.user, "view")
-                vpn_profile_table = VPNProfileTable(vpn_profiles)
-                vpn_profile_table.columns.hide("role")
-                RequestConfig(request, paginate).configure(vpn_profile_table)
-                context["vpn_profile_table"] = vpn_profile_table
-            if ContentType.objects.get_for_model(VPNTunnel) in context["content_types"]:
-                vpn_tunnels = instance.vpn_tunnels.restrict(request.user, "view")
-                vpn_tunnel_table = VPNTunnelTable(vpn_tunnels)
-                vpn_tunnel_table.columns.hide("role")
-                RequestConfig(request, paginate).configure(vpn_tunnel_table)
-                context["vpn_tunnel_table"] = vpn_tunnel_table
-            if ContentType.objects.get_for_model(VPNTunnelEndpoint) in context["content_types"]:
-                vpn_tunnel_endpoints = instance.vpn_tunnel_endpoints.restrict(request.user, "view")
-                vpn_tunnel_endpoint_table = VPNTunnelEndpointTable(vpn_tunnel_endpoints)
-                vpn_tunnel_endpoint_table.columns.hide("role")
-                RequestConfig(request, paginate).configure(vpn_tunnel_endpoint_table)
-                context["vpn_tunnel_endpoint_table"] = vpn_tunnel_endpoint_table
         return context
 
 
@@ -3352,7 +2855,6 @@ class SecretUIViewSet(
     ObjectBulkDestroyViewMixin,
     # no ObjectBulkUpdateViewMixin here yet
     ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
     ObjectNotesViewMixin,
 ):
     queryset = Secret.objects.all()
@@ -3434,8 +2936,7 @@ class SecretsGroupUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 table_class=tables.SecretsGroupAssociationTable,
                 table_filter="secrets_group",
-                related_field_name="secrets_groups",
-                related_list_url_name="extras:secret_list",
+                related_field_name="secrets_group",
                 table_title="Secrets",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
@@ -3541,7 +3042,6 @@ class TagUIViewSet(NautobotUIViewSet):
                 select_related_fields=["content_type"],
                 prefetch_related_fields=["content_object"],
                 include_paginator=True,
-                enable_related_link=False,
             ),
         ),
     )
@@ -3598,7 +3098,6 @@ class TeamUIViewSet(NautobotUIViewSet):
                 table_filter="team",
                 table_title="Contact For",
                 add_button_route=None,
-                enable_related_link=False,
             ),
         )
     )
@@ -3631,7 +3130,7 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=("http_method", "http_content_type", "payload_url", "additional_headers"),
-                value_transforms={"additional_headers": [partial(helpers.pre_tag, format_empty_value=False)]},
+                value_transforms={"additional_headers": [helpers.pre_tag]},
             ),
             object_detail.ObjectFieldsPanel(
                 label="Security",
