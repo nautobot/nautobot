@@ -349,4 +349,5 @@ For more information for the Golden Configuration specific data sources, navigat
     - Ensure the PAT permissions are setup properly.
         - At a minimum the `repo` option should be checked or access.
 
-    ![Error Authentication Issue](./images/git-as-data-source/17-git-data-source.png)
+    ![Error Authentication Issue](./images/git-as-data-source/ss_17-git-data-source_light.png#only-light){ .on-glb }
+    ![Error Authentication Issue](./images/git-as-data-source/ss_17-git-data-source_dark.png#only-dark){ .on-glb }
