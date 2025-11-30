@@ -17,7 +17,7 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -418,7 +418,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         # Append additional object permissions if specified.
         if self.custom_view_additional_permissions:
-            model_permissions.append(*self.custom_view_additional_permissions)
+            model_permissions.extend(self.custom_view_additional_permissions)
         return model_permissions
 
     def get_required_permission(self):
@@ -929,10 +929,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 self.filterset_class(),
             )
 
+        resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
+        view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
+
         # Check if there is a default for this view for this specific user
         user_default_saved_view = None
-        app_label, model_name = queryset.model._meta.label.split(".")
-        view_name = f"{app_label}:{model_name.lower()}_list"
         user = request.user
         if not isinstance(user, AnonymousUser):
             try:
