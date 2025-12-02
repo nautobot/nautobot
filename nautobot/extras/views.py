@@ -1067,7 +1067,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
 
         return context
 
-    @action(detail=True, url_path="validation")
+    @action(detail=True, url_path="validation", custom_view_base_action="view")
     def validation(self, request, *args, **kwargs):
         return Response({})
 
