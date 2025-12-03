@@ -25,7 +25,7 @@ The following operational statuses are available by default:
 
 ## Port type
 
-+++ 3.0.0
++++ 3.0.2
 Interfaces now have an optional `port_type` field which describes the physical connector.
 
 ### Validation rules for port type
