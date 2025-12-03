@@ -11,7 +11,7 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
-- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images); you shouldn't generally need to change these.
+- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images-manually-if-needed); you shouldn't generally need to change these.
 - `ephemeral_ports`: Setting this value to `True` and not using any custom compose files will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts. If setting `compose_files`, this will have no effect so please ensure to manually add the `docker-compose.ephemeral-ports.yml` to your list.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
