@@ -12,11 +12,10 @@ from rest_framework import renderers
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
-    SearchForm,
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -102,6 +101,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     saved_view=self.saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
+                    configurable=True,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
@@ -206,7 +206,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
-        search_form = None
         instance = None
         filter_form = None
         display_filter_params = []
@@ -228,7 +227,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset_class.get_filters()
+                        filterset_filters = view.filterset_class.base_filters
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -236,8 +235,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-                search_form = SearchForm(data=view.filter_params, q_placeholder=q_placeholder)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -283,7 +280,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
-            "search_form": search_form,
             "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
@@ -315,6 +311,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
             resolved_path = resolve(request.path)
+            # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
             list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None
             if model.is_saved_view_model:
@@ -328,7 +325,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     "action_buttons": valid_actions,
                     "list_url": list_url,
                     "saved_views": saved_views,
-                    "title": bettertitle(model._meta.verbose_name_plural),
                 }
             )
         elif view.action in ["create", "update"]:
@@ -368,6 +364,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
+
+        data["request"] = request
 
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
 

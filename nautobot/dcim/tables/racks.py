@@ -130,8 +130,6 @@ class RackDetailTable(RackTable):
             "role",
             "u_height",
             "device_count",
-            "get_utilization",
-            "get_power_utilization",
         )
 
 

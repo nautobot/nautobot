@@ -4,11 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Organization",
-        weight=100,
+        icon=NavigationIconChoices.ORGANIZATION,
+        weight=NavigationWeightChoices.ORGANIZATION,
         groups=(
             NavMenuGroup(
                 name="Tenancy",

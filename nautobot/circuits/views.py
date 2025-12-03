@@ -60,7 +60,7 @@ class CircuitTypeUIViewSet(NautobotUIViewSet):
 
 class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
     def get_extra_context(self, context):
-        return {"termination": context["object"]}
+        return {"termination": context["object"], **super().get_extra_context(context)}
 
     def render_key(self, key, value, context):
         if key == "connected_endpoint":
@@ -226,7 +226,11 @@ class CircuitUIViewSet(NautobotUIViewSet):
             return True
 
         def get_extra_context(self, context):
-            return {"termination": context[self.context_object_key], "side": self.side}
+            return {
+                "termination": context[self.context_object_key],
+                "side": self.side,
+                **super().get_extra_context(context),
+            }
 
         def get_data(self, context):
             """
@@ -431,7 +435,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },
@@ -476,7 +479,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },
