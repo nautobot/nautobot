@@ -483,13 +483,14 @@ class AutoPositionPatternField(ExpandableNameField):
 
 class DynamicModelChoiceMixin:
     """
-    :param display_field: The name of the attribute of an API response object to display in the selection list
-    :param query_params: A dictionary of additional key/value pairs to attach to the API request
-    :param initial_params: A dictionary of child field references to use for selecting a parent field's initial value
-    :param null_option: The string used to represent a null selection (if any)
-    :param disabled_indicator: The name of the field which, if populated, will disable selection of the
-        choice (optional)
-    :param depth: Nested serialization depth when making API requests (default: `0` or a flat representation)
+    Args:
+        display_field (str): The name of the attribute of an API response object to display in the selection list
+        query_params (Optional[dict]): Additional key/value pairs to attach to the API request
+        initial_params (Optional[dict]): Child field references to use for selecting a parent field's initial value
+        null_option (Optional[str]): The string used to represent a null selection (if any)
+        disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
+            choice
+        depth (int): Nested serialization depth when making API requests (default: `0` or a flat representation)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -887,7 +888,8 @@ class TagFilterField(DynamicModelMultipleChoiceField):
     """
     A filter field for the tags of a model. Only the tags used by a model are displayed.
 
-    :param model: The model of the filter
+    Args:
+        model (Model): The model of the filter
     """
 
     def __init__(self, model, *args, query_params=None, queryset=None, **kwargs):

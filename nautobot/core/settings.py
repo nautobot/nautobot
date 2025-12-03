@@ -95,11 +95,12 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+    DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -157,6 +158,7 @@ METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "F
 METRICS_DISABLED_APPS = []
 if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
+METRICS_EXPERIMENTAL_CACHING_DURATION = int(os.getenv("NAUTOBOT_METRICS_EXPERIMENTAL_CACHING_DURATION", "0"))
 
 # Napalm
 NAPALM_ARGS = {}
@@ -411,10 +413,12 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        "VirtualServerProtocolChoices": "nautobot.load_balancers.choices.ProtocolChoices",
         # These choice enums need to be overridden because they get assigned to the `mode` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
         "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "VPNPhase2PolicyChoices": "nautobot.vpn.choices.DhGroupChoices",
         "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
@@ -448,8 +452,10 @@ DATABASES = {
 }
 
 # Ensure proper Unicode handling for MySQL
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+if "mysql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"].setdefault("OPTIONS", {})["charset"] = "utf8mb4"
+    DATABASES["default"].setdefault("TEST", {})["CHARSET"] = "utf8mb4"
+    DATABASES["default"]["TEST"]["COLLATION"] = "utf8mb4_0900_ai_ci"
 
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
@@ -543,7 +549,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "corsheaders",
-    "django_htmx",
     "django_filters",
     "django_jinja",
     "django_tables2",
@@ -562,11 +567,13 @@ INSTALLED_APPS = [
     "nautobot.cloud",
     "nautobot.data_validation",
     "nautobot.dcim",
-    "nautobot.ipam",
     "nautobot.extras",
+    "nautobot.ipam",
+    "nautobot.load_balancers",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.vpn",
     "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -594,7 +601,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "django_htmx.middleware.HtmxMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
@@ -758,12 +764,15 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
-    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
-        default=False,
-        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
-        "Set this to True to use the device name alone as the natural key for Device objects. "
-        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
-        field_type=bool,
+    "DEVICE_UNIQUENESS": ConstanceConfigItem(
+        default="location_tenant_name",
+        help_text=(
+            "Select how Devices are uniquely identified:\n"
+            "- 'location_tenant_name': combination of Location + Tenant + Name\n"
+            "- 'name': Device name must be globally unique\n"
+            "- 'none': No enforced uniqueness (rely on other validation rules or custom validators)"
+        ),
+        field_type=str,
     ),
     "DEPLOYMENT_ID": ConstanceConfigItem(
         default="",
@@ -773,7 +782,7 @@ CONSTANCE_CONFIG = {
     ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
-        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        help_text=mark_safe(
             "Maximum size (in bytes) of any single file generated by a <code>Job.create_file()</code> call."
         ),
         field_type=int,
@@ -806,7 +815,7 @@ CONSTANCE_CONFIG = {
     ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
-        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        help_text=mark_safe(
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
@@ -828,6 +837,11 @@ CONSTANCE_CONFIG = {
         default=False,
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
         field_type=bool,
+    ),
+    "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
+        default=42,
+        help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
+        field_type=int,
     ),
     "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": ConstanceConfigItem(
         default=22, help_text="Default height (in pixels) of a rack unit in a rack elevation diagram", field_type=int
@@ -868,10 +882,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
-    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
+    "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
+        "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
@@ -943,6 +958,19 @@ CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
     "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
 )
+
+# Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
+CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+)
+
+# Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
+CELERY_WORKER_READINESS_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_ready")
+)
+
+# Celery health probes as files - if enabled, Celery worker health probes will be implemented as files
+CELERY_HEALTH_PROBES_AS_FILES = is_truthy(os.getenv("NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES", "False"))
 
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -1034,12 +1062,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
-    "header_bullet": os.getenv(
-        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-    ),  # bullet image used for various view headers
-    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
+    # "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    # "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
@@ -1145,6 +1169,12 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# django-tables2
+#
+
+DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 
 #
 # Kubernetes settings variables

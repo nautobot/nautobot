@@ -25,8 +25,9 @@ class ChoiceField(serializers.Field):
     """
     Represent a ChoiceField as {'value': <DB value>, 'label': <string>}. Accepts a single value on write.
 
-    :param choices: An iterable of choices in the form (value, key).
-    :param allow_blank: Allow blank values in addition to the listed choices.
+    Args:
+        choices (Iterable): An iterable of choices in the form (value, key).
+        allow_blank (bool): Allow blank values in addition to the listed choices.
     """
 
     def __init__(self, choices, allow_blank=False, **kwargs):

@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 from django.urls import reverse
 
 from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
@@ -19,7 +18,6 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         super().setUp()
         self.login_as_superuser()
 
-    @tag("fix_in_v3")
     def test_relationship_advanced_ui(self):
         """
         This test creates a device and a relationship for that device.
@@ -30,7 +28,7 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         device = create_test_device()
         power_panel = PowerPanel.objects.create(
             location=device.location,
-            name="Test Power Panel",
+            name="Test-Power-Panel",
         )
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
         device_content_type = ContentType.objects.get_for_model(Device)
@@ -47,24 +45,23 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
             destination=power_panel,
         )
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the relationship appears in the primary information tab
-        self.assertTrue(self.browser.is_text_present("power panel"))
-        self.assertTrue(self.browser.is_text_present("Power Panel"))
+        self.assertTrue(self.browser.is_text_present("Test-Power-Panel"))  # related object
+        self.assertTrue(self.browser.is_text_present("Power Panel"))  # relationship label
         # Check the relationship does NOT appear in the advanced tab
-        self.browser.links.find_by_partial_text("Advanced")[0].click()
         self.switch_tab("Advanced")
-        self.assertFalse(self.browser.is_text_present("power panel"))
+        self.assertFalse(self.browser.is_text_present("Test-Power-Panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Set the custom_field to only show in the advanced tab
         relationship.advanced_ui = True
         relationship.save()
         # Visit the device detail page
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device', kwargs={'pk': device.pk})}")
         # Check the relationship does NOT appear in the primary information tab
-        self.assertFalse(self.browser.is_text_present("power panel"))
+        self.assertFalse(self.browser.is_text_present("Test-Power-Panel"))
         self.assertFalse(self.browser.is_text_present("Power Panel"))
         # Check the relationship appears in the advanced tab
         self.switch_tab("Advanced")
-        self.assertTrue(self.browser.is_text_present("power panel"))
+        self.assertTrue(self.browser.is_text_present("Test-Power-Panel"))
         self.assertTrue(self.browser.is_text_present("Power Panel"))

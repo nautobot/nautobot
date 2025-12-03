@@ -159,6 +159,20 @@ class DeviceStatusChoices(ChoiceSet):
     )
 
 
+class DeviceUniquenessChoices(ChoiceSet):
+    LOCATION_TENANT_NAME = "location_tenant_name"
+    NAME = "name"
+    NONE = "none"
+
+    DEFAULT = LOCATION_TENANT_NAME
+
+    CHOICES = [
+        (LOCATION_TENANT_NAME, "Location + Tenant + Name"),
+        (NAME, "Device name must be globally unique"),
+        (NONE, "No enforced uniqueness"),
+    ]
+
+
 #
 # ConsolePorts
 #
@@ -589,6 +603,7 @@ class PowerOutletTypeChoices(ChoiceSet):
     TYPE_NEUTRIK_POWERCON_TRUE1 = "neutrik-powercon-true1"
     TYPE_NEUTRIK_POWERCON_TRUE1_TOP = "neutrik-powercon-true1-top"
     TYPE_UBIQUITI_SMARTPOWER = "ubiquiti-smartpower"
+    TYPE_EATON_C39 = "eaton-c39"
     # Other
     TYPE_HARDWIRED = "hardwired"
     TYPE_OTHER = "other"
@@ -728,6 +743,7 @@ class PowerOutletTypeChoices(ChoiceSet):
                 (TYPE_NEUTRIK_POWERCON_TRUE1, "Neutrik powerCON TRUE1"),
                 (TYPE_NEUTRIK_POWERCON_TRUE1_TOP, "Neutrik powerCON TRUE1 TOP"),
                 (TYPE_UBIQUITI_SMARTPOWER, "Ubiquiti SmartPower"),
+                (TYPE_EATON_C39, "Eaton C39"),
             ),
         ),
         (
@@ -762,6 +778,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
+    TYPE_TUNNEL = "tunnel"
 
     # Ethernet
     TYPE_100ME_FX = "100base-fx"
@@ -930,6 +947,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_VIRTUAL, "Virtual"),
                 (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
+                (TYPE_TUNNEL, "Tunnel"),
             ),
         ),
         (
@@ -1133,6 +1151,55 @@ class InterfaceModeChoices(ChoiceSet):
         (MODE_ACCESS, "Access"),
         (MODE_TAGGED, "Tagged"),
         (MODE_TAGGED_ALL, "Tagged (All)"),
+    )
+
+
+class InterfaceDuplexChoices(ChoiceSet):
+    DUPLEX_AUTO = "auto"
+    DUPLEX_FULL = "full"
+    DUPLEX_HALF = "half"
+
+    CHOICES = (
+        (DUPLEX_AUTO, "Auto"),
+        (DUPLEX_FULL, "Full"),
+        (DUPLEX_HALF, "Half"),
+    )
+
+
+class InterfaceSpeedChoices(ChoiceSet):
+    # Stored in Kbps (for compatibility with circuits and humanize_speed filter)
+    SPEED_1M = 1_000
+    SPEED_10M = 10_000
+    SPEED_100M = 100_000
+    SPEED_1G = 1_000_000
+    SPEED_2_5G = 2_500_000
+    SPEED_5G = 5_000_000
+    SPEED_10G = 10_000_000
+    SPEED_25G = 25_000_000
+    SPEED_40G = 40_000_000
+    SPEED_50G = 50_000_000
+    SPEED_100G = 100_000_000
+    SPEED_200G = 200_000_000
+    SPEED_400G = 400_000_000
+    SPEED_800G = 800_000_000
+    SPEED_1_6T = 1_600_000_000
+
+    CHOICES = (
+        (SPEED_1M, "1 Mbps"),
+        (SPEED_10M, "10 Mbps"),
+        (SPEED_100M, "100 Mbps"),
+        (SPEED_1G, "1 Gbps"),
+        (SPEED_2_5G, "2.5 Gbps"),
+        (SPEED_5G, "5 Gbps"),
+        (SPEED_10G, "10 Gbps"),
+        (SPEED_25G, "25 Gbps"),
+        (SPEED_40G, "40 Gbps"),
+        (SPEED_50G, "50 Gbps"),
+        (SPEED_100G, "100 Gbps"),
+        (SPEED_200G, "200 Gbps"),
+        (SPEED_400G, "400 Gbps"),
+        (SPEED_800G, "800 Gbps"),
+        (SPEED_1_6T, "1.6 Tbps"),
     )
 
 
@@ -1370,6 +1437,37 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
+# Power Panels
+#
+
+
+class PowerPanelTypeChoices(ChoiceSet):
+    TYPE_UTILITY = "utility"
+    TYPE_GENERATOR = "generator"
+    TYPE_SWITCHGEAR = "switchgear"
+    TYPE_MDP = "mdp"
+    TYPE_UPS = "ups"
+    TYPE_TRANSFER_SWITCH = "transfer-switch"
+    TYPE_PDU = "pdu"
+    TYPE_PANELBOARD = "panelboard"
+    TYPE_MLC = "mlc"
+    TYPE_RPP = "rpp"
+
+    CHOICES = (
+        (TYPE_UTILITY, "Utility"),
+        (TYPE_GENERATOR, "Generator"),
+        (TYPE_SWITCHGEAR, "Switchgear"),
+        (TYPE_MDP, "Main Distribution Panel (MDP)"),
+        (TYPE_UPS, "Uninterruptible Power Supply (UPS)"),
+        (TYPE_TRANSFER_SWITCH, "Transfer Switch (TS)"),
+        (TYPE_PDU, "Power Distribution Unit (PDU)"),
+        (TYPE_PANELBOARD, "Panelboard"),
+        (TYPE_MLC, "Mini Load Center (MLC)"),
+        (TYPE_RPP, "Remote Power Panel (RPP)"),
+    )
+
+
+#
 # PowerFeeds
 #
 
@@ -1403,6 +1501,16 @@ class PowerFeedTypeChoices(ChoiceSet):
     }
 
 
+class PowerPathChoices(ChoiceSet):
+    PATH_A = "a"
+    PATH_B = "b"
+
+    CHOICES = (
+        (PATH_A, "Path A"),
+        (PATH_B, "Path B"),
+    )
+
+
 class PowerFeedSupplyChoices(ChoiceSet):
     SUPPLY_AC = "ac"
     SUPPLY_DC = "dc"
@@ -1421,6 +1529,18 @@ class PowerFeedPhaseChoices(ChoiceSet):
         (PHASE_SINGLE, "Single phase"),
         (PHASE_3PHASE, "Three-phase"),
     )
+
+
+class PowerFeedBreakerPoleChoices(ChoiceSet):
+    POLE_1 = 1
+    POLE_2 = 2
+    POLE_3 = 3
+
+    CHOICES = [
+        (POLE_1, "1-Pole"),
+        (POLE_2, "2-Pole"),
+        (POLE_3, "3-Pole"),
+    ]
 
 
 #

@@ -1,2 +1,0 @@
-Fixed an issue in which data-validation-engine checks would incorrectly run repeatedly when calling model `clean()`, causing significant performance degradation.
-Changed data-validation-engine `BaseValidator.clean()` implementation to use cacheable lookup APIs, improving performance of repeated model `clean()` calls.

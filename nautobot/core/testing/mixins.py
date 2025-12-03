@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
@@ -19,6 +19,7 @@ from nautobot.core.testing import utils
 from nautobot.core.utils import deprecation, permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.ipam.models import default_namespace_pk
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -81,6 +82,7 @@ class NautobotTestCaseMixin:
         """
         super().tearDown()
         cache.clear()
+        default_namespace_pk.set(None)
 
     def prepare_instance(self, instance):
         """
@@ -156,10 +158,28 @@ class NautobotTestCaseMixin:
         """
         for name in names:
             ct, action = permissions.resolve_permission_ct(name)
-            obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
+            obj_perm, _ = users_models.ObjectPermission.objects.get_or_create(name=name, actions=[action], **kwargs)
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
+
+    def remove_permissions(self, *names, **kwargs):
+        """
+        Remove a set of permissions. Accepts permission names in the form <app>.<action>_<model>.
+        Additional keyword arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+
+        Examples:
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup")
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
+        """
+        for name in names:
+            _, action, _ = permissions.resolve_permission(name)
+            try:
+                obj_perm = users_models.ObjectPermission.objects.get(name=name, actions=[action], **kwargs)
+                obj_perm.delete()
+            except ObjectDoesNotExist:
+                # Permission does not exist, so nothing to remove
+                pass
 
     #
     # Custom assertions
@@ -202,10 +222,11 @@ class NautobotTestCaseMixin:
         Compare a model instance to a dictionary, checking that its attribute values match those specified
         in the dictionary.
 
-        :param instance: Python object instance
-        :param data: Dictionary of test data used to define the instance
-        :param exclude: List of fields to exclude from comparison (e.g. passwords, which get hashed)
-        :param api: Set to True is the data is a JSON representation of the instance
+        Args:
+            instance (Model): Django model instance
+            data (dict): Dictionary of test data used to define the instance
+            exclude (Optional[List[str]]): List of fields to exclude from comparison (e.g. passwords, which get hashed)
+            api (bool): Set to True is the data is a JSON representation of the instance
         """
         if exclude is None:
             exclude = []
@@ -246,9 +267,9 @@ class NautobotTestCaseMixin:
         self.assertEqual(new_model_dict, relevant_data)
 
     def assertQuerySetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
-        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+        """Wrapper for assertQuerySetEqual with additional logic to assert input queryset and values are not empty"""
 
-        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(qs), 0, "QuerySet cannot be empty")
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
         return self.assertQuerySetEqual(qs, values, *args, **kwargs)

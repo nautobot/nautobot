@@ -17,6 +17,7 @@ router.register("rack-reservations", views.RackReservationViewSet)
 router.register("manufacturers", views.ManufacturerViewSet)
 router.register("device-families", views.DeviceFamilyViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
+router.register("module-families", views.ModuleFamilyViewSet)
 router.register("module-types", views.ModuleTypeViewSet)
 
 # Device type and Module type components
@@ -89,6 +90,8 @@ router.register("controller-managed-device-groups", views.ControllerManagedDevic
 router.register("virtual-device-contexts", views.VirtualDeviceContextViewSet)
 router.register("interface-vdc-assignments", views.InterfaceVDCAssignmentViewSet)
 
+# Device Cluster Assignments
+router.register("device-cluster-assignments", views.DeviceClusterAssignmentViewSet)
 
 app_name = "dcim-api"
 urlpatterns = router.urls

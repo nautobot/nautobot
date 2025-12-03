@@ -15,7 +15,7 @@ from nautobot.core.forms import (
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -27,6 +27,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
+    get_saved_views_for_user,
     view_changes_not_saved,
 )
 from nautobot.extras.models import SavedView
@@ -226,7 +227,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset.get_filters()
+                        filterset_filters = view.filterset_class.base_filters
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -275,6 +276,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "model": model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -289,7 +291,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "table_config_form": TableConfigForm(table=table) if table else None,
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            "view_action": view.action,
+            "detail": False,
         }
+
+        self._set_context_from_method(view, "get_view_titles", context, "view_titles")
+        self._set_context_from_method(view, "get_breadcrumbs", context, "breadcrumbs")
+
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
@@ -303,32 +311,20 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
             resolved_path = resolve(request.path)
+            # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
             list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None
             if model.is_saved_view_model:
-                # We are not using .restrict(request.user, "view") here
-                # User should be able to see any saved view that he has the list view access to.
-                if request.user.has_perms(["extras.view_savedview"]):
-                    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
-                else:
-                    shared_saved_views = (
-                        SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
-                    )
-                    user_owned_saved_views = (
-                        SavedView.objects.filter(view=list_url, owner=request.user).order_by("name").only("pk", "name")
-                    )
-                    saved_views = shared_saved_views | user_owned_saved_views
+                saved_views = get_saved_views_for_user(request.user, list_url)
 
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
                 {
-                    "model": model,
                     "current_saved_view": self.saved_view,
                     "new_changes_not_applied": new_changes_not_applied,
                     "action_buttons": valid_actions,
                     "list_url": list_url,
                     "saved_views": saved_views,
-                    "title": bettertitle(model._meta.verbose_name_plural),
                 }
             )
         elif view.action in ["create", "update"]:
@@ -369,4 +365,18 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
+        data["request"] = request
+
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
+
+    @staticmethod
+    def _set_context_from_method(
+        view,
+        view_function,
+        context,
+        context_key,
+    ):
+        try:
+            context[context_key] = getattr(view, view_function)()
+        except AttributeError:
+            context[context_key] = None

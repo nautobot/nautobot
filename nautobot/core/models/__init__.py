@@ -11,15 +11,23 @@ from django.utils.encoding import is_protected_type
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
-from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
+from nautobot.core.models.querysets import (
+    ClusterToClustersQuerySetMixin,
+    CompositeKeyQuerySetMixin,
+    LocationToLocationsQuerySetMixin,
+    RestrictedQuerySet,
+)
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
     "BaseManager",
     "BaseModel",
+    "ClusterToClustersQuerySetMixin",
     "CompositeKeyQuerySetMixin",
     "ContentTypeRelatedQuerySet",
+    "LocationToLocationsQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -95,6 +103,17 @@ class BaseModel(models.Model):
         raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
     @property
+    def page_title(self):
+        """
+        Property used by Title and Breadcrumbs to display link to the object or title at detail page.
+        """
+        if hasattr(self, "name"):
+            return self.name
+        if hasattr(self, "display"):
+            return self.display
+        return str(self)
+
+    @property
     def present_in_database(self):
         """
         True if the record exists in the database, False if it does not.
@@ -115,7 +134,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"nautobot.{cls._meta.label_lower}._content_type"
+        return construct_cache_key(cls, method_name="_content_type")
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument

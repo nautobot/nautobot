@@ -9,7 +9,7 @@
                 {% if request.user.is_authenticated %}
                     {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}
                         <a
-                            class="align-items-center d-inline-flex gap-4 my-n4 text-decoration-none"
+                            class="align-items-center d-inline-flex fs-5 gap-4 my-n4 text-decoration-none"
                             href="{{ settings.BRANDING_POWERED_BY_URL }}"
                             target="_blank"
                         >
@@ -38,7 +38,7 @@
                             href="#theme_modal"
                             id="btn-theme-modal"
                         >
-                            <i class="mdi mdi-theme-light-dark"></i>
+                            <span class="mdi mdi-theme-light-dark"></span>
                         </a>
                     </div>
                     &middot;
@@ -48,7 +48,7 @@
                         href="{% if settings.BRANDING_URLS.docs %}{{ settings.BRANDING_URLS.docs }}{% else %}{% static 'docs/index.html' %}{% endif %}"
                         target="_blank"
                     >
-                        <i class="mdi mdi-book-open-page-variant"></i>
+                        <span class="mdi mdi-book-open-page-variant"></span>
                     </a>
                     &middot;
                     <a
@@ -68,7 +68,7 @@
                         href="{% url 'api_docs' %}"
                         target="_blank"
                     >
-                        <i class="mdi mdi-cloud-braces"></i>
+                        <span class="mdi mdi-cloud-braces"></span>
                     </a>
                     &middot;
                     <a
@@ -77,7 +77,7 @@
                         href="{% url 'graphql' %}"
                         target="_blank"
                     >
-                        <i class="mdi mdi-graphql"></i>
+                        <span class="mdi mdi-graphql"></span>
                     </a>
                     &middot;
                     <a
@@ -86,7 +86,7 @@
                         href="{{ settings.BRANDING_URLS.code }}"
                         target="_blank"
                     >
-                        <i class="mdi mdi-xml"></i>
+                        <span class="mdi mdi-xml"></span>
                     </a>
                     &middot;
                     <a
@@ -95,10 +95,12 @@
                         href="{{ settings.BRANDING_URLS.help }}"
                         target="_blank"
                     >
-                        <i class="mdi mdi-lifebuoy"></i>
+                        <span class="mdi mdi-lifebuoy"></span>
                     </a>
                 {% endif %}
             </div>
         </div>
     </div>
 </footer>
+
+{% include 'modals/modal_theme.html' with name='theme'%}

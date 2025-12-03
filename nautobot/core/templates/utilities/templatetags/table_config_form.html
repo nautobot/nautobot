@@ -1,4 +1,5 @@
 {% load form_helpers %}
+{% load static %}
 
 <section class="nb-drawer" tabindex="-1" id="{{ table_name }}_config">
     <div class="nb-drawer-header">
@@ -6,20 +7,49 @@
         <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
     </div>
     <div class="nb-drawer-body">
-        <form class="form-horizontal userconfigform pb-20 px-20" data-config-root="tables.{{ table_config_form.table_name }}">
-            {% render_form table_config_form %}
-            <div class="row">
-                <div class="col-md-9 col-md-offset-3">
-                    <a class="btn btn-primary btn-xs" id="move-option-up" data-target="id_columns"><i class="mdi mdi-arrow-up-bold"></i> Move up</a>
-                    <a class="btn btn-primary btn-xs" id="move-option-down" data-target="id_columns"><i class="mdi mdi-arrow-down-bold"></i> Move down</a>
-                    <a class="btn btn-success btn-xs" id="select-all-options" data-target="id_columns"><i class="mdi mdi-expand-all-outline"></i> Select all</a>
+        <form class="userconfigform h-100 pb-20 px-20 vstack" data-config-root="tables.{{ table_config_form.table_name }}">
+            <div class="row align-content-start flex-fill">
+                <div class="col-12">
+                    <div class="alert alert-warning">
+                        Column choices may negatively affect loading times.
+                        <a href="{% static 'docs/user-guide/platform-functionality/user-interface/configurablecolumns.html' %}" class="btn btn-link btn-sm" target="_blank" rel="noopener">
+                            <span class="mdi mdi-information"></span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-12">
+                    {% with field=table_config_form.visible_fields.0 %}
+                        {{ field }}
+                        <span class="form-text mt-8">{{ field.help_text|safe }}</span>
+                        <div class="hstack gap-4 mt-8 mx-n4">
+                            {# djlint:off B083 #}
+                            <button type="button" class="btn btn-primary btn-sm" id="move-option-up" data-target="{{ field.id_for_label }}"><span class="mdi mdi-arrow-up-bold me-4"></span>Move up</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="move-option-down" data-target="{{ field.id_for_label }}"><span class="mdi mdi-arrow-down-bold me-4"></span>Move down</button>
+                            <button type="button" class="btn btn-success btn-sm" id="select-all-options" data-target="{{ field.id_for_label }}"><span class="mdi mdi-expand-all-outline me-4"></span>Select all</button>
+                            {# djlint:on B083 #}
+                        </div>
+                    {% endwith %}
                 </div>
             </div>
-            <br>
-            <div class="text-right">
+            <div class="nb-form-sticky-footer">
                 <input type="submit" class="btn btn-primary" value="Save">
                 <input type="submit" class="btn btn-danger reset" value="Reset">
             </div>
         </form>
     </div>
 </section>
+
+{% block javascript %}
+    <script>
+        (() => {
+            document.addEventListener('DOMContentLoaded', () => {
+                document.addEventListener('submit', (event) => {
+                    if (event.target.closest('#{{ table_name }}_config')) {
+                        // Keep the drawer open after page reload caused by form submission.
+                        window.nb.history.saveState();
+                    }
+                });
+            });
+        })();
+    </script>
+{% endblock %}

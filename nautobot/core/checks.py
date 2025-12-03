@@ -6,6 +6,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import connections
 
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.choices import DeviceUniquenessChoices
+
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
     id="nautobot.core.E002",
@@ -40,6 +43,19 @@ W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
     obj=settings,
+)
+
+W006 = Warning(
+    "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
+    hint="This setting has been superseded by DEVICE_UNIQUENESS (see Device Constraints).",
+    id="nautobot.core.W006",
+    obj=settings,
+)
+
+W007 = Warning(
+    "Invalid DEVICE_UNIQUENESS configuration value.",
+    hint=f"DEVICE_UNIQUENESS must be one of: {', '.join(DeviceUniquenessChoices.values())}.",
+    id="nautobot.core.W007",
 )
 
 MIN_POSTGRESQL_MAJOR_VERSION = 14
@@ -152,4 +168,34 @@ def check_data_validation_engine_installed(app_configs, **kwargs):
     app_name = "nautobot_data_validation_engine"
     if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
         return [E006]
+    return []
+
+
+@register(Tags.compatibility)
+def check_deprecated_device_name_as_natural_key(app_configs, **kwargs):
+    """
+    Warn if the deprecated DEVICE_NAME_AS_NATURAL_KEY setting is still defined.
+
+    This setting existed prior to 3.0 and has been replaced by the
+    DEVICE_UNIQUENESS Constance configuration.
+    """
+    try:
+        get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY")
+        return [W006]
+    except AttributeError:
+        pass
+    return []
+
+
+@register(Tags.compatibility)
+def check_valid_value_for_device_uniqueness(app_configs, **kwargs):
+    """
+    Warn if the invalid value for DEVICE_UNIQUENESS is set.
+    """
+    try:
+        device_uniqueness = get_settings_or_config("DEVICE_UNIQUENESS")
+        if device_uniqueness not in DeviceUniquenessChoices.values():
+            return [W007]
+    except AttributeError:
+        return [W007]
     return []

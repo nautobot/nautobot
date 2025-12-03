@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 from datetime import date, datetime
 import json
 import logging
@@ -13,6 +13,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
+from jinja2 import TemplateError, TemplateSyntaxError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -35,7 +36,8 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -48,20 +50,71 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    def get_for_model(self, model, get_queryset=True):
         """
         Return all ComputedFields assigned to the given model.
+
+        Returns a queryset by default, or a list if `get_queryset` param is False.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        cache_key = construct_cache_key(
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
+        list_cache_key = construct_cache_key(
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_type=content_type)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` lookups."""
+        queryset = self.all().select_related("content_type")
+        listings = defaultdict(list)
+        for cf in queryset:
+            listings[f"{cf.content_type.app_label}.{cf.content_type.model}"].append(cf)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            cache_key = construct_cache_key(
+                self, method_name="get_for_model", branch_aware=True, model=label, listing=True
+            )
+            cache.set(cache_key, listings[label])
+
+    def bulk_create(self, objs, *args, **kwargs):
+        """Validate templates before saving."""
+        self._validate_templates_bulk(objs)
+        return super().bulk_create(objs, *args, **kwargs)
+
+    def bulk_update(self, objs, fields, *args, **kwargs):
+        """Validate templates before updating if template field is being modified."""
+        if "template" in fields:
+            self._validate_templates_bulk(objs)
+
+        return super().bulk_update(objs, fields, *args, **kwargs)
+
+    def _validate_templates_bulk(self, objs):
+        """Helper method to validate templates for multiple objects."""
+        errors = []
+        for obj in objs:
+            try:
+                obj.validate_template()
+            except ValidationError as exc:
+                message_list = [f"'{obj.label}': {x}" for x in exc.messages]
+                errors.extend(message_list)
+
+        if errors:
+            raise ValidationError(f"Template validation failed - {'; '.join(errors)}")
 
 
 @extras_features("graphql")
@@ -123,14 +176,7 @@ class ComputedField(
 
     def render(self, context):
         try:
-            rendered = render_jinja2(self.template, context)
-            # If there is an undefined variable within a template, it returns nothing
-            # Doesn't raise an exception either most likely due to using Undefined rather
-            # than StrictUndefined, but return fallback_value if None is returned
-            if rendered is None:
-                logger.warning("Failed to render computed field %s", self.key)
-                return self.fallback_value
-            return rendered
+            return render_jinja2(self.template, context)
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
@@ -141,8 +187,25 @@ class ComputedField(
 
     def clean(self):
         super().clean()
+
+        self.validate_template()
+
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
+    def validate_template(self):
+        """
+        Validate that the template contains valid Jinja2 syntax.
+        """
+        try:
+            validate_jinja2(self.template)
+        except TemplateSyntaxError as exc:
+            raise ValidationError({"template": f"Template syntax error on line {exc.lineno}: {exc.message}"})
+        except TemplateError as exc:
+            raise ValidationError({"template": f"Template error: {exc}"})
+        except Exception as exc:
+            # System-level exceptions (very rare) - memory, recursion, encoding issues
+            raise ValidationError(f"Template validation failed: {exc}")
 
 
 class CustomFieldModel(models.Model):
@@ -370,18 +433,35 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, exclude_filter_disabled=False):
+    def get_for_model(self, model, exclude_filter_disabled=False, get_queryset=True):
         """
         Return (and cache) all CustomFields assigned to the given model.
 
         Args:
             model (Model): The django model to which custom fields are registered
             exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
+            get_queryset (bool): Whether to return a QuerySet or a list.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = (
-            f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}.{exclude_filter_disabled}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            exclude_filter_disabled=exclude_filter_disabled,
         )
+        list_cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            exclude_filter_disabled=exclude_filter_disabled,
+            listing=True,
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -389,21 +469,64 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
             cache.set(cache_key, queryset)
+        if not get_queryset:
+            listing = list(queryset)
+            cache.set(list_cache_key, listing)
+            return listing
         return queryset
-
-    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
     def keys_for_model(self, model):
         """Return list of all keys for CustomFields assigned to the given model."""
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.keys_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        cache_key = construct_cache_key(
+            self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
         keys = cache.get(cache_key)
         if keys is None:
             keys = list(self.get_for_model(model).values_list("key", flat=True))
             cache.set(cache_key, keys)
         return keys
 
-    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` and `keys_for_model` lookups."""
+        queryset = self.all().prefetch_related("content_types")
+        cf_listings = defaultdict(lambda: defaultdict(list))
+        key_listings = defaultdict(list)
+        for cf in queryset:
+            for ct in cf.content_types.all():
+                label = f"{ct.app_label}.{ct.model}"
+                cf_listings[label][False].append(cf)
+                if cf.filter_logic != CustomFieldFilterLogicChoices.FILTER_DISABLED:
+                    cf_listings[label][True].append(cf)
+                key_listings[label].append(cf.key)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            cache.set(
+                construct_cache_key(
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=True,
+                ),
+                cf_listings[label][True],
+            )
+            cache.set(
+                construct_cache_key(
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=False,
+                ),
+                cf_listings[label][False],
+            )
+            cache.set(
+                construct_cache_key(self, method_name="keys_for_model", branch_aware=True, model=label),
+                key_listings[label],
+            )
 
 
 @extras_features("webhooks")
@@ -465,8 +588,7 @@ class CustomField(
         blank=True,
         null=True,
         help_text=(
-            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
-            '"Foo").'
+            'Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "Foo").'
         ),
     )
     weight = models.PositiveSmallIntegerField(
@@ -524,10 +646,6 @@ class CustomField(
         return self.label
 
     @property
-    def choices_cache_key(self):
-        return f"nautobot.extras.customfield.choices.{self.pk}"
-
-    @property
     def choices(self) -> list[str]:
         """
         Cacheable shorthand for retrieving custom_field_choices values associated with this model.
@@ -537,10 +655,11 @@ class CustomField(
         """
         if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
             return []
-        choices = cache.get(self.choices_cache_key)
+        cache_key = construct_cache_key(self, method_name="choices", branch_aware=True)
+        choices = cache.get(cache_key)
         if choices is None:
             choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
-            cache.set(self.choices_cache_key, choices)
+            cache.set(cache_key, choices)
         return choices
 
     def save(self, *args, **kwargs):

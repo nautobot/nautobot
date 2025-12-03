@@ -140,6 +140,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "customlink",
     "devicebay",
     "devicebaytemplate",
+    "deviceclusterassignment",
     "devicetypetosoftwareimagefile",
     "dynamicgroupmembership",
     "exporttemplate",
@@ -209,3 +210,6 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "vrfprefixassignment",
     "webhook",
 ]
+
+# M2M fields that are included by default in API responses if exclude_m2m is not provided
+DEFAULT_M2M_FIELDS = ["tags", "content_types", "object_types"]

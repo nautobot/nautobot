@@ -15,10 +15,7 @@ router.register("required-rules", views.RequiredValidationRuleUIViewSet)
 router.register("unique-rules", views.UniqueValidationRuleUIViewSet)
 
 urlpatterns = [
-    path(
-        "data-compliance/<model>/<uuid:id>/",
-        views.DataComplianceObjectView.as_view(),
-        name="data-compliance-tab",
-    ),
+    path("device-constraints/", views.DeviceConstraintsView.as_view(), name="device-constraints"),
 ]
+
 urlpatterns += router.urls

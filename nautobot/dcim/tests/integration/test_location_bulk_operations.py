@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 
 from nautobot.core.testing.integration import (
     BulkOperationsTestCases,
@@ -8,7 +7,6 @@ from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.models import Status
 
 
-@tag("fix_in_v3")
 class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):
     """
     Test locations bulk edit / delete operations.
@@ -19,10 +17,14 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
     model_edit_data = {"description": "Test description"}
     model_filter_by = {"location_type": "External"}
     model_class = Location
+    model_expected_counts: dict[str, int] = {
+        "all": 5,
+        "filtered": 2,
+    }
+    all_count = 5
 
     def setup_items(self):
-        Location.objects.all().delete()
-
+        self.model_expected_counts["all"] = Location.objects.count() + self.all_count
         # Create locations for test
         self.create_location("Test Location Integration Test 1")
         self.create_location("Test Location Integration Test 2")

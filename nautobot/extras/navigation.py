@@ -4,10 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Approvals",
+        icon=NavigationIconChoices.APPROVAL_WORKFLOWS,
+        weight=NavigationWeightChoices.APPROVAL_WORKFLOWS,
         groups=(
             NavMenuGroup(
                 name="Approval Workflows",
@@ -37,7 +40,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Organization",
-        weight=100,
+        icon=NavigationIconChoices.ORGANIZATION,
+        weight=NavigationWeightChoices.ORGANIZATION,
         groups=(
             NavMenuGroup(
                 name="Contacts",
@@ -139,7 +143,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Secrets",
-        weight=700,
+        icon=NavigationIconChoices.SECRETS,
+        weight=NavigationWeightChoices.SECRETS,
         groups=(
             NavMenuGroup(
                 name="Secrets",
@@ -167,7 +172,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Jobs",
-        weight=800,
+        icon=NavigationIconChoices.JOBS,
+        weight=NavigationWeightChoices.JOBS,
         groups=(
             NavMenuGroup(
                 name="Jobs",
@@ -179,16 +185,6 @@ menu_items = (
                         weight=100,
                         permissions=[
                             "extras.view_job",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
-                        link="extras:scheduledjob_approval_queue_list",
-                        name="Job Approval Queue",
-                        weight=200,
-                        permissions=[
-                            "extras.view_job",
-                            "extras.view_scheduledjob",
                         ],
                         buttons=(),
                     ),
@@ -265,7 +261,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Extensibility",
-        weight=900,
+        icon=NavigationIconChoices.EXTENSIBILITY,
+        weight=NavigationWeightChoices.EXTENSIBILITY,
         groups=(
             NavMenuGroup(
                 name="Logging",
@@ -539,7 +536,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Apps",
-        weight=5000,
+        icon=NavigationIconChoices.APPS,
+        weight=NavigationWeightChoices.APPS,
         groups=(
             NavMenuGroup(
                 name="General",

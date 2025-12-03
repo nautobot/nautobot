@@ -12,23 +12,23 @@
                 {{ approval_workflow.object_under_review|hyperlinked_object }}
                 <br />
                 <small>
-                    <span class="text-muted">{{ approval_workflow.user }} -</span>
-                    <span class="text-muted">{{ approval_workflow.created|date:settings.SHORT_DATETIME_FORMAT }}</a>
+                    <span class="text-secondary">{{ approval_workflow.user }} -</span>
+                    <span class="text-secondary">{{ approval_workflow.created|date:settings.SHORT_DATETIME_FORMAT }}</a>
                 </small>
             </div>
         {% endwith %}
         {% if forloop.last %}
-            <div class="list-group-item text-right">
+            <div class="list-group-item text-end">
                 <a href="{% url 'extras:approver_dashboard' %}">View All Approval Workflow Stages Pending Approval</a>
             </div>
         {% endif %}
     {% endfor %}
 {% elif perms.extras.view_approvalworkflowstage %}
-    <div class="panel-body text-muted">
+    <div class="card-body text-secondary">
         No Pending Approval Workflows found
     </div>
 {% else %}
-    <div class="panel-body text-muted">
-        <i class="mdi mdi-lock"></i> No Permission
+    <div class="card-body text-secondary">
+        <span class="mdi mdi-lock"></span> No Permission
     </div>
 {% endif %}

@@ -27,13 +27,20 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
+from nautobot.extras.models.mixins import (
+    ContactMixin,
+    DataComplianceModelMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -129,6 +136,7 @@ class ConfigContext(
     tenant_groups = models.ManyToManyField(to="tenancy.TenantGroup", related_name="+", blank=True)
     tenants = models.ManyToManyField(to="tenancy.Tenant", related_name="+", blank=True)
     tags = models.ManyToManyField(to="extras.Tag", related_name="+", blank=True)
+    device_families = models.ManyToManyField("dcim.DeviceFamily", related_name="+", blank=True)
 
     # Due to feature flag CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED this field will remain empty unless set to True.
     dynamic_groups = models.ManyToManyField(
@@ -355,6 +363,14 @@ class CustomLink(
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
 
+    is_data_compliance_model = False
+
+    @property
+    def button_class_css_class(self):
+        if self.button_class == ButtonClassChoices.CLASS_DEFAULT:
+            return "secondary"
+        return self.button_class
+
     class Meta:
         ordering = ["group_name", "weight", "name"]
 
@@ -579,6 +595,7 @@ class FileAttachment(BaseModel):
     mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     natural_key_field_names = ["pk"]
 
@@ -644,6 +661,8 @@ class FileProxy(BaseModel):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
 
+    is_data_compliance_model = False
+
     def __str__(self):
         return self.name
 
@@ -682,6 +701,7 @@ class FileProxy(BaseModel):
 class GraphQLQuery(
     ChangeLoggedModel,
     ContactMixin,
+    DataComplianceModelMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
@@ -822,7 +842,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Note(ChangeLoggedModel, BaseModel):
+class Note(ChangeLoggedModel, DataComplianceModelMixin, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
@@ -883,6 +903,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
     is_shared = models.BooleanField(default=True)
 
     documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["owner", "view", "name"]
@@ -904,6 +925,24 @@ class SavedView(BaseModel, ChangeLoggedModel):
 
         super().save(*args, **kwargs)
 
+    @property
+    def model(self):
+        """
+        Return the model class associated with this SavedView, based on the 'view' field.
+        """
+        return get_model_for_view_name(self.view)
+
+    def get_filtered_queryset(self, user):
+        """
+        Return a queryset for the associated model, filtered by this SavedView's filter_params.
+        """
+        model = self.model
+        if model is None:
+            return None
+        filter_params = self.config.get("filter_params", {})
+        filterset_class = get_filterset_for_model(model)
+        return filterset_class(filter_params, model.objects.restrict(user)).qs
+
 
 @extras_features("graphql")
 class UserSavedViewAssociation(BaseModel):
@@ -911,6 +950,7 @@ class UserSavedViewAssociation(BaseModel):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
     view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["user", "view_name"]]

@@ -1,0 +1,105 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'members' %} active{% endif %}">
+            Members {% badge object.count %}
+        </a>
+    </li>
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    <div id="members" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "members" %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-lg-12">
+                {% if members_list_url %}
+                    <div class="alert alert-success" role="alert">
+                        You can bulk-add and bulk-remove members of this group from the <a href="{{ members_list_url }}">{{ members_verbose_name_plural|bettertitle }} list view</a>.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        Dynamic group membership is cached for performance reasons, therefore this listing may not always
+                        be up-to-date.<br>You can refresh the membership of this group asynchronously by clicking the
+                        "Refresh Members" button above.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Dynamic Group members' %}
+            </div>
+        </div>
+    </div>
+{% endblock extra_tab_content %}
+
+{% block content_left_page %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Dynamic Group</strong>
+        </div>
+        <table class="table table-hover card-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td><span>{{ object.name }}</span></td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td><span>{{ object.description }}</span></td>
+            </tr>
+            <tr>
+                <td>Content Type</td>
+                <td><span>{{ object.content_type }}</span></td>
+            </tr>
+            <tr>
+                <td>Group Type</td>
+                <td><span>{{ object.get_group_type_display }}</span></td>
+            </tr>
+            {% include 'inc/tenant_table_row.html' %}
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% if object.group_type == "dynamic-filter" %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Filter</strong>
+            </div>
+            <div class="card-body">
+                <pre>{{ object.filter | render_json }}</pre>
+            </div>
+        </div>
+    {% endif %}
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% if object.group_type != "static" %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Filter Query Logic</strong>
+            </div>
+            <div class="card-body">
+                {% if object.group_type == "dynamic-set" %}
+                    <span class="form-text">
+                        This is a raw representation of the underlying filter that is derived
+                        by aggregating the filters from all descendant groups.
+                    </span>
+                {% endif %}
+            <pre>{{ raw_query }}</pre>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <strong>Related Groups</strong>
+            </div>
+            <div class="card-body">
+                {% if object.group_type == "dynamic-set" %}
+                    {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' disable_pagination=True %}
+                {% endif %}
+                {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' disable_pagination=True %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock content_full_width_page %}

@@ -1,5 +1,7 @@
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.html import escape
 from rest_framework import status
@@ -21,8 +23,6 @@ from nautobot.extras.choices import (
 from nautobot.extras.models import CustomField, CustomFieldChoice, DynamicGroup, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
-
-from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
 
 
 class ChangeLogViewTest(ModelViewTestCase):
@@ -234,6 +234,32 @@ class ChangeLogViewTest(ModelViewTestCase):
             self.assertContains(resp, escape('"description": "changed description2"'))
             self.assertContains(resp, escape('"description": "changed description3"'))
 
+    def test_objectchange_skips_add_conditional_prefetch(self):
+        """
+        Test that ObjectChange.objects.all() skips prefetch_related on ContentTypes without a model class.
+        """
+        self.add_permissions("extras.view_objectchange")
+
+        ct = ContentType.objects.create(app_label="nonexistent_app", model="nonexistentmodel")
+        oc = ObjectChange.objects.create(
+            changed_object_type=ct,
+            changed_object_id=1,
+            object_repr="nonexistentobject",
+            action=ObjectChangeActionChoices.ACTION_CREATE,
+            user=self.user,
+            object_data={},
+            request_id=uuid.uuid4(),
+        )
+        url = reverse("extras:objectchange_list")
+        with self.assertLogs(level="WARNING") as cm:
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, oc.object_repr)
+            self.assertIn(
+                ("One or more ContentType entries in the database are invalid."),
+                cm.output[0],
+            )
+
 
 class ChangeLogAPITest(APITestCase):
     def setUp(self):
@@ -260,7 +286,10 @@ class ChangeLogAPITest(APITestCase):
         self.tags = Tag.objects.get_for_model(Location)
         self.statuses = Status.objects.get_for_model(Location)
 
+    @tag("example_app")
     def test_create_object(self):
+        from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
+
         location_type = LocationType.objects.get(name="Campus")
         data = {
             "name": "Test Location 1",
@@ -290,8 +319,11 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], sorted([self.tags[0].name, self.tags[1].name]))
         self.assertEqual(oc.user_id, self.user.pk)
 
+    @tag("example_app")
     def test_update_object(self):
         """Test PUT with changelogs."""
+        from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
+
         location_type = LocationType.objects.get(name="Campus")
         location = Location.objects.create(
             name="Test Location 1",
@@ -510,13 +542,35 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()
 
+    def test_m2m_fields_not_excluded(self):
+        """Ensure that m2m fields are included in object changes, even if exclude_m2m is the default in the REST API."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test m2m locationtype")
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+
+        object_changes = get_changes_for_model(location_type)
+        self.assertEqual(object_changes.count(), 2)
+
+        snapshots = object_changes.first().get_snapshots()
+        self.assertIsNotNone(snapshots["differences"]["removed"])
+        self.assertIsNotNone(snapshots["differences"]["added"])
+        self.assertIn("content_types", snapshots["differences"]["removed"])
+        self.assertIn("content_types", snapshots["differences"]["added"])
+        self.assertEqual(
+            len(snapshots["differences"]["added"]["content_types"]),
+            ContentType.objects.filter(app_label="dcim").count(),
+        )
+
     def test_opt_out(self):
         """Hidden static group associations can "opt out" of change logging."""
         dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
         # Force reassignment of all cached memberships:
         members = list(dg.members)
-        dg._set_members([])
-        dg._set_members(members)
+        with context_managers.web_request_context(self.user):
+            dg._set_members([])
+            dg._set_members(members)
 
         for sga in dg.static_group_associations(manager="all_objects").all():
             self.assertIsNone(get_changes_for_model(sga).first())

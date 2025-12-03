@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import tag
 
 from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
@@ -16,7 +15,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         super().setUp()
         self.login_as_superuser()
 
-    @tag("fix_in_v3")
     def test_create_valid_config_context_schema(self):
         """
         Given a clean slate, navigate to and fill out the form for a valid schema object
@@ -34,13 +32,12 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         self.fill_input("name", "Integration Schema 1")
         self.fill_input("description", "Description")
         self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
         self.assertTrue(self.browser.is_text_present("Edit"))
 
-    @tag("fix_in_v3")
     def test_create_invalid_config_context_schema(self):
         """
         Given a clean slate, navigate to and fill out the form for an invalid schema object
@@ -61,14 +58,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         self.fill_input("name", "Integration Schema 2")
         self.fill_input("description", "Description")
         self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
 
         # Verify validation error raised to user within form
         self.assertTrue(self.browser.is_text_present("'not a valid type' is not valid under any of the given schemas"))
         self.assertTrue(self.browser.is_text_present("Add a new config context schema"))
         self.assertEqual(self.browser.find_by_name("name").first.value, "Integration Schema 2")
 
-    @tag("fix_in_v3")
     def test_validation_tab(self):
         """
         Given a config context schema that is assigned to a config context, and device, and a VM with valid context data
@@ -137,60 +133,65 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
+        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             )
 
         # Edit the schema
-        self.browser.links.find_by_partial_text("Edit").click()
+        self.switch_tab("Config Context")
+        self.click_button("#edit-button")
         # Change property "a" to be type string
         self.fill_input(
             "data_schema",
             '{"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}, "c": {"type": "integer"}}, "additionalProperties": false}',
         )
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
 
         # Navigate to ConfigContextSchema Validation tab
-        self.browser.links.find_by_text("Validation").click()
+        self.switch_tab("Validation")
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
+        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[1].find_by_tag("td")[
-            -1
-        ].find_by_tag("a").click()
+        self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-1].find_by_tag(
+            "button"
+        ).click()
+        menu = self.browser.find_by_xpath("//ul[contains(@class, 'dropdown-menu') and contains(@class, 'show')]")
+        menu.is_visible(wait_time=5)
+        menu.find_by_tag("a").click()
+
         # Update the property "a" to be a string
         self.fill_input("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
         )  # 3 rows (config context, device, virtual machine)
         # Config context still fails
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
+            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )

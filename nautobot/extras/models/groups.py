@@ -76,6 +76,7 @@ class DynamicGroup(PrimaryModel):
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
+    is_data_compliance_model = False
 
     clone_fields = ["content_type", "group_type", "filter", "tenant"]
 
@@ -628,6 +629,10 @@ class DynamicGroup(PrimaryModel):
         else:
             # Validate against the filterset's internal form validation.
             filterset = self.filterset_class(self.filter)  # pylint: disable=not-callable
+            # TODO: the below is more generous than one might expect. For example, passing a list of strings ["foo"]
+            # to a (single-input) CharFilter will quietly normalize the list to a string '["foo"]' instead of reporting
+            # any failure of is_valid(). We've had cases of such "should be invalid but isn't caught" DynamicGroups causing
+            # exceptions when trying to evaluate their membership; it would be good to be stricter here instead!
             if not filterset.is_valid():
                 raise ValidationError(filterset.errors)
 
@@ -660,6 +665,22 @@ class DynamicGroup(PrimaryModel):
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
             # TODO limit most changes to self.group_type as well.
+
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroup record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.update_cached_members()` explicitly when ready.
+        """
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.update_cached_members()
+            for ancestor in self.get_ancestors():
+                ancestor.update_cached_members()
 
     def _generate_query_for_filter(self, filter_field, value):
         """
@@ -703,9 +724,12 @@ class DynamicGroup(PrimaryModel):
             # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str) and not is_uuid(value[0]):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
-                related_model = model_field.related_model
-                lookup_kwargs = {f"{to_field_name}__in": value}
-                gq_value = related_model.objects.filter(**lookup_kwargs)
+                if model_field is None:
+                    gq_value = value
+                else:
+                    related_model = model_field.related_model
+                    lookup_kwargs = {f"{to_field_name}__in": value}
+                    gq_value = related_model.objects.filter(**lookup_kwargs)
             else:
                 gq_value = value
             query |= filter_field.generate_query(gq_value)
@@ -806,7 +830,16 @@ class DynamicGroup(PrimaryModel):
     def _get_group_queryset(self):
         """Construct the queryset representing dynamic membership of this group."""
         query = self.generate_query()
-        return self.model.objects.filter(query)
+        # https://github.com/nautobot/nautobot/issues/7631
+        #     Some queries may result in duplicate records, hence the need for `.distinct()`.
+        #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
+        #     filters that can be applied, support for both MySQL and PostgreSQL, and limitations of the Django ORM,
+        #     I don't see a clear alternative at this time.
+        #
+        #     Additionally, due to the use of `.distinct()`, in combination with our use of `.only("id")`
+        #     on this queryset, e.g. in `_set_members()`, we also need to override any default model ordering on the
+        #     queryset in order to avoid SQL errors like "each EXCEPT query must have the same number of columns"
+        return self.model.objects.filter(query).order_by("id").distinct()
 
     # TODO: unused in core
     def add_child(self, child, operator, weight):
@@ -1163,12 +1196,26 @@ class DynamicGroupMembership(BaseModel):
         if self.group in self.parent_group.get_ancestors():
             raise ValidationError({"group": "Cannot add ancestor as a child"})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroupMembership record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.parent_group.update_cached_members()` explicitly when ready.
+        """
         # For backwards compatibility
         if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
             self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
             self.parent_group.save()
-        return super().save(*args, **kwargs)
+
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.parent_group.update_cached_members()
+            for ancestor in self.parent_group.get_ancestors():
+                ancestor.update_cached_members()
 
 
 class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
@@ -1209,6 +1256,7 @@ class StaticGroupAssociation(OrganizationalModel):
     is_contact_associable_model = False
     is_dynamic_group_associable_model = False
     is_saved_view_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["dynamic_group", "associated_object_type", "associated_object_id"]]

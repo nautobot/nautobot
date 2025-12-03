@@ -1,0 +1,15 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>Tag</strong></div>
+        <div class="card-body">
+            {% render_field form.name %}
+            {% render_field form.color %}
+            {% render_field form.description %}
+            {% render_field form.content_types %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}

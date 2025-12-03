@@ -1,13 +1,14 @@
 import json
 import os
+from pathlib import Path
 import re
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import urllib.parse
 
 from django.apps import apps
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
@@ -23,6 +24,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, Status
@@ -98,8 +100,8 @@ class HomeViewTestCase(TestCase):
         difference = [model for model in existing_models if model not in global_searchable_models]
         if difference:
             self.fail(
-                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
-                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
+                f"Existing model/models {','.join(difference)} are not included in the searchable_models attribute of the app config.\n"
+                "If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants."
             )
 
     def make_request(self):
@@ -108,38 +110,25 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in header
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col text-center" method="get" id="navbar_search" role="search">.*</form>.*</header>'
+            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
 
-        # Global search bar in body/container-fluid wrapper
-        body_search_bar_pattern = re.compile(
-            '<div class="container-fluid wrapper" id="main-content">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>',
-            re.DOTALL,
-        )
-
-        body_search_bar_result = body_search_bar_pattern.search(
-            response.content.decode(response.charset).replace("\n", "")
-        )
-
-        return header_search_bar_result, body_search_bar_result
+        return header_search_bar_result
 
     def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
-        header_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
         self.assertIsNone(header_search_bar_result)
-        self.assertIsNone(body_search_bar_result)
 
-    @tag("fix_in_v3")
     def test_search_bar_visible_if_user_authenticated(self):
-        header_search_bar_result, body_search_bar_result = self.make_request()
+        header_search_bar_result = self.make_request()
 
         self.assertIsNotNone(header_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
 
     @override_settings(VERSION="1.2.3")
     def test_footer_version_visible_authenticated_users_only(self):
@@ -186,6 +175,132 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class AppDocsViewTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.test_app_label = "test_app"
+        self.test_base_url = "test-app"
+
+        # Create temp docs dir
+        # I use tearDown to clean up, so this is save
+        self.temp_dir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        self.docs_path = Path(self.temp_dir.name) / "docs"
+        self.docs_path.mkdir(parents=True)
+        (self.docs_path / "index.html").write_text("<html>Test Index</html>")
+        (self.docs_path / "css/style.css").parent.mkdir(parents=True, exist_ok=True)
+        (self.docs_path / "css/style.css").write_text("body { background: #fff; }")
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        super().tearDown()
+
+    def test_docs_index_redirect(self):
+        """Ensure /docs/<base_url>/ redirects to /docs/<base_url>/index.html."""
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/docs/{self.test_base_url}/index.html")
+
+    def test_docs_index_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url})
+        response = self.client.get(url, follow=False)
+
+        # First, the redirect to /docs/<base_url>/index.html
+        self.assertEqual(response.status_code, 302)
+        redirect_url = f"/docs/{self.test_base_url}/index.html"
+        self.assertEqual(response["Location"], redirect_url)
+
+        # Follow the redirect to AppDocsView, which should require login
+        response = self.client.get(redirect_url)
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={redirect_url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    def test_docs_file_redirect_if_not_logged_in(self):
+        self.client.logout()
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        # LoginRequiredMixin redirects to /accounts/login/
+        self.assertRedirects(
+            response,
+            expected_url=f"{reverse('login')}?next={url}",
+            status_code=302,
+            target_status_code=200,
+        )
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_access_denied_path_traversal_attempts(self, mock_resources_files):
+        """Ensure ../ or similar traversal patterns are rejected."""
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+
+        malicious_paths = [
+            "../settings.py",
+            "../../etc/passwd",
+            "docs/../../secret.txt",
+        ]
+
+        for path in malicious_paths:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_index_html_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": self.test_base_url, "path": "index.html"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Index")
+        self.assertEqual(response["Content-Type"], "text/html")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_serve_css_logged_in(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "background: #fff;")
+        self.assertEqual(response["Content-Type"], "text/css")
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_index_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_index_redirect", kwargs={"app_base_url": "nonexistent-app"})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_docs_file_nonexistent_app(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        url = reverse("docs_file", kwargs={"app_base_url": "nonexistent-app", "path": "css/style.css"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+        self.assertJSONEqual(response.content, {"detail": "Unknown base_url 'nonexistent-app'."})
+
+    @mock.patch.dict("nautobot.core.views.BASE_URL_TO_APP_LABEL", {"test-app": "test_app"})
+    @mock.patch("nautobot.core.views.resources.files")
+    def test_nonexistent_file(self, mock_resources_files):
+        mock_resources_files.return_value = Path(self.temp_dir.name)
+        test_cases = ["/../missing.html", "//../missing.html", "missing.html", "missing_dir/missing.html"]
+        for path in test_cases:
+            with self.subTest(path=path):
+                url = reverse("docs_file", kwargs={"app_base_url": self.test_base_url, "path": path})
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 404)
+                self.assertIn("File", response.json()["detail"])
 
 
 class MediaViewTestCase(TestCase):
@@ -268,29 +383,45 @@ class SearchFieldsTestCase(TestCase):
         # SearchForm will redirect the user to the login Page
         self.assertEqual(response.status_code, 302)
 
-    @tag("fix_in_v3")
-    def test_global_and_model_search_bar(self):
+    def test_global_search_bar_scoped_to_model(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            html=True,
+        )
+        self.assertBodyContains(
+            response,
+            """
+                <span class="badge border" data-nb-link="/dcim/locations/"><!--
+                    -->in: Locations<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
+            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
             html=True,
         )
-
-        # Assert global search bar present in UI
-        self.assertContains(  # not using assertBodyContains because this is in the nav
+        self.assertBodyContains(
             response,
-            '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
+            """
+                <span class="badge border" data-nb-link="/dcim/devices/"><!--
+                    -->in: Devices<!--
+                    --><button tabindex="-1" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button>
+            """,
             html=True,
         )
 
@@ -300,14 +431,14 @@ class FilterFormsTestCase(TestCase):
         self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
-        <ul class="nav nav-tabs" id="tabs">
+        <ul class="nav nav-tabs" id="filter-tabs">
             <li class="nav-item" role="presentation">
                 <a class="active nav-link" data-bs-toggle="tab" href="#default-filter" role="tab">
-                    Default
+                    Basic
                 </a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="nav-link" data-bs-toggle="tab" href="#advanced-filter" role="tab">
+                <a class="nav-link position-relative" data-bs-toggle="tab" href="#advanced-filter" role="tab">
                     Advanced
                 </a>
             </li>
@@ -356,15 +487,19 @@ class FilterFormsTestCase(TestCase):
         query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        # The important thing here is that the data-nb-value and value are correctly quoted
         self.assertBodyContains(
             response,
             """
-<span class="filter-selection-choice-remove remove-filter-param"
-      data-field-type="child"
-      data-field-parent="location_type"
-      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
->×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            <span class="badge" data-nb-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"><!--
+                --><button class="nb-dynamic-filter-remove" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove</span>
+                </button><!--
+                -->1 onmouseover=alert(&#x27;hi&#x27;) foo=bar<!--
+                --><input name="location_type" type="hidden" value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar">
+            </span>
+            """,
             html=True,
         )
 
@@ -413,7 +548,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_marketplace_item_weight}"
                 href="{self.apps_marketplace_url}">
                 Apps Marketplace
@@ -428,7 +563,7 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a class="sidenav-link"
+            <a class="nb-sidenav-link"
                 data-item-weight="{self.apps_list_item_weight}"
                 href="{self.apps_list_url}">
                 Installed Apps
@@ -554,6 +689,7 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
+    @tag("example_app")
     def test_metrics_extensibility(self):
         """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
@@ -569,6 +705,50 @@ class MetricsViewTestCase(TestCase):
             self.assertNotIn(test_metric_name, metric_names_without_app)
         metric_names_with_app.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_app, metric_names_without_app)
+
+    def test_enabled_metrics_cache_disabled(self):
+        """Assert that when cache is disabled the cache enabled function doesn't get called."""
+        with mock.patch("nautobot.core.views.utils.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.assertTrue(mock_generate_latest_with_cache.call_count == 0)
+
+    @tag("example_app")
+    @override_settings(METRICS_EXPERIMENTAL_CACHING_DURATION=30)
+    def test_enabled_metrics_cache_enabled(self):
+        """Assert that multiple calls to metrics with caching returns expected response."""
+        test_metric_name = "nautobot_example_metric_count"
+        metrics_with_app = self.query_and_parse_metrics()
+        metrics_with_app_cached = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        metric_names_with_app_cached = {metric.name for metric in metrics_with_app_cached}
+        self.assertIn(test_metric_name, metric_names_with_app)
+        self.assertIn(test_metric_name, metric_names_with_app_cached)
+
+        # In some circumstances (e.g. if this test is run first) metrics_with_app may not have
+        # metrics from Django like total view counts. Since metrics_with_app_cached is called
+        # second, it should have everything that metrics_with_app has (plus potentially more).
+        # We at least want to ensure the cached version has everything the non-cached version has.
+        self.assertTrue(
+            metric_names_with_app.issubset(metric_names_with_app_cached),
+            msg="Cached metrics should be a superset of non-cached metrics.",
+        )
+        with mock.patch("nautobot.core.views.generate_latest_with_cache") as mock_generate_latest_with_cache:
+            self.query_and_parse_metrics()
+            self.query_and_parse_metrics()
+            self.assertEqual(mock_generate_latest_with_cache.call_count, 2)
+
+        from example_app.metrics import metric_example
+
+        cache.delete(METRICS_CACHE_KEY)  # Ensure we start with a clean cache for the next part of the test
+        # Assert that the metric function only gets called once even though we scrape metrics twice
+
+        mock_metric_function = mock.Mock(name="mock_metric_function", side_effect=metric_example)
+        with mock.patch.dict("nautobot.core.views.registry", app_metrics=[mock_metric_function]):
+            self.query_and_parse_metrics()
+            first_call_count = mock_metric_function.call_count
+            self.query_and_parse_metrics()
+            second_call_count = mock_metric_function.call_count
+            self.assertEqual(first_call_count, second_call_count)
 
 
 class AuthenticateMetricsTestCase(APITestCase):
@@ -713,10 +893,7 @@ class SilkUIAccessTestCase(TestCase):
 
 
 class ExampleViewWithCustomPermissionsTest(TestCase):
-    @skipIf(
-        "example_app" not in settings.PLUGINS,
-        "example_app not in settings.PLUGINS",
-    )
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_permission_classes_attribute_is_enforced(self):
         """
@@ -745,7 +922,6 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @tag("fix_in_v3")
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):
         provider = Provider.objects.create(name="A Test Provider 1")
@@ -767,14 +943,13 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(f"{url}?tab=main")
+        response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        response_data = response.content.decode(response.charset)
-        print(response_data)
+        response_data = extract_page_body(response.content.decode(response.charset))
         view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = f"""<div class="card-header"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
@@ -822,3 +997,27 @@ class SearchRobotsTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
         self.assertNotContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
+
+
+@tag("example_app")
+class ViewSetCustomActionsTestCase(TestCase):
+    """Tests for NautobotUIViewSet custom actions."""
+
+    def test_custom_view_base_action(self):
+        """Assert that all of the permissions in a custom action's custom_view_base_action are enforced."""
+        from example_app.models import AnotherExampleModel
+
+        self.add_permissions("example_app.view_anotherexamplemodel", "dcim.view_location")
+        self.remove_permissions("dcim.add_location", "dcim.change_location")
+
+        example_model = AnotherExampleModel.objects.create(name="test")
+        url = reverse(
+            "plugins:example_app:anotherexamplemodel_custom-action-permissions-test",
+            kwargs={"pk": example_model.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        self.add_permissions("dcim.add_location", "dcim.change_location")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)

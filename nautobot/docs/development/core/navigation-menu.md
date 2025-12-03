@@ -6,10 +6,13 @@ Both core applications and Apps can contribute items to the navigation menu by d
 
 By defining an object with the same identifier, a developer can modify existing objects. The example below shows modifying an existing tab to have a new group.
 
-A tab object is being created with the same identifier as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
+A tab object is being created with the same identifier as an existing object using the `name` attribute and should reference the same values for weight and icon, or risk inconsistencies. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
+
+!!! warning
+    Weights on `NavMenuTab` instances must always reference `nautobot.apps.NavigationWeightChoices`. Even if not using an existing `NavMenuTab`, you should use sensible offset's from existing entries, as the numeric values are subject to change, such as `NavigationWeightChoices.DEVICE + 10`. Similarly always use `nautobot.apps.NavigationIconChoices` for icon placement or any core provided `NavMenuTab` or you may end up with inconsistent results.
 
 !!! tip
-    Weights for already existing items can be found in the Nautobot source code (in `navigation.py`) or with a web session open to your Nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
+    For the types of `tab`, `group`, `item` or `button`, you can find their reference in the Nautobot source code by finding the `navigation.py` files in each Django app.
 
 This pattern works for modifying all objects in the tree. New items can be added to existing groups and new buttons can be added to existing items.
 
@@ -17,6 +20,8 @@ This pattern works for modifying all objects in the tree. New items can be added
 menu_tabs = (
     NavMenuTab(
         name="Circuits",
+        weight=NavigationWeightChoices.CIRCUITS,
+        icon=NavigationIconChoices.CIRCUITS,
         groups=(
             NavMenuGroup(
                 name="Example Circuit Group",
@@ -56,7 +61,7 @@ The code below shows how to add a new tab to the navbar. A tab is defined by a `
 
 The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for Apps to customize.
 
-Below you can see `Example Menu` has a weight value of `150`. This means the tab (menu) will appear between `Organization` (100) and `Devices` (200).
+Below you can see `Example Menu` has a weight value of `10` more than cloud. This means the tab (menu) will appear after the `Cloud` menu.
 
 ``` python
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
@@ -64,7 +69,7 @@ from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavM
 menu_items = (
     NavMenuTab(
         name="Example Menu",
-        weight=150,
+        weight=NavigationWeightChoices.CLOUD + 10,
         groups=(
             NavMenuGroup(
                 weight=100,
@@ -111,7 +116,8 @@ menu_items = (
 A `NavMenuTab` has the following attributes:
 
 * `name` - Display name to be shown in navigation menu
-* `weight` - Defines the position the object should be displayed at (optional)
+* `weight` - Defines the position the object should be displayed at (optional, defaults to `1000`)
+* `icon` - Defines the icon to use from Nautobot icon library or URL (optional, defaults to first letter of the apps name inside a rounded rectangle.)
 * `permissions` - A list of permissions required to display this link (optional)
 * `groups` - List or tuple of `NavMenuGroup`
 

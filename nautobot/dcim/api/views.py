@@ -36,6 +36,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -54,6 +55,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -644,6 +646,14 @@ class CableViewSet(NautobotModelViewSet):
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
+    def get_queryset(self):
+        # 6933 fix: with prefetch related in queryset
+        # DeviceInterface is not properly cleared of _path_id
+        queryset = super().get_queryset()
+        if self.action == "destroy":
+            queryset = queryset.prefetch_related(None)
+        return queryset
+
 
 #
 # Virtual chassis
@@ -836,3 +846,20 @@ class InterfaceVDCAssignmentViewSet(ModelViewSet):
     queryset = InterfaceVDCAssignment.objects.all()
     serializer_class = serializers.InterfaceVDCAssignmentSerializer
     filterset_class = filters.InterfaceVDCAssignmentFilterSet
+
+
+class ModuleFamilyViewSet(NautobotModelViewSet):
+    """API viewset for interacting with ModuleFamily objects."""
+
+    queryset = ModuleFamily.objects.annotate(
+        module_type_count=count_related(ModuleType, "module_family"),
+        module_bay_count=count_related(ModuleBay, "module_family"),
+    )
+    serializer_class = serializers.ModuleFamilySerializer
+    filterset_class = filters.ModuleFamilyFilterSet
+
+
+class DeviceClusterAssignmentViewSet(ModelViewSet):
+    queryset = DeviceClusterAssignment.objects.all()
+    serializer_class = serializers.DeviceClusterAssignmentSerializer
+    filterset_class = filters.DeviceClusterAssignmentFilterSet

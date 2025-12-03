@@ -9,9 +9,11 @@ from django.core.validators import MinValueValidator, ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.cache import construct_cache_key
+from nautobot.extras.models.mixins import DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -33,26 +35,22 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_model(self, content_type: str):
         """Given a content type string (<app_label>.<model>), return all instances that are enabled for that model."""
         app_label, model = content_type.split(".")
-        cache_key = (
-            # e.g. "nautobot.data_validation.get_for_model.regularexpressionvalidationrule.dcim.device"
-            f"{self.get_for_model.cache_key_prefix}."
-            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
-        )
+        cache_key = construct_cache_key(self, method_name="get_for_model", branch_aware=True, content_type=content_type)
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model)
             cache.set(cache_key, queryset)
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.data_validation.get_for_model"
+    @property
+    def get_for_model_cache_key_prefix(self):
+        return construct_cache_key(self, method_name="get_for_model", branch_aware=True)
 
     def get_enabled_for_model(self, content_type: str):
         """As get_for_model(), but only return enabled rules."""
         app_label, model = content_type.split(".")
-        cache_key = (
-            # e.g. "nautobot.data_validation.get_enabled_for_model.regularexpressionvalidationrule.dcim.device"
-            f"{self.get_enabled_for_model.cache_key_prefix}."
-            f"{self.model._meta.concrete_model._meta.model_name}.{content_type}"
+        cache_key = construct_cache_key(
+            self, method_name="get_enabled_for_model", branch_aware=True, content_type=content_type
         )
         queryset = cache.get(cache_key)
         if queryset is None:
@@ -60,10 +58,12 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache.set(cache_key, queryset)
         return queryset
 
-    get_enabled_for_model.cache_key_prefix = "nautobot.data_validation.get_enabled_for_model"
+    @property
+    def get_enabled_for_model_cache_key_prefix(self):
+        return construct_cache_key(self, method_name="get_enabled_for_model", branch_aware=True)
 
 
-class ValidationRule(PrimaryModel):
+class ValidationRuleModelMixin(models.Model):
     """Base model for all validation engine rule models."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -84,6 +84,8 @@ class ValidationRule(PrimaryModel):
     objects = ValidationRuleManager()
     documentation_static_path = "docs/user-guide/platform-functionality/data-validation.html"
 
+    is_data_compliance_model = False
+
     class Meta:
         """Model metadata for all validation engine rule models."""
 
@@ -102,7 +104,7 @@ class ValidationRule(PrimaryModel):
     "relationships",
     "webhooks",
 )
-class RegularExpressionValidationRule(ValidationRule):
+class RegularExpressionValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a regular expression to a given model field."""
 
     regular_expression = models.TextField()
@@ -166,7 +168,7 @@ class RegularExpressionValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class MinMaxValidationRule(ValidationRule):
+class MinMaxValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies min/max constraints to a given numeric model field."""
 
     min = models.FloatField(
@@ -232,7 +234,7 @@ class MinMaxValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class RequiredValidationRule(ValidationRule):
+class RequiredValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """A type of validation rule that applies a required constraint to a given model field."""
 
     clone_fields = ["enabled", "content_type", "error_message"]
@@ -280,7 +282,7 @@ class RequiredValidationRule(ValidationRule):
     "relationships",
     "webhooks",
 )
-class UniqueValidationRule(ValidationRule):
+class UniqueValidationRule(ValidationRuleModelMixin, PrimaryModel):
     """
     A type of validation rule that applies a unique constraint to a given model field.
 
@@ -322,19 +324,25 @@ class UniqueValidationRule(ValidationRule):
             raise ValidationError({"field": "This field is already unique by default."})
 
 
-class DataCompliance(PrimaryModel):
+@extras_features(
+    "export_templates",
+    "graphql",
+)
+class DataCompliance(DynamicGroupsModelMixin, NotesMixin, SavedViewMixin, BaseModel):
     """Model to represent the results of an audit method."""
 
     compliance_class_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False)
     last_validation_date = models.DateTimeField(blank=False, null=False, auto_now=True)
     content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, blank=False, null=False)
-    object_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False)
-    validated_object = GenericForeignKey("content_type", "object_id")
+    object_id = models.UUIDField(blank=False, null=False)
+    validated_object = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     validated_object_str = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, default="")
     validated_attribute = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, default="")
     validated_attribute_value = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, default="")
     valid = models.BooleanField(blank=False, null=False)
     message = models.TextField(blank=True, default="")
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for Audit model."""

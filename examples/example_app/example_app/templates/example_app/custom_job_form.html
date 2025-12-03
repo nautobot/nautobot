@@ -11,17 +11,17 @@
     Note that we are not calling `block.super` here because we don't want any
     part of the parent job_form block to be rendered (in this case).
 -->
-<div class="form-group">
-    {% with field=job_form.fields.custom_job_data %}
-        {% with field_value=job_form.initial.custom_job_data|default:field.initial %}
-    <label class="col-md-3 control-label nb-required" for="id_custom_job_data">{{ field.label }}</label>
-    <div class="col-md-9">
-        <textarea class="form-control" id="id_custom_job_data" name="custom_job_data">{{ field_value }}</textarea>
-        <span class="help-block">{{ field.help_text|safe }}</span>
-    </div>
+    <div class="mb-10 d-flex justify-content-center">
+        {% with field=job_form.fields.custom_job_data %}
+            {% with field_value=job_form.initial.custom_job_data|default:field.initial %}
+                <label class="col-lg-3 col-form-label nb-required" for="id_custom_job_data">{{ field.label }}</label>
+                <div class="col-lg-9">
+                    <textarea class="form-control" id="id_custom_job_data" name="custom_job_data">{{ field_value }}</textarea>
+                    <span class="form-text">{{ field.help_text|safe }}</span>
+                </div>
+            {% endwith %}
         {% endwith %}
-    {% endwith %}
-</div>
+    </div>
 <!--
     Even though we want full control over the rendering of the job form, we do need
     to render the form object (as opposed to the parent template) so so that all of
@@ -30,5 +30,5 @@
     here. Here we are going to exclude the `custom_job_data` field since we've rendered
     it above.
 -->
-{% render_form job_form excluded_fields="['custom_job_data']" %}
+    {% render_form job_form excluded_fields="['custom_job_data']" %}
 {% endblock %}

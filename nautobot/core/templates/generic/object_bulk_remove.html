@@ -9,9 +9,9 @@
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        <div class="row align-content-start flex-fill">
-            <div class="col-md-8 offset-md-2">
-                <div class="card border-danger mb-16">
+        <div class="row align-content-start justify-content-center flex-fill">
+            <div class="col-lg-8 col-md-10 d-flex justify-content-center">
+                <div class="card border-danger">
                     <div class="card-header bg-danger-subtle border-danger text-body">
                         <strong>Confirm Bulk Removal</strong>
                     </div>
@@ -21,7 +21,7 @@
                 </div>
             </div>
             <div class="col-md-8 offset-md-2">
-                <div class="card mb-16">
+                <div class="card">
                     <div class="table-responsive">
                         {% include 'inc/table.html' %}
                     </div>

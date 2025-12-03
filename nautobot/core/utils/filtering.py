@@ -17,6 +17,21 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
+MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
+    "approval_workflow_definitions": "approval_workflows",
+    "cables": "cable_terminations",
+    "data_compliance": "custom_validators",
+    "location_types": "locations",
+    "metadata_types": "metadata",
+    "min_max_validation_rules": "custom_validators",
+    "object_metadata": "metadata",
+    "regular_expression_validation_rules": "custom_validators",
+    "relationship_associations": "relationships",
+    "required_validation_rules": "custom_validators",
+    "static_group_associations": "dynamic_groups",
+    "unique_validation_rules": "custom_validators",
+}
+
 
 def build_lookup_label(field_name, _verbose_name):
     """
@@ -92,6 +107,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         BOOLEAN_CHOICES,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
+        MultiValueCharInput,
         StaticSelect2,
         StaticSelect2Multiple,
     )
@@ -112,7 +128,16 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
-        form_field = forms.IntegerField()
+        # If "choices" are passed, then when 'exact' is used in an Advanced
+        # Filter, render a dropdown of choices instead of a free integer input
+        if field.lookup_expr == "exact" and getattr(field, "choices", None):
+            # Use a multi-value widget that allows both preset choices and free-form entries
+            form_field = forms.MultipleChoiceField(
+                choices=field.choices,
+                widget=MultiValueCharInput,
+            )
+        else:
+            form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         if getattr(field, "prefers_id", False):
             to_field_name = "id"
@@ -131,26 +156,11 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(
         field, ContentTypeMultipleChoiceFilter
     ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
-        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        # models that have such a filter and the `verbose_name_plural` does not match, we can lookup the feature name.
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
-
-        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
-        if plural_name == "cables":
-            plural_name = "cable_terminations"
-        elif plural_name == "metadata_types":
-            plural_name = "metadata"
-        elif plural_name == "object_metadata":
-            plural_name = "metadata"
-        elif plural_name in [
-            "data_compliance",
-            "min_max_validation_rules",
-            "regular_expression_validation_rules",
-            "required_validation_rules",
-            "unique_validation_rules",
-        ]:
-            plural_name = "custom_validators"
+        plural_name = MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING.get(plural_name, plural_name)
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

@@ -1,11 +1,11 @@
 import json
 import logging
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, QuerySet
 from django.forms import ChoiceField, IntegerField, NumberInput
+from django.test import tag
 from django.urls import reverse
 from rest_framework import status
 
@@ -31,6 +31,7 @@ from nautobot.virtualization.models import VirtualMachine
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
 #       (due to the test_multi_select_field_value_after_bulk_update() test).
 #       At some point we should probably split this into separate classes.
+@tag("example_app")
 class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
     model = CustomField
 
@@ -397,31 +398,50 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             self.assertIsInstance(filter_field.widget, NumberInput)
 
 
+@tag("example_app")
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
         self.content_type = ContentType.objects.get_for_model(Location)
-        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Text Field",
+            default="foo",
+            filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED,
+        )
         custom_field.save()
         custom_field.content_types.set([self.content_type])
 
     def test_get_for_model(self):
         self.assertEqual(CustomField.objects.get_for_model(Location).count(), 2)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
+        self.assertEqual(len(CustomField.objects.get_for_model(Location, get_queryset=False)), 2)
+        self.assertEqual(len(CustomField.objects.get_for_model(VirtualMachine, get_queryset=False)), 0)
 
     def test_get_for_model_caching_and_cache_invalidation(self):
         """Test that the cache is used and is properly invalidated when CustomFields are created or deleted."""
         # Assert that the cache is used when calling get_for_model a second time
         CustomField.objects.get_for_model(Location)
         with self.assertNumQueries(0):
-            CustomField.objects.get_for_model(Location)
+            qs = CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that different values of exclude_filter_disabled are cached separately
         with self.assertNumQueries(1):
             CustomField.objects.get_for_model(Location, exclude_filter_disabled=True)
         with self.assertNumQueries(0):
-            CustomField.objects.get_for_model(Location, exclude_filter_disabled=True)
+            qs = CustomField.objects.get_for_model(Location, exclude_filter_disabled=True)
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, exclude_filter_disabled=True, get_queryset=False)
         with self.assertNumQueries(0):
             CustomField.objects.get_for_model(Location)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(1, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that different models are cached separately
         with self.assertNumQueries(1):
@@ -444,23 +464,114 @@ class CustomFieldManagerTest(TestCase):
         with self.assertNumQueries(1):
             CustomField.objects.get_for_model(Location)
         with self.assertNumQueries(0):
-            CustomField.objects.get_for_model(Location)
+            qs = CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(3, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
         custom_field.content_types.set([])
         with self.assertNumQueries(1):
             CustomField.objects.get_for_model(Location)
         with self.assertNumQueries(0):
-            CustomField.objects.get_for_model(Location)
+            qs = CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(2, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that the cache is invalidated on object delete
         custom_field.delete()
         with self.assertNumQueries(1):
             CustomField.objects.get_for_model(Location)
         with self.assertNumQueries(0):
-            CustomField.objects.get_for_model(Location)
+            qs = CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(2, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
 
+class ComputedFieldManagerTestCase(TestCase):
+    def setUp(self):
+        self.content_type = ContentType.objects.get_for_model(Location)
+        ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            key="computed_field_one",
+            label="Computed Field One",
+            template="{{ obj.name }} is the name of this location.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=100,
+        )
+
+    def test_get_for_model(self):
+        self.assertEqual(ComputedField.objects.get_for_model(Location).count(), 1)
+        self.assertEqual(ComputedField.objects.get_for_model(VirtualMachine).count(), 0)
+        self.assertEqual(len(ComputedField.objects.get_for_model(Location, get_queryset=False)), 1)
+        self.assertEqual(len(ComputedField.objects.get_for_model(VirtualMachine, get_queryset=False)), 0)
+
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        # Assert that the cache is used when calling get_for_model a second time
+        ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            qs = ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = ComputedField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(1, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
+
+        # Assert that different models are cached separately
+        with self.assertNumQueries(1):
+            ComputedField.objects.get_for_model(VirtualMachine)
+        with self.assertNumQueries(0):
+            ComputedField.objects.get_for_model(VirtualMachine)
+        with self.assertNumQueries(0):
+            ComputedField.objects.get_for_model(Location)
+
+        # Assert that the cache is invalidated on object save
+        computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            key="computed_field_two",
+            label="Computed Field Two",
+            template="{{ obj.name }} is still jthe name of this location.",
+            fallback_value="An error occurred while rendering this template.",
+            weight=200,
+        )
+        with self.assertNumQueries(1):
+            ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            qs = ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = ComputedField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(2, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
+
+        # Assert that the cache is invalided on object delete
+        computed_field.delete()
+        with self.assertNumQueries(1):
+            ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            qs = ComputedField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            listing = ComputedField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(qs, QuerySet)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(1, len(listing))
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
+
+
+@tag("example_app")
 class CustomFieldDataAPITest(APITestCase):
     """
     Check that object representations in the REST API include their custom field data.
@@ -585,9 +696,8 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_json,
         ]
 
-        if "example_app" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
-            self.all_cfs.append(self.cf_plugin_field)
+        self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+        self.all_cfs.append(self.cf_plugin_field)
         self.statuses = Status.objects.get_for_model(Location)
 
         # Create some locations
@@ -609,8 +719,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
             self.cf_json.key: {"hello": "world"},
         }
-        if "example_app" in settings.PLUGINS:
-            self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
+        self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
         self.locations[1].validated_save()
         self.list_url = reverse("dcim-api:location-list")
         self.detail_url = reverse("dcim-api:location-detail", kwargs={"pk": self.locations[1].pk})
@@ -684,8 +793,7 @@ class CustomFieldDataAPITest(APITestCase):
                 self.cf_json.key: {"foo": "bar"},
             },
         }
-        if "example_app" in settings.PLUGINS:
-            data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
+        data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
         response = self.client.post(self.list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
@@ -757,9 +865,8 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Heading",
             self.cf_json.key: {"dict1": {"dict2": {}}},
         }
-        if "example_app" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
-            custom_field_data[self.cf_plugin_field.key] = "Custom Value"
+        self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+        custom_field_data[self.cf_plugin_field.key] = "Custom Value"
         data = (
             {
                 "name": "Location 3",
@@ -1061,6 +1168,7 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
 
+@tag("example_app")
 class CustomFieldImportTest(TestCase):
     """
     Test importing object custom field data along with the object itself.
@@ -1901,12 +2009,20 @@ class CustomFieldFilterTest(TestCase):
         )
 
     def test_filter_multi_select(self):
-        self.assertQuerySetEqual(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Foo"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
         )
-        self.assertQuerySetEqual(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9": ["Foo"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9": ["Bar"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
         self.assertQuerySetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
@@ -1915,6 +2031,7 @@ class CustomFieldFilterTest(TestCase):
         )
 
 
+@tag("example_app")
 class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
     model = CustomFieldChoice
 
@@ -2251,9 +2368,9 @@ class CustomFieldTableTest(TestCase):
             "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
-            "choice_field": '<span class="label label-default">Bar</span>',
+            "choice_field": '<span class="badge bg-secondary">Bar</span>',
             "multi_choice_field": (
-                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>'
+                '<span class="badge bg-secondary">Bar</span> <span class="badge bg-secondary">Baz</span>'
             ),
         }
 

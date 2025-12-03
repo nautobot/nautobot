@@ -1,17 +1,17 @@
-{% extends 'dcim/device/base.html' %}
+{% extends 'generic/object_retrieve.html' %}
 
 {% block title %}{{ object }} - Config{% endblock %}
 
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
     <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="card mb-16">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card">
                 <div class="card-header"><strong>Device Configuration</strong></div>
                 <ul class="nav nav-tabs mt-16" role="tablist">
-                    <li class="nav-item" role="presentation"><a class="nav-link active" href="#running" aria-controls="running" role="tab" data-toggle="tab">Running</a></li>
-                    <li class="nav-item" role="presentation"><a class="nav-link" href="#startup" aria-controls="startup" role="tab" data-toggle="tab">Startup</a></li>
-                    <li class="nav-item" role="presentation"><a class="nav-link" href="#candidate" aria-controls="candidate" role="tab" data-toggle="tab">Candidate</a></li>
+                    <li class="nav-item" role="presentation"><a class="nav-link active" href="#running" aria-controls="running" role="tab" data-bs-toggle="tab">Running</a></li>
+                    <li class="nav-item" role="presentation"><a class="nav-link" href="#startup" aria-controls="startup" role="tab" data-bs-toggle="tab">Startup</a></li>
+                    <li class="nav-item" role="presentation"><a class="nav-link" href="#candidate" aria-controls="candidate" role="tab" data-bs-toggle="tab">Candidate</a></li>
                 </ul>
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade show active" id="running">
@@ -30,21 +30,21 @@
 {% endblock content %}
 
 {% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-$(document).ready(function() {
-    $.ajax({
-        url: "{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_config",
-        dataType: 'json',
-        success: function(json) {
-            $('#running_config').html($.trim(json['get_config']['running']));
-            $('#startup_config').html($.trim(json['get_config']['startup']));
-            $('#candidate_config').html($.trim(json['get_config']['candidate']));
-        },
-        error: function(xhr) {
-            alert(xhr.responseText);
-        }
-    });
-});
-</script>
+    {{ block.super }}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $.ajax({
+                url: "{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_config",
+                dataType: 'json',
+                success: function(json) {
+                    $('#running_config').html($.trim(json['get_config']['running']));
+                    $('#startup_config').html($.trim(json['get_config']['startup']));
+                    $('#candidate_config').html($.trim(json['get_config']['candidate']));
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
+        });
+    </script>
 {% endblock javascript %}

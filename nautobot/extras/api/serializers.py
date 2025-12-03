@@ -45,7 +45,6 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
-from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -121,7 +120,9 @@ class ApprovalWorkflowDefinitionSerializer(NautobotModelSerializer):
     """ApprovalWorkflowDefinition Serializer."""
 
     model_content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
     )
 
     class Meta:
@@ -150,7 +151,9 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
     """ApprovalWorkflow Serializer."""
 
     object_under_review_content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(APPROVAL_WORKFLOW_MODELS).order_by("app_label", "model"),
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
     )
     decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
 
@@ -648,25 +651,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = Job
         fields = "__all__"
 
-    def validate(self, attrs):
-        # note no validation for on creation of jobs because we do not support user creation of Job records via API
-        if self.instance:
-            has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
-            approval_required = attrs.get("approval_required", self.instance.approval_required)
-
-            if approval_required and has_sensitive_variables:
-                error_message = "A job with sensitive variables cannot also be marked as requiring approval"
-                errors = {}
-
-                if "approval_required" in attrs:
-                    errors["approval_required"] = [error_message]
-                if "has_sensitive_variables" in attrs:
-                    errors["has_sensitive_variables"] = [error_message]
-
-                raise serializers.ValidationError(errors)
-
-        return super().validate(attrs)
-
 
 class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
@@ -707,6 +691,7 @@ class ScheduledJobSerializer(BaseModelSerializer):
     # queue is added to maintain backward compatibility with versions pre v2.4.
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
+    associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
 
     class Meta:
         model = ScheduledJob

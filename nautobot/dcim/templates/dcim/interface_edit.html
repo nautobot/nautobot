@@ -3,7 +3,7 @@
 {% load helpers %}
 
 {% block form %}
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header"><strong>Interface</strong></div>
         <div class="card-body">
             {% render_field form.device %}
@@ -12,6 +12,8 @@
             {% render_field form.status %}
             {% render_field form.role %}
             {% render_field form.type %}
+            {% render_field form.speed %}
+            {% render_field form.duplex %}
             {% render_field form.enabled %}
             {% render_field form.parent_interface %}
             {% render_field form.bridge %}
@@ -25,7 +27,7 @@
             {% render_field form.ip_addresses %}
         </div>
     </div>
-    <div class="card mb-16">
+    <div class="card">
         <div class="card-header"><strong>802.1Q Switching</strong></div>
         <div class="card-body">
             {% render_field form.mode %}

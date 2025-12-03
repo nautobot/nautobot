@@ -20,6 +20,7 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -63,6 +64,7 @@ class LoginView(View):
             self.template_name,
             {
                 "form": form,
+                "title": "Login",
             },
         )
 
@@ -90,6 +92,7 @@ class LoginView(View):
             self.template_name,
             {
                 "form": form,
+                "title": "Login",
             },
         )
 
@@ -142,6 +145,7 @@ def is_django_auth_user(request):
 
 class ProfileView(GenericView):
     template_name = "users/profile.html"
+    view_titles = Titles(titles={"*": "User Profile"})
 
     def get(self, request):
         return render(
@@ -150,12 +154,15 @@ class ProfileView(GenericView):
             {
                 "is_django_auth_user": is_django_auth_user(request),
                 "active_tab": "profile",
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 
 
 class UserConfigView(GenericView):
     template_name = "users/preferences.html"
+    view_titles = Titles(titles={"*": "User Preferences"})
 
     def get(self, request):
         tzname = request.user.get_config("timezone", get_default_timezone_name())
@@ -170,6 +177,8 @@ class UserConfigView(GenericView):
                 "form": form,
                 "active_tab": "preferences",
                 "is_django_auth_user": is_django_auth_user(request),
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 
@@ -209,7 +218,7 @@ class UserConfigView(GenericView):
 
 class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
     def post(self, request):
-        if request.htmx:
+        if request.headers.get("HX-Request", False):
             form = NavbarFavoritesAddForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
@@ -228,7 +237,7 @@ class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
 
 class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
     def post(self, request):
-        if request.htmx:
+        if request.headers.get("HX-Request", False):
             form = NavbarFavoritesRemoveForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
@@ -246,6 +255,7 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
 
 class ChangePasswordView(GenericView):
     template_name = "users/change_password.html"
+    view_titles = Titles(titles={"*": "Change Password"})
 
     RESTRICTED_NOTICE = "Remotely authenticated user credentials cannot be changed within Nautobot."
 
@@ -267,6 +277,8 @@ class ChangePasswordView(GenericView):
                 "form": form,
                 "active_tab": "change_password",
                 "is_django_auth_user": is_django_auth_user(request),
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 
@@ -305,6 +317,8 @@ class ChangePasswordView(GenericView):
 
 
 class TokenListView(GenericView):
+    view_titles = Titles(titles={"*": "API Tokens"})
+
     def get(self, request):
         tokens = Token.objects.filter(user=request.user)
 
@@ -315,6 +329,8 @@ class TokenListView(GenericView):
                 "tokens": tokens,
                 "active_tab": "api_tokens",
                 "is_django_auth_user": is_django_auth_user(request),
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 
@@ -388,7 +404,7 @@ class TokenDeleteView(GenericView):
 
         return render(
             request,
-            "generic/object_delete.html",
+            "generic/object_destroy.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -407,7 +423,7 @@ class TokenDeleteView(GenericView):
 
         return render(
             request,
-            "generic/object_delete.html",
+            "generic/object_destroy.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -424,6 +440,7 @@ class TokenDeleteView(GenericView):
 
 class AdvancedProfileSettingsEditView(GenericView):
     template_name = "users/advanced_settings_edit.html"
+    view_titles = Titles(titles={"*": "Advanced Settings"})
 
     def get(self, request):
         silk_record_requests = request.session.get("silk_record_requests", False)
@@ -437,6 +454,8 @@ class AdvancedProfileSettingsEditView(GenericView):
                 "active_tab": "advanced_settings",
                 "return_url": reverse("user:advanced_settings_edit"),
                 "is_django_auth_user": is_django_auth_user(request),
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             },
         )
 

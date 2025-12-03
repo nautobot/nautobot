@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
-import warnings
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -15,8 +14,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings
-from django.test.utils import isolate_apps
+from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
@@ -29,6 +27,7 @@ from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
+    DeviceFamily,
     DeviceType,
     Location,
     LocationType,
@@ -90,7 +89,6 @@ from nautobot.extras.models import (
     Team,
     Webhook,
 )
-from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
@@ -102,8 +100,6 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
-
-from example_app.jobs import ExampleJob
 
 User = get_user_model()
 
@@ -129,10 +125,10 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
             User.objects.create(username="User 4", is_active=True),
             User.objects.create(username="User 5", is_active=True),
         )
-        job_model = JobModel.objects.get_for_class_path("pass.TestPassJob")
+        job_model = JobModel.objects.get_for_class_path("pass_job.TestPassJob")
         cls.scheduled_job = ScheduledJob.objects.create(
             name="Test Pass Scheduled Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.users[0],
@@ -146,12 +142,12 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Approval Workflow with Three Stages",
             model_content_type=cls.scheduledjob_ct,
-            priority=1,
+            weight=1,
         )
         # Create three stages of the Approval Workflow Definition
         cls.approval_workflow_stage_definition_1 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=100,
+            sequence=100,
             name="Approval Workflow Stage Definition 1",
             min_approvers=1,
             denial_message="Stage 1 Denial Message",
@@ -159,7 +155,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=200,
+            sequence=200,
             name="Approval Workflow Stage Definition 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -167,7 +163,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         cls.approval_workflow_stage_definition_3 = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=300,
+            sequence=300,
             name="Approval Workflow Stage Definition 3",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -228,7 +224,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         """
         Test the active_stage property of the ApprovalWorkflow model.
         """
-        # Test that the active stage is the one with the lowest weight when all stages are pending
+        # Test that the active stage is the one with the lowest sequence when all stages are pending
         self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_1)
         # Test that the active stage is the second stage when the first stage is approved
         self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
@@ -323,7 +319,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Scheduled Job Approval Workflow",
             model_content_type=scheduled_job_ct,
-            priority=2,
+            weight=2,
         )
         approval_workflow = ApprovalWorkflow(
             approval_workflow_definition=approval_workflow_definition,
@@ -393,6 +389,10 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
 
+        # Template strings for validation testing (cannot be saved due to syntax errors)
+        self.invalid_template_unclosed_bracket = "{{ obj.name }"
+        self.invalid_template_unknown_tag = "{% unknowntag %}{{ obj.name }}{% endunknowntag %}"
+
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, f"{self.location1.name} is awesome!")
@@ -454,6 +454,218 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             str(error.exception),
         )
 
+    def test_template_validation_invalid_syntax(self):
+        """
+        Test that ComputedField with invalid Jinja2 template syntax raises ValidationError.
+        """
+        # Invalid template with syntax error - unclosed bracket
+        invalid_computed_field = ComputedField(
+            label="Invalid Template Test",
+            key="invalid_template_test",
+            template=self.invalid_template_unclosed_bracket,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+        self.assertIn("line", str(error_dict["template"][0]))
+
+    def test_template_validation_invalid_tag(self):
+        """
+        Test that ComputedField with invalid Jinja2 tag raises ValidationError.
+        """
+        # Invalid template with unknown tag
+        invalid_computed_field = ComputedField(
+            label="Invalid Tag Test",
+            key="invalid_tag_test",
+            template=self.invalid_template_unknown_tag,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+
+    def test_bulk_create_valid_templates(self):
+        """Test that bulk_create works with valid templates."""
+        valid_fields = [
+            ComputedField(
+                label="Bulk Test 1",
+                key="bulk_test_1",
+                template="{{ obj.name }} - Test 1",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Bulk Test 2",
+                key="bulk_test_2",
+                template="{{ obj.id }} - Test 2",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        # Should not raise ValidationError
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+        self.assertEqual(len(created_fields), 2)
+
+    def test_bulk_create_invalid_templates(self):
+        """Test that bulk_create fails with invalid templates and reports all errors."""
+        invalid_fields = [
+            ComputedField(
+                label="Invalid Test 1",
+                key="invalid_test_1",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Test 2",
+                key="invalid_test_2",
+                template=self.invalid_template_unknown_tag,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(invalid_fields)
+
+        # Check that both errors are reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Test 1", error_message)
+        self.assertIn("Invalid Test 2", error_message)
+
+    def test_bulk_update_template_field(self):
+        """Test that bulk_update validates templates when template field is updated."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Update Test 1",
+                key="update_test_1",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Update Test 2",
+                key="update_test_2",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update with invalid templates
+        for field in created_fields:
+            field.template = self.invalid_template_unclosed_bracket
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that validation error occurred
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Update Test 1", error_message)
+        self.assertIn("Update Test 2", error_message)
+
+    def test_bulk_update_non_template_field(self):
+        """Test that bulk_update skips template validation when template field is not updated."""
+        # Create a field with invalid template (bypassing validation for this test)
+        field = ComputedField(
+            label="Non-template Update Test",
+            key="non_template_update_test",
+            template="{{ obj.name }}",  # Start with valid template
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+        field.save()
+
+        # Manually set invalid template (simulating existing invalid data)
+        ComputedField.objects.filter(pk=field.pk).update(template=self.invalid_template_unclosed_bracket)
+        field.refresh_from_db()
+
+        # Update only the label field - should not trigger template validation
+        field.label = "Updated Label"
+        try:
+            ComputedField.objects.bulk_update([field], ["label"])
+        except ValidationError:
+            self.fail("bulk_update should not validate templates when template field is not being updated")
+
+    def test_bulk_create_mixed_valid_invalid(self):
+        """Test that bulk_create fails when mixing valid and invalid templates."""
+        mixed_fields = [
+            ComputedField(
+                label="Valid Mixed Test",
+                key="valid_mixed_test",
+                template="{{ obj.name }} - Valid",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Mixed Test",
+                key="invalid_mixed_test",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(mixed_fields)
+
+        # Check that the invalid object is reported but valid one is not
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Mixed Test", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Mixed Test", error_message)
+
+        # Verify no objects were created (all-or-nothing behavior)
+        self.assertFalse(ComputedField.objects.filter(key="valid_mixed_test").exists())
+        self.assertFalse(ComputedField.objects.filter(key="invalid_mixed_test").exists())
+
+    def test_bulk_update_mixed_valid_invalid(self):
+        """Test that bulk_update fails when mixing valid and invalid template updates."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Valid Update Mixed",
+                key="valid_update_mixed",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Update Mixed",
+                key="invalid_update_mixed",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update: one with valid template, one with invalid
+        created_fields[0].template = "{{ obj.name }} - Updated Valid"  # Valid
+        created_fields[1].template = self.invalid_template_unclosed_bracket  # Invalid
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that only the invalid object is reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Update Mixed", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Update Mixed", error_message)
+
+        # Verify templates were not updated (all-or-nothing behavior)
+        created_fields[0].refresh_from_db()
+        created_fields[1].refresh_from_db()
+        self.assertEqual(created_fields[0].template, "{{ obj.name }}")  # Original template
+        self.assertEqual(created_fields[1].template, "{{ obj.id }}")  # Original template
+
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     """
@@ -466,8 +678,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.first()
-        cls.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.devicefamily = DeviceFamily.objects.create(name="Device Family 1")
+        cls.devicetype = DeviceType.objects.create(
+            manufacturer=cls.manufacturer, model="Device Type 1", device_family=cls.devicefamily
+        )
         cls.devicerole = Role.objects.get_for_model(Device).first()
         root_location_type = LocationType.objects.create(name="Root Location Type")
         parent_location_type = LocationType.objects.create(name="Parent Location Type", parent=root_location_type)
@@ -575,6 +790,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             name="dynamic group", weight=100, data={"dynamic_group": 1}
         )
         dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_group_context = ConfigContext.objects.create(
+            name="cluster group", weight=100, data={"cluster_group": 1}
+        )
+        cluster_group_context.cluster_groups.add(cluster_group)
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
+            location=self.location,
+            tenant=self.tenant,
+        )
+        cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
+        cluster_context.clusters.add(cluster)
 
         device = Device.objects.create(
             name="Device 2",
@@ -586,11 +816,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
+        device.clusters.add(cluster)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
+        for key in [
+            "location",
+            "platform",
+            "tenant_group",
+            "tenant",
+            "tag",
+            "dynamic_group",
+            "cluster_group",
+            "cluster",
+        ]:
             self.assertIn(key, device_context)
         # Add a device type constraint that does not match the device in question to the location config context
         # And make sure that location_context is not applied to it anymore.
@@ -819,9 +1059,9 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
         """
         Tagged items use a generic relationship, which results in duplicate rows being returned when queried.
-        This is combatted by by appending distinct() to the config context querysets. This test creates a config
-        context assigned to two tags and ensures objects related by those same two tags result in only a single
-        config context record being returned.
+        This is combatted by by appending distinct() to the config context querysets. This test creates two config
+        contexts assigned to two different tags and ensures objects related by those same two tags result in both
+        config context records being returned.
 
         This test case is seperate from the above in that it deals with multiple config context objects in play.
 
@@ -882,6 +1122,136 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
         self.assertIn("dynamic context 2", device2.get_config_context().values())
         self.assertNotIn("dynamic context 1", device2.get_config_context().values())
+
+    def test_multiple_clusters_and_cluster_groups(self):
+        """
+        Device-to-cluster is a many-to-many relationship since Nautobot 3.0. Make sure things work as expected here.
+        """
+        cluster_group_1 = ClusterGroup.objects.create(name="Cluster Group 1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_1 = Cluster.objects.create(
+            name="Cluster 1",
+            cluster_group=cluster_group_1,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_group_2 = ClusterGroup.objects.create(name="Cluster Group 2")
+        cluster_2 = Cluster.objects.create(
+            name="Cluster 2",
+            cluster_group=cluster_group_2,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_context_1 = ConfigContext.objects.create(name="cluster_1", weight=100, data={"cluster_1": 1})
+        cluster_context_1.clusters.add(cluster_1)
+        cluster_context_2 = ConfigContext.objects.create(name="cluster_2", weight=200, data={"cluster_2": 2})
+        cluster_context_2.clusters.add(cluster_2)
+        cluster_context_12 = ConfigContext.objects.create(name="cluster_12", weight=300, data={"cluster_12": [1, 2]})
+        cluster_context_12.clusters.add(cluster_1)
+        cluster_context_12.clusters.add(cluster_2)
+        cluster_group_context_1 = ConfigContext.objects.create(
+            name="cluster_group_1", weight=1100, data={"cluster_group_1": 1}
+        )
+        cluster_group_context_1.cluster_groups.add(cluster_group_1)
+        cluster_group_context_2 = ConfigContext.objects.create(
+            name="cluster_group_2", weight=1200, data={"cluster_group_2": 2}
+        )
+        cluster_group_context_2.cluster_groups.add(cluster_group_2)
+        cluster_group_context_12 = ConfigContext.objects.create(
+            name="cluster_group_12", weight=1300, data={"cluster_group_12": [1, 2]}
+        )
+        cluster_group_context_12.cluster_groups.add(cluster_group_1)
+        cluster_group_context_12.cluster_groups.add(cluster_group_2)
+
+        device = Device.objects.create(
+            name="Device Clusters",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=self.devicetype,
+        )
+
+        with self.subTest("Device in single cluster"):
+            device.clusters.add(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in multiple clusters"):
+            device.clusters.add(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 7)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in single cluster again"):
+            device.clusters.remove(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in no clusters"):
+            device.clusters.remove(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertNotIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertNotIn("cluster_group_12", context.keys())
+
+    def test_device_family_context(self):
+        """
+        A config context assigned to the device's DeviceFamily is included in get_config_context().
+        """
+
+        # Create a Family-level context
+        cc_family = ConfigContext.objects.create(
+            name="Device Family 1",
+            weight=100,
+            data={
+                "device_family": "Device Family 1",
+            },
+        )
+        cc_family.device_families.add(self.devicefamily)
+        ctx1 = self.device.get_config_context()
+
+        # Create a second device for a negative test and verify that it does NOT receive the family context
+        device_type2 = DeviceType.objects.create(manufacturer=self.manufacturer, model="Device Type2")
+        device2 = Device.objects.create(
+            name="Device 2",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=device_type2,
+        )
+        ctx2 = device2.get_config_context()
+
+        self.assertEqual(ctx1.get("device_family"), "Device Family 1")
+        self.assertEqual(ctx2.get("device_family"), None)
 
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
@@ -1622,6 +1992,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
 
 
+@tag("example_app")
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
@@ -1637,6 +2008,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        from example_app.jobs import ExampleJob
+
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
@@ -1644,7 +2017,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass.TestPassJob")
+        self.assertEqual(self.local_job.class_path, "pass_job.TestPassJob")
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
@@ -1706,7 +2079,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "description": "Overridden Description",
             "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
@@ -1772,20 +2144,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                 name="Similarly, let us hope that no one really wants to specify a job name that is over 100 characters long, it would be a pain to type at the very least and it won't look good in the UI either",
             ).clean()
         self.assertIn("Name", str(handler.exception))
-
-        with self.assertRaises(ValidationError) as handler:
-            JobModel(
-                module_name="module_name",
-                job_class_name="JobClassName",
-                grouping="grouping",
-                has_sensitive_variables=True,
-                approval_required=True,
-                name="Job Class Name",
-            ).clean()
-        self.assertEqual(
-            handler.exception.message_dict["approval_required"][0],
-            "A job that may have sensitive variables cannot be marked as requiring approval",
-        )
 
     def test_default_job_queue_always_included_in_job_queues(self):
         default_job_queue = JobQueue.objects.first()
@@ -2386,7 +2744,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
         self.daily_utc_job = ScheduledJob.objects.create(
             name="Daily UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
@@ -2394,7 +2752,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.daily_est_job = ScheduledJob.objects.create(
             name="Daily EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_DAILY,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2409,7 +2767,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_CUSTOM,
             start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
@@ -2418,7 +2776,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         )
         self.one_off_utc_job = ScheduledJob.objects.create(
             name="One-off UTC Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
@@ -2430,6 +2788,13 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off EST Job",
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+        )
+        self.one_off_immediately_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="One-off IMMEDIATELY job",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            start_time=now(),
         )
 
     def test_scheduled_job_queue_setter(self):
@@ -2466,6 +2831,10 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.one_off_est_job.schedule.clocked_time - self.one_off_utc_job.schedule.clocked_time,
                 timedelta(hours=5),
             )
+
+        with self.subTest("Test TYPE IMMEDIATELY schedules"):
+            self.assertTrue(self.one_off_immediately_job.one_off)
+            self.assertEqual(self.one_off_immediately_job.interval, JobExecutionType.TYPE_FUTURE)
 
     def test_to_cron(self):
         """Test the to_cron() method and its interaction with time zone variants."""
@@ -2565,7 +2934,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test that TYPE_CUSTOM behavior around DST is as expected."""
         cronjob = ScheduledJob.objects.create(
             name="DST Aware Cronjob",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_CUSTOM,
@@ -2620,7 +2989,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         """Test the interaction of TYPE_DAILY around DST."""
         daily = ScheduledJob.objects.create(
             name="Daily Job",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             enabled=False,
             interval=JobExecutionType.TYPE_DAILY,
@@ -3160,31 +3529,15 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.save()
             self.assertEqual(str(self.status), test)
 
-    @isolate_apps("nautobot.extras.tests")
-    def test_deprecated_mixin_class(self):
-        """Test that inheriting from StatusModel raises a DeprecationWarning."""
-        with warnings.catch_warnings(record=True) as warn_list:
-            warnings.simplefilter("always")
-
-            class MyModel(StatusModel):  # pylint: disable=unused-variable
-                pass
-
-        self.assertEqual(len(warn_list), 1)
-        warning = warn_list[0]
-        self.assertTrue(issubclass(warning.category, DeprecationWarning))
-        self.assertIn("StatusModel is deprecated", str(warning))
-        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
-        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
-
 
 class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
 
     def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+        instance = Tag(name="Testing Unicode: 台灣")
+        instance.save()
 
-        self.assertEqual(tag.name, "Testing Unicode: 台灣")
+        self.assertEqual(instance.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
@@ -3193,7 +3546,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_class = get_job(f"{module}.{name}")
 

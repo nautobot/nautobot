@@ -10,246 +10,266 @@
 {% load tz %}
 {% load ui_framework %}
 
-
-{% block breadcrumbs %}
-    {% with title=object.display|default:object %}
-        {% get_breadcrumbs as crumbs %}
-        {% include 'inc/breadcrumbs.html' with title=title copy_title=True crumbs=crumbs %}
-    {% endwith %}
-{% endblock breadcrumbs %}
-
-{% block title %}
-    {% with title=object.display|default:object %}
-        {{ title }}
+{% block page_title %}
+    {% with copy_title=True %}
+        {{ block.super }}
     {% endwith %}
 {% endblock %}
 
+{% block breadcrumbs_wrapper %}
+    {% with list_url=object|validated_viewname:"list" %}
+        {% captureas default_breadcrumbs %}
+            {% if list_url %}
+                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+            {% endif %}
+        {% endcaptureas %}
+
+        {% captureas block_breadcrumbs %}
+            {% block breadcrumbs %}
+                {% if list_url %}
+                    <li class="breadcrumb-item"><a href="{% url list_url %}">{{ verbose_name_plural|bettertitle }}</a></li>
+                {% endif %}
+                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+            {% endblock %}
+        {% endcaptureas %}
+
+        {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+    {% endwith %}
+{% endblock breadcrumbs_wrapper %}
+
 {% block header %}
-    <ul id="tabs" class="nav nav-tabs" role="tablist">
-    {% block nav_tabs %}
-      {% if object_detail_content %}
-        {% render_tabs_labels object_detail_content.tabs %}
-      {% else %}
-        <li class="nav-item" role="presentation">
-            <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' or not request.GET.tab %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
-                {{ verbose_name|bettertitle }}
-            </a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link{% if request.GET.tab == 'advanced' %} active{% endif %}" href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
-                Advanced
-            </a>
-        </li>
-        {% if object.is_contact_associable_model and perms.extras.view_contactassociation %}
-            <li class="nav-item" role="presentation">
-                <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-bs-toggle="tab">
-                    Contacts
-                </a>
-            </li>
-        {% endif %}
-        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
-            {% with object.dynamic_groups.count as dg_count %}
-                {% if dg_count %}
+    <div data-nb-tests-id="object-details-header-tabs">
+        <ul class="nav nav-tabs" data-nb-tests-id="object-details-header-tabs-ul" role="tablist">
+            {% block nav_tabs %}
+                {% if object_detail_content %}
+                    {% render_tabs_labels object_detail_content.tabs %}
+                {% else %}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-bs-toggle="tab">
-                            Dynamic Groups {% badge dg_count %}
+                        <a class="nav-link{% if active_tab == 'main' or request.GET.tab == 'main' %} active{% endif %}" href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-bs-toggle="tab">
+                            {{ verbose_name|bettertitle }}
                         </a>
                     </li>
-                {% endif %}
-            {% endwith %}
-        {% endif %}
-        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
-            {% with object.associated_object_metadata.count as om_count %}
-                {% if om_count %}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-bs-toggle="tab">
-                            Object Metadata {% badge om_count %}
+                        <a class="nav-link{% if request.GET.tab == 'advanced' %} active{% endif %}" href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-bs-toggle="tab">
+                            Advanced
                         </a>
                     </li>
+                    {% if object.is_contact_associable_model and perms.extras.view_contactassociation %}
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link{% if request.GET.tab == 'contacts' %} active{% endif %}" href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-bs-toggle="tab">
+                                Contacts{% badge object.associated_contacts.count True %}
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+                        {% with object.dynamic_groups.count as dg_count %}
+                            {% if dg_count %}
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link{% if request.GET.tab == 'dynamic_groups' %} active{% endif %}" href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-bs-toggle="tab">
+                                        Dynamic Groups{% badge dg_count True %}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                    {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+                        {% with object.associated_object_metadata.count as om_count %}
+                            {% if om_count %}
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link{% if request.GET.tab == 'object_metadata' %} active{% endif %}" href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-bs-toggle="tab">
+                                        Object Metadata{% badge om_count True %}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
                 {% endif %}
-            {% endwith %}
-        {% endif %}
-      {% endif %}
-        {% if perms.extras.view_note %}
-            {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
-                <li class="nav-item" role="presentation">
-                    <a
-                        class="nav-link {% if active_tab == 'notes' %}active{% endif %}"
-                        {% if active_tab == 'notes' %}aria-current="page"{% endif %}
-                        href="{{ object.get_notes_url }}"
-                    >
-                        Notes {% badge object.notes.count %}
-                    </a>
-                </li>
-            {% endif %}
-        {% endif %}
-        {% if perms.extras.view_objectchange %}
-            {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
-                <li class="nav-item" role="presentation">
-                    <a
-                        class="nav-link {% if active_tab == 'changelog' %}active{% endif %}"
-                        {% if active_tab == 'changelog' %} aria-current="page"{% endif %}"
-                        href="{{ object.get_changelog_url }}"
-                    >
-                        Change Log
-                    </a>
-                </li>
-            {% endif %}
-        {% endif %}
-        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
-    {% endblock nav_tabs %}
-    {% plugin_object_detail_tabs object %}
-    </ul>
+                {% if perms.extras.view_note %}
+                    {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
+                        <li class="nav-item" role="presentation">
+                            <a
+                                class="nav-link {% if active_tab == 'notes' %}active{% endif %}"
+                                {% if active_tab == 'notes' %}aria-current="page"{% endif %}
+                                href="{{ object.get_notes_url }}"
+                            >
+                                Notes{% badge object.notes.count True %}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% if perms.extras.view_objectchange %}
+                    {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
+                        <li class="nav-item" role="presentation">
+                            <a
+                                class="nav-link {% if active_tab == 'changelog' %}active{% endif %}"
+                                {% if active_tab == 'changelog' %} aria-current="page"{% endif %}
+                                href="{{ object.get_changelog_url }}"
+                            >
+                                Change Log
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
+            {% endblock nav_tabs %}
+            {% plugin_object_detail_tabs object %}
+        </ul>
+    </div>
 {% endblock header %}
+
+{% block drawer %}
+    {% if object_detail_content %}
+        {% render_table_config_forms object_detail_content.tabs %}
+    {% endif %}
+{% endblock drawer %}
 
 {% block content %}
     <div class="tab-content">
-      {% if object_detail_content %}
-        {% render_components object_detail_content.tabs %}
-      {% else %}
-        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" or not request.GET.tab %}active{% else %}fade{% endif %}">
-            <div class="align-items-center d-flex flex-wrap mb-16">
-                {% include 'inc/created_updated.html' %}
-                <div class="flex-grow-0 flex-shrink-0 d-print-none">
-                    {% block buttons %}
-                        {% plugin_buttons object %}
-                        {% render_detail_view_extra_buttons %}
-                        {% block extra_buttons %}{% endblock extra_buttons %}
-                        {% consolidate_detail_view_action_buttons %}
-                    {% endblock buttons %}
-                    {% custom_links object %}
-                    {% job_buttons object %}
-                    {% block panel_buttons %}{% endblock panel_buttons %}
+        {% if object_detail_content %}
+            {% render_components object_detail_content.tabs %}
+        {% else %}
+            <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+                <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
+                    {% include 'inc/created_updated.html' %}
+                    <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
+                        {% custom_links object %}
+                        {% job_buttons object %}
+                        {% block buttons %}
+                            {% plugin_buttons object %}
+                            {% render_detail_view_extra_buttons %}
+                            {% block extra_buttons %}{% endblock extra_buttons %}
+                            {% consolidate_detail_view_action_buttons %}
+                        {% endblock buttons %}
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic custom_fields_advanced_ui=False computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
-                    {% include 'inc/relationships_panel.html' %}
-                    {% include 'extras/inc/tags_panel.html' %}
-                    {% plugin_left_page object %}
-                </div>
-                <div class="col-md-6">
-                    {% block content_right_page %}{% endblock content_right_page %}
-                    {% plugin_right_page object %}
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    {% block content_full_width_page %}{% endblock content_full_width_page %}
-                    {% plugin_full_width_page object %}
-                </div>
-            </div>
-        </div>
-        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
-            <div class="row">
-                <div class="col-md-6">
-                    {% include 'inc/object_details_advanced_panel.html' %}
-                    {% block advanced_content_left_page %}{% endblock advanced_content_left_page %}
-                </div>
-                <div class="col-md-6">
-                    {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
-                </div>
-            </div>
-        </div>
-        {% if object.is_contact_associable_model %}
-            <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
                 <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="card">
-                                <div class="card-header">
-                                    <strong>Contact Associations</strong>
-                                </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_contacts_table 'inc/table.html' %}
-                                </div>
-                                {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                                    <div class="card-footer d-print-none">
-                                        {% if perms.extras.change_contactassociation %}
-                                            <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
-                                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-                                            </button>
-                                        {% endif %}
-                                        {% if perms.extras.delete_contactassociation %}
-                                            <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
-                                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-                                            </button>
-                                        {% endif %}
-                                            {% if perms.extras.add_contactassociation %}
-                                                <div class="float-end">
-                                                <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
-                                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
-                                                </a>
-                                            </div>
-                                        {% endif %}
-                                        <div class="clearfix"></div>
-                                    </div>
-                                {% endwith %}
-                            </div>
-                        </form>
+                    <div class="col-lg-6">
+                        {% block content_left_page %}{% endblock content_left_page %}
+                        {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic custom_fields_advanced_ui=False computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
+                        {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
+                        {% include 'extras/inc/tags_panel.html' %}
+                        {% plugin_left_page object %}
+                    </div>
+                    <div class="col-lg-6">
+                        {% block content_right_page %}{% endblock content_right_page %}
+                        {% plugin_right_page object %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        {% block content_full_width_page %}{% endblock content_full_width_page %}
+                        {% plugin_full_width_page object %}
                     </div>
                 </div>
             </div>
-        {% endif %}
-        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
-            <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+            <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
                 <div class="row">
-                    <div class="col-md-12">
-                        <div class="alert alert-warning">
-                            Dynamic group membership is cached for performance reasons,
-                            therefore this table may not always be up-to-date.
-                            <br>You can refresh the membership of any specific group by navigating to it from the list below
-                            or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
-                            <br>You can also refresh the membership of all groups by running the
-                            <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                    <div class="col-lg-6">
+                        {% include 'inc/object_details_advanced_panel.html' %}
+                        {% block advanced_content_left_page %}{% endblock advanced_content_left_page %}
+                    </div>
+                    <div class="col-lg-6">
+                        {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
+                    </div>
+                </div>
+            </div>
+            {% if object.is_contact_associable_model %}
+                <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="card">
+                                    <div class="card-header">
+                                        <strong>Contact Associations</strong>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_contacts_table 'inc/table.html' %}
+                                    </div>
+                                    {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                                        <div class="card-footer d-print-none">
+                                            {% if perms.extras.change_contactassociation %}
+                                                <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-sm">
+                                                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                                                </button>
+                                            {% endif %}
+                                            {% if perms.extras.delete_contactassociation %}
+                                                <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-sm">
+                                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                                </button>
+                                            {% endif %}
+                                            {% if perms.extras.add_contactassociation %}
+                                                <div class="float-end">
+                                                    <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-sm">
+                                                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            <div class="clearfix"></div>
+                                        </div>
+                                    {% endwith %}
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="card">
-                                <div class="card-header">
-                                    <strong>Dynamic Groups</strong>
-                                </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_dynamic_groups_table 'inc/table.html' %}
-                                </div>
+            {% endif %}
+            {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+                <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="alert alert-warning">
+                                Dynamic group membership is cached for performance reasons,
+                                therefore this table may not always be up-to-date.
+                                <br>You can refresh the membership of any specific group by navigating to it from the list below
+                                or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                                <br>You can also refresh the membership of all groups by running the
+                                <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
                             </div>
-                        </form>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="card">
+                                    <div class="card-header">
+                                        <strong>Dynamic Groups</strong>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_dynamic_groups_table 'inc/table.html' %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endif %}
-        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
-            <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
-                <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="card">
-                                <div class="card-header">
-                                    <strong>Object Metadata</strong>
+            {% endif %}
+            {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+                <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="card">
+                                    <div class="card-header">
+                                        <strong>Object Metadata</strong>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_object_metadata_table 'inc/table.html' %}
+                                    </div>
                                 </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_object_metadata_table 'inc/table.html' %}
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
         {% endif %}
-      {% endif %}
         {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
@@ -257,45 +277,46 @@
 
 
 {% block javascript %}
-<script>
-    const clipboard = new ClipboardJS('.btn');
-    clipboard.on('success', function (event) {});
-    clipboard.on('error', function (event) {});
+    <script>
+        const clipboard = new ClipboardJS('.btn');
+        clipboard.on('success', function (event) {});
+        clipboard.on('error', function (event) {});
 
-    const DEFAULT_TAB_ID = 'main';
+        const DEFAULT_TAB_ID = 'main';
 
-    function show_tab(tab_id) {
-        const tabs = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
-        [...tabs].forEach(tab => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
-    }
-
-    function switch_tab(tab_href, reload = false) {
-        const [tab_url, tab_id = DEFAULT_TAB_ID] = tab_href.split("#");
-        const next_href = tab_id === DEFAULT_TAB_ID ? tab_url : `${tab_url}?${new URLSearchParams({ tab: tab_id })}`;
-
-        if (window.location.pathname !== '{{ object.get_absolute_url }}') {
-            window.location.href = next_href;
-        } else if (window.history.state.id !== tab_id) {
-            window.history.pushState({ id: tab_id }, document.title, next_href);
+        function show_tab(tab_id) {
+            const tabs = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
+            [...tabs].forEach(tab => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
         }
 
-        // If set, reload the page after asserting state.
-        if (reload) {
-            window.location.reload();
+        function switch_tab(tab_href, reload = false) {
+            const [tab_url, tab_id = DEFAULT_TAB_ID] = tab_href.split("#");
+            const next_href = tab_id === DEFAULT_TAB_ID ? tab_url : `${tab_url}?${new URLSearchParams({ tab: tab_id })}`;
+
+            if (window.location.pathname !== '{{ object.get_absolute_url }}') {
+                window.location.href = next_href;
+            } else if (window.history.state.id !== tab_id) {
+                window.history.pushState({ id: tab_id }, document.title, next_href);
+            }
+
+            // If set, reload the page after asserting state.
+            if (reload) {
+                window.location.reload();
+            }
         }
-    }
 
-    // Set initial history state
-    if (window.location.pathname === '{{ object.get_absolute_url }}') {
-        const tab_url = window.location.origin + window.location.pathname + window.location.search;
-        const search_params = new URLSearchParams(window.location.search);
+        // Set initial history state
+        if (window.location.pathname === '{{ object.get_absolute_url }}') {
+            const tab_url = window.location.origin + window.location.pathname + window.location.search;
+            const search_params = new URLSearchParams(window.location.search);
 
-        const tab_id = search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
+            const tab_id = search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
 
-        window.history.replaceState({ id: tab_id }, document.title, tab_url);
-        show_tab(tab_id);
-    }
+            window.history.replaceState({ id: tab_id }, document.title, tab_url);
+            show_tab(tab_id);
+        }
 
-    window.addEventListener('popstate', (event) => show_tab(event.state.id));
-</script>
+        window.addEventListener('popstate', (event) => show_tab(event.state.id));
+    </script>
+    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
 {% endblock javascript %}

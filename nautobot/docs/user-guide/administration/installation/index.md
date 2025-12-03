@@ -119,11 +119,11 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 --- 2.4.0 "Python 3.8 support removed"
     Python 3.8 support was removed.
 
+--- 2.4.20 "Python 3.9 support removed"
+    Python 3.9 support was removed.
+
 +++ 3.0.0 "Python 3.13 support added"
     Python 3.13 support was added.
-
---- 3.0.0 "Python 3.9 support removed"
-    Python 3.9 support was removed.
 
 #### Database
 
@@ -132,7 +132,7 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 --- 2.1.0 "PostgreSQL minimum version became 12.0"
     Support for versions of PostgreSQL older than 12.0 was removed.
 
---- 3.0.0 "PostgreSQL minimum version became 14.0, MySQL minimum version became 8.0.11"
+--- 3.1.0 "PostgreSQL minimum version became 14.0, MySQL minimum version became 8.0.11"
     - Support for versions of PostgreSQL older than 14.0 was removed.
     - Support for versions of MySQL older than 8.0.11 was removed.
 

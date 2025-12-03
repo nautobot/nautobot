@@ -3,14 +3,15 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import sys
 
-from celery import Celery, shared_task, signals
+from celery import bootsteps, Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
+from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
-from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
@@ -19,7 +20,7 @@ from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
-from nautobot.core.utils.module_loading import import_modules_privately
+from nautobot.core.utils.module_loading import import_modules_privately, import_string_optional
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -48,12 +49,15 @@ app.autodiscover_tasks()
 def import_jobs(sender=None, **kwargs):
     """
     Import system Jobs into Nautobot as well as Jobs from JOBS_ROOT and GIT_ROOT.
+    Import app-provided jobs if the app provides dynamic jobs.
 
     Note that app-provided jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs  # noqa: F401
+    import nautobot.core.jobs
+    import nautobot.ipam.jobs  # noqa: F401
 
     _import_jobs_from_jobs_root()
+    _import_dynamic_jobs_from_apps()
 
     try:
         _import_jobs_from_git_repositories()
@@ -119,6 +123,22 @@ def _import_jobs_from_git_repositories():
     # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
     for repo in GitRepository.objects.filter(provided_contents__contains="extras.job"):
         refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
+
+
+def _import_dynamic_jobs_from_apps():
+    for app_name in settings.PLUGINS:
+        app_config = apps.get_app_config(app_name)
+        if not getattr(app_config, "provides_dynamic_jobs", False):
+            continue
+
+        # Unload job modules from sys.modules if they were previously loaded
+        app_jobs = getattr(app_config, "features", {}).get("jobs", [])
+        for job in app_jobs:
+            if job.__module__ in sys.modules:
+                del sys.modules[job.__module__]
+
+        # Load app jobs
+        app_config.features["jobs"] = import_string_optional(f"{app_config.__module__}.{app_config.jobs}")
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -198,7 +218,7 @@ def nautobot_kombu_json_loads_hook(data):
         qual_name = data.pop("__nautobot_type__")
         branch_name = data.pop("__nautobot_branch__", None)
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
-        cls = import_string(qual_name)  # fully qualified dotted import path
+        cls = import_string_optional(qual_name)  # fully qualified dotted import path
         if cls:
 
             def get_object():
@@ -248,3 +268,48 @@ def register_jobs(*jobs):
     for job in jobs:
         if job.class_path not in registry["jobs"]:
             registry["jobs"][job.class_path] = job
+
+
+@signals.worker_ready.connect
+def worker_ready(**_):
+    if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+        return
+    WORKER_READINESS_FILE = Path(settings.CELERY_WORKER_READINESS_FILE)
+    WORKER_READINESS_FILE.touch(exist_ok=True)
+
+
+@signals.worker_shutdown.connect
+def worker_shutdown(**_):
+    if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+        return
+    WORKER_READINESS_FILE = Path(settings.CELERY_WORKER_READINESS_FILE)
+    WORKER_READINESS_FILE.unlink(missing_ok=True)
+
+
+class LivenessProbe(bootsteps.StartStopStep):
+    requires = {"celery.worker.components:Timer"}
+
+    def __init__(self, parent, **kwargs):
+        self.requests = []
+        self.tref = None
+        self.WORKER_HEARTBEAT_FILE = Path(settings.CELERY_WORKER_HEARTBEAT_FILE)
+
+    def start(self, parent):
+        if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+            return
+        # This is a 1-second interval.
+        self.tref = parent.timer.call_repeatedly(
+            1.0,
+            self.update_worker_heartbeat_file,
+            (parent,),
+            priority=10,
+        )
+
+    def stop(self, parent):
+        self.WORKER_HEARTBEAT_FILE.unlink(missing_ok=True)
+
+    def update_worker_heartbeat_file(self, parent):
+        self.WORKER_HEARTBEAT_FILE.touch(exist_ok=True)
+
+
+app.steps["worker"].add(LivenessProbe)

@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, RequestFactory
+from django.test import override_settings, RequestFactory, tag
 from django.utils.timezone import now
 
 from nautobot.core.jobs import BulkDeleteObjects
@@ -14,6 +14,7 @@ from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import (
     Device,
+    DeviceFamily,
     DeviceType,
     Interface,
     Location,
@@ -124,6 +125,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
+from nautobot.extras.utils import get_pending_approval_workflow_stages
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -164,35 +166,35 @@ class ApprovalWorkflowTestMixin:
         cls.approval_workflow_1_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 1 Definition",
             model_content_type=cls.scheduledjob_ct,
-            priority=1,
+            weight=1,
         )
         cls.approval_workflow_2_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 2 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=2,
+            weight=2,
         )
         cls.approval_workflow_3_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 3 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=3,
+            weight=3,
         )
         cls.approval_workflow_4_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 4 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=4,
+            weight=4,
         )
         cls.approval_workflow_5_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow 5 Definition",
             model_content_type=cls.scheduledjob_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=5,
+            weight=5,
         )
         cls.approval_workflow_1_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -200,7 +202,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -208,7 +210,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=3,
             denial_message="Stage 3 Denial Message",
@@ -216,7 +218,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_4_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=400,
+            sequence=400,
             name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=5,
             denial_message="Stage 4 Denial Message",
@@ -224,7 +226,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_5_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=500,
+            sequence=500,
             name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=2,
             denial_message="Stage 5 Denial Message",
@@ -232,7 +234,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_6_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_1_definition,
-            weight=600,
+            sequence=600,
             name="Test Approval Workflow 1 Stage 6 Definition",
             min_approvers=2,
             denial_message="Stage 6 Denial Message",
@@ -240,7 +242,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 2 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -248,7 +250,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 2 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -256,7 +258,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_2_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 2 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -264,7 +266,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_1_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 3 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -272,7 +274,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_2_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 3 Stage 2 Definition",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -280,7 +282,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_3_stage_3_definition = ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_3_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 3 Stage 3 Definition",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -441,7 +443,7 @@ class ApprovalWorkflowStageDefinitionFilterTestCase(ApprovalWorkflowTestMixin, F
         ("created",),
         ("last_updated",),
         ("approval_workflow_definition",),
-        ("weight",),
+        ("sequence",),
         ("name",),
         ("min_approvers",),
         ("denial_message",),
@@ -493,6 +495,39 @@ class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestC
         ("state",),
         ("decision_date",),
     )
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
+
+    def test_pending_my_approvals(self):
+        """Test filtering approval stages by pending_my_approvals query param."""
+        test_user = self.users[0]
+        request = self.factory.get("/api/extras/approval-workflow-stages/")
+        request.user = test_user
+
+        params = {"pending_my_approvals": "false"}
+        pending_qs = get_pending_approval_workflow_stages(test_user, self.queryset)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(approval_workflow_stage_responses__user=test_user).exclude(
+                id__in=pending_qs.values_list("id", flat=True)
+            ),
+            ordered=False,
+        )
+
+        params = {"pending_my_approvals": "true"}
+        # set pending state for active workflow
+        for approval_workflow_stage in self.queryset:
+            if approval_workflow_stage.approval_workflow.active_stage:
+                approval_workflow_stage.state = ApprovalWorkflowStateChoices.PENDING
+                approval_workflow_stage.save()
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset, request=request).qs,
+            get_pending_approval_workflow_stages(test_user, self.queryset),
+            ordered=False,
+        )
 
 
 class ApprovalWorkflowStageResponseFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.FilterTestCase):
@@ -559,6 +594,8 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"content_type__n": "dcim.location"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ConfigContextTestCase(FilterTestCases.FilterTestCase):
@@ -569,6 +606,8 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         ("cluster_group", "cluster_groups__id"),
         ("cluster_group", "cluster_groups__name"),
         ("cluster_group_id", "cluster_groups__id"),
+        ("device_family", "device_families__id"),
+        ("device_family", "device_families__name"),
         ("device_type", "device_types__id"),
         ("device_type", "device_types__model"),
         ("device_type_id", "device_types__id"),
@@ -595,10 +634,28 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
         manufacturer = Manufacturer.objects.first()
 
+        cls.device_families = (
+            DeviceFamily.objects.create(name="Device Family A"),
+            DeviceFamily.objects.create(name="Device Family B"),
+            DeviceFamily.objects.create(name="Device Family C"),
+        )
+
         device_types = (
-            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 2", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 3", manufacturer=manufacturer),
+            DeviceType.objects.create(
+                model="Device Type 1",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[0],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 2",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[1],
+            ),
+            DeviceType.objects.create(
+                model="Device Type 3",
+                manufacturer=manufacturer,
+                device_family=cls.device_families[2],
+            ),
         )
         cls.device_types = device_types
 
@@ -633,6 +690,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
             )
             c.locations.set([cls.locations[i]])
             c.roles.set([device_roles[i]])
+            c.device_families.set([cls.device_families[i]])
             c.device_types.set([device_types[i]])
             c.platforms.set([platforms[i]])
             c.cluster_groups.set([cluster_groups[i]])
@@ -1038,6 +1096,8 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": ContentType.objects.get(model="location").pk}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"content_type__n": ContentType.objects.get(model="location").pk}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
 class FileProxyTestCase(FilterTestCases.FilterTestCase):
@@ -1253,6 +1313,8 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     def test_content_type(self):
         params = {"content_type": "dcim.location"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"content_type__n": "dcim.location"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type_id_and_object_id(self):
         params = {
@@ -1291,9 +1353,10 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
         params = {"dryrun_default": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
+    @tag("example_app")
     def test_hidden(self):
         params = {"hidden": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
     def test_read_only(self):
         params = {"read_only": True}
@@ -1301,13 +1364,7 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
         )
 
-    def test_approval_required(self):
-        params = {"approval_required": True}
-        self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(approval_required=True),
-        )
-
+    @tag("example_app")
     def test_is_job_hook_receiver(self):
         params = {"is_job_hook_receiver": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
@@ -1369,6 +1426,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     filterset = JobResultFilterSet
     generic_filter_tests = (
         ("date_created",),
+        ("date_started",),
         ("date_done",),
         ("job_model", "job_model__id"),
         ("job_model", "job_model__name"),
@@ -1382,11 +1440,11 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         scheduled_jobs = [
             ScheduledJob.objects.create(
                 name="test1",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -1395,7 +1453,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
             ScheduledJob.objects.create(
                 name="test2",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_DAILY,
                 user=user,
@@ -1405,7 +1463,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
             ScheduledJob.objects.create(
                 name="test3",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="34 12 * * *",
@@ -1479,6 +1537,8 @@ class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_content_types(self):
         params = {"content_types": ["dcim.devicetype"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        params = {"content_types__n": ["dcim.devicetype"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_enabled(self):
         params = {"enabled": True}
@@ -1689,7 +1749,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_changed_object_type_id(self):
-        params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
+        params = {"changed_object_type_id": [ContentType.objects.get(app_label="dcim", model="location").pk]}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
@@ -1763,12 +1823,25 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
         ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
         ct_1 = ContentType.objects.get(pk=ct_1_pk)
         ct_2 = ContentType.objects.get(pk=ct_2_pk)
-        oms = self.queryset.filter(assigned_object_type=ct_1_pk).distinct()
+        # Default ordering for the model is just by metadata_type, so if we have multiple records it's nondeterministic
+        oms = (
+            self.queryset.filter(assigned_object_type=ct_1_pk)
+            .distinct()
+            .order_by("metadata_type", "assigned_object_id")
+        )
         params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
-        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
-        oms = self.queryset.filter(assigned_object_type=ct_2_pk).distinct()
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+        )
+        oms = (
+            self.queryset.filter(assigned_object_type=ct_2_pk)
+            .distinct()
+            .order_by("metadata_type", "assigned_object_id")
+        )
         params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
-        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+        )
 
 
 class RelationshipTestCase(FilterTestCases.FilterTestCase):
@@ -2091,6 +2164,8 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
         ("created",),
         ("last_updated",),
         ("name",),
+        ("secrets_groups", "secrets_groups__id"),
+        ("secrets_groups", "secrets_groups__name"),
         ("tags", "tags__id"),
         ("tags", "tags__name"),
     )
@@ -2118,6 +2193,15 @@ class SecretTestCase(FilterTestCases.FilterTestCase):
             secret.validated_save()
         secrets[0].tags.set(Tag.objects.get_for_model(Secret))
         secrets[1].tags.set(Tag.objects.get_for_model(Secret)[:3])
+
+        secrets_groups = (
+            SecretsGroup.objects.create(
+                name="Secrets Group 1",
+            ),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
+        secrets_groups[0].secrets.set([secrets[0]])
+        secrets_groups[1].secrets.set([secrets[1]])
 
     def test_provider(self):
         params = {"provider": ["environment-variable"]}

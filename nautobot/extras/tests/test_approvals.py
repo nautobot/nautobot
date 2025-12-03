@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import now
 
-from nautobot.core.jobs import BulkDeleteObjects
+from nautobot.core.jobs import BulkDeleteObjects, ExportObjectList
 from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
 from nautobot.extras import choices, models
 from nautobot.users.models import User
@@ -39,31 +39,31 @@ class ApprovalWorkflowTestMixin:
         cls.approval_workflow_def_1 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=scheduled_job_ct,
-            priority=0,
+            weight=0,
         )
         cls.approval_workflow_def_2 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 2",
             model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=1,
+            weight=1,
         )
         cls.approval_workflow_def_3 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 3",
             model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=2,
+            weight=2,
         )
         cls.approval_workflow_def_4 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 4",
             model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=3,
+            weight=3,
         )
         cls.approval_workflow_def_5 = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 5",
             model_content_type=scheduled_job_ct,
             model_constraints={"name": "Bulk Delete Objects"},
-            priority=4,
+            weight=4,
         )
         cls.approval_workflow_1_instance_1 = models.ApprovalWorkflow.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
@@ -97,7 +97,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_1 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 1 Stage 1",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -105,7 +105,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_2 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 1 Stage 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -113,7 +113,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_3 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 1 Stage 3",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -121,7 +121,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_4 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=400,
+            sequence=400,
             name="Test Approval Workflow 1 Stage 4",
             min_approvers=2,
             denial_message="Stage 4 Denial Message",
@@ -129,7 +129,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_5 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=500,
+            sequence=500,
             name="Test Approval Workflow 1 Stage 5",
             min_approvers=2,
             denial_message="Stage 5 Denial Message",
@@ -137,7 +137,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_1_stage_def_6 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_1,
-            weight=600,
+            sequence=600,
             name="Test Approval Workflow 1 Stage 6",
             min_approvers=2,
             denial_message="Stage 6 Denial Message",
@@ -145,7 +145,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_def_1 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 2 Stage 1",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -153,7 +153,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_def_2 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 2 Stage 2",
             min_approvers=2,
             denial_message="Stage 2 Denial Message",
@@ -161,7 +161,7 @@ class ApprovalWorkflowTestMixin:
         )
         cls.approval_workflow_2_stage_def_3 = models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_def_2,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 2 Stage 3",
             min_approvers=2,
             denial_message="Stage 3 Denial Message",
@@ -232,19 +232,19 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
                 "name": "Approval Workflow Definition 1",
                 "model_content_type": "extras.scheduledjob",
                 "model_constraints": {"name": "Bulk Delete Objects"},
-                "priority": 5,
+                "weight": 5,
             },
             {
                 "name": "Approval Workflow Definition 2",
                 "model_content_type": "extras.scheduledjob",
                 "model_constraints": {},
-                "priority": 6,
+                "weight": 6,
             },
             {
                 "name": "Approval Workflow Definition 3",
                 "model_content_type": "extras.scheduledjob",
                 "model_constraints": {"name": "Bulk Delete Objects"},
-                "priority": 7,
+                "weight": 7,
             },
         ]
 
@@ -271,33 +271,60 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
             models.ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow Definition {i}",
                 model_content_type=scheduled_job_ct,
-                priority=i,
+                weight=len(range(4)) - 1 - i,  # first with highest weight
             )
             for i in range(4)
         ]
 
     def test_find_for_model(self):
-        """Test that the workflow definition with the highest priority and no constraints is returned."""
+        """Test that the workflow definition with the highest weight and no constraints is returned."""
         self.assertEqual(
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             self.approval_workflow_defs[0],
         )
-        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+        self.assertEqual(self.approval_workflow_defs[0].weight, 3)
 
-    def test_find_for_model_with_match_contrains(self):
-        """Test that a workflow definition with matching constraints is correctly returned."""
+    def test_find_for_model_with_filter_match_constraints(self):
+        """Test that a workflow definition with filter matching constraints is correctly returned."""
+        self.approval_workflow_defs[0].model_constraints = {
+            "job_model__name__in": ["Bulk Delete Objects", "Export Object List"]
+        }
+        self.approval_workflow_defs[0].save()
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].weight, 3)
+
+        export_job_model = models.Job.objects.get_for_class_path(ExportObjectList.class_path)
+        export_scheduled_job = models.ScheduledJob.objects.create(
+            name="Export Scheduled Job",
+            task=ExportObjectList.class_path,
+            job_model=export_job_model,
+            interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=now(),
+        )
+        self.assertEqual(
+            models.ApprovalWorkflowDefinition.objects.find_for_model(export_scheduled_job),
+            self.approval_workflow_defs[0],
+        )
+        self.assertEqual(self.approval_workflow_defs[0].weight, 3)
+
+    def test_find_for_model_with_exact_match_constraints(self):
+        """Test that a workflow definition with exact matching constraints is correctly returned."""
         self.approval_workflow_defs[0].model_constraints = {"name": "Bulk Delete Objects Scheduled Job"}
         self.approval_workflow_defs[0].save()
         self.assertEqual(
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             self.approval_workflow_defs[0],
         )
-        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+        self.assertEqual(self.approval_workflow_defs[0].weight, 3)
 
-    def test_find_for_model_returns_highest_priority_when_all_match(self):
+    def test_find_for_model_returns_highest_weight_when_all_match(self):
         """
         Test that when all workflow definitions match the model instance,
-        the one with the highest priority (lowest number) is returned.
+        the one with the highest weight is returned.
         """
         # Set all definitions to have matching constraints
         for definition in self.approval_workflow_defs:
@@ -308,14 +335,14 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             self.approval_workflow_defs[0],
         )
-        self.assertEqual(self.approval_workflow_defs[0].priority, 0)
+        self.assertEqual(self.approval_workflow_defs[0].weight, 3)
 
     def test_find_for_model_skips_unmatched_constraints_and_returns_next_without_constraints(self):
         """
-        Test that if the highest priority workflow definition has unmatched constraints,
+        Test that if the highest weight workflow definition has unmatched constraints,
         the method skips it and returns the next one with no constraints.
         """
-        # Set constraints on the highest priority definition that do not match the instance
+        # Set constraints on the highest weight definition that do not match the instance
         self.approval_workflow_defs[0].model_constraints = {"name": "Non Matching Name"}
         self.approval_workflow_defs[0].save()
 
@@ -327,12 +354,12 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             self.approval_workflow_defs[1],
         )
-        self.assertEqual(self.approval_workflow_defs[1].priority, 1)
+        self.assertEqual(self.approval_workflow_defs[1].weight, 2)
 
-    def test_find_for_model_matches_lower_priority_if_higher_fails(self):
+    def test_find_for_model_matches_lower_weight_if_higher_fails(self):
         """
-        Test that if the highest priority workflow definition's constraints don't match,
-        the next matching lower-priority definition is returned.
+        Test that if the highest weight workflow definition's constraints don't match,
+        the next matching lower-weight definition is returned.
         """
         self.approval_workflow_defs[0].model_constraints = {"name": "Non Matching Name"}
         self.approval_workflow_defs[0].save()
@@ -344,7 +371,7 @@ class ApprovalWorkflowDefinitionManagerTest(TestCase):
             models.ApprovalWorkflowDefinition.objects.find_for_model(self.scheduled_job),
             self.approval_workflow_defs[1],
         )
-        self.assertEqual(self.approval_workflow_defs[1].priority, 1)
+        self.assertEqual(self.approval_workflow_defs[1].weight, 2)
 
     def test_find_for_model_ignores_constraints_matching_different_instance(self):
         """
@@ -385,7 +412,7 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
         cls.create_data = [
             {
                 "approval_workflow_definition": cls.approval_workflow_def_2.pk,
-                "weight": 400,
+                "sequence": 400,
                 "name": "Test Approval Workflow 2 Stage 4 Definition",
                 "min_approvers": 3,
                 "denial_message": "Stage 4 Denial Message",
@@ -393,7 +420,7 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_2.pk,
-                "weight": 500,
+                "sequence": 500,
                 "name": "Test Approval Workflow 2 Stage 5 Definition",
                 "min_approvers": 2,
                 "denial_message": "Stage 5 Denial Message",
@@ -401,7 +428,7 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_2.pk,
-                "weight": 600,
+                "sequence": 600,
                 "name": "Test Approval Workflow 2 Stage 6 Definition",
                 "min_approvers": 1,
                 "denial_message": "Stage 6 Denial Message",
@@ -410,7 +437,7 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
         ]
 
         cls.update_data = {
-            "weight": 700,
+            "sequence": 700,
             "approval_workflow_definition": cls.approval_workflow_def_2.pk,
             "min_approvers": 4,
             "denial_message": "Updated Denial Message",
@@ -470,7 +497,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         users = list(User.objects.all())
         for user in users:
             user.groups.add(approver_group_1)
-        self.job_model = models.Job.objects.get_for_class_path("pass.TestPassJob")
+        self.job_model = models.Job.objects.get_for_class_path("pass_job.TestPassJob")
         self.content_type = ContentType.objects.get_for_model(models.ScheduledJob)
         self.approval_workflow_def = models.ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition",
@@ -478,7 +505,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         )
         models.ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=self.approval_workflow_def,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow Stage 1",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -506,7 +533,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
 
         scheduled_job = models.ScheduledJob.objects.create(
             name="test0",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -535,14 +562,14 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
 
         scheduled_job = models.ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=now(),
         )
         self.assertTrue(scheduled_job.associated_approval_workflows.exists())
-        self.assertIsNone(scheduled_job.approved_at)
+        self.assertIsNone(scheduled_job.decision_date)
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
 
@@ -561,13 +588,13 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         """
         scheduled_job = models.ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=now(),
         )
-        self.assertIsNone(scheduled_job.approved_at)
+        self.assertIsNone(scheduled_job.decision_date)
 
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
@@ -578,7 +605,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.APPROVED)
 
         scheduled_job.refresh_from_db()
-        self.assertEqual(scheduled_job.approved_at, approval_workflow.decision_date)
+        self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
     def test_approval_workflow_denied_for_scheduled_job(self):
         """
@@ -593,13 +620,13 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         """
         scheduled_job = models.ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             job_model=self.job_model,
             interval=choices.JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=now(),
         )
-        self.assertIsNone(scheduled_job.approved_at)
+        self.assertIsNone(scheduled_job.decision_date)
         approval_workflow = scheduled_job.associated_approval_workflows.first()
         self.assertEqual(approval_workflow.approval_workflow_stages.count(), 1)
         active_stage = approval_workflow.active_stage
@@ -608,7 +635,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         approval_workflow.save()
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.DENIED)
         scheduled_job.refresh_from_db()
-        self.assertIsNone(scheduled_job.approved_at)
+        self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
 
 
 class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):
@@ -673,6 +700,12 @@ class ApprovalWorkflowStageResponseAPITest(ApprovalWorkflowTestMixin, APIViewTes
                 "user": users[4].pk,
                 "comments": "Denied by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
+            },
+            {
+                "approval_workflow_stage": cls.approval_workflow_2_stage_instance_1.pk,
+                "user": users[4].pk,
+                "comments": "Denied by user 1",
+                "state": choices.ApprovalWorkflowStateChoices.CANCELED,
             },
         ]
 

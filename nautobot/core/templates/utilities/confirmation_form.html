@@ -2,32 +2,32 @@
 {% load form_helpers %}
 
 {% block content %}
-<div class="row">
-	<div class="col-md-6 mx-auto">
-        <form action="" method="post">
-            {% csrf_token %}
-            {% for field in form.hidden_fields %}
-                {{ field }}
-            {% endfor %}
-            <div class="card border-{{ card_class|default:'danger' }}">
-                <div class="card-header bg-{{ card_class|default:'danger' }}-subtle border-{{card_class|default:'danger'}} fw-medium text-body">
-                    {% block title %}{% endblock %}
-                </div>
-                <div class="card-body">
-                    {% block message %}<p>Are you sure?</p>{% endblock %}
-                    <div class="gap-8 hstack justify-content-end">
-                        <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:'danger' }}">
-                            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                            -->Confirm
-                        </button>
-                        <a href="{{ return_url }}" class="btn btn-secondary">
-                            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                            -->Cancel
-                        </a>
+    <div class="row">
+        <div class="col-md-8 col-lg-6 mx-auto nb-lg-max-width">
+            <form action="" method="post">
+                {% csrf_token %}
+                {% for field in form.hidden_fields %}
+                    {{ field }}
+                {% endfor %}
+                <div class="card border-{{ card_class|default:'danger' }}">
+                    <div class="card-header bg-{{ card_class|default:'danger' }}-subtle border-{{card_class|default:'danger'}} fw-medium text-body">
+                        {% block title %}{% endblock %}
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-16">{% block message %}<p>Are you sure?</p>{% endblock %}</div>
+                        <div class="gap-8 hstack justify-content-end">
+                            <button type="submit" name="_confirm" class="btn btn-{{ button_class|default:'danger' }}">
+                                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                                -->Confirm
+                            </button>
+                            <a href="{{ return_url }}" class="btn btn-secondary">
+                                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                                -->Cancel
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
-	</div>
-</div>
+            </form>
+        </div>
+    </div>
 {% endblock %}

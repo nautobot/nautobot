@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -13,8 +13,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
-from nautobot.extras.constants import APPROVAL_WORKFLOW_MODELS
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.users.models import User
 
 
@@ -29,8 +28,8 @@ class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuer
         """
         content_type = ContentType.objects.get_for_model(model_instance)
 
-        # Get all workflow definitions for this content type, ordered by priority (lowest first = highest priority)
-        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("priority")
+        # Get all workflow definitions for this content type, ordered by weight (highest wins)
+        workflow_definitions = self.get_queryset().filter(model_content_type=content_type).order_by("-weight")
 
         for workflow_definition in workflow_definitions:
             if not workflow_definition.model_constraints:
@@ -39,8 +38,11 @@ class ApprovalWorkflowDefinitionManager(BaseManager.from_queryset(RestrictedQuer
             model_class = model_instance.__class__
             try:
                 # Try to get the specific instance using the constraints
-                # TODO: we want this to support various filtering options besides exact-match. This implementation should be filterset based.
-                # should work very similarly to Relationship.source_filter and Relationship.destination_filter
+                # NOTE: Any valid Django ORM lookup (e.g. __in, __icontains, __gte) will technically work here,
+                # since constraints are passed directly into .filter(). However, the current UI only supports
+                # simple key=value style constraints and does not provide validation for advanced lookups.
+                # Maybe in 3.1 replace with a FilterSet-based implementation (similar to Relationship.source_filter
+                # and Relationship.destination_filter) to provide full support
                 model_class.objects.filter(**workflow_definition.model_constraints).get(pk=model_instance.pk)
                 return workflow_definition
             except model_class.DoesNotExist:
@@ -68,30 +70,42 @@ class ApprovalWorkflowDefinition(PrimaryModel):
         to=ContentType,
         on_delete=models.PROTECT,
         related_name="+",
-        limit_choices_to=APPROVAL_WORKFLOW_MODELS,
+        limit_choices_to=FeatureQuery("approval_workflows"),
     )
     model_constraints = models.JSONField(
         blank=True,
         default=dict,
         help_text="Constraints to filter the objects that can be approved using this workflow.",
     )
-    priority = models.IntegerField(
-        default=0, help_text="Determines workflow relevance when multiple apply. Lower values indicate higher priority."
+    weight = models.IntegerField(
+        default=0, help_text="Determines workflow relevance when multiple apply. Higher weight wins."
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_dynamic_group_associable = False
+    is_data_compliance_model = False
     objects = ApprovalWorkflowDefinitionManager()
+    is_version_controlled = False
 
     class Meta:
         """Meta class for ApprovalWorkflow Definition."""
 
         verbose_name = "Approval Workflow Definition"
         ordering = ["name"]
-        unique_together = [["model_content_type", "priority"]]
+        unique_together = [["model_content_type", "weight"]]
 
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    def clean(self):
+        super().clean()
+        model_class = self.model_content_type.model_class()
+        if model_class is None:
+            raise ValidationError({"model_content_type": "Couldn't find corresponding model class. Is it installed?"})
+        try:
+            model_class.objects.filter(**self.model_constraints)
+        except (FieldError, AttributeError) as exc:
+            raise ValidationError({"model_constraints": f"Invalid query filter: {exc}"})
 
 
 @extras_features(
@@ -111,12 +125,13 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         on_delete=models.CASCADE,
         help_text="Approval workflow definition to which this stage belongs.",
     )
-    weight = models.PositiveIntegerField(
-        help_text="The weight dictates the order in which this stage will need to be approved. The lower the number, the earlier it will be.",
+    sequence = models.PositiveIntegerField(
+        help_text="The sequence dictates the order in which this stage will need to be approved. The lower the number, the earlier it will be.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     min_approvers = models.PositiveIntegerField(
-        help_text="Number of minimum approvers required to approve this stage.",
+        verbose_name="Minimum approvers",
+        help_text="Minimum number of approvers required to approve this stage.",
     )
     denial_message = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Message to show when the stage is denied."
@@ -125,17 +140,20 @@ class ApprovalWorkflowStageDefinition(OrganizationalModel):
         to=Group,
         related_name="approval_workflow_stage_definitions",
         verbose_name="Group",
-        help_text="Group of users who are eligible to approve this stage.",
+        help_text="Group of users who are eligible to approve this stage. Only admin users can create new groups.",
         on_delete=models.PROTECT,
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+    is_version_controlled = False
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStage."""
 
         verbose_name = "Approval Workflow Stage Definition"
-        unique_together = [["approval_workflow_definition", "name"], ["approval_workflow_definition", "weight"]]
-        ordering = ["approval_workflow_definition", "weight"]
+        unique_together = [["approval_workflow_definition", "name"], ["approval_workflow_definition", "sequence"]]
+        ordering = ["approval_workflow_definition", "sequence"]
 
     def __str__(self):
         """Stringify instance."""
@@ -166,7 +184,7 @@ class ApprovalWorkflow(OrganizationalModel):
         to=ContentType,
         on_delete=models.PROTECT,
         related_name="+",
-        limit_choices_to=APPROVAL_WORKFLOW_MODELS,
+        limit_choices_to=FeatureQuery("approval_workflows"),
     )
     object_under_review_object_id = models.UUIDField(db_index=True)
     current_state = models.CharField(
@@ -190,6 +208,9 @@ class ApprovalWorkflow(OrganizationalModel):
     )
     user_name = models.CharField(max_length=150, editable=False, db_index=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+
+    is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         """Meta class for ApprovalWorkflow."""
@@ -219,7 +240,7 @@ class ApprovalWorkflow(OrganizationalModel):
         """
         first_nonapproved_stage = (
             self.approval_workflow_stages.exclude(state=ApprovalWorkflowStateChoices.APPROVED)
-            .order_by("approval_workflow_stage_definition__weight")
+            .order_by("approval_workflow_stage_definition__sequence")
             .first()
         )
         return first_nonapproved_stage
@@ -243,18 +264,25 @@ class ApprovalWorkflow(OrganizationalModel):
         # TODO need to check of the object fits the model_constraints of the approval workflow
         if self.user:
             self.user_name = self.user.username
-        # Check if there is one or more denied response for this stage instance
+        # Check if there is one or more denied/canceled response for this stage instance
         previous_state = self.current_state
         denied_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_stages.exists():
             self.current_state = ApprovalWorkflowStateChoices.DENIED
-        # Check if all stages are approved
-        approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
-        approval_workflow_stage_count = self.approval_workflow_definition.approval_workflow_stage_definitions.count()
-        if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
-            self.current_state = ApprovalWorkflowStateChoices.APPROVED
+        else:
+            canceled_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED)
+            if canceled_stages.exists():
+                self.current_state = ApprovalWorkflowStateChoices.CANCELED
+            else:
+                # Check if all stages are approved
+                approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+                approval_workflow_stage_count = (
+                    self.approval_workflow_definition.approval_workflow_stage_definitions.count()
+                )
+                if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
+                    self.current_state = ApprovalWorkflowStateChoices.APPROVED
 
-        # If the state is changed to APPROVED or DENIED from PENDING, set the decision date
+        # If the state is changed to APPROVED or DENIED or CANCELED from PENDING, set the decision date
         if previous_state != self.current_state:
             self.decision_date = timezone.now()
         super().save(*args, **kwargs)
@@ -302,13 +330,16 @@ class ApprovalWorkflowStage(OrganizationalModel):
         help_text="Date and time when the decision of approval/denial was made.",
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+    is_version_controlled = False
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStage."""
 
         verbose_name = "Approval Workflow Stage"
         unique_together = [["approval_workflow", "approval_workflow_stage_definition"]]
-        ordering = ["approval_workflow", "approval_workflow_stage_definition__weight"]
+        ordering = ["approval_workflow", "approval_workflow_stage_definition__sequence"]
 
     def __str__(self):
         """Stringify instance."""
@@ -347,6 +378,16 @@ class ApprovalWorkflowStage(OrganizationalModel):
         return self.pk == active_stage.pk and active_stage.state == ApprovalWorkflowStateChoices.PENDING
 
     @property
+    def is_not_done_stage(self):
+        """
+        Check if the stage is not done (approved or denied).
+
+        Returns:
+            bool: True if the stage is not APPROVED or DENIED
+        """
+        return self.state == ApprovalWorkflowStateChoices.PENDING
+
+    @property
     def users_that_already_approved(self):
         """
         Get the users that have already approved this stage instance.
@@ -356,6 +397,18 @@ class ApprovalWorkflowStage(OrganizationalModel):
         return [
             response.user
             for response in self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+        ]
+
+    @property
+    def users_that_already_denied(self):
+        """
+        Get the users that have already denied this stage instance.
+        Returns:
+            list: List of users that have already denied this stage instance.
+        """
+        return [
+            response.user
+            for response in self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.DENIED)
         ]
 
     @property
@@ -369,6 +422,7 @@ class ApprovalWorkflowStage(OrganizationalModel):
         if self.is_active_stage or self.state in [
             ApprovalWorkflowStateChoices.APPROVED,
             ApprovalWorkflowStateChoices.DENIED,
+            ApprovalWorkflowStateChoices.CANCELED,
         ]:
             return True
         return False
@@ -393,15 +447,26 @@ class ApprovalWorkflowStage(OrganizationalModel):
         if approved_responses.count() >= self.approval_workflow_stage_definition.min_approvers:
             self.state = ApprovalWorkflowStateChoices.APPROVED
 
-        # Check if there is one or more denied response for this stage instance
-        # If so, set the stage as denied even tho previously the stage could be approved by enough number of approvers
+        # Check if there is one or more denied/canceled response for this stage instance
+        # If so, set the stage as denied/canceled even tho previously the stage could be approved by enough number of approvers
         denied_responses = self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_responses.exists():
             self.state = ApprovalWorkflowStateChoices.DENIED
+        else:
+            canceled_responses = self.approval_workflow_stage_responses.filter(
+                state=ApprovalWorkflowStateChoices.CANCELED
+            )
+            if canceled_responses.exists():
+                self.state = ApprovalWorkflowStateChoices.CANCELED
 
         # Set the decision date if the state is changed to APPROVED or DENIED
         decision_made = (
-            self.state in [ApprovalWorkflowStateChoices.APPROVED, ApprovalWorkflowStateChoices.DENIED]
+            self.state
+            in [
+                ApprovalWorkflowStateChoices.APPROVED,
+                ApprovalWorkflowStateChoices.DENIED,
+                ApprovalWorkflowStateChoices.CANCELED,
+            ]
             and previous_state != self.state
         )
         if decision_made:
@@ -409,12 +474,17 @@ class ApprovalWorkflowStage(OrganizationalModel):
         super().save(*args, **kwargs)
 
         # Modify the parent ApprovalWorkflow to potentially update its state as well
-        # If this stage is approved or denied.
+        # If this stage is approved or denied or canceled.
         if decision_made:
             approval_workflow = self.approval_workflow
             # Check if there is one or more denied response for this stage instance
-            denied_stages = approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.DENIED)
-            if denied_stages.exists() and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING:
+            denied_or_canceled_stages = approval_workflow.approval_workflow_stages.filter(
+                state__in=[ApprovalWorkflowStateChoices.DENIED, ApprovalWorkflowStateChoices.CANCELED]
+            )
+            if (
+                denied_or_canceled_stages.exists()
+                and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING
+            ):
                 approval_workflow.save(using=kwargs.get("using"))
             # Check if all stages are approved
             approved_stages = approval_workflow.approval_workflow_stages.filter(
@@ -458,9 +528,12 @@ class ApprovalWorkflowStageResponse(BaseModel):
         max_length=CHARFIELD_MAX_LENGTH,
         choices=ApprovalWorkflowStateChoices,
         default=ApprovalWorkflowStateChoices.PENDING,
-        help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Approved, Denied.",
+        help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Comment, Approved, Denied.",
     )
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
+    is_version_controlled = False
+
+    is_data_compliance_model = False
 
     class Meta:
         """Meta class for ApprovalWorkflowStageResponse."""
@@ -486,7 +559,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
         super().save(*args, **kwargs)
         # Call save() on the parent ApprovalWorkflowStage to potentially update its state as well
         # If this stage is approved or denied and the approval workflow stage instance needs to be updated.
-        if self.state == ApprovalWorkflowStateChoices.DENIED:
+        if self.state in [ApprovalWorkflowStateChoices.DENIED, ApprovalWorkflowStateChoices.CANCELED]:
             # Check if the stage instance needs to be updated.
             if self.approval_workflow_stage.state == ApprovalWorkflowStateChoices.PENDING:
                 self.approval_workflow_stage.save(using=kwargs.get("using"))

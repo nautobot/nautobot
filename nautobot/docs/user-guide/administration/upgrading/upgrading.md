@@ -67,8 +67,10 @@ Nautobot v3.0.0 and later requires the following:
 --- 2.4.0
     Support for Python 3.8 was removed.
 
---- 3.0.0
-    - Support for Python 3.9 was removed.
+--- 2.4.20
+    Support for Python 3.9 was removed.
+
+--- 3.1.0
     - Support for versions of PostgreSQL older than 14.0 was removed.
 
 Nautobot v1.1.0 and later can optionally support the following:
@@ -79,7 +81,7 @@ Nautobot v1.1.0 and later can optionally support the following:
 | ---------- | --------------- |
 | MySQL      | 8.0.11          |
 
---- 3.0.0
+--- 3.1.0
     - Support for versions of MySQL older than 8.0.11 was removed.
 
 !!! tip

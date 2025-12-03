@@ -39,20 +39,28 @@ from nautobot.core.forms import (
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
+    convert_querydict_to_dict,
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import (
+    BulkEditAndBulkDeleteModelMixin,
+    GetReturnURLMixin,
+    ObjectPermissionRequiredMixin,
+    UIComponentsMixin,
+)
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
+    get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
+    get_saved_views_for_user,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -61,7 +69,7 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 
 
-class GenericView(LoginRequiredMixin, View):
+class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
     """
     Base class for non-object-related views.
 
@@ -69,7 +77,7 @@ class GenericView(LoginRequiredMixin, View):
     """
 
 
-class ObjectView(ObjectPermissionRequiredMixin, View):
+class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     """
     Retrieve a single object for display.
 
@@ -114,21 +122,28 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        model = self.queryset.model
         content_type = ContentType.objects.get_for_model(self.queryset.model)
         context = {
             "object": instance,
             "content_type": content_type,
-            "verbose_name": self.queryset.model._meta.verbose_name,
-            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "verbose_name": model._meta.verbose_name,
+            "verbose_name_plural": model._meta.verbose_name_plural,
             "object_detail_content": self.object_detail_content,
+            "breadcrumbs": self.get_breadcrumbs(model, view_type=""),
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
 
+        # Some of the legacy views overriding title in `get_extra_context` method.
+        # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
+        if context.get("title") is None:
+            context["title"] = self.get_view_titles(model, view_type="").render(context)
+
         return render(request, self.get_template_name(), context)
 
 
-class ObjectListView(ObjectPermissionRequiredMixin, View):
+class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     """
     List a series of objects.
 
@@ -212,6 +227,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
         resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         skip_user_and_global_default_saved_view = False
@@ -222,30 +238,35 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 self.filterset(),
             )
 
-        # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
-            # Check if there is a default for this view for this specific user
-            if not isinstance(user, AnonymousUser):
-                try:
-                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=list_url
-                    ).saved_view.pk
-                    # Saved view should either belong to the user or be public
-                    SavedView.objects.get(
-                        Q(pk=user_default_saved_view_pk),
-                        Q(owner=user) | Q(is_shared=True),
-                    )
-                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    pass
-
-            # Check if there is a global default for this view
+        # Check if there is a default for this view for this specific user
+        user_default_saved_view = None
+        if not isinstance(user, AnonymousUser):
             try:
-                global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
-                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+                user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                    user=user, view_name=list_url
+                ).saved_view.pk
+                # Saved view should either belong to the user or be public
+                user_default_saved_view = SavedView.objects.get(
+                    Q(pk=user_default_saved_view_pk),
+                    Q(owner=user) | Q(is_shared=True),
+                )
             except ObjectDoesNotExist:
                 pass
+
+        # Check if there is a global default for this view
+        global_saved_view = None
+        try:
+            global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
+            if user_default_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": user_default_saved_view.pk}))
+
+            if global_saved_view:
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset is not None:
             filter_params = self.get_filter_params(request)
@@ -315,18 +336,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        # We are not using .restrict(request.user, "view") here
-        # User should be able to see any saved view that he has the list view access to.
-        if user.has_perms(["extras.view_savedview"]):
-            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
-        else:
-            shared_saved_views = (
-                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
-            )
-            user_owned_saved_views = (
-                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-            )
-            saved_views = shared_saved_views | user_owned_saved_views
+        saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
             try:
@@ -384,11 +394,15 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "list_url": list_url,
-            "title": bettertitle(model._meta.verbose_name_plural),
             "new_changes_not_applied": new_changes_not_applied,
             "current_saved_view": current_saved_view,
             "saved_views": saved_views,
+            "user_default_saved_view": user_default_saved_view,
+            "global_saved_view": global_saved_view,
             "model": model,
+            "verbose_name_plural": model._meta.verbose_name_plural,
+            "view_action": "list",
+            "breadcrumbs": self.get_breadcrumbs(model),
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be
@@ -397,6 +411,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # in plugins and core that either override or implement it without request.
         setattr(self, "request", request)
         context.update(self.extra_context())
+
+        # Some of the legacy views overriding title in `extra_context` method.
+        # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
+        if context.get("title") is None:
+            context["title"] = self.get_view_titles(model).render(context)
 
         return render(request, self.template_name, context)
 
@@ -408,7 +427,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         return {}
 
 
-class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Create or edit a single object.
 
@@ -475,6 +494,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
+                "view_action": "update" if obj.present_in_database else "create",
+                "breadcrumbs": self.get_breadcrumbs(),
                 "editing": obj.present_in_database,
                 **self.get_extra_context(request, obj),
             },
@@ -549,6 +570,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
+                "view_action": "update" if obj.present_in_database else "create",
+                "breadcrumbs": self.get_breadcrumbs(),
                 "return_url": self.get_return_url(request, obj),
                 "editing": obj.present_in_database,
                 **self.get_extra_context(request, obj),
@@ -556,7 +579,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class ObjectDeleteView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Delete a single object.
 
@@ -565,7 +588,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_delete.html"
+    template_name = "generic/object_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")
@@ -633,7 +656,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Create new objects in bulk.
 
@@ -747,7 +770,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class ObjectImportView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Import a single object (YAML or JSON format).
 
@@ -894,7 +917,9 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  # 3.0 TODO: remove as it's no longer used
+class BulkImportView(
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View
+):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
 
@@ -1003,7 +1028,9 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
+class BulkEditView(
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
+):
     """
     Edit objects in bulk.
 
@@ -1018,7 +1045,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "generic/object_bulk_edit.html"
+    template_name = "generic/object_bulk_update.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -1039,15 +1066,19 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
         if self.queryset is None or self.form is None or self.table is None:
             raise RuntimeError("self.queryset, self.form, and self.table must not be None")
         model = self.queryset.model
-        edit_all = request.POST.get("_all")
+        pk_list = list(request.POST.getlist("pk"))
+        edit_all = bool(self.request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
 
-        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if edit_all:
-            pk_list = []
-            queryset = self._get_bulk_edit_delete_all_queryset(request)
-        else:
-            pk_list = request.POST.getlist("pk")
-            queryset = self.queryset.filter(pk__in=pk_list)
+        self.key_params = {
+            "content_type": ContentType.objects.get_for_model(model),
+            "edit_all": edit_all,
+            "filter_query_params": convert_querydict_to_dict(request.GET),
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
+        queryset = get_bulk_queryset_from_view(user=request.user, action="change", **self.key_params)
 
         if "_apply" in request.POST:
             form = self.form(model, request.POST, edit_all=edit_all)  # pylint: disable=not-callable
@@ -1055,7 +1086,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                return self.send_bulk_edit_objects_to_job(request, form.cleaned_data, model)
+                return self.send_bulk_edit_objects_to_job(request, form.cleaned_data)
             else:
                 logger.debug("Form validation failed")
 
@@ -1099,7 +1130,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
         return {}
 
 
-class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     An extendable view for renaming objects in bulk.
     """
@@ -1199,7 +1230,9 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
+class BulkDeleteView(
+    UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View
+):
     """
     Delete objects in bulk.
 
@@ -1214,7 +1247,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
     filterset: Optional[type[FilterSet]] = None
     table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None
-    template_name = "generic/object_bulk_delete.html"
+    template_name = "generic/object_bulk_destroy.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "delete")
@@ -1227,15 +1260,19 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
         if self.queryset is None or self.table is None:
             raise RuntimeError("self.queryset and self.table must not be None")
         model = self.queryset.model
-        delete_all = request.POST.get("_all")
+        pk_list = list(request.POST.getlist("pk"))
+        delete_all = bool(request.POST.get("_all"))
+        saved_view_id = request.GET.get("saved_view", "")
 
-        # Are we deleting *all* objects in the queryset or just a selected subset?
-        if delete_all:
-            queryset = self._get_bulk_edit_delete_all_queryset(request)
-            pk_list = []
-        else:
-            pk_list = request.POST.getlist("pk")
-            queryset = self.queryset.filter(pk__in=pk_list)
+        self.key_params = {
+            "content_type": ContentType.objects.get_for_model(model),
+            "delete_all": delete_all,
+            "filter_query_params": convert_querydict_to_dict(request.GET),
+            "pk_list": pk_list,
+            "saved_view_id": saved_view_id,
+        }
+
+        queryset = get_bulk_queryset_from_view(user=request.user, action="delete", **self.key_params)
 
         form_cls = self.get_form()
 
@@ -1247,7 +1284,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                return self.send_bulk_delete_objects_to_job(request, pk_list, model, delete_all)
+                return self.send_bulk_delete_objects_to_job(request)
             else:
                 logger.debug("Form validation failed")
 
@@ -1310,7 +1347,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
 
 
 # TODO: Replace with BulkCreateView
-class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
@@ -1416,7 +1453,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         )
 
 
-class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """

@@ -12,7 +12,9 @@ from .models import Tenant, TenantGroup
 
 TREE_LINK = """
 {% load helpers %}
+{% if not table.hide_hierarchy_ui %}
 {% tree_hierarchy_ui_representation record.tree_depth|as_range table.hide_hierarchy_ui %}
+{% endif %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
@@ -75,8 +77,9 @@ class TenantTable(BaseTable):
     name = tables.Column(linkify=True)
     tenant_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
+    actions = ButtonsColumn(Tenant)
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "tenant_group", "description", "tags")
-        default_columns = ("pk", "name", "tenant_group", "description")
+        fields = ("pk", "name", "tenant_group", "description", "tags", "actions")
+        default_columns = ("pk", "name", "tenant_group", "description", "actions")

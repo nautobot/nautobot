@@ -15,12 +15,12 @@ from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
@@ -97,6 +97,17 @@ class FilterTestCases:
             """Helper method to return q filter."""
             self.assertIsNotNone(self.filterset)
             return self.filterset.declared_filters["q"].filter_predicates
+
+        def test_no_distinct_on_empty_filter_params(self):
+            """Verify that an empty filterset doesn't cause a `SELECT DISTINCT`."""
+            self.assertIsNotNone(self.filterset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
+            self.assertTrue(filterset.is_valid())
+            self.assertNotIn(
+                "SELECT DISTINCT",
+                str(filterset.qs.query),
+                "Filter set with empty parameter added `DISTINCT` to select query. This needs to be avoided because it incurs heavy performance penalties.",
+            )
 
         def test_id(self):
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
@@ -203,19 +214,35 @@ class FilterTestCases:
                 with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
-                    filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
+                    filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable
+                    self.assertIn(filter_name, list(filterset.filters.keys()))
+                    filterset_result = filterset.qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
                     self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
+        def test_automagic_filters(self):
+            """https://github.com/nautobot/nautobot/issues/6656"""
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
+            if getattr(self.queryset.model, "is_contact_associable_model", False):
+                self.assertIsInstance(fs.filters["contacts"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["contacts__n"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["teams"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["teams__n"], NaturalKeyOrPKMultipleChoiceFilter)
+
+            if getattr(self.queryset.model, "is_dynamic_group_associable_model", False):
+                self.assertIsInstance(fs.filters["dynamic_groups"], NaturalKeyOrPKMultipleChoiceFilter)
+                self.assertIsInstance(fs.filters["dynamic_groups__n"], NaturalKeyOrPKMultipleChoiceFilter)
+
         def test_boolean_filters_generic(self):
-            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`
+            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.filters`
             except for the ones with custom filter logic defined in its `method` attribute.
 
-            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
-            that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
+            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=...)` and
+            that `filter=False` matches `self.queryset.exclude(field__isnull=...)`.
             """
             self.assertIsNotNone(self.filterset)
-            for filter_name, filter_object in self.filterset.get_filters().items():
+            for filter_name, filter_object in self.filterset().filters.items():  # pylint: disable=not-callable
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
                     continue
                 if filter_object.method is not None:
@@ -311,29 +338,34 @@ class FilterTestCases:
             if not isinstance(obj_field, (CharField, TextField)):
                 self.skipTest("Not a CharField or TextField")
 
+            original_value = getattr(obj, obj_field_name)
             # Create random lowercase string to use for icontains lookup
             max_length = obj_field.max_length or CHARFIELD_MAX_LENGTH
             randomized_attr_value = "".join(random.choices(string.ascii_lowercase, k=max_length))  # noqa: S311 # pseudo-random generator
-            setattr(obj, obj_field_name, randomized_attr_value)
-            obj.save()
+            try:
+                setattr(obj, obj_field_name, randomized_attr_value)
+                obj.save()
 
-            # if lookup_method is iexact use the full updated attr
-            if lookup_method == "iexact":
-                lookup = randomized_attr_value.upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
-            else:
-                lookup = randomized_attr_value[1:].upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
-            params = {"q": lookup}
-            filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
+                # if lookup_method is iexact use the full updated attr
+                if lookup_method == "iexact":
+                    lookup = randomized_attr_value.upper()
+                    model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
+                else:
+                    lookup = randomized_attr_value[1:].upper()
+                    model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
+                params = {"q": lookup}
+                filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
 
-            self.assertTrue(filterset_result.is_valid())
-            self.assertQuerySetEqualAndNotEmpty(
-                filterset_result.qs,
-                model_queryset,
-                ordered=False,
-                msg=lookup,
-            )
+                self.assertTrue(filterset_result.is_valid())
+                self.assertQuerySetEqualAndNotEmpty(
+                    filterset_result.qs,
+                    model_queryset,
+                    ordered=False,
+                    msg=lookup,
+                )
+            finally:
+                setattr(obj, obj_field_name, original_value)
+                obj.save()
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):
             """Gets the relevant queryset based on filter parameters."""
@@ -380,6 +412,8 @@ class FilterTestCases:
                     self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
         def test_content_type_related_fields_uses_content_type_filter(self):
+            self.assertIsNotNone(self.filterset)
+            fs = self.filterset()  # pylint: disable=not-callable
             for field in self.queryset.model._meta.fields:
                 related_model = getattr(field, "related_model", None)
                 if not related_model or related_model != ContentType:
@@ -387,7 +421,7 @@ class FilterTestCases:
                 with self.subTest(
                     f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"
                 ):
-                    filter_field = self.filterset.get_filters().get(field.name)
+                    filter_field = fs.filters.get(field.name)
                     if not filter_field:
                         # This field is not part of the Filterset.
                         continue
@@ -399,28 +433,6 @@ class FilterTestCases:
                             ContentTypeChoiceFilter,
                         ),
                     )
-
-    # Test cases should just explicitly include `name` as a generic_filter_tests entry
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameOnlyFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
-
-    # Test cases should just explicitly include `name` and `slug` as generic_filter_tests entries
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "slug" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["slug"], *self.generic_filter_tests)
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
 
     class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""
@@ -442,7 +454,7 @@ class FilterTestCases:
             tenant_groups = list(
                 models.TenantGroup.objects.filter(
                     tenants__isnull=False, **{f"tenants__{self.tenancy_related_name}__isnull": False}
-                )
+                ).distinct()
             )[:2]
             tenant_groups_including_children = []
             for tenant_group in tenant_groups:

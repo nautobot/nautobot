@@ -15,7 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import ProtectedError, signals
+from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
@@ -50,7 +50,13 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ApprovableModelMixin, ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import (
+    ApprovableModelMixin,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -155,9 +161,6 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    approval_required = models.BooleanField(
-        default=False, help_text="Whether the job requires approval from another user before running"
-    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
@@ -216,10 +219,6 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
     )
-    approval_required_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
     dryrun_default_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
@@ -253,6 +252,7 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -316,7 +316,7 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
+        return self.enabled and self.installed
 
     @cached_property
     def git_repository(self):
@@ -391,11 +391,6 @@ class Job(PrimaryModel):
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
-        if self.has_sensitive_variables is True and self.approval_required is True:
-            raise ValidationError(
-                {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
-            )
-
     def save(self, *args, **kwargs):
         """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
         super().save(*args, **kwargs)
@@ -444,6 +439,8 @@ class JobHook(OrganizationalModel):
     type_create = models.BooleanField(default=False, help_text="Call this job hook when a matching object is created.")
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
+
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
 
@@ -535,6 +532,7 @@ class JobLogEntry(BaseModel):
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
@@ -546,6 +544,12 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+        indexes = [
+            models.Index(
+                name="extras_joblog_jr_created_idx",
+                fields=["job_result", "created"],
+            )
+        ]
 
 
 #
@@ -580,6 +584,7 @@ class JobQueue(PrimaryModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["name"]
@@ -610,6 +615,7 @@ class JobQueueAssignment(BaseModel):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = ["job", "job_queue"]
@@ -628,7 +634,7 @@ class JobQueueAssignment(BaseModel):
     "custom_links",
     "graphql",
 )
-class JobResult(BaseModel, CustomFieldModel):
+class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     """
     This model stores the results from running a Job.
     """
@@ -647,6 +653,7 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
     date_created = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_started = models.DateTimeField(null=True, blank=True, db_index=True)
     date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
@@ -677,11 +684,17 @@ class JobResult(BaseModel, CustomFieldModel):
     traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # django-nullable-model-string-field -- TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
+    debug_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    success_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    info_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
+    error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
+    is_data_compliance_model = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -712,7 +725,7 @@ class JobResult(BaseModel, CustomFieldModel):
     natural_key_field_names = ["id"]
 
     def __str__(self):
-        return f"{self.name} started at {self.date_created} ({self.status})"
+        return f"{self.name} created at {self.date_created} ({self.status})"
 
     def as_dict(self):
         """This is required by the django-celery-results DB backend."""
@@ -734,7 +747,8 @@ class JobResult(BaseModel, CustomFieldModel):
         if not self.date_done:
             return None
 
-        duration = self.date_done - self.date_created
+        # Older records may not have a date_started value, so we use date_created as a fallback.
+        duration = self.date_done - (self.date_started or self.date_created)
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
@@ -752,12 +766,37 @@ class JobResult(BaseModel, CustomFieldModel):
             # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
             # have a related job model, so this shouldn't be too tight of a restriction.
             if self.job_model:
-                duration = self.date_done - self.date_created
+                # Older records may not have a date_started value, so we use date_created as a fallback.
+                duration = self.date_done - (self.date_started or self.date_created)
                 JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
                     duration.total_seconds()
                 )
 
     set_status.alters_data = True
+
+    def count_logs_by_level(self):
+        """Helper method to count JobLogEntries after a Job is run, or update these values when missing or changed."""
+        db_log_counts = self.job_log_entries.aggregate(
+            debug_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_DEBUG)),
+            success_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_SUCCESS)),
+            info_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_INFO)),
+            warning_log_count=Count("pk", filter=Q(log_level=LogLevelChoices.LOG_WARNING)),
+            error_log_count=Count(
+                "pk",
+                filter=Q(
+                    log_level__in=[
+                        LogLevelChoices.LOG_FAILURE,
+                        LogLevelChoices.LOG_ERROR,
+                        LogLevelChoices.LOG_CRITICAL,
+                    ]
+                ),
+            ),
+        )
+        self.debug_log_count = db_log_counts["debug_log_count"]
+        self.success_log_count = db_log_counts["success_log_count"]
+        self.info_log_count = db_log_counts["info_log_count"]
+        self.warning_log_count = db_log_counts["warning_log_count"]
+        self.error_log_count = db_log_counts["error_log_count"]
 
     @classmethod
     def execute_job(cls, *args, **kwargs):
@@ -883,6 +922,7 @@ class JobResult(BaseModel, CustomFieldModel):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
+            job_result.date_started = timezone.now()
             job_result.save()
 
             # setup synchronous task logging
@@ -1002,6 +1042,18 @@ class JobResult(BaseModel, CustomFieldModel):
 
     log.alters_data = True
 
+    def save(self, *args, **kwargs):
+        """When a JobResult is saved and in a terminal state, store missing log counts for summary."""
+        if self.status in JobResultStatusChoices.READY_STATES and None in [
+            self.debug_log_count,
+            self.info_log_count,
+            self.success_log_count,
+            self.warning_log_count,
+            self.error_log_count,
+        ]:
+            self.count_logs_by_level()
+        super().save(*args, **kwargs)
+
 
 #
 # Job Button
@@ -1051,9 +1103,17 @@ class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesM
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
+    is_data_compliance_model = False
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
+
+    @property
+    def button_class_css_class(self):
+        """Map self.button_class database value to the correct CSS class for buttons."""
+        if self.button_class == ButtonClassChoices.CLASS_DEFAULT:
+            return "secondary"
+        return self.button_class
 
     def __str__(self):
         return self.name
@@ -1077,6 +1137,7 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+    is_data_compliance_model = False
 
     def __str__(self):
         return str(self.ident)
@@ -1194,22 +1255,14 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         null=True,
         help_text="User that requested the schedule",
     )
-    approved_by_user = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-        help_text="User that approved the schedule",
-    )
     # todoindex:
     approval_required = models.BooleanField(default=False)
-    approved_at = models.DateTimeField(
+    decision_date = models.DateTimeField(
         editable=False,
         blank=True,
         null=True,
-        verbose_name="Approval date/time",
-        help_text="Datetime that the schedule was approved",
+        verbose_name="Approval/Rejection date/time",
+        help_text="Datetime that the schedule was approved or denied",
     )
     crontab = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -1222,6 +1275,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     no_changes = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
+    is_data_compliance_model = False
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
@@ -1257,34 +1311,38 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if is_new:
             self.begin_approval_workflow()
 
-    def clean(self):
-        """
-        Model Validation
-        """
-        if self.user and self.approved_by_user and self.user == self.approved_by_user:
-            raise ValidationError("The requesting and approving users cannot be the same")
-        # bitwise xor also works on booleans, but not on complex values
-        if bool(self.approved_by_user) ^ bool(self.approved_at):
-            raise ValidationError("Approval by user and approval time must either both be set or both be undefined")
-
     def on_workflow_initiated(self, approval_workflow):
-        """When initiated, set enabled to False."""
+        """When initiated, set approval required to True."""
         self.approval_required = True
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
-        """When approved, set enabled to True."""
-        self.approved_at = approval_workflow.decision_date
+        """When approved, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
     def on_workflow_denied(self, approval_workflow):
-        """When denied, set enabled to False."""
-        if self.approved_at:
-            self.approved_at = None
-            self.save()
+        """When denied, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
+        self.save()
+
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
+
+    def get_approval_template(self):
+        """
+        Return a custom template path to be used for the approval UI.
+
+        This allows the object to override the default approval template
+        when special logic or warnings are needed. If no override is
+        required, return None to use the standard approval form.
+        """
+        if self.one_off and self.start_time < timezone.now():
+            return "extras/job_approval_confirmation.html"
+        return None
 
     @property
     def schedule(self):
@@ -1298,6 +1356,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def queue(self) -> str:
         """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
         return self.job_queue.name if self.job_queue else ""
+
+    @property
+    def runnable(self):
+        return self.job_model.runnable and not (self.job_model.has_sensitive_variables and self.approval_required)
 
     @queue.setter
     def queue(self, value: str):
@@ -1348,11 +1410,9 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         interval: str = JobExecutionType.TYPE_IMMEDIATELY,
         crontab: str = "",
         profile: bool = False,
-        approval_required: bool = False,
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
-        validated_save: bool = True,
         **job_kwargs,
     ):
         """
@@ -1371,7 +1431,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
             crontab (str): The crontab string for the schedule. Defaults to "".
             profile (bool): Flag indicating whether to profile the job. Defaults to False.
-            approval_required (bool): Flag indicating if approval is required. Defaults to False.
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
             ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
@@ -1416,6 +1475,11 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if job_model.time_limit > 0:
             celery_kwargs["time_limit"] = job_model.time_limit
 
+        # We do this because when a job creates an approval workflow, a scheduled job is also created.
+        # If the scheduled job has an "immediate" interval, the scheduler will not send this task.
+        # since TYPE_IMMEDIATELY is not a valid value in JobExecutionType.SCHEDULE_CHOICES
+        if interval == JobExecutionType.TYPE_IMMEDIATELY:
+            interval = JobExecutionType.TYPE_FUTURE
         # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
         #
         # We pass in task and job_model here partly for forward/backward compatibility logic, and
@@ -1435,12 +1499,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             interval=interval,
             one_off=(interval == JobExecutionType.TYPE_FUTURE),
             user=user,
-            approval_required=approval_required,
             crontab=crontab,
             job_queue=job_queue,
         )
-        if validated_save:
-            scheduled_job.validated_save()
+        scheduled_job.validated_save()
         return scheduled_job
 
     create_schedule.__func__.alters_data = True

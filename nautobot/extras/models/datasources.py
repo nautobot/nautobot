@@ -1,7 +1,6 @@
 """Models for representing external data sources."""
 
 from contextlib import contextmanager
-from importlib.util import find_spec
 import logging
 import os
 import shutil
@@ -19,22 +18,27 @@ from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dash
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.git import GitRepo
-from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.extras.utils import extras_features
 
 logger = logging.getLogger(__name__)
 
 
 class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_provided_contents(self, provided_contents_type):
-        cache_key = f"{self.get_for_provided_contents.cache_key_prefix}.{provided_contents_type}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
+        )
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
             cache.set(cache_key, queryset)
         return queryset
-
-    get_for_provided_contents.cache_key_prefix = "nautobot.extras.gitrepository.get_for_provided_contents"
 
 
 @extras_features(
@@ -117,17 +121,13 @@ class GitRepository(PrimaryModel):
 
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
-                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
-                f"requested slug is {self.slug}"
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, requested slug is {self.slug}"
             )
 
         if not self.present_in_database:
-            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
-            # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
-            if find_spec(self.slug) is not None:
-                raise ValidationError(
-                    f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
-                )
+            permitted, reason = check_name_safe_to_import_privately(self.slug)
+            if not permitted:
+                raise ValidationError({"slug": f"Please choose a different slug; {self.slug!r} is {reason}"})
 
         if self.provided_contents:
             q = models.Q()

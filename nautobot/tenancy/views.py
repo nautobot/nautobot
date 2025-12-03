@@ -1,13 +1,18 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
 from nautobot.extras.models import DynamicGroup
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VRF
 from nautobot.tenancy.api import serializers
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
@@ -37,8 +42,9 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                context_table_key="tenant_table",
                 exclude_columns=["tenant_group"],
+                context_table_key="tenant_table",
+                related_field_name="tenant_group",
             ),
         )
     )
@@ -54,7 +60,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
                 tenant_group__in=instance.descendants(include_self=True)
             )
 
-            tenant_table = tables.TenantTable(tenants)
+            tenant_table = tables.TenantTable(tenants, configurable=True)
             tenant_table.columns.hide("tenant_group")
 
             paginate = {
@@ -99,6 +105,7 @@ class TenantUIViewSet(NautobotUIViewSet):
                     IPAddress,
                     # TODO: Should we include child locations of the filtered locations in the location_count below?
                     Location,
+                    Namespace,
                     Prefix,
                     Rack,
                     RackReservation,
@@ -110,4 +117,12 @@ class TenantUIViewSet(NautobotUIViewSet):
                 weight=100,
             ),
         )
+    )
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="tenant_group", parent_lookup_key="name"),
+            ]
+        }
     )

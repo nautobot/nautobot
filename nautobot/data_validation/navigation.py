@@ -1,10 +1,13 @@
 """App navigation menu items."""
 
 from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Extensibility",
+        icon=NavigationIconChoices.EXTENSIBILITY,
+        weight=NavigationWeightChoices.EXTENSIBILITY,
         groups=(
             NavMenuGroup(
                 name="Data Validation",
@@ -58,6 +61,11 @@ menu_items = (
                         link="data_validation:datacompliance_list",
                         name="Data Compliance",
                         permissions=["data_validation.view_datacompliance"],
+                    ),
+                    NavMenuItem(
+                        link="data_validation:device-constraints",
+                        name="Device Constraints",
+                        permissions=["dcim.view_device"],
                     ),
                 ),
             ),

@@ -22,8 +22,9 @@ import redis.exceptions
 
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import ButtonClassChoices, JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
     ComputedField,
@@ -142,9 +143,11 @@ def invalidate_models_cache(sender, **kwargs):
 
     with contextlib.suppress(redis.exceptions.ConnectionError):
         # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-        cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
+        cache_key = construct_cache_key(manager, method_name="get_for_model", branch_aware=True)
+        cache.delete_pattern(f"{cache_key}(*)")
         if hasattr(manager, "keys_for_model"):
-            cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
+            cache_key = construct_cache_key(manager, method_name="keys_for_model", branch_aware=True)
+            cache.delete_pattern(f"{cache_key}(*)")
 
 
 @receiver(post_delete, sender=CustomField)
@@ -155,9 +158,10 @@ def invalidate_choices_cache(sender, instance, **kwargs):
     """Invalidate the choices cache for CustomFields."""
     with contextlib.suppress(redis.exceptions.ConnectionError):
         if sender is CustomField:
-            cache.delete(instance.choices_cache_key)
+            cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
         else:
-            cache.delete(instance.custom_field.choices_cache_key)
+            cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
+        cache.delete(cache_key)
 
 
 @receiver(post_save, sender=Relationship)
@@ -165,13 +169,14 @@ def invalidate_choices_cache(sender, instance, **kwargs):
 @receiver(post_delete, sender=Relationship)
 def invalidate_relationship_models_cache(sender, **kwargs):
     """Invalidate the related-models caches for Relationships."""
-    for method in (
-        Relationship.objects.get_for_model_source,
-        Relationship.objects.get_for_model_destination,
+    for method_name in (
+        "get_for_model_source",
+        "get_for_model_destination",
     ):
         with contextlib.suppress(redis.exceptions.ConnectionError):
             # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-            cache.delete_pattern(f"{method.cache_key_prefix}.*")
+            cache_key = construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)
+            cache.delete_pattern(f"{cache_key}(*)")
 
 
 @receiver(post_save, sender=CustomField)
@@ -204,7 +209,10 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
 @receiver(post_delete, sender=GitRepository)
 def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
     with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache.delete_pattern(f"{GitRepository.objects.get_for_provided_contents.cache_key_prefix}.*")
+        cache_key = construct_cache_key(
+            GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True
+        )
+        cache.delete_pattern(f"{cache_key}(*)")
 
 
 @receiver(post_save)
@@ -549,24 +557,6 @@ m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
-def dynamic_group_update_cached_members(sender, instance, **kwargs):
-    """
-    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members for it and any parent groups.
-    """
-    if isinstance(instance, DynamicGroupMembership):
-        group = instance.parent_group
-    else:
-        group = instance
-
-    group.update_cached_members()
-    for ancestor in group.get_ancestors():
-        ancestor.update_cached_members()
-
-
-post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
-post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
-
-
 #
 # Jobs
 #
@@ -652,6 +642,25 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+    # Wire up the JobButton for Dynamic Group member refresh
+    JobButton = apps.get_model("extras", "JobButton")
+    ContentType = apps.get_model("contenttypes", "ContentType")  # pylint: disable=redefined-outer-name
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")  # pylint: disable=redefined-outer-name
+
+    dg_job_button, _ = JobButton.objects.get_or_create(
+        name="Refresh Dynamic Group Members Cache",
+        job=Job.objects.get(
+            module_name="nautobot.core.jobs.groups", job_class_name="RefreshDynamicGroupCacheJobButtonReceiver"
+        ),
+        defaults={
+            "enabled": True,
+            "text": "Refresh Members",
+            "button_class": ButtonClassChoices.CLASS_WARNING,
+            "confirmation": True,
+        },
+    )
+    dg_job_button.content_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
 
 #

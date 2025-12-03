@@ -1,0 +1,150 @@
+{% extends 'generic/object_create.html' %}
+{% load static %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>VPN Profile</strong></div>
+        <div class="card-body">
+            {% render_field form.name %}
+            {% render_field form.description %}
+            {% render_field form.role %}
+            {% render_field form.secrets_group %}
+            {% render_field form.keepalive_interval %}
+            {% render_field form.keepalive_retries %}
+            {% render_field form.keepalive_enabled %}
+            {% render_field form.nat_traversal %}
+            {% render_field form.extra_options %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><strong>Phase 1 Policy Assignments</strong></div>
+        <div class="card-body overflow-auto">
+            {% if vpn_phase1_policies.errors %}
+                <div class="text-danger">
+                    Please correct the error(s) below:
+
+                    {% for policy in vpn_phase1_policies.forms %}
+                        {% if policy.errors %}
+                            {% for error in policy.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {{ vpn_phase1_policies.non_field_errors }}
+            <table class="table" id="vpn_phase1_policies">
+                {{ vpn_phase1_policies.management_form }}
+                {% for policy_form in vpn_phase1_policies.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr>
+                                {% for field in policy_form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ vpn_phase1_policies.prefix }}">
+                        {% for field in policy_form.visible_fields %}
+                            <td>
+                                {% if forloop.first %}
+                                    {% for hidden in policy_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Phase 2 Policy Assignments</strong></div>
+        <div class="card-body overflow-auto">
+            {% if vpn_phase2_policies.errors %}
+                <div class="text-danger">
+                    Please correct the error(s) below:
+
+                    {% for policy in vpn_phase2_policies.forms %}
+                        {% if policy.errors %}
+                            {% for error in policy.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {{ vpn_phase2_policies.non_field_errors }}
+            <table class="table" id="vpn_phase2_policies">
+                {{ vpn_phase2_policies.management_form }}
+                {% for policy_form in vpn_phase2_policies.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr>
+                                {% for field in policy_form.visible_fields %}
+                                    <th>{{ field.label|capfirst }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ vpn_phase2_policies.prefix }}">
+                        {% for field in policy_form.visible_fields %}
+                            <td>
+                                {% if forloop.first %}
+                                    {% for hidden in policy_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script type="text/javascript">
+        $('.formset_row-{{ vpn_phase1_policies.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ vpn_phase1_policies.prefix }}',
+            formCssClass: 'dynamic-formset-{{ vpn_phase1_policies.prefix }}',
+            added: jsify_form
+        });
+        $('.formset_row-{{ vpn_phase2_policies.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Policy',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ vpn_phase2_policies.prefix }}',
+            formCssClass: 'dynamic-formset-{{ vpn_phase2_policies.prefix }}',
+            added: jsify_form
+        });
+    </script>
+{% endblock javascript %}

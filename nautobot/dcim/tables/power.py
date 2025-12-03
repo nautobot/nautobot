@@ -2,6 +2,7 @@ import django_tables2 as tables
 
 from nautobot.core.tables import (
     BaseTable,
+    ButtonsColumn,
     ChoiceFieldColumn,
     LinkedCountColumn,
     TagColumn,
@@ -27,17 +28,39 @@ class PowerPanelTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     location = tables.Column(linkify=True)
+    panel_type = tables.Column()
+    power_path = tables.Column()
+    breaker_position_count = tables.Column(verbose_name="Total Breaker Positions")
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel": "pk"},
         verbose_name="Feeds",
     )
     tags = TagColumn(url_name="dcim:powerpanel_list")
+    actions = ButtonsColumn(PowerPanel)
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
-        fields = ("pk", "name", "location", "rack_group", "power_feed_count", "tags")
-        default_columns = ("pk", "name", "location", "rack_group", "power_feed_count")
+        fields = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "power_path",
+            "breaker_position_count",
+            "power_feed_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "location",
+            "rack_group",
+            "panel_type",
+            "power_path",
+            "power_feed_count",
+        )
 
 
 #
@@ -51,11 +74,16 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     power_panel = tables.Column(linkify=True)
+    destination_panel = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
+    power_path = tables.Column()
+    occupied_positions = tables.Column(accessor="occupied_positions", verbose_name="Position", orderable=False)
+    phase_designation = tables.Column(accessor="phase_designation", verbose_name="Phase Designation", orderable=False)
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
+    actions = ButtonsColumn(PowerFeed)
 
     class Meta(BaseTable.Meta):
         model = PowerFeed
@@ -63,9 +91,11 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "pk",
             "name",
             "power_panel",
+            "destination_panel",
             "rack",
             "status",
             "type",
+            "power_path",
             "supply",
             "voltage",
             "amperage",
@@ -84,6 +114,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "rack",
             "status",
             "type",
+            "power_path",
             "supply",
             "voltage",
             "amperage",

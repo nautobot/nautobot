@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% comment %}
-3.0 TODO: This file is not used in Nautobot any more as it's replaced by the 'system_jobs/import_objects.html' template.
-Leaving it here for now in case apps are making use of it.
+4.0 TODO: This file should be replaced by the 'system_jobs/import_objects.html' template eventually,
+but for now many CSV import views still exist which use this template.
 {% endcomment %}
 {% load helpers %}
 {% load form_helpers %}
@@ -25,13 +25,14 @@ Leaving it here for now in case apps are making use of it.
     </style>
 {% endblock %}
 
+{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}
+
 {% block content %}
     {% block tabs %}{% endblock %}
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <h1 class="mb-16">{% block title %}{{ obj_type|bettertitle }} Bulk Import{% endblock %}</h1>
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
             {% if form.non_field_errors %}
-                <div class="card border-danger mb-16">
+                <div class="card border-danger">
                     <div class="card-header bg-danger-subtle border-danger text-body">
                         <strong>Errors</strong>
                     </div>
@@ -85,7 +86,7 @@ Leaving it here for now in case apps are making use of it.
             </div>
             <div class="clearfix"></div>
             {% if fields %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header">
                         <strong>CSV Field Options</strong>
                     </div>
@@ -104,7 +105,7 @@ Leaving it here for now in case apps are making use of it.
                                     <td>{{ field.required | render_boolean }}</td>
                                     <td>
                                         {% if field.choices %}
-                                            <button type="button" class="btn btn-link btn-xs float-end" data-bs-toggle="modal" data-target="#{{ field.name }}_choices">
+                                            <button type="button" class="btn btn-link btn-sm float-end" data-bs-toggle="modal" data-bs-target="#{{ field.name }}_choices">
                                                 <span aria-hidden="true" class="mdi mdi-help-circle"></span>
                                             </button>
                                             <div class="modal fade" id="{{ field.name }}_choices" tabindex="-1" role="dialog">

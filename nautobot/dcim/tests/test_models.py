@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import caches
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Model
@@ -16,9 +17,16 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
+    DeviceUniquenessChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
+    PowerFeedPhaseChoices,
+    PowerFeedSupplyChoices,
+    PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -35,6 +43,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -50,8 +59,10 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
+    PowerFeed,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
@@ -717,6 +728,101 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
         )
         first_status = Status.objects.get_for_model(Interface).first()
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
+
+    def test_speed_disallowed_for_lag_virtual_wireless(self):
+        """speed must be None for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SpeedGuard 1000")
+
+        for if_type in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.subTest(if_type=if_type):
+                with self.assertRaises(ValidationError) as cm:
+                    InterfaceTemplate(
+                        device_type=device_type,
+                        name=f"bad-{if_type}",
+                        type=if_type,
+                        speed=InterfaceSpeedChoices.SPEED_1G,
+                    ).full_clean()
+                self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+
+    def test_duplex_disallowed_for_lag_virtual_wireless(self):
+        """duplex must be blank for LAG, virtual, and wireless templates."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="DuplexGuard 1000")
+
+        for itype in (
+            InterfaceTypeChoices.TYPE_LAG,
+            InterfaceTypeChoices.TYPE_VIRTUAL,
+            InterfaceTypeChoices.TYPE_80211N,
+        ):
+            with self.assertRaises(ValidationError):
+                InterfaceTemplate(
+                    device_type=device_type,
+                    name=f"bad-{itype}",
+                    type=itype,
+                    duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+                ).full_clean()
+
+    def test_duplex_disallowed_for_non_base_t(self):
+        """duplex must be blank for non-BASE-T physical types (e.g., SFP)."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SfpGuard 1000")
+
+        with self.assertRaises(ValidationError) as cm:
+            InterfaceTemplate(
+                device_type=device_type,
+                name="sfp0",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            ).full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+    def test_duplex_and_speed_allowed_for_base_t(self):
+        """BASE-T physical types accept duplex and speed values."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="CopperOK 1000")
+
+        tmpl = InterfaceTemplate(
+            device_type=device_type,
+            name="eth0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        tmpl.full_clean()  # should not raise
+
+    def test_instantiation_propagates_speed_and_duplex(self):
+        """Interface created from template inherits speed and duplex."""
+        statuses = Status.objects.get_for_model(Device)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Propagate 2000")
+
+        InterfaceTemplate.objects.create(
+            device_type=device_type,
+            name="EthX",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=False,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=statuses[0],
+            name="Device-Prop",
+            location=location,
+        )
+
+        iface = device.interfaces.get(name="EthX")
+        self.assertEqual(iface.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(iface.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
 
 
 class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
@@ -1416,6 +1522,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
     def setUp(self):
+        # clear Constance cache
+        cache = caches[settings.CONSTANCE_DATABASE_CACHE_BACKEND]
+        cache.clear()
+
         manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
@@ -1504,6 +1614,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device.validated_save()
 
+        self.cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        self.cluster = Cluster.objects.create(
+            name="Test Cluster", cluster_type=self.cluster_type, location=self.location_3
+        )
+        self.device.clusters.add(self.cluster)
+
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
@@ -1519,11 +1635,24 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_natural_key_overrides(self):
         """Ensure that the natural-key for Device is affected by settings/Constance."""
-        with override_config(DEVICE_NAME_AS_NATURAL_KEY=True):
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NAME):
             self.assertEqual([self.device.name], self.device.natural_key())
             # self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))
             # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME):
+            self.assertEqual(
+                [self.device.name, self.device.tenant, self.device.location.name], self.device.natural_key()
+            )
+            self.assertEqual(
+                self.device,
+                Device.objects.get_by_natural_key([self.device.name, self.device.tenant, self.device.location]),
+            )
+
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.NONE):
+            self.assertEqual([str(self.device.pk)], self.device.natural_key())
+            self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.pk]))
 
         with override_config(LOCATION_NAME_AS_NATURAL_KEY=True):
             self.assertEqual([self.device.name, None, self.device.location.name], self.device.natural_key())
@@ -1637,6 +1766,28 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIn(
             f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
+
+    def test_device_cluster_location_mismatch(self):
+        with self.subTest("Invalid cluster assignment at creation time"):
+            device = Device(
+                name="Device in different location from cluster",
+                device_type=self.device_type,
+                role=self.device_role,
+                status=self.device_status,
+                location=self.location_2,
+                cluster=self.cluster,  # belongs to self.location_3
+            )
+            with self.assertRaises(ValidationError) as cm:
+                device.validated_save()
+            self.assertIn("does not include", str(cm.exception))
+
+        new_cluster = Cluster.objects.create(
+            name="New Cluster", cluster_type=self.cluster_type, location=self.location_2
+        )
+        with self.subTest("Invalid cluster assignment via Device.clusters m2m manager"):
+            with self.assertRaises(ValidationError) as cm:
+                self.device.clusters.add(new_cluster)  # self.device belongs to self.location_3
+            self.assertIn("does not include", str(cm.exception))
 
     def test_device_redundancy_group_validation(self):
         d2 = Device(
@@ -1777,6 +1928,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device.validated_save()
 
     def test_all_x_properties(self):
+        self.assertTrue(self.device.has_module_bays)
         self.assertEqual(self.device.all_modules.count(), 0)
         self.assertEqual(self.device.all_module_bays.count(), 1)
         self.assertEqual(self.device.all_console_server_ports.count(), 1)
@@ -1964,6 +2116,42 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+    def test_cluster_queries(self):
+        with self.subTest("Assert filtering and excluding `cluster`"):
+            self.assertQuerySetEqualAndNotEmpty(
+                Device.objects.filter(cluster=self.cluster),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerySetEqualAndNotEmpty(
+                Device.objects.exclude(cluster=self.cluster),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+            self.assertQuerySetEqualAndNotEmpty(
+                Device.objects.filter(cluster__in=[self.cluster]),
+                Device.objects.filter(clusters__in=[self.cluster]),
+            )
+            self.assertQuerySetEqualAndNotEmpty(
+                Device.objects.exclude(cluster__in=[self.cluster]),
+                Device.objects.exclude(clusters__in=[self.cluster]),
+            )
+
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "cluster_type", "location"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert cluster__{field_name} query."):
+                value = getattr(self.cluster, field_name)
+                self.assertQuerySetEqualAndNotEmpty(
+                    Device.objects.filter(**{f"cluster__{field_name}": value}),
+                    Device.objects.filter(**{f"clusters__{field_name}": value}),
+                )
+                self.assertQuerySetEqualAndNotEmpty(
+                    Device.objects.exclude(**{f"cluster__{field_name}": value}),
+                    Device.objects.exclude(**{f"clusters__{field_name}": value}),
+                )
 
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
@@ -2387,6 +2575,263 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             self.device1.delete()
 
 
+class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
+    model = PowerFeed
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.status = Status.objects.get_for_model(PowerFeed).first()
+        cls.rack_status = Status.objects.get_for_model(Rack).first()
+
+        cls.source_panel = PowerPanel.objects.create(location=cls.location, name="Source Panel 1")
+        cls.destination_panel = PowerPanel.objects.create(location=cls.location, name="Destination Panel 1")
+
+        # Create location in different hierarchy for rack validation test
+        cls.other_location = Location.objects.create(
+            name="Other Location",
+            location_type=LocationType.objects.get(name="Campus"),
+            status=Status.objects.get_for_model(Location).first(),
+        )
+
+        cls.rack = Rack.objects.create(location=cls.location, name="Test Rack", status=cls.rack_status)
+        cls.other_rack = Rack.objects.create(location=cls.other_location, name="Other Rack", status=cls.rack_status)
+
+        PowerFeed.objects.create(
+            name="Test Power Feed 1",
+            power_panel=cls.source_panel,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 2",
+            power_panel=cls.source_panel,
+            status=cls.status,
+        )
+        PowerFeed.objects.create(
+            name="Test Power Feed 3",
+            power_panel=cls.destination_panel,
+            status=cls.status,
+        )
+
+    def test_destination_panel_self_reference_validation(self):
+        """Test that a power feed cannot reference itself."""
+        feed = PowerFeed(
+            name="Self Reference",
+            power_panel=self.source_panel,
+            destination_panel=self.source_panel,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("destination_panel", cm.exception.message_dict)
+
+    def test_circuit_breaker_position_conflict_validation(self):
+        """Test that overlapping circuit breaker positions raise validation errors."""
+        # Create first feed at position 1 with 2 poles (occupies 1,3)
+        PowerFeed.objects.create(
+            name="Feed 1",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=1,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        # Try to create conflicting feed at position 3
+        conflicting_feed = PowerFeed(
+            name="Feed 2",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=3,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            conflicting_feed.full_clean()
+        self.assertIn("breaker_position", cm.exception.message_dict)
+
+    def test_rack_location_hierarchy_validation(self):
+        """Test that rack must belong to same location hierarchy as power panel."""
+        feed = PowerFeed(
+            name="Invalid Rack Location",
+            power_panel=self.source_panel,
+            rack=self.other_rack,  # Different location hierarchy
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("rack", cm.exception.message_dict)
+
+    def test_ac_voltage_negative_validation(self):
+        """Test that AC supply cannot have negative voltage."""
+        feed = PowerFeed(
+            name="Negative Voltage",
+            power_panel=self.source_panel,
+            status=self.status,
+            voltage=-120,
+            supply=PowerFeedSupplyChoices.SUPPLY_AC,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            feed.full_clean()
+        self.assertIn("voltage", cm.exception.message_dict)
+
+    def test_phase_designation_single_pole(self):
+        """Test phase designation calculation for single-pole breakers."""
+        # Pattern: positions 1,2=A, 3,4=B, 5,6=C, 7,8=A, etc.
+        test_cases = [
+            (1, "A"),
+            (2, "A"),
+            (3, "B"),
+            (4, "B"),
+            (5, "C"),
+            (6, "C"),
+            (7, "A"),
+            (8, "A"),
+            (9, "B"),
+            (10, "B"),
+        ]
+
+        for position, expected_phase in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"1P Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+                    # phase defaults to PHASE_SINGLE which is correct for all single-pole feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_phase)
+
+    def test_phase_designation_two_pole_single_phase(self):
+        """Test phase designation for 2-pole breakers delivering single-phase power."""
+        # Common datacenter scenario: 2P breaker for 208V single-phase to rack PDU
+        # Uses two phase conductors but delivers single-phase power
+        test_cases = [
+            (1, "A-B"),  # occupies 1,3 → A,B → 208V single-phase
+            (2, "A-B"),  # occupies 2,4 → A,B → 208V single-phase
+            (3, "B-C"),  # occupies 3,5 → B,C → 208V single-phase
+            (4, "B-C"),  # occupies 4,6 → B,C → 208V single-phase
+            (5, "A-C"),  # occupies 5,7 → C,A → sorted to A-C → 208V single-phase
+            (6, "A-C"),  # occupies 6,8 → C,A → sorted to A-C → 208V single-phase
+            (7, "A-B"),  # occupies 7,9 → A,B → 208V single-phase (cycle continues)
+        ]
+
+        for position, expected_designation in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"2P Single-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+                    # phase defaults to PHASE_SINGLE - correct for 208V single-phase feeds
+                )
+                self.assertEqual(feed.phase_designation, expected_designation)
+                # Verify it's still marked as single-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+
+    def test_phase_designation_three_pole_three_phase(self):
+        """Test phase designation for 3-pole breakers delivering three-phase power."""
+        # True three-phase power using all three phases
+        test_cases = [1, 2, 3, 4, 5]
+
+        for position in test_cases:
+            with self.subTest(position=position):
+                feed = PowerFeed.objects.create(
+                    name=f"3P Three-Phase Test {position}",
+                    power_panel=self.source_panel,
+                    status=self.status,
+                    breaker_position=position,
+                    breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_3,
+                    phase=PowerFeedPhaseChoices.PHASE_3PHASE,  # Explicitly set to three-phase
+                )
+                self.assertEqual(feed.phase_designation, "A-B-C")
+                # Verify it's marked as three-phase power
+                self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_3PHASE)
+
+    def test_phase_designation_edge_cases(self):
+        """Test phase designation calculation for edge cases and None values."""
+        # Test missing breaker_position
+        feed = PowerFeed.objects.create(
+            name="No Position",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_1,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+        # Test missing breaker_pole_count (should default to single pole)
+        feed = PowerFeed.objects.create(
+            name="No Pole Count",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=1,
+            breaker_pole_count=None,
+        )
+        # Should default to single pole and have phase designation
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
+        self.assertEqual(feed.phase_designation, "A")
+
+        # Test both missing
+        feed = PowerFeed.objects.create(
+            name="No Position or Pole Count",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=None,
+            breaker_pole_count=None,
+        )
+        self.assertIsNone(feed.phase_designation)
+
+    def test_phase_field_defaults(self):
+        """Test that phase field defaults correctly and type field defaults to primary."""
+        feed = PowerFeed.objects.create(
+            name="Default Fields Test",
+            power_panel=self.source_panel,
+            status=self.status,
+        )
+
+        # Verify defaults
+        self.assertEqual(feed.phase, PowerFeedPhaseChoices.PHASE_SINGLE)
+        self.assertEqual(feed.type, PowerFeedTypeChoices.TYPE_PRIMARY)
+
+    def test_occupied_positions(self):
+        """Test occupied positions calculation."""
+        feed = PowerFeed.objects.create(
+            name="Test Feed",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=5,
+            breaker_pole_count=PowerFeedBreakerPoleChoices.POLE_2,
+        )
+
+        self.assertEqual(feed.get_occupied_positions(), {5, 7})
+        self.assertEqual(feed.occupied_positions, "5, 7")
+
+    def test_breaker_pole_count_enforcement_in_save(self):
+        """Test that breaker_pole_count defaults to POLE_1 when breaker_position is set during save."""
+        # Create feed with breaker_position but no breaker_pole_count
+        feed = PowerFeed(
+            name="Test Save Enforcement",
+            power_panel=self.source_panel,
+            status=self.status,
+            breaker_position=10,
+        )
+
+        # Verify breaker_pole_count is None before save
+        self.assertIsNone(feed.breaker_pole_count)
+
+        # Save without calling clean() to bypass form validation
+        feed.save()
+
+        # Verify breaker_pole_count was set to POLE_1 during save
+        self.assertEqual(feed.breaker_pole_count, PowerFeedBreakerPoleChoices.POLE_1)
+
+
 class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have a PowerPanelFactory
     def test_power_panel_validation(self):
         status = Status.objects.get_for_model(Location).first()
@@ -2431,6 +2876,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
         )
         status = Status.objects.get_for_model(Device).first()
+        cls.intf_status = Status.objects.get_for_model(Interface).first()
         cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
@@ -2570,11 +3016,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
 
+        # add a single instance which is already there
+        count = interface.add_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ips[-1], interface=interface).count(), 1)
+
         # add multiple instances
         count = interface.add_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
         for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+        # add multiple instances all of which are already there
+        count = interface.add_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 6)
+        for ip in ips[:5]:
+            self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
+
+        # add multiple IPs some of which are there
+        count = interface.add_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 8)
+        for ip in ips[3:7]:
             self.assertEqual(IPAddressToInterface.objects.filter(ip_address=ip, interface=interface).count(), 1)
 
     def test_remove_ip_addresses(self):
@@ -2599,13 +3064,28 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(count, 1)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
 
+        # remove a single instance which has already been removed
+        count = interface.remove_ip_addresses(ips[-1])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 9)
+
         # remove multiple instances
         count = interface.remove_ip_addresses(ips[:5])
         self.assertEqual(count, 5)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
 
+        # remove multiple instances all which have already been removed
+        count = interface.remove_ip_addresses(ips[:5])
+        self.assertEqual(count, 0)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 4)
+
+        # remove multiple instances some of which have already been removed
+        count = interface.remove_ip_addresses(ips[3:7])
+        self.assertEqual(count, 2)
+        self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 2)
+
         count = interface.remove_ip_addresses(ips)
-        self.assertEqual(count, 4)
+        self.assertEqual(count, 2)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 0)
 
         # Test the pre_delete signal for IPAddressToInterface instances
@@ -2613,12 +3093,185 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
         self.device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         self.device.save()
-        interface.remove_ip_addresses(self.device.primary_ip4)
+
+        count = interface.remove_ip_addresses(self.device.primary_ip4)
+        self.assertEqual(count, 1)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip4, None)
-        interface.remove_ip_addresses(self.device.primary_ip6)
+        # NOTE: This effectively tests what happens when you pass remove_ip_addresses None; it
+        # NOTE: does not remove a v6 address, because there are no v6 IPs created in this test
+        # NOTE: class.
+        count = interface.remove_ip_addresses(self.device.primary_ip6)
+        self.assertEqual(count, 0)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
+
+    def _assert_invalid_speed_duplex(self, if_type, speed=None, duplex="", expected_error=""):
+        iface = Interface(
+            device=self.device,
+            name=f"test-{if_type}",
+            type=if_type,
+            status=self.intf_status,
+            speed=speed,
+            duplex=duplex,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn(expected_error, str(cm.exception))
+
+    def test_disallowed_speed_and_duplex_matrix(self):
+        """Test that interface types with no speed or duplex disallow those settings."""
+        test_cases = [
+            # LAG
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_LAG,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Virtual
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_VIRTUAL,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Wireless
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                InterfaceSpeedChoices.SPEED_1M,
+                None,
+                "Speed is not applicable to this interface type.",
+            ),
+            (
+                InterfaceTypeChoices.TYPE_80211AC,
+                None,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is not applicable to this interface type.",
+            ),
+            # Copper (negative speed is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, -100, None, "Ensure this value is greater than or equal to 0."),
+            # Copper (speed as a string is invalid)
+            (InterfaceTypeChoices.TYPE_1GE_FIXED, "100 Mbps", None, "value must be an integer."),
+            # Copper (invalid duplex is invalid)
+            (
+                InterfaceTypeChoices.TYPE_1GE_FIXED,
+                InterfaceSpeedChoices.SPEED_1M,
+                "invalid",
+                "Value 'invalid' is not a valid choice.",
+            ),
+            # Optical (no duplex allowed)
+            (
+                InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                InterfaceSpeedChoices.SPEED_1M,
+                InterfaceDuplexChoices.DUPLEX_FULL,
+                "Duplex is only applicable to copper twisted-pair interfaces.",
+            ),
+        ]
+        for if_type, speed, duplex, expected_error in test_cases:
+            with self.subTest(f"{if_type} with speed={speed} and duplex={duplex}"):
+                self._assert_invalid_speed_duplex(if_type, speed, duplex, expected_error)
+
+    def test_copper_allows_duplex_and_non_negative_speed(self):
+        """Test that copper interfaces allow duplex and non-negative speed."""
+        iface = Interface(
+            device=self.device,
+            name="eth1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,  # 1000BASE-T
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_1G,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        # Should not raise
+        iface.full_clean()
+
+        iface.speed = 0
+        iface.full_clean()
+
+    def test_lag_allows_no_speed_or_duplex(self):
+        """Test that LAG interfaces pass validation when speed and duplex are not set."""
+        iface = Interface(
+            device=self.device,
+            name="Port-Channel1",
+            type=InterfaceTypeChoices.TYPE_LAG,
+            status=self.intf_status,
+        )
+        # Should not raise when speed and duplex are not set
+        iface.full_clean()
+
+    def test_optical_disallows_duplex_allows_speed(self):
+        """Test that optical interfaces do not allow duplex and allow positive speed."""
+        # Duplex set should error
+        iface_bad = Interface(
+            device=self.device,
+            name="xe0",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            iface_bad.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        # Speed positive should pass
+        iface_ok = Interface(
+            device=self.device,
+            name="xe1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.intf_status,
+            speed=InterfaceSpeedChoices.SPEED_10G,
+        )
+        iface_ok.full_clean()
+
+    def test_changing_copper_interface_with_speed_and_duplex_to_optical_fails(self):
+        """Test that changing a copper interface with speed and duplex to an optical interface fails."""
+
+        with self.subTest("speed"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                speed=InterfaceSpeedChoices.SPEED_1G,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_LAG
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("Speed is not applicable to this interface type.", str(cm.exception))
+
+        with self.subTest("duplex"):
+            iface = Interface(
+                device=self.device,
+                name="eth3",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=self.intf_status,
+                duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            )
+            iface.full_clean()
+
+            iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+            with self.assertRaises(ValidationError) as cm:
+                iface.full_clean()
+            self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+        iface.type = InterfaceTypeChoices.TYPE_10GE_SFP_PLUS
+        with self.assertRaises(ValidationError) as cm:
+            iface.full_clean()
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
 
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
@@ -3404,6 +4057,130 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.assertEqual(child_module.interfaces.first().name, "Interface " + module_bay_position + "/3/2")
 
+    def test_module_manufacturer_constraint_requires_first_party_false(self):
+        """Test that modules are allowed when requires_first_party_modules is False, regardless of manufacturer."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test1", requires_first_party_modules=False
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        device_manufacturer = self.device.device_type.manufacturer
+        module_type = ModuleType.objects.create(manufacturer=device_manufacturer, model="Same Manufacturer Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test2", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
+    def test_module_manufacturer_constraint_device_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        manufacturer = Manufacturer.objects.create(name="Different Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Different Module")
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device, position="test3", requires_first_party_modules=True
+        )
+        module = Module(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_module_parent_same_manufacturer(self):
+        """Test that modules are allowed when requires_first_party_modules is True and manufacturers match."""
+        manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child1")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        child_module.full_clean()
+        child_module.save()
+
+    def test_module_manufacturer_constraint_module_parent_different_manufacturer(self):
+        """Test that modules are rejected when requires_first_party_modules is True and manufacturers don't match."""
+        parent_manufacturer = Manufacturer.objects.create(name="Parent Manufacturer")
+        parent_module_type = ModuleType.objects.create(manufacturer=parent_manufacturer, model="Parent Module")
+        ModuleBayTemplate.objects.create(module_type=parent_module_type, position="child2")
+
+        parent_module = Module.objects.create(
+            module_type=parent_module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_manufacturer = Manufacturer.objects.create(name="Child Manufacturer")
+        child_module_type = ModuleType.objects.create(manufacturer=child_manufacturer, model="Child Module")
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.requires_first_party_modules = True
+        parent_module_bay.save()
+
+        child_module = Module(
+            module_type=child_module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            child_module.full_clean()
+
+        self.assertIn("module_type", context.exception.message_dict)
+        self.assertIn(
+            "The selected module bay requires a module type from the same manufacturer as the parent device or module",
+            context.exception.message_dict["module_type"],
+        )
+
+    def test_module_manufacturer_constraint_no_parent_module_bay(self):
+        """Test that manufacturer constraint validation is skipped when parent_module_bay is None."""
+        manufacturer = Manufacturer.objects.create(name="Any Manufacturer")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Any Module")
+        module = Module(
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+
+        module.full_clean()
+        module.save()
+
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
@@ -3507,3 +4284,168 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             vdc.validated_save()
 
         self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
+
+
+class ModuleFamilyTestCase(ModelTestCases.BaseModelTestCase):
+    """Test cases for the ModuleFamily model."""
+
+    model = ModuleFamily
+
+    def setUp(self):
+        """Create a ModuleFamily for use in test methods."""
+        self.module_family = ModuleFamily.objects.create(
+            name="Test Module Family", description="A module family for testing"
+        )
+
+    def test_create_modulefamily(self):
+        """Test the creation of a ModuleFamily instance."""
+        self.assertEqual(self.module_family.name, "Test Module Family")
+        self.assertEqual(self.module_family.description, "A module family for testing")
+
+    def test_modulefamily_str(self):
+        """Test string representation of ModuleFamily."""
+        self.assertEqual(str(self.module_family), "Test Module Family")
+
+
+class DeviceClusterAssignmentTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        # Create necessary objects for testing
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Test Device Type 1",
+        )
+        cls.devices = (
+            Device.objects.create(
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Test Device 1",
+                location=cls.location,
+                status=cls.device_status,
+            ),
+            Device.objects.create(
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Test Device 2",
+                location=cls.location,
+                status=cls.device_status,
+            ),
+        )
+        cls.cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        cls.clusters = (
+            Cluster.objects.create(name="Test Cluster 1", cluster_type=cls.cluster_type),
+            Cluster.objects.create(name="Test Cluster 2", cluster_type=cls.cluster_type),
+        )
+        cls.assignment = DeviceClusterAssignment.objects.create(
+            device=cls.devices[0],
+            cluster=cls.clusters[0],
+        )
+
+    def test_create_device_cluster_assignment(self):
+        """Test creating a device-cluster assignment."""
+        assignment = DeviceClusterAssignment(
+            device=self.devices[1],
+            cluster=self.clusters[0],
+        )
+        assignment.validated_save()
+        self.assertTrue(
+            DeviceClusterAssignment.objects.filter(
+                device=self.devices[1],
+                cluster=self.clusters[0],
+            ).exists()
+        )
+        self.assertEqual(self.devices[1].clusters.count(), 1)
+        self.assertEqual(self.devices[1].clusters.first(), self.clusters[0])
+        self.assertEqual(self.clusters[0].devices.count(), 2)
+        self.assertIn(self.devices[0], self.clusters[0].devices.all())
+        self.assertIn(self.devices[1], self.clusters[0].devices.all())
+
+    def test_uniqueness_constraint(self):
+        """Test that a device can't be assigned to the same cluster twice."""
+        duplicate_assignment = DeviceClusterAssignment(
+            device=self.devices[0],
+            cluster=self.clusters[0],
+        )
+        with self.assertRaises(ValidationError):
+            duplicate_assignment.full_clean()
+        with self.assertRaises(IntegrityError):
+            duplicate_assignment.save()
+
+    def test_cascade_on_delete(self):
+        """Test that assignments are deleted when either the device or cluster is deleted."""
+        new_assignment = DeviceClusterAssignment.objects.create(
+            device=self.devices[1],
+            cluster=self.clusters[1],
+        )
+        self.assertTrue(DeviceClusterAssignment.objects.filter(id=new_assignment.id).exists())
+        self.devices[1].delete()
+        self.assertFalse(DeviceClusterAssignment.objects.filter(id=new_assignment.id).exists())
+        another_device = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device 3",
+            location=self.location,
+            status=self.device_status,
+        )
+        another_assignment = DeviceClusterAssignment.objects.create(
+            device=another_device,
+            cluster=self.clusters[1],
+        )
+
+        self.assertTrue(DeviceClusterAssignment.objects.filter(id=another_assignment.id).exists())
+
+        self.clusters[1].delete()
+        self.assertFalse(DeviceClusterAssignment.objects.filter(id=another_assignment.id).exists())
+
+    def test_cluster_property_backward_compatibility(self):
+        """Test the backward-compatible cluster property on Device."""
+        self.assertEqual(self.devices[0].cluster, self.clusters[0])
+
+        device_no_clusters = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device No Clusters",
+            location=self.location,
+            status=self.device_status,
+        )
+        self.assertIsNone(device_no_clusters.cluster)
+
+        device_multi_clusters = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device Multi Clusters",
+            location=self.location,
+            status=self.device_status,
+        )
+        DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[0])
+        DeviceClusterAssignment.objects.create(device=device_multi_clusters, cluster=self.clusters[1])
+
+        with self.assertRaises(Cluster.MultipleObjectsReturned):
+            device_multi_clusters.cluster
+        self.assertEqual(device_multi_clusters.clusters.count(), 2)
+        self.assertIn(self.clusters[0], device_multi_clusters.clusters.all())
+        self.assertIn(self.clusters[1], device_multi_clusters.clusters.all())
+
+    def test_cluster_setter_backward_compatibility(self):
+        """Test the backward-compatible cluster setter on Device."""
+        device = Device.objects.create(
+            device_type=self.device_type,
+            role=self.device_role,
+            name="Test Device For Setter",
+            location=self.location,
+            status=self.device_status,
+        )
+        device.cluster = self.clusters[0]
+        self.assertEqual(device.clusters.count(), 1)
+        self.assertEqual(device.clusters.first(), self.clusters[0])
+        device.cluster = self.clusters[1]
+        self.assertEqual(device.clusters.count(), 1)
+        self.assertEqual(device.clusters.first(), self.clusters[1])
+        device.cluster = None
+        self.assertEqual(device.clusters.count(), 0)

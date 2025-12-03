@@ -1,13 +1,9 @@
 {% extends 'base.html' %}
 {% load helpers %}
 
-{% block header %}
-    <h1>{% block title %}Cable Trace for {{ object|meta:"verbose_name"|bettertitle }} {{ object }}{% endblock %}</h1>
-{% endblock %}
-
 {% block content %}
     <div class="row">
-        <div class="col-md-5 col-sm-12">
+        <div class="col-lg-5 col-md-12">
             <div class="nb-cable-trace">
                 {% with traced_path=path.origin.trace %}
                     {% for near_end, cable, far_end in traced_path %}
@@ -50,7 +46,7 @@
                                 <div class="nb-trace-end">
                                     <h3 class="text-danger">Path split!</h3>
                                     <p>Select a node below to continue:</p>
-                                    <ul class="text-left">
+                                    <ul class="text-start">
                                         {% for next_node in path.get_split_nodes %}
                                             {% if next_node.cable %}
                                                 <li>
@@ -58,7 +54,7 @@
                                                     (Cable {{ next_node.cable|hyperlinked_object }})
                                                 </li>
                                             {% else %}
-                                                <li class="text-muted">{{ next_node }}</li>
+                                                <li class="text-secondary">{{ next_node }}</li>
                                             {% endif %}
                                         {% endfor %}
                                     </ul>
@@ -72,7 +68,7 @@
                                             {{ total_length|floatformat:"-2" }} Meters /
                                             {{ total_length|meters_to_feet|floatformat:"-2" }} Feet
                                         {% else %}
-                                            <span class="text-muted">N/A</span>
+                                            <span class="text-secondary">N/A</span>
                                         {% endif %}
                                     </h5>
                                 </div>
@@ -83,13 +79,13 @@
                 {% endwith %}
             </div>
         </div>
-        <div class="col-md-7 col-sm-12">
+        <div class="col-lg-7 col-md-12">
 
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                  <strong>Related Paths</strong>
+            <div class="card">
+                <div class="card-header">
+                    <strong>Related Paths</strong>
                 </div>
-                <table class="table table-hover panel-body">
+                <table class="table table-hover card-body">
                     <thead>
                         <tr>
                             <th>Origin</th>
@@ -109,15 +105,15 @@
                                     {% if cablepath.destination %}
                                         {{ cablepath.destination }} ({{ cablepath.destination.parent }})
                                     {% else %}
-                                        <span class="text-muted">Incomplete</span>
+                                        <span class="text-secondary">Incomplete</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-right">
+                                <td class="text-end">
                                     {{ cablepath.segment_count }}
                                 </td>
                             </tr>
                         {% empty %}
-                            <td colspan="3" class="text-muted">
+                            <td colspan="3" class="text-secondary">
                                 None found
                             </td>
                         {% endfor %}

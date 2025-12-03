@@ -13,6 +13,7 @@ from unittest import mock, TestCase
 
 from django import __version__ as django_version
 from django.conf import settings
+from django.test import tag
 
 from nautobot import __version__ as nautobot_version
 
@@ -101,6 +102,7 @@ class NautobotServerTestCase(TestCase):
 
         self.assertNotEqual(secret_key_1, secret_key_2)
 
+    @tag("example_app")
     def test_settings_processing(self):
         result = subprocess.run(
             ["nautobot-server", "--config", settings.SETTINGS_PATH, "print_settings"],

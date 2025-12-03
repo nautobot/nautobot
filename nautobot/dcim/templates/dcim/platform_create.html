@@ -1,0 +1,53 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+
+{% block form_fields %}
+    {% render_field form.name %}
+    {% render_field form.slug %}
+    {% render_field form.manufacturer %}
+
+    <div class="mb-10 d-flex justify-content-center{% if form.network_driver.errors %} has-error{% endif %}">
+        <label class="col-lg-3 col-form-label" for="id_network_driver">Network driver</label>
+        <div class="col-lg-9">
+            {{ form.network_driver }}
+            <span class="form-text">
+                The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">normalized network driver</a> to use when interacting with devices
+                <span class="mdi mdi-help-circle-outline"></span> <a href="#network_driver_choices" data-bs-toggle="modal" data-bs-target="#network_driver_choices">Show Configured Choices</a>
+            </span>
+            {% if form.network_driver.errors %}
+                <ul>
+                    {% for error in form.network_driver.errors %}
+                    {# Embed an HTML comment indicating the error for extraction by tests #}
+                    <!-- FORM-ERROR {{ form.network_driver.name }}: {{ error }} -->
+                        <li class="text-danger">{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+    <div class="modal fade" id="network_driver_choices" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Network Driver Choices</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Drivers selected from the below list can be used to automatically map to a driver name in supported tools using the platform's <a href="{% static 'docs/models/dcim/platform.html' %}"><code>network_driver_mappings</code></a> property. For advanced automation purposes, the network driver field may be set to a value not present in this list but will not provide automatic mapping unless the <a href="{% static 'docs/configuration/optional-settings.html' %}#network_drivers"><code>NETWORK_DRIVERS</code></a> setting is updated to add the new value.</p>
+                    <table class="table table-striped">
+                        {% for value in network_driver_names %}
+                            {% if value %}<tr><td><samp>{{ value }}</samp></td></tr>{% endif %}
+                        {% endfor %}
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% render_field form.napalm_driver %}
+    {% render_field form.napalm_args %}
+    {% render_field form.description %}
+{% endblock %}

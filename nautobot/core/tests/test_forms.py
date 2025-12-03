@@ -1,21 +1,26 @@
+import inspect
+import sys
 from unittest import mock
 
 from django import forms as django_forms
+from django.apps import apps as django_apps
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
-from django.test import TestCase
+from django.test import tag
 from django.urls import reverse
+from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
+from nautobot.core.utils.filtering import get_filterset_parameter_form_field
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
 from nautobot.dcim.tests import test_views
 from nautobot.extras import filters as extras_filters, models as extras_models
 from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
-class ExpandIPAddress(TestCase):
+class ExpandIPAddress(testing.TestCase):
     """
     Validate the operation of expand_ipaddress_pattern().
     """
@@ -198,7 +203,7 @@ class ExpandIPAddress(TestCase):
             sorted(forms.expand_ipaddress_pattern("1.2.3.[4,,5]/32", 4))
 
 
-class ExpandAlphanumeric(TestCase):
+class ExpandAlphanumeric(testing.TestCase):
     """
     Validate the operation of expand_alphanumeric_pattern().
     """
@@ -332,7 +337,7 @@ class ExpandAlphanumeric(TestCase):
             sorted(forms.expand_alphanumeric_pattern("r[a,,b]a"))
 
 
-class AddFieldToFormClassTest(TestCase):
+class AddFieldToFormClassTest(testing.TestCase):
     def test_field_added(self):
         """
         Test adding of a new field to an existing form.
@@ -361,7 +366,7 @@ class AddFieldToFormClassTest(TestCase):
             )
 
 
-class DynamicModelChoiceFieldTest(TestCase):
+class DynamicModelChoiceFieldTest(testing.TestCase):
     """Tests for DynamicModelChoiceField."""
 
     def setUp(self):
@@ -397,7 +402,7 @@ class DynamicModelChoiceFieldTest(TestCase):
         self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
 
 
-class DynamicModelMultipleChoiceFieldTest(TestCase):
+class DynamicModelMultipleChoiceFieldTest(testing.TestCase):
     """Tests for DynamicModelMultipleChoiceField."""
 
     def setUp(self):
@@ -434,7 +439,7 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
         )
 
 
-class MultiValueCharFieldTest(TestCase):
+class MultiValueCharFieldTest(testing.TestCase):
     def setUp(self):
         self.filter = filters.MultiValueCharFilter()
         self.field = forms.MultiValueCharField()
@@ -467,7 +472,7 @@ class MultiValueCharFieldTest(TestCase):
         )
 
 
-class NumericArrayFieldTest(TestCase):
+class NumericArrayFieldTest(testing.TestCase):
     def setUp(self):
         super().setUp()
         # We need to use a field with required=False so we can test empty/None inputs
@@ -497,7 +502,7 @@ class NumericArrayFieldTest(TestCase):
                 self.field.clean(test)
 
 
-class AddressFieldMixinTest(TestCase):
+class AddressFieldMixinTest(testing.TestCase):
     """Test cases for the AddressFieldMixin."""
 
     def setUp(self):
@@ -527,7 +532,7 @@ class AddressFieldMixinTest(TestCase):
             mock_init.assert_called_with(initial=self.initial, instance=self.ip)
 
 
-class PrefixFieldMixinTest(TestCase):
+class PrefixFieldMixinTest(testing.TestCase):
     """Test cases for the PrefixFieldMixin."""
 
     def setUp(self):
@@ -569,14 +574,14 @@ class JSONFieldTest(testing.TestCase):
         device_content_type = ContentType.objects.get_for_model(dcim_models.Device)
         custom_field.content_types.set([device_content_type])
         # Fetch URL with filter parameter
-        response = self.client.get(f'{reverse("dcim:device_list")}?name=Foo%20Device')
+        response = self.client.get(f"{reverse('dcim:device_list')}?name=Foo%20Device")
         self.assertIn("Foo Device", str(response.content))
 
     def test_prepare_value_with_utf8(self):
         self.assertEqual('"I am UTF-8! 😀"', forms.JSONField().prepare_value("I am UTF-8! 😀"))
 
 
-class MultiMatchModelMultipleChoiceFieldTest(TestCase):
+class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
     def test_clean(self):
         field = forms.MultiMatchModelMultipleChoiceField(
             queryset=ipam_models.VLANGroup.objects.all(), to_field_name="name"
@@ -604,20 +609,57 @@ class MultiMatchModelMultipleChoiceFieldTest(TestCase):
                 field.clean(value)
 
 
-class WidgetsTest(TestCase):
+class WidgetsTest(testing.TestCase):
     def test_api_select_add_query_param_with_utf8(self):
         widget = forms.APISelect()
         widget.add_query_param("utf8", "I am UTF-8! 😀")
         self.assertEqual('["I am UTF-8! 😀"]', widget.attrs["data-query-param-utf8"])
 
 
-class DynamicFilterFormTest(TestCase):
+class DynamicFilterFormTest(testing.TestCase):
+    def test_get_filterset_parameter_form_field_all_filters(self):
+        """
+        Test every FilterSet to validate that Plural names are correctly mapped in get_filterset_parameter_form_field.
+        """
+        filterset_classes = set()
+        for app_config in django_apps.get_app_configs():
+            try:
+                filters_mod = sys.modules.get(f"{app_config.name}.filters")
+                if not filters_mod:
+                    continue
+                for _name, obj in inspect.getmembers(filters_mod):
+                    if (
+                        inspect.isclass(obj)  # Check if obj is a class
+                        and issubclass(obj, FilterSet)  # Check if obj is a subclass of FilterSet
+                        and obj is not FilterSet  # Exclude the base FilterSet class itself
+                        and getattr(getattr(obj, "_meta", None), "model", None)
+                        is not None  # Ensure the FilterSet has a model defined
+                    ):
+                        filterset_classes.add(obj)
+            except Exception as e:
+                # This test might start failing if an app's filters.py gets a design change.
+                self.fail(f"Error processing app '{app_config.name}': {e}")
+        for filterset_class in filterset_classes:
+            filterset = filterset_class()
+            model = filterset._meta.model
+            for filter_name in filterset.filters.keys():
+                try:
+                    field = get_filterset_parameter_form_field(model, filter_name, filterset=filterset)
+                    self.assertIsNotNone(field, "Field was unexpectedly None")
+                except KeyError as e:
+                    self.fail(
+                        f"A filter failed to operate due to mismatched plural name:"
+                        f" Check MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING:"
+                        f" FilterClass: {filterset_class.__name__} name: {filter_name}: {e}"
+                    )
+
     # TODO(timizuo): investigate why test fails on CI
     # def test_dynamic_filter_form_with_missing_attr(self):
     #     with self.assertRaises(AttributeError) as err:
     #         DynamicFilterForm()
     #     self.assertEqual("'DynamicFilterForm' object requires `filterset_class` attribute", str(err.exception))
 
+    @tag("example_app")
     def test_dynamic_filter_form(self):
         form = forms.DynamicFilterForm(filterset=extras_filters.StatusFilterSet())
         location_form = forms.DynamicFilterForm(filterset=dcim_filters.LocationFilterSet())
@@ -625,7 +667,6 @@ class DynamicFilterFormTest(TestCase):
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
-                form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
                     ("contacts", "Contacts (name or ID)"),
@@ -637,13 +678,13 @@ class DynamicFilterFormTest(TestCase):
                     ("name", "Name"),
                     ("teams", "Teams (name or ID)"),
                 ],
+                form._get_lookup_field_choices(),
             )
             self.assertEqual(
-                location_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
                     ("child_location_type", "Child location type (name or ID)"),
-                    ("circuit_terminations", "Circuit terminations"),
+                    ("circuit_terminations", "Circuit terminations (ID)"),
                     ("clusters", "Clusters (name or ID)"),
                     ("comments", "Comments"),
                     ("contact_email", "Contact E-mail"),
@@ -676,9 +717,9 @@ class DynamicFilterFormTest(TestCase):
                     ("parent", "Parent location (name or ID)"),
                     ("physical_address", "Physical address"),
                     ("power_panels", "Power panels (name or ID)"),
-                    ("prefixes", "Prefixes"),
-                    ("racks", "Rack (name or ID)"),
+                    ("prefixes", "Prefixes (ID)"),
                     ("rack_groups", "Rack groups (name or ID)"),
+                    ("racks", "Racks (name or ID)"),
                     ("shipping_address", "Shipping address"),
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
@@ -690,6 +731,7 @@ class DynamicFilterFormTest(TestCase):
                     ("time_zone", "Time zone"),
                     ("vlan_groups", "VLAN groups (name or ID)"),
                 ],
+                location_form._get_lookup_field_choices(),
             )
 
         with self.subTest(

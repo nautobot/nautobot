@@ -8,7 +8,7 @@
         <h1 class="mb-16">{% block title %}Renaming {{ selected_objects|length }} {{ obj_type_plural|bettertitle }} on {{ parent_name }}{% endblock %}</h1>
         <div class="row align-content-start flex-fill">
             <div class="col-md-7">
-                <div class="card mb-16">
+                <div class="card">
                     <div class="table-responsive">
                         <table class="table">
                             <thead>
@@ -31,7 +31,7 @@
             </div>
             <div class="col-md-5">
                 {% if form.non_field_errors %}
-                    <div class="card border-danger mb-16">
+                    <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body">
                             <strong>Errors</strong>
                         </div>
@@ -40,7 +40,7 @@
                         </div>
                     </div>
                 {% endif %}
-                <div class="card mb-16">
+                <div class="card">
                     <div class="card-header"><strong>Rename</strong></div>
                     <div class="card-body">
                         {% render_form form %}

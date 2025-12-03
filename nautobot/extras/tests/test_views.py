@@ -1,5 +1,4 @@
 from datetime import timedelta
-import json
 from unittest import mock
 import urllib.parse
 import uuid
@@ -15,10 +14,8 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import (
     extract_form_failures,
@@ -27,12 +24,12 @@ from nautobot.core.testing import (
     TestCase,
     ViewTestCases,
 )
-from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
+from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
     Device,
+    DeviceFamily,
     DeviceType,
     Interface,
     Location,
@@ -65,6 +62,7 @@ from nautobot.extras.models import (
     Contact,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     CustomLink,
     DynamicGroup,
     ExportTemplate,
@@ -99,7 +97,6 @@ from nautobot.extras.models import (
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
-from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -121,7 +118,6 @@ class ApprovalWorkflowDefinitionViewTestCase(
     # This is almost like ViewTestCases.PrimaryObjectViewTestCase, but without BulkEditObjectsViewTestCase,
     # because ApprovalWorkflowDefinition doesn't have any fields that support bulk editing.
     # Currently, `model_content_type` only accepts one content type: ScheduledJob.
-    # See nautobot/extras/constants.py:APPROVAL_WORKFLOW_MODELS for details.
 ):
     """Test the ApprovalWorkflowDefinition views."""
 
@@ -136,14 +132,15 @@ class ApprovalWorkflowDefinitionViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
 
         cls.form_data = {
             "name": "Test Approval Workflow Definition 5",
             "model_content_type": cls.scheduledjob_ct.pk,
-            "model_constraints": '{"name": "Bulk Delete Objects"}',
-            "priority": 5,
+            "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
+            "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
             "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
             "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
@@ -165,14 +162,15 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
             name="Test Approval Workflow Definition 1",
             model_content_type=cls.scheduledjob_ct,
-            priority=10,
+            weight=10,
+            model_constraints={"job_model__name": "NoSuchJob"},
         )
         cls.approver_group = Group.objects.create(name="Test Group 1")
         cls.updated_approver_group = Group.objects.create(name="Test Group 2")
         # Deletable objects
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=100,
+            sequence=100,
             name="Test Approval Workflow 1 Stage 1 Definition",
             min_approvers=2,
             denial_message="Stage 1 Denial Message",
@@ -180,7 +178,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=200,
+            sequence=200,
             name="Test Approval Workflow 1 Stage 2 Definition",
             min_approvers=3,
             denial_message="Stage 2 Denial Message",
@@ -188,7 +186,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=300,
+            sequence=300,
             name="Test Approval Workflow 1 Stage 3 Definition",
             min_approvers=4,
             denial_message="Stage 3 Denial Message",
@@ -196,7 +194,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=400,
+            sequence=400,
             name="Test Approval Workflow 1 Stage 4 Definition",
             min_approvers=4,
             denial_message="Stage 4 Denial Message",
@@ -204,7 +202,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         )
         ApprovalWorkflowStageDefinition.objects.create(
             approval_workflow_definition=cls.approval_workflow_definition,
-            weight=500,
+            sequence=500,
             name="Test Approval Workflow 1 Stage 5 Definition",
             min_approvers=4,
             denial_message="Stage 5 Denial Message",
@@ -213,7 +211,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.form_data = {
             "approval_workflow_definition": cls.approval_workflow_definition.pk,
-            "weight": 600,
+            "sequence": 600,
             "name": "Approval Workflow Stage 1 Definition",
             "min_approvers": 2,
             "denial_message": "Stage 1 is denied",
@@ -222,7 +220,7 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
 
         cls.update_data = {
             "approval_workflow_definition": cls.approval_workflow_definition.pk,
-            "weight": 700,
+            "sequence": 700,
             "name": "Updated approval workflow stage 1",
             "min_approvers": 3,
             "denial_message": "updated message",
@@ -230,11 +228,9 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
         }
 
         cls.bulk_edit_data = {
-            "weight": 800,
-            "name": "Updated approval workflow stage definition name",
+            "sequence": 800,
             "min_approvers": 5,
             "denial_message": "updated denial message",
-            "approver_group": cls.updated_approver_group.pk,
         }
 
 
@@ -255,12 +251,12 @@ class ApprovalWorkflowViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -270,7 +266,10 @@ class ApprovalWorkflowViewTestCase(
         ]
         approval_workflow_definitions = [
             ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i}", model_content_type=cls.scheduledjob_ct, priority=i
+                name=f"Test Approval Workflow {i}",
+                model_content_type=cls.scheduledjob_ct,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -320,12 +319,12 @@ class ApprovalWorkflowStageViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         user = User.objects.first()
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -338,7 +337,8 @@ class ApprovalWorkflowStageViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -348,7 +348,7 @@ class ApprovalWorkflowStageViewTestCase(
                 cls.approval_workflow_stage_definitions.append(
                     ApprovalWorkflowStageDefinition.objects.create(
                         approval_workflow_definition=approval_workflow_definition,
-                        weight=i * 100,
+                        sequence=i * 100,
                         name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
@@ -419,18 +419,32 @@ class ApprovalWorkflowStageViewTestCase(
         self.client.force_login(self.user)
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
-        # Try GET with model-level permission
+        # Try GET with model-level permission but not belonging to the approver group
         url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to approve this")
+
+        # Try GET with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
 
-        # Try POST with model-level permission
+        # Try POST with model-level permission but not belonging to the approver group
         request = {
             "path": url,
             "data": post_data({"comments": "Approved!"}),
         }
         response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to approve this")
+
+        # Try POST with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -450,23 +464,86 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(response, "Approval Date")  # Assert the approval date is present
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approve_stage_with_existing_comment_endpoint(self):
+        """Test the approve stage with existing comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
+        self.assertBodyContains(response, "existing comment")
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Approved!"}),
+        }
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # Response should be updated
+        new_response.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(new_response.comments, "Approved!")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_endpoint(self):
         """Test the deny endpoint."""
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
-        # Try GET with model-level permission
+        # Try GET with model-level permission but not belonging to the approver group
         url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to deny this")
+
+        # Try GET with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
 
-        # Try POST with model-level permission
+        # Try POST with model-level permission but not belonging to the approver group
         request = {
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
         response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to deny this")
+
+        # Try POST with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -484,6 +561,239 @@ class ApprovalWorkflowStageViewTestCase(
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, "Denial Date")  # Assert the denial date is present
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_deny_stage_with_existing_comment_endpoint(self):
+        """Test the deny stage with existing comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
+        self.assertBodyContains(response, "existing comment")
+
+        # Try POST with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Denied!"}),
+        }
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # Response should be updated
+        new_response.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertEqual(new_response.comments, "Denied!")
+        self.assertBodyContains(
+            response, f"You denied {approval_workflow_stage}."
+        )  # Assert the denial message is present
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_comment_endpoint(self):
+        """Test the comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET with model-level permission
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        expected_object_button = '<button type="submit" name="_confirm" class="btn btn-info"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Comment</button>'
+        self.assertContains(response, expected_object_button, html=True)  # Assert button Comment
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data({"comments": "It is just a comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        # New response should be created
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(new_response.comments, "It is just a comment")
+        self.assertBodyContains(
+            response, f"You commented {approval_workflow_stage}."
+        )  # Assert the comment message is present
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "It is just a comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_comment_endpoint(self):
+        """Test the edit comment endpoint."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit existing comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(edited_response.comments, "Edit existing comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_new_comment_from_different_user(self):
+        """Test the add comment if different user add it."""
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # create new response with a comment
+        second_user = User.objects.last()
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=second_user,
+            comments="existing comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=second_user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+        self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "New comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(ApprovalWorkflowStageResponse.objects.all().count(), 2)
+
+        old_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=second_user
+        )
+        self.assertEqual(old_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(old_response.comments, "existing comment")
+        new_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
+        self.assertEqual(new_response.comments, "New comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_comment_to_pending_approval(self):
+        """
+        Test editing or adding a comment in the approval stage that already has one approval,
+        but needs two. Only edit the comment don't change the state from APPROVED to COMMENT.
+        """
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # check min_approver to 2
+        approval_workflow_stage.approval_workflow_stage_definition.min_approvers = 2
+        approval_workflow_stage.approval_workflow_stage_definition.save()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="approved comment",
+            state=ApprovalWorkflowStateChoices.APPROVED,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit approved comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        # assert state is still APPROVED
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(edited_response.comments, "Edit approved comment")
 
 
 class ApprovalWorkflowStageResponseViewTestCase(
@@ -505,11 +815,11 @@ class ApprovalWorkflowStageResponseViewTestCase(
             for group in cls.approver_groups:
                 user.groups.add(group)
 
-        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
         cls.scheduled_jobs = [
             ScheduledJob.objects.create(
                 name=f"TessPassJob Scheduled Job {i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=cls.users[0],
@@ -522,7 +832,8 @@ class ApprovalWorkflowStageResponseViewTestCase(
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i} Definition",
                 model_content_type=cls.scheduledjob_ct,
-                priority=i,
+                weight=i,
+                model_constraints={"job_model__name": "NoSuchJob"},
             )
             for i in range(5)
         ]
@@ -532,7 +843,7 @@ class ApprovalWorkflowStageResponseViewTestCase(
                 cls.approval_workflow_stage_definitions.append(
                     ApprovalWorkflowStageDefinition.objects.create(
                         approval_workflow_definition=approval_workflow_definition,
-                        weight=i * 100,
+                        sequence=i * 100,
                         name=f"Test Approval Workflow Stage {i} Definition",
                         min_approvers=i + 1,
                         denial_message=f"Stage {i} Denial Message",
@@ -675,7 +986,7 @@ class ComputedFieldRenderingTestCase(TestCase):
     def test_view_object_with_computed_field_fallback_value(self):
         """Ensure that the fallback_value is rendered if the template fails to render."""
         # Make the template invalid to demonstrate the fallback value
-        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.template = "FOO {{ obj | invalid_filter }}"
         self.computedfield.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
@@ -694,7 +1005,7 @@ class ComputedFieldRenderingTestCase(TestCase):
 
     def test_view_object_with_computed_field_unsafe_fallback_value(self):
         """Ensure that computed field fallback values can't be used as an XSS vector."""
-        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.template = "FOO {{ obj | invalid_filter }}"
         self.computedfield.fallback_value = '<script>alert("Hello world!"</script>'
         self.computedfield.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
@@ -736,6 +1047,7 @@ class ConfigContextTestCase(
             "regions": [],
             "locations": [location.pk],
             "roles": [],
+            "device_families": [DeviceFamily.objects.first().pk],
             "device_types": [],
             "platforms": [],
             "tenant_groups": [],
@@ -770,6 +1082,7 @@ class ConfigContextTestCase(
             "regions": [],
             "locations": [],
             "roles": [],
+            "device_families": [],
             "device_types": [],
             "platforms": [],
             "tenant_groups": [],
@@ -809,6 +1122,7 @@ class ConfigContextTestCase(
             "regions": [],
             "locations": [],
             "roles": [],
+            "device_families": [],
             "device_types": [],
             "platforms": [],
             "tenant_groups": [],
@@ -1109,12 +1423,16 @@ class CustomFieldTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
 ):
     model = CustomField
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
+        ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
         obj_type = ContentType.objects.get_for_model(Location)
 
         custom_fields = [
@@ -1145,7 +1463,7 @@ class CustomFieldTestCase(
 
         for custom_field in custom_fields:
             custom_field.validated_save()
-            custom_field.content_types.set([obj_type])
+            custom_field.content_types.set([obj_type, device_ct])
 
         cls.form_data = {
             "content_types": [obj_type.pk],
@@ -1160,6 +1478,17 @@ class CustomFieldTestCase(
             "custom_field_choices-INITIAL_FORMS": "1",
             "custom_field_choices-MIN_NUM_FORMS": "0",
             "custom_field_choices-MAX_NUM_FORMS": "1000",
+        }
+
+        cls.bulk_edit_data = {
+            "grouping": "Updated Grouping",
+            "description": "Updated description for testing bulk edit.",
+            "required": True,
+            "filter_logic": "loose",
+            "weight": 200,
+            "advanced_ui": True,
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "remove_content_types": [device_ct.pk],
         }
 
     def test_create_object_without_permission(self):
@@ -1179,6 +1508,161 @@ class CustomFieldTestCase(
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
+
+    def test_create_custom_field_with_choices(self):
+        """Ensure a select-type CustomField can be created with multiple valid choices.."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "select_with_choices",
+            "label": "Select Field with Choices",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-value": "Option A",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "Option B",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(CustomField.objects.filter(key="select_with_choices").exists())
+
+        field = CustomField.objects.get(key="select_with_choices")
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertSetEqual(
+            set(field.custom_field_choices.values_list("value", flat=True)),
+            {"Option A", "Option B"},
+        )
+
+    def test_update_select_custom_field_add_choice(self):
+        """Test that submitting the edit form with both existing and new choices
+        results in the new choice being saved correctly."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Editable Select Field",
+            key="editable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        # Added initial choice
+        initial_choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Initial Option",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "2",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": initial_choice.pk,
+            "custom_field_choices-0-value": "Initial Option",
+            "custom_field_choices-0-weight": "100",
+            "custom_field_choices-1-value": "New Option",
+            "custom_field_choices-1-weight": "200",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 2)
+        self.assertTrue(field.custom_field_choices.filter(value="New Option").exists())
+
+    def test_update_select_custom_field_remove_choice(self):
+        """Test removing a choice from a select field."""
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Deletable Select Field",
+            key="deletable_select_field",
+        )
+        field.content_types.set([content_type])
+
+        choice = CustomFieldChoice.objects.create(
+            custom_field=field,
+            value="Choice To Delete",
+            weight=100,
+        )
+
+        url = reverse("extras:customfield_edit", args=[field.pk])
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": field.type,
+            "key": field.key,
+            "label": field.label,
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-0-id": choice.pk,
+            "custom_field_choices-0-value": choice.value,
+            "custom_field_choices-0-weight": choice.weight,
+            "custom_field_choices-0-DELETE": "on",
+        }
+
+        response = self.client.post(url, data=form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(field.custom_field_choices.count(), 0)
+
+    def test_create_custom_field_with_invalid_choice_data(self):
+        """Ensure invalid choice formset blocks saving."""
+        self.add_permissions("extras.add_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+
+        form_data = {
+            "content_types": [content_type.pk],
+            "type": CustomFieldTypeChoices.TYPE_SELECT,
+            "key": "invalid_choice_field",
+            "label": "Field with Invalid Choice",
+            "default": "",
+            "filter_logic": "loose",
+            "weight": 100,
+            "custom_field_choices-TOTAL_FORMS": "1",
+            "custom_field_choices-INITIAL_FORMS": "0",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
+            # Invalid: missing weight, empty value
+            "custom_field_choices-0-value": "",
+        }
+
+        response = self.client.post(reverse("extras:customfield_add"), data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="value", errors=["This field is required."]
+        )
+        self.assertFormsetError(
+            response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
+        )
 
 
 class CustomLinkRenderingTestCase(TestCase):
@@ -1279,6 +1763,7 @@ class DynamicGroupTestCase(
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     # NOTE: This isn't using `ViewTestCases.PrimaryObjectViewTestCase` because bulk-import/edit
     # views for DynamicGroup do not make sense at this time, primarily because `content_type` is
     # immutable after create.
@@ -1308,6 +1793,10 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
+        }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
         }
 
     def _get_queryset(self):
@@ -1608,7 +2097,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": '{"baz": "quux"}', "headers": '{"a": "b"}'}
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -2048,7 +2537,11 @@ class SavedViewTest(ModelViewTestCase):
         )
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as global default
-        self.assertBodyContains(response, "<strong>Global Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default(self):
@@ -2062,7 +2555,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default_precedes_global_default(self):
@@ -2081,7 +2578,11 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
+        self.assertBodyContains(
+            response,
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            html=True,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_filtered_view_precedes_global_default(self):
@@ -2102,7 +2603,7 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the global default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>Global Location Default View</strong>",
+            '<span aria-hidden="true" class="mdi mdi-check"></span>Global Location Default View<span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
             extract_page_body(response.content.decode(response.charset)),
         )
 
@@ -2131,7 +2632,8 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that the user is not redirected to the user default view
         # But instead redirected to the filtered view
         self.assertNotIn(
-            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+            '<span aria-hidden="true" class="mdi mdi-check"></span>User Location Default View<span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+            extract_page_body(response.content.decode(response.charset)),
         )
         # Floor type locations (Floor-<number>) should not be visible in the response
         self.assertNotIn(
@@ -2164,6 +2666,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
         self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
+    @tag("example_app")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_views_contain_boolean_filter_params(self):
         """
@@ -2194,7 +2697,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
             # This is the description
             self.assertBodyContains(response, "I should not show in the UI!", html=True)
 
@@ -2224,7 +2729,9 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
+            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view_contain_boolean_filter_params(self):
@@ -2251,7 +2758,11 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+                html=True,
+            )
 
         with self.subTest("Update device Saved View with boolean filter parameters"):
             view_name = "dcim:device_list"
@@ -2275,7 +2786,11 @@ class SavedViewTest(ModelViewTestCase):
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+            self.assertBodyContains(
+                response,
+                f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
+                html=True,
+            )
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -2321,8 +2836,18 @@ class SecretTestCase(
         }
 
 
-class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class SecretsGroupTestCase(
+    ViewTestCases.OrganizationalObjectViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+):
     model = SecretsGroup
+    custom_test_permissions = [
+        "extras.view_secret",
+        "extras.add_secretsgroup",
+        "extras.view_secretsgroup",
+        "extras.add_secretsgroupassociation",
+        "extras.change_secretsgroupassociation",
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2366,6 +2891,108 @@ class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "secrets_group_associations-MIN_NUM_FORMS": "0",
             "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
+        cls.bulk_edit_data = {
+            "description": "This is a very detailed new description",
+        }
+
+    def test_create_group_with_valid_secret_association(self):
+        """Test that a SecretsGroup with a valid Secret association saves correctly via the formset."""
+        self.add_permissions(*self.custom_test_permissions)
+        # Create a secret to associate
+        secret = Secret.objects.create(
+            name="AWS_Secret",
+            provider="text-file",
+            parameters={"path": "/tmp"},  # noqa: S108  # hardcoded-temp-file -- false positive
+        )
+
+        form_data = {
+            "name": "test",
+            "description": "test bulk edits",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret.pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        # Submit the form to the "add SecretsGroup" view
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(SecretsGroup.objects.filter(name="test").exists())
+
+        # Checks that the association was created correctly
+        group = SecretsGroup.objects.get(name="test")
+        self.assertEqual(group.secrets_group_associations.count(), 1)
+
+        association = group.secrets_group_associations.first()
+        self.assertEqual(association.secret, secret)
+        self.assertEqual(association.access_type, SecretsGroupAccessTypeChoices.TYPE_HTTP)
+        self.assertEqual(association.secret_type, SecretsGroupSecretTypeChoices.TYPE_PASSWORD)
+
+    def test_create_group_with_invalid_secret_association(self):
+        """Test that invalid Secret association formset raises validation error and does not save."""
+        self.add_permissions(*self.custom_test_permissions)
+        url = reverse("extras:secretsgroup_add")
+
+        form_data = {
+            "name": "Invalid Secrets Group",
+            "description": "Missing required fields",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": "",  # invalid
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": "",  # invalid
+        }
+
+        response = self.client.post(url, data=form_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Checks that no new SecretsGroup was created
+        self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
+
+        # Checks that formset errors are raised in the context
+        self.assertFormsetError(
+            response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
+        )
+
+    def test_create_group_with_deleted_secret_fails_cleanly(self):
+        """
+        Creating a SecretsGroup with a deleted Secret should fail with a formset error.
+        """
+        self.add_permissions(*self.custom_test_permissions)
+
+        secret = Secret.objects.create(name="TempSecret", provider="text-file", parameters={"path": "/tmp"})  # noqa: S108  # hardcoded-temp-file -- false positive
+        secret_pk = secret.pk
+        secret.delete()
+
+        form_data = {
+            "name": "Test Group",
+            "description": "This should not be created",
+            "secrets_group_associations-TOTAL_FORMS": "1",
+            "secrets_group_associations-INITIAL_FORMS": "0",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-0-secret": secret_pk,
+            "secrets_group_associations-0-access_type": SecretsGroupAccessTypeChoices.TYPE_HTTP,
+            "secrets_group_associations-0-secret_type": SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
+        }
+
+        response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFormsetError(
+            response.context["secrets"],
+            form_index=0,
+            field="secret",
+            errors=["Select a valid choice. That choice is not one of the available choices."],
+        )
+        self.assertFalse(SecretsGroup.objects.filter(name="Test Group").exists())
 
 
 class GraphQLQueriesTestCase(
@@ -2427,79 +3054,26 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
             crontab="15 10 * * *",
         )
-
-    def test_only_enabled_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        # this should not appear, since it's not enabled
-        ScheduledJob.objects.create(
-            enabled=False,
-            name="test4",
-            task="pass.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-    def test_approved_required_jobs_are_listed_only_when_approved(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        # this should not appear, since it's not approved
-        ScheduledJob.objects.create(
-            enabled=True,
-            approval_required=True,
-            approved_at=None,
-            name="test4",
-            task="pass.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-        ScheduledJob.objects.create(
-            enabled=True,
-            approval_required=False,
-            name="test5",
-            task="pass.TestPassJob",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            start_time=timezone.now(),
-        )
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-        self.assertIn("test5", extract_page_body(response.content.decode(response.charset)))
-
-        scheduled_job = ScheduledJob.objects.get(name="test4")
-        scheduled_job.approved_at = timezone.now()
-        scheduled_job.save()
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertIn("test4", extract_page_body(response.content.decode(response.charset)))
 
     def test_non_valid_crontab_syntax(self):
         self.add_permissions("extras.view_scheduledjob")
@@ -2508,7 +3082,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -2539,7 +3113,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -2549,415 +3123,6 @@ class ScheduledJobTestCase(
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
-
-
-class ApprovalQueueTestCase(
-    # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
-    # but we can't directly use it as it uses instance.get_absolute_url() rather than self._get_url("view", instance)
-    ViewTestCases.ListObjectsViewTestCase,
-):
-    model = ScheduledJob
-    # Many interactions with a ScheduledJob also require permissions to view the associated Job
-    user_permissions = ("extras.view_job",)
-
-    def _get_url(self, action, instance=None):
-        if action == "list":
-            return reverse("extras:scheduledjob_approval_queue_list")
-        if action == "view" and instance is not None:
-            return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
-        raise ValueError("This override is only valid for list and view test cases")
-
-    def get_list_url(self):
-        return reverse("extras:scheduledjob_approval_queue_list")
-
-    def setUp(self):
-        super().setUp()
-        self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
-        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFailJob")
-
-        ScheduledJob.objects.create(
-            name="test1",
-            task="dry_run.TestDryRun",
-            job_model=self.job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=timezone.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test2",
-            task="fail.TestFailJob",
-            job_model=self.job_model_2,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=timezone.now(),
-        )
-
-    def test_only_approvable_is_listed(self):
-        self.add_permissions("extras.view_scheduledjob")
-
-        ScheduledJob.objects.create(
-            name="test4",
-            task="pass.TestPassJob",
-            job_model=self.job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=False,
-            start_time=timezone.now(),
-        )
-
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn("test4", extract_page_body(response.content.decode(response.charset)))
-
-    #
-    # Reimplementations of ViewTestCases.GetObjectViewTestCase test functions.
-    # Needed because those use instance.get_absolute_url() instead of self._get_url("view", instance)...
-    #
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_get_object_anonymous(self):
-        self.client.logout()
-        response = self.client.get(self._get_url("view", self._get_queryset().first()))
-        self.assertHttpStatus(response, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_without_permission(self):
-        instance = self._get_queryset().first()
-
-        with disable_warnings("django.request"):
-            self.assertHttpStatus(self.client.get(self._get_url("view", instance)), 403)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_with_permission(self):
-        instance = self._get_queryset().first()
-
-        # Add model-level permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-        # Try GET with model-level permission
-        response = self.client.get(self._get_url("view", instance))
-        # The object's display name or string representation should appear in the response
-        self.assertBodyContains(response, getattr(instance, "display", str(instance)))
-
-        # skip GetObjectViewTestCase checks for Relationships and Custom Fields since this isn't actually a detail view
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_get_object_with_constrained_permission(self):
-        instance1, instance2 = self._get_queryset().all()[:2]
-
-        # Add object-level permission
-        obj_perm = ObjectPermission(
-            name="Test permission",
-            constraints={"pk": instance1.pk},
-            # To get a different rendering flow than the "test_get_object_with_permission" test above,
-            # enable additional permissions for this object so that interaction buttons are rendered.
-            actions=["view", "add", "change", "delete"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-        # Try GET to permitted object
-        self.assertHttpStatus(self.client.get(self._get_url("view", instance1)), 200)
-
-        # Try GET to non-permitted object
-        self.assertHttpStatus(self.client.get(self._get_url("view", instance2)), 404)
-
-    #
-    # Additional test cases specific to the job approval view
-    #
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_anonymous(self):
-        """Anonymous users may not take any action with regard to job approval requests."""
-        self.client.logout()
-        response = self.client.post(self._get_url("view", self._get_queryset().first()))
-        self.assertBodyContains(response, "You do not have permission to run jobs")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_not_runnable(self):
-        """A non-enabled job cannot be dry-run."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "This job cannot be run at this time")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_needs_job_run_permission(self):
-        """A user without run_job permission cannot dry-run a job."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission to run this job")
-        # No job was submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_post_dry_run_needs_specific_job_run_permission(self):
-        """A user without run_job permission FOR THAT SPECIFIC JOB cannot dry-run a job."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance1, instance2 = self._get_queryset().all()[:2]
-        data = {"_dry_run": True}
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        instance1.job_model.enabled = True
-        instance1.job_model.save()
-        instance2.job_model.enabled = True
-        instance2.job_model.save()
-
-        response = self.client.post(self._get_url("view", instance2), data)
-        self.assertBodyContains(response, "You do not have permission to run this job")
-        # No job was submitted
-        job_names = [instance1.job_model.name, instance2.job_model.name]
-        self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_not_supported(self, _):
-        """Request a dry run on a job that doesn't support dryrun."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = ScheduledJob.objects.filter(name="test2").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        data = {"_dry_run": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        # Job was not submitted
-        self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
-        self.assertContains(response, "This job does not support dryrun")
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
-    def test_post_dry_run_success(self, mock_enqueue_job, _):
-        """Successfully request a dry run based on object-based run_job permissions."""
-        self.add_permissions("extras.view_scheduledjob")
-        instance = ScheduledJob.objects.filter(name="test1").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
-        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        data = {"_dry_run": True}
-
-        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
-
-        response = self.client.post(self._get_url("view", instance), data)
-        # Job was submitted
-        mock_enqueue_job.assert_called_once()
-        job_result = JobResult.objects.get(name=instance.job_model.name)
-        self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_deny_different_user_lacking_permissions(self):
-        """A user needs both delete_scheduledjob and approve_job permissions to deny a job request."""
-        user1 = User.objects.create_user(username="testuser1")
-        user2 = User.objects.create_user(username="testuser2")
-
-        # Give both users view_scheduledjob permission
-        obj_perm = ObjectPermission(name="View", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(user1, user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user1 delete_scheduledjob permission but not approve_job permission
-        obj_perm = ObjectPermission(name="Delete", actions=["delete"])
-        obj_perm.save()
-        obj_perm.users.add(user1)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user2 approve_job permission but not delete_scheduledjob permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
-        obj_perm.save()
-        obj_perm.users.add(user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        instance = self._get_queryset().first()
-        data = {"_deny": True}
-
-        for user in (user1, user2):
-            self.client.force_login(user)
-            response = self.client.post(self._get_url("view", instance), data)
-            self.assertBodyContains(response, "You do not have permission")
-            # Request was not deleted
-            self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @load_event_broker_override_settings(
-        EVENT_BROKERS={
-            "SyslogEventBroker": {
-                "CLASS": "nautobot.core.events.SyslogEventBroker",
-                "TOPICS": {
-                    "INCLUDE": ["*"],
-                },
-            }
-        }
-    )
-    def test_post_deny_different_user_permitted(self):
-        """A user with appropriate permissions can deny a job request."""
-        user = User.objects.create_user(username="testuser1")
-        instance = self._get_queryset().first()
-
-        # Give user view_scheduledjob and delete_scheduledjob permissions
-        obj_perm = ObjectPermission(name="View", actions=["view", "delete"], constraints={"pk": instance.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        data = {"_deny": True}
-
-        self.client.force_login(user)
-        with self.assertLogs("nautobot.events") as cm:
-            response = self.client.post(self._get_url("view", instance), data)
-        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-        # Request was deleted
-        self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
-        # Event was published
-        expected_payload = {"data": serialize_object_v2(instance)}
-        self.assertEqual(
-            cm.output,
-            [
-                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
-            ],
-        )
-
-        # Check object-based permissions are enforced for a different instance
-        instance = self._get_queryset().first()
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission")
-        # Request was not deleted
-        self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_approve_cannot_self_approve(self):
-        self.add_permissions("extras.change_scheduledjob")
-        self.add_permissions("extras.approve_job")
-        instance = self._get_queryset().first()
-        data = {"_approve": True}
-
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You cannot approve your own job request")
-        # Job was not approved
-        instance.refresh_from_db()
-        self.assertIsNone(instance.approved_by_user)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_post_approve_different_user_lacking_permissions(self):
-        """A user needs both change_scheduledjob and approve_job permissions to approve a job request."""
-        user1 = User.objects.create_user(username="testuser1")
-        user2 = User.objects.create_user(username="testuser2")
-
-        # Give both users view_scheduledjob permission
-        obj_perm = ObjectPermission(name="View", actions=["view"])
-        obj_perm.save()
-        obj_perm.users.add(user1, user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user1 change_scheduledjob permission but not approve_job permission
-        obj_perm = ObjectPermission(name="Change", actions=["change"])
-        obj_perm.save()
-        obj_perm.users.add(user1)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user2 approve_job permission but not change_scheduledjob permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"])
-        obj_perm.save()
-        obj_perm.users.add(user2)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        instance = self._get_queryset().first()
-        data = {"_approve": True}
-
-        for user in (user1, user2):
-            self.client.force_login(user)
-            response = self.client.post(self._get_url("view", instance), data)
-            self.assertBodyContains(response, "You do not have permission")
-            # Job was not approved
-            instance.refresh_from_db()
-            self.assertIsNone(instance.approved_by_user)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @load_event_broker_override_settings(
-        EVENT_BROKERS={
-            "SyslogEventBroker": {
-                "CLASS": "nautobot.core.events.SyslogEventBroker",
-                "TOPICS": {
-                    "INCLUDE": ["*"],
-                },
-            }
-        }
-    )
-    def test_post_approve_different_user_permitted(self):
-        """A user with appropriate permissions can approve a job request."""
-        user = User.objects.create_user(username="testuser1")
-        instance = self._get_queryset().first()
-
-        # Give user view_scheduledjob and change_scheduledjob permissions
-        obj_perm = ObjectPermission(name="View", actions=["view", "change"], constraints={"pk": instance.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(ScheduledJob))
-
-        # Give user approve_job permission
-        obj_perm = ObjectPermission(name="Approve", actions=["approve"], constraints={"pk": instance.job_model.pk})
-        obj_perm.save()
-        obj_perm.users.add(user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-
-        data = {"_approve": True}
-
-        self.client.force_login(user)
-        with self.assertLogs("nautobot.events") as cm:
-            response = self.client.post(self._get_url("view", instance), data)
-
-        self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
-        # Job was scheduled
-        instance.refresh_from_db()
-        self.assertEqual(instance.approved_by_user, user)
-        # Event was published
-        expected_payload = {"data": serialize_object_v2(instance)}
-        self.assertEqual(
-            cm.output,
-            [
-                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
-            ],
-        )
-
-        # Check object-based permissions are enforced for a different instance
-        instance = self._get_queryset().last()
-        response = self.client.post(self._get_url("view", instance), data)
-        self.assertBodyContains(response, "You do not have permission")
-        # Job was not scheduled
-        instance.refresh_from_db()
-        self.assertIsNone(instance.approved_by_user)
 
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -2990,7 +3155,7 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass.TestPassJob")
+        JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
@@ -3058,6 +3223,18 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
+        cls.test_dryrun = Job.objects.get(job_class_name="TestDryRun")
+        cls.test_dryrun.enabled = True
+        cls.test_dryrun.has_sensitive_variables = False
+        cls.test_dryrun.save()
+
+        cls.run_urls_dryrun = (
+            # Legacy URL (job class path based)
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_dryrun.class_path}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_dryrun.pk}),
+        )
+
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
         cls.test_pass.default_job_queue = default_job_queue
@@ -3101,8 +3278,6 @@ class JobTestCase(
             "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "approval_required_override": True,
-            "approval_required": True,
             "soft_time_limit_override": True,
             "soft_time_limit": 350,
             "time_limit_override": True,
@@ -3124,8 +3299,6 @@ class JobTestCase(
             "dryrun_default": "",
             "clear_hidden_override": True,
             "hidden": False,
-            "clear_approval_required_override": True,
-            "approval_required": True,
             "clear_soft_time_limit_override": False,
             "soft_time_limit": 350,
             "clear_time_limit_override": True,
@@ -3385,7 +3558,6 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
-            mock_begin_approval_workflow.assert_not_called()
 
     def test_rerun_job(self):
         self.add_permissions("extras.run_job")
@@ -3422,7 +3594,8 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            content,
         )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -3552,168 +3725,66 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
+    def test_run_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        ApprovalWorkflowDefinition.objects.create(
+            name="Test Approval Workflow Definition 1",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
         self.test_pass.has_sensitive_variables = True
-        self.test_pass.approval_required = True
         self.test_pass.save()
 
         data = {
             "_schedule_type": "immediately",
         }
         for run_url in self.run_urls:
-            # Assert warning message shows in get
-            response = self.client.get(run_url)
-            self.assertBodyContains(
-                response,
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
-            )
-
-            # Assert run button is disabled
-            self.assertBodyContains(
-                response,
-                """
-                <button class="btn btn-primary" id="id__run" name="_run" type="submit" disabled="disabled">
-                    <span aria-hidden="true" class="mdi mdi-play"></span><!--
-                    -->Run Job Now
-                </button>
-                """,
-                html=True,
-            )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
             self.assertBodyContains(
                 response,
                 "Unable to run or schedule job: "
-                "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
-                "One of these two flags must be removed before this job can be scheduled or run.",
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_approval_required_triggers_approval_workflow(self, _):
-        ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 1",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
+    def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-
-        data = {
-            "_schedule_type": "immediately",
-        }
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            # Assert the redirect goes to that job's approval workflow view
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_with_approval_required_triggers_approval_workflow(self, _):
-        ApprovalWorkflowDefinition.objects.create(
-            name="Test Approval Workflow Definition 1",
-            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
-        )
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
-        }
-        for i, run_url in enumerate(self.run_urls):
-            data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_with_approval_required_fails_without_approval_workflow(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "immediately",
-        }
-        for run_url in self.run_urls:
-            count_job_result = JobResult.objects.count()
-            response = self.client.post(run_url, data, follow=True)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            self.assertEqual(JobResult.objects.count(), count_job_result)
-            self.assertContains(response, "Job was not successfully submitted for approval")
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_with_approval_required_fails_without_approval_workflow(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = True
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
-        }
-
-        for i, run_url in enumerate(self.run_urls):
-            if "_schedule_name" in data:
-                data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data, follow=True)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            self.assertContains(response, "Job was not successfully submitted for approval")
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_skips_approval_workflow_if_not_required(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_jobresult")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
         )
         data = {
             "_schedule_type": "immediately",
         }
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
-            self.assertEqual(ScheduledJob.objects.count(), 0)
-            result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertEqual(scheduled_job.interval, JobExecutionType.TYPE_FUTURE)
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_scheduled_job_with_no_approval_flag_still_triggers_approval_workflow_if_defined(self, _):
+    def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
-        self.test_pass.approval_required = False
-        self.test_pass.save()
-
-        ApprovalWorkflowDefinition.objects.create(
+        workflow = ApprovalWorkflowDefinition(
             name="Approval Definition",
             model_content_type=ContentType.objects.get_for_model(ScheduledJob),
-            priority=0,
+            weight=0,
+            model_constraints={"job_model__name": self.test_pass.name},
         )
+        workflow.validated_save()
         data = {
             "_schedule_type": "future",
             "_schedule_name": "test",
@@ -3721,22 +3792,20 @@ class JobTestCase(
         }
 
         for i, run_url in enumerate(self.run_urls):
-            if "_schedule_name" in data:
-                data["_schedule_name"] = f"test {i}"
-            response = self.client.post(run_url, data)
-            scheduled_job = ScheduledJob.objects.last()
-            self.assertRedirects(
-                response,
-                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
-            )
+            with self.subTest(run_url=run_url):
+                if "_schedule_name" in data:
+                    data["_schedule_name"] = f"test {i}"
+                response = self.client.post(run_url, data)
+                scheduled_job = ScheduledJob.objects.last()
+                self.assertRedirects(
+                    response,
+                    reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+                )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_scheduled_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+    def test_run_scheduled_job_with_no_approval_workflow_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         data = {
             "_schedule_type": "future",
@@ -3753,12 +3822,9 @@ class JobTestCase(
             self.assertFalse(scheduled_job.associated_approval_workflows.exists())
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_immediate_job_without_approval_required_and_no_approval_workflow_succeeds(self, _):
+    def test_run_immediate_job_with_no_approval_workflow_definded(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
-
-        self.test_pass.approval_required = False
-        self.test_pass.save()
 
         data = {
             "_schedule_type": "immediately",
@@ -3770,6 +3836,104 @@ class JobTestCase(
             self.assertIsNone(scheduled_job)
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_immediate_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+        for run_url in self.run_urls_dryrun:
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertIsNone(scheduled_job)
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
+        self.test_dryrun.has_sensitive_variables = True
+        self.test_dryrun.save()
+
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+
+        data = {
+            "_schedule_type": "immediately",
+            "dryrun": True,
+        }
+
+        for run_url in self.run_urls_dryrun:
+            # Assert error message shows after post
+            response = self.client.post(run_url, data)
+            self.assertBodyContains(
+                response,
+                "Unable to run or schedule job: "
+                "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
+                "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(
+                response,
+                reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]),
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_dryrun_schedule_job_with_no_approval_workflow_definded(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "test",
+            "_schedule_start_time": str(timezone.now() + timedelta(minutes=1)),
+            "dryrun": True,
+        }
+
+        for i, run_url in enumerate(self.run_urls_dryrun):
+            if "_schedule_name" in data:
+                data["_schedule_name"] = f"test {i}"
+            response = self.client.post(run_url, data)
+            scheduled_job = ScheduledJob.objects.last()
+            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
+            self.assertFalse(scheduled_job.associated_approval_workflows.exists())
 
     def test_job_object_change_log_view(self):
         """Assert Job change log view displays appropriate header"""
@@ -3872,14 +4036,12 @@ class JobButtonRenderingTestCase(TestCase):
 
         self.location_type = LocationType.objects.get(name="Campus")
 
-    @tag("fix_in_v3")
     def test_view_object_with_job_button(self):
         """Ensure that the job button is rendered."""
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertBodyContains(response, f"JobButton {self.location_type.name}")
         self.assertBodyContains(response, "Click me!")
 
-    @tag("fix_in_v3")
     def test_task_queue_hidden_input_is_present(self):
         """
         Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
@@ -3907,7 +4069,6 @@ class JobButtonRenderingTestCase(TestCase):
             f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
-    @tag("fix_in_v3")
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
         self.job_button_1.text = '<script>alert("Hello world!")</script>'
@@ -3927,7 +4088,6 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
-    @tag("fix_in_v3")
     def test_view_object_with_unsafe_name(self):
         """Ensure that JobButton names can't be used as a vector for XSS."""
         self.job_button_1.text = "JobButton {{ obj"
@@ -3939,7 +4099,6 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
-    @tag("fix_in_v3")
     def test_render_constrained_run_permissions(self):
         obj_perm = ObjectPermission(
             name="Test permission",
@@ -3958,8 +4117,9 @@ class JobButtonRenderingTestCase(TestCase):
                 NO_CONFIRM_BUTTON.format(
                     button_id=self.job_button_1.pk,
                     button_text=f"JobButton {self.location_type.name}",
-                    button_class=self.job_button_1.button_class,
+                    button_class=self.job_button_1.button_class_css_class,
                     disabled="",
+                    menu_item="",
                 ),
                 content,
             )
@@ -3967,8 +4127,9 @@ class JobButtonRenderingTestCase(TestCase):
                 NO_CONFIRM_BUTTON.format(
                     button_id=self.job_button_2.pk,
                     button_text="Click me!",
-                    button_class=self.job_button_2.button_class,
+                    button_class=self.job_button_2.button_class_css_class,
                     disabled="disabled",
+                    menu_item="",
                 ),
                 content,
             )
@@ -3989,6 +4150,7 @@ class JobButtonRenderingTestCase(TestCase):
                     button_text=f"JobButton {self.location_type.name}",
                     button_class="link",
                     disabled="",
+                    menu_item="dropdown-item",
                 )
                 + "</li>",
                 content,
@@ -4000,12 +4162,14 @@ class JobButtonRenderingTestCase(TestCase):
                     button_text="Click me!",
                     button_class="link",
                     disabled="disabled",
+                    menu_item="dropdown-item",
                 )
                 + "</li>",
                 content,
             )
 
 
+@tag("example_app")
 class JobCustomTemplateTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -4174,17 +4338,7 @@ class ObjectMetadataTestCase(
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 
 
-class RelationshipTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    RequiredRelationshipTestMixin,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Relationship
     slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
@@ -4355,6 +4509,43 @@ class RelationshipAssociationTestCase(
         self.assertIn(instance1.destination.name, content, msg=content)
         self.assertNotIn(instance2.source.name, content, msg=content)
         self.assertNotIn(instance2.destination.name, content, msg=content)
+
+    def test_get_object_with_advanced_relationships(self):
+        device_type = ContentType.objects.get_for_model(Device)
+        vlan_type = ContentType.objects.get_for_model(VLAN)
+        Relationship.objects.create(
+            label="Device VLANs 4",
+            key="device_vlans_4",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Advanced",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=True,
+        )
+        Relationship.objects.create(
+            label="Device VLANs 5",
+            key="device_vlans_5",
+            type="one-to-many",
+            source_type=device_type,
+            source_label="Device VLANs Main",
+            destination_type=vlan_type,
+            destination_label="VLANs",
+            advanced_ui=False,
+        )
+
+        device = Device.objects.first()
+        # Add model-level permission
+        self.add_permissions(f"{Device._meta.app_label}.view_{Device._meta.model_name}")
+        # Try GET the main tab
+        response = self.client.get(device.get_absolute_url())
+        response_content = extract_page_body(response.content.decode(response.charset))
+        # The relationship's source label should be in the advanced tab since advance_ui=True
+        # a.k.a its index should be greater than the index of the advanced tab
+        self.assertGreater(response_content.find("Device VLANs Advanced"), response_content.find('id="advanced"'))
+        # The relationship's source label should not be in the advanced tab since advance_ui=False
+        # a.k.a its index should be smaller than the index of the advanced tab
+        self.assertGreater(response_content.find('id="advanced"'), response_content.find("Device VLANs Main"))
 
 
 class StaticGroupAssociationTestCase(
@@ -4619,8 +4810,7 @@ class WebhookTestCase(
             "http_content_type": "application/json",
         }
         cls.bulk_edit_data = {
-            "name": "webhook-4",
-            "enabled": True,
+            "enabled": False,
             "type_create": True,
             "type_update": True,
             "type_delete": False,
@@ -4662,7 +4852,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
             "remove_content_types": [device_ct.pk],
         }
 
-    @tag("fix_in_v3")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_view_with_content_types(self):
         """
@@ -4681,16 +4870,13 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
                         # AssociationContact Table in the contact tab should be there.
-                        self.assertIn(
-                            f'<strong>{result}</strong>\n                                    <div class="pull-right d-print-none">\n',
-                            response_body,
-                        )
-                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertInHTML(f"<strong>{result}</strong>", response_body)
+                        # ContactAssociationTable related to this role instances in the main tab should not be there.
                         self.assertNotIn(
-                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n\n\n    <table class="table table-hover nb-table-headings">',
                             response_body,
                         )
                     else:
                         self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
-                    self.assertIn(f"<strong>{result}</strong>", response_body)
+                    self.assertInHTML(f"<strong>{result}</strong>", response_body)

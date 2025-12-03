@@ -1,11 +1,15 @@
+import uuid
+
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
+from tree_queries.compiler import TreeQuery
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache
+from nautobot.core.utils.cache import construct_cache_key
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -19,15 +23,18 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         Dynamically computes ancestors either through the tree or through the `parent` foreign key depending on whether
         tree fields are present on `of`.
         """
+
+        # If `of` is a UUID, i.e. pk, retrieve the corresponding model instance with tree fields disabled.
+        if isinstance(of, uuid.UUID):
+            of = self.model.objects.without_tree_fields().get(pk=of)
+
         # If `of` has `tree_depth` defined, i.e. if it was retrieved from the database on a queryset where tree fields
         # were enabled (see `TreeQuerySet.with_tree_fields` and `TreeQuerySet.without_tree_fields`), use the default
         # implementation from `tree_queries.query.TreeQuerySet`.
-        # Furthermore, if `of` doesn't have a parent field we also have to defer to the tree-based implementation which
-        # will then annotate the tree fields and proceed as usual.
-        if hasattr(of, "tree_depth") or not hasattr(of, "parent"):
+        if hasattr(of, "tree_depth"):
             return super().ancestors(of, include_self=include_self)
+
         # In the other case, traverse the `parent` foreign key until the root.
-        model_class = of._meta.concrete_model
         ancestor_pks = []
         if include_self:
             ancestor_pks.append(of.pk)
@@ -38,7 +45,7 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         # Reference:
         # https://stackoverflow.com/questions/4916851/django-get-a-queryset-from-array-of-ids-in-specific-order
         preserve_order = Case(*[When(pk=pk, then=position) for position, pk in enumerate(ancestor_pks)])
-        return model_class.objects.without_tree_fields().filter(pk__in=ancestor_pks).order_by(preserve_order)
+        return self.model.objects.without_tree_fields().filter(pk__in=ancestor_pks).order_by(preserve_order)
 
     def max_tree_depth(self):
         r"""
@@ -61,6 +68,22 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
             return deepest.tree_depth
         return 0
 
+    def count(self):
+        """Custom count method for optimization purposes.
+
+        TreeQuerySet instances in Nautobot are by default with tree fields. So if somewhere tree fields aren't
+        explicitly removed from the queryset and count is called, the whole tree is calculated. Since this is not
+        needed, this implementation calls `without_tree_fields` before issuing the count query and `with_tree_fields`
+        afterwards when applicable.
+        """
+        should_have_tree_fields = isinstance(self.query, TreeQuery)
+        if should_have_tree_fields:
+            self.without_tree_fields()
+        count = super().count()
+        if should_have_tree_fields:
+            self.with_tree_fields()
+        return count
+
 
 class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     """
@@ -72,7 +95,7 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
 
     @property
     def max_depth_cache_key(self):
-        return f"nautobot.{self.model._meta.concrete_model._meta.label_lower}.max_depth"
+        return construct_cache_key(self, method_name="max_depth", branch_aware=True)
 
     @property
     def max_depth(self):
@@ -80,10 +103,11 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
 
         Generally TreeManagers are persistent objects while TreeQuerySets are not, hence the difference in behavior.
         """
-        max_depth = cache.get(self.max_depth_cache_key)
+        cache_key = self.max_depth_cache_key
+        max_depth = cache.get(cache_key)
         if max_depth is None:
             max_depth = self.max_tree_depth()
-            cache.set(self.max_depth_cache_key, max_depth)
+            cache.set(cache_key, max_depth)
         return max_depth
 
 
@@ -106,7 +130,7 @@ class TreeModel(TreeNode):
         """
         if not hasattr(self, "name"):
             raise NotImplementedError("default TreeModel.display implementation requires a `name` attribute!")
-        cache_key = f"nautobot.{self._meta.concrete_model._meta.label_lower}.{self.id}.display"
+        cache_key = construct_cache_key(self, method_name="display", branch_aware=True)
         display_str = cache.get(cache_key, "")
         if display_str:
             return display_str

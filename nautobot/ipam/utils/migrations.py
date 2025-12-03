@@ -146,7 +146,9 @@ def process_vrfs(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     VRF = apps.get_model("ipam", "VRF")
 
-    global_ns = Namespace.objects.get(name=GLOBAL_NS)
+    global_ns, _ = Namespace.objects.get_or_create(
+        name=GLOBAL_NS, defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
     vrfs = VRF.objects.all().order_by("name", "rd")
     unique_non_empty_vrfs = vrfs.filter(enforce_unique=True).exclude(ip_addresses__isnull=True, prefixes__isnull=True)
     # At the point in the migration where we iterate through vrfs in global_ns_vrfs, every vrf that
@@ -257,6 +259,11 @@ def process_ip_addresses(apps):
                 broadcast = new_parent_cidr[-1]
                 # This can result in duplicate Prefixes being created in the global_ns but that will be
                 # cleaned up subsequently in `process_prefix_duplicates`.
+                if orphaned_ip.vrf and orphaned_ip.vrf.namespace:
+                    prefix_namespace = orphaned_ip.vrf.namespace
+                else:
+                    prefix_namespace = global_ns
+
                 new_parent = Prefix.objects.create(
                     ip_version=orphaned_ip.ip_version,
                     network=network,
@@ -264,7 +271,7 @@ def process_ip_addresses(apps):
                     tenant=orphaned_ip.tenant,
                     vrf=orphaned_ip.vrf,
                     prefix_length=prefix_length,
-                    namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
+                    namespace=prefix_namespace,
                     description=DESCRIPTION,
                 )
             orphaned_ip.parent = new_parent
@@ -295,6 +302,13 @@ def process_prefix_duplicates(apps):
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
     global_namespace = Namespace.objects.get(name=GLOBAL_NS)
+
+    # First, assign any remaining prefixes with null namespace to Global namespace
+    null_namespace_prefixes = Prefix.objects.filter(namespace__isnull=True)
+    if null_namespace_prefixes.exists():
+        if "test" not in sys.argv:
+            print(f">>> Assigning {null_namespace_prefixes.count()} prefixes with null namespace to Global namespace")
+        null_namespace_prefixes.update(namespace=global_namespace)
 
     namespaces = list(Namespace.objects.all())
     # Always start with the Global Namespace.
@@ -587,7 +601,7 @@ def get_closest_parent(obj, qs):
     """
     # Validate that it's a real CIDR
     cidr = validate_cidr(obj)
-    broadcast = str(cidr.broadcast or cidr.ip)
+    broadcast = str(cidr.broadcast or cidr[-1])
 
     # Prepare the queryset filter
     lookup_kwargs = {

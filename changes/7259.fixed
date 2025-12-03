@@ -1,1 +1,0 @@
-Fixed not working JavaScript build by converting webpack config from CJS to ESM.

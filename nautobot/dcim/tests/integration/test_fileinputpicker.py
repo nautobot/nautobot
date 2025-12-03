@@ -1,7 +1,6 @@
-from django.test import tag
 from django.urls import reverse
 
-from nautobot.core.testing.integration import SeleniumTestCase, WebDriverWait
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Job, Status
 
@@ -16,14 +15,14 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         Ensure clearable input file type has working clear and info display.
         """
         self.browser.visit(f"{self.live_server_url}{uri_to_visit}")
-        WebDriverWait(self.browser, 10).until(lambda driver: driver.is_text_present(page_loaded_confirmation))
+        self.assertTrue(self.browser.is_text_present(page_loaded_confirmation, wait_time=10))
 
         # Find the first file input button and scroll to it
         front_image_button = self.browser.find_by_css("span.group-span-filestyle.input-group-btn").first
         front_image_button.scroll_to()
 
         # cancel button is NOT visible initially
-        self.assertFalse(self.browser.find_by_css("button.clear-button").first.visible)
+        self.assertTrue(self.browser.find_by_css("button.clear-button").first.is_not_visible(wait_time=5))
 
         # Test file text changes after selecting a file
         file_selection_indicator_css = "div.bootstrap-filestyle input[type='text'].form-control"
@@ -34,14 +33,13 @@ class ClearableFileInputTestCase(SeleniumTestCase):
 
         # clear button is now visible
         clear_button = self.browser.find_by_css("button.clear-button").first
-        self.assertTrue(clear_button.visible)
+        self.assertTrue(clear_button.is_visible(wait_time=5))
 
         # clicking clearbutton should hide the button, and wipe the file input value
         clear_button.click()
-        self.assertFalse(clear_button.visible)
+        self.assertTrue(clear_button.is_not_visible(wait_time=5))
         self.assertEqual(front_image_file_input.value, "")
 
-    @tag("fix_in_v3")
     def test_add_device_page(self):
         """
         Confirm device type add page input is working correctly.
@@ -52,7 +50,6 @@ class ClearableFileInputTestCase(SeleniumTestCase):
             file_input_selector_id="id_front_image",
         )
 
-    @tag("fix_in_v3")
     def test_job_runner_page(self):
         """
         Confirm job run page file input is working correctly.
@@ -65,7 +62,6 @@ class ClearableFileInputTestCase(SeleniumTestCase):
             file_input_selector_id="id_input_file",
         )
 
-    @tag("fix_in_v3")
     def test_location_image_attachment_view(self):
         """
         Confirm location image attachment page is working correctly.
@@ -80,6 +76,6 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         )
         self._assert_file_picker(
             uri_to_visit=location_image_attach_uri,
-            page_loaded_confirmation="Image attachment",
+            page_loaded_confirmation="IMAGE ATTACHMENT",
             file_input_selector_id="id_image",
         )

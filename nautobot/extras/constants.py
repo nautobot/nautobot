@@ -1,8 +1,3 @@
-from django.db.models import Q
-
-# Approval Workflow models
-APPROVAL_WORKFLOW_MODELS = Q(app_label="extras", model__in=("scheduledjob",))
-
 # Webhook content types
 HTTP_CONTENT_TYPE_JSON = "application/json"
 
@@ -32,7 +27,6 @@ JOB_OVERRIDABLE_FIELDS = (
     "description",
     "dryrun_default",
     "hidden",
-    "approval_required",
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",

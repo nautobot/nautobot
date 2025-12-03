@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0124_approval_workflow_models"),
+        ("extras", "0127_approval_workflow_models"),
     ]
 
     operations = [
@@ -198,15 +198,9 @@ class Migration(migrations.Migration):
                         default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
                     ),
                 ),
-                ("created", models.DateTimeField(auto_now_add=True, null=True)),
-                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
-                (
-                    "_custom_field_data",
-                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
-                ),
                 ("compliance_class_name", models.CharField(max_length=255)),
                 ("last_validation_date", models.DateTimeField(auto_now=True)),
-                ("object_id", models.CharField(max_length=255)),
+                ("object_id", models.UUIDField(blank=False, null=False)),
                 ("validated_object_str", models.CharField(blank=True, default="", max_length=255)),
                 ("validated_attribute", models.CharField(blank=True, default="", max_length=255)),
                 ("validated_attribute_value", models.CharField(blank=True, default="", max_length=255)),
@@ -216,7 +210,6 @@ class Migration(migrations.Migration):
                     "content_type",
                     models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="contenttypes.contenttype"),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "verbose_name_plural": "Data Compliance",

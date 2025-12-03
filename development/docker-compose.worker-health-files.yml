@@ -1,0 +1,18 @@
+---
+services:
+  nautobot:
+    environment:
+      - "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES=true"
+  celery_worker:
+    environment:
+      - "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES=true"
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+      # find the heartbeat file and report success if it was modified less than 1 minute ago, else fail
+      test: "[ $$(find /tmp/nautobot_celery_worker_heartbeat -mmin -1 | wc -l) -eq 1 ] || false"
+  celery_beat:
+    environment:
+      - "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES=true"

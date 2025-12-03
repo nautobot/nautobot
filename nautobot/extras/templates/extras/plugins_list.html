@@ -1,41 +1,37 @@
 {% extends "base.html" %}
 {% load helpers %}
 {% load static %}
+{% load ui_framework %}
 
 {% block drawer %}
     {% table_config_form table %}
 {% endblock %}
 
 {% block content %}
-    <div class="row d-print-none">
-        <div class="col-md-12">
-            <ol class="breadcrumb">
-                {% block breadcrumbs %}
-                    <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
-                {% endblock breadcrumbs %}
-            </ol>
+    <div class="row d-print-none mb-16">
+        <div class="col-lg-12">
+            <div class="float-end d-print-none">
+                <div class="btn-group" role="group">
+                    <a href="{% django_querystring display='list' %}"
+                       class="btn btn-primary{% if display == 'list' %} bg-primary nb-text-body-bg{% endif %}">
+                        <span class="mdi mdi-view-sequential" aria-hidden="true"></span> List
+                    </a>
+                    {# djlint:off B123 #}
+                    <a href="{% django_querystring display='tiles' %}"
+                       class="btn btn-primary{% if display == 'tiles' %} bg-primary nb-text-body-bg{% endif %}">
+                        <span class="mdi mdi-view-grid" aria-hidden="true"></span> Tiles
+                    </a>
+                    {# djlint:on B123 #}
+                </div>
+
+                <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
+            </div>
         </div>
     </div>
-
-    <div class="pull-right d-print-none">
-        <div class="btn-group">
-            <a class="btn btn-default set-apps-display" data-display="tiles" href="" title="Tiles">
-                <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
-            </a>
-            <a class="btn btn-default set-apps-display" data-display="list" href="" title="List">
-                <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
-            </a>
-        </div>
-
-        <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
-    </div>
-
-    <h1>{% block title %}Installed Apps{% endblock %}</h1>
-
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% if filter_form %}
-                <div class="col-md-3 float-end nb-right-side-panel d-print-none">
+                <div class="col-lg-3 float-end nb-right-side-panel d-print-none">
                     {% include 'inc/search_panel.html' %}
                     {% block sidebar %}{% endblock %}
                 </div>
@@ -48,15 +44,6 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script src="{% static 'js/tableconfig.js' %}"></script>
-
-<script>
-    // Set display anchor links without losing other potentially active query params such as applied filters.
-    [...document.querySelectorAll('.set-apps-display')].forEach(button => {
-        const queryParams = new URLSearchParams(window.location.search);
-        queryParams.set('display', button.dataset.display);
-        button.setAttribute('href', `?${queryParams.toString()}`);
-    });
-</script>
+    {{ block.super }}
+    <script src="{% static 'js/tableconfig.js' %}"></script>
 {% endblock %}

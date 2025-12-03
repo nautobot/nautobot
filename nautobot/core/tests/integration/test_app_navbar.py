@@ -1,6 +1,9 @@
+from django.test import tag
+
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
+@tag("example_app")
 class AppNavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
@@ -51,7 +54,7 @@ class AppNavBarTestCase(SeleniumTestCase):
         self.assertTrue(sidenav_section.is_expanded)
 
         group = sidenav_section.flyout.find_by_xpath(
-            "//li[@class='sidenav-link-group' and normalize-space()='Example Group 1']"
+            "//li[@class='nb-sidenav-link-group' and normalize-space()='Example Group 1']"
         )
         self.assertEqual(len(group), 1)
 
@@ -68,7 +71,7 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         for group_name, items in self.navbar["Circuits"].items():
             group = sidenav_section.flyout.find_by_xpath(
-                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                f"//li[@class='nb-sidenav-link-group' and normalize-space()='{group_name}']"
             )
             self.assertEqual(len(group), 1)
 
@@ -88,7 +91,7 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         for group_name, items in self.navbar["Apps"].items():
             group = sidenav_section.flyout.find_by_xpath(
-                f"//li[@class='sidenav-link-group' and normalize-space()='{group_name}']"
+                f"//li[@class='nb-sidenav-link-group' and normalize-space()='{group_name}']"
             )
             self.assertEqual(len(group), 1)
 
@@ -97,3 +100,26 @@ class AppNavBarTestCase(SeleniumTestCase):
                 self.assertEqual(len(link), 1)
 
         sidenav_section.toggle()
+
+    def test_app_navbar_state_persistence(self):
+        """
+        Verify that menu expanded/collapse state is persistent and does not reset after page refresh.
+        """
+
+        def get_toggler(aria_expanded):
+            return self.browser.find_by_xpath(
+                f"//*[@id='sidenav']//button[contains(@class, 'nb-sidenav-toggler') and @aria-expanded='{aria_expanded}']"
+            )
+
+        toggler = get_toggler("true")  # Get toggler, expect sidenav to be expanded by default.
+        self.assertTrue(toggler)
+
+        toggler.click()  # Collapse sidenav.
+        self.browser.reload()
+        toggler = get_toggler("false")  # Get toggler, expect sidenav to stay collapsed after full document reload.
+        self.assertTrue(toggler)
+
+        toggler.click()  # Expand sidenav.
+        self.browser.reload()
+        toggler = get_toggler("true")  # Get toggler, expect sidenav to be expanded again.
+        self.assertTrue(toggler)

@@ -1,12 +1,34 @@
 from contextlib import contextmanager
 import importlib
 from importlib.util import find_spec, module_from_spec
+from keyword import iskeyword
 import logging
 import os
 import pkgutil
 import sys
 
+from django.utils.module_loading import import_string
+
 logger = logging.getLogger(__name__)
+
+
+def import_string_optional(dotted_path):
+    """An extension/wrapper of Django's `import_string()` that returns `None` if no such dotted path exists."""
+    try:
+        return import_string(dotted_path)
+    except ModuleNotFoundError as err:
+        # No such module
+        module_name, _ = dotted_path.rsplit(".", 1)
+        if module_name.startswith(err.name):  # tried to import foo.bar.baz but couldn't find foo.bar, etc.
+            return None
+        # Some import *from within* the given module couldn't find what it was looking for?
+        raise
+    except ImportError as err:
+        if "does not define" in str(err):
+            # Exception raised by Django if the module exists but has no such attribute
+            return None
+        # Maybe a legitimate problem with the import?
+        raise
 
 
 @contextmanager
@@ -33,6 +55,28 @@ def clear_module_from_sys_modules(module_name):
             del sys.modules[name]
 
 
+def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
+    """
+    Make sure the given package/module name is "safe" to import from the filesystem.
+
+    In other words, make sure it's:
+    - a valid Python identifier and not a reserved keyword
+    - not the name of an existing "real" Python package or builtin
+
+    Returns:
+        (bool, str): Whether safe to load, and an explanatory string fragment for logging/exception messages.
+    """
+    if not name.isidentifier():
+        return False, "not a valid identifier"
+    if iskeyword(name):
+        return False, "a reserved keyword"
+    if name in sys.builtin_module_names:
+        return False, "a Python builtin"
+    if any(module_info.name == name for module_info in pkgutil.iter_modules()):
+        return False, "the name of an installed Python package"
+    return True, "a valid and non-conflicting module name"
+
+
 def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     """
     Import modules from the filesystem without adding the path permanently to `sys.path`.
@@ -54,7 +98,8 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
         module_prefix = None
     else:
         module_prefix = ".".join(module_path)
-    modules = []
+
+    loaded_modules = []
     with _temporarily_add_to_sys_path(path):
         for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
             if module_prefix and not (
@@ -92,9 +137,10 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                 else:
                     module = importlib.import_module(discovered_module_name)
                 importlib.reload(module)
-                modules.append(module)
+                loaded_modules.append(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
                 if not ignore_import_errors:
                     raise
-    return modules
+
+    return loaded_modules

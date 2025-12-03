@@ -1,4 +1,4 @@
-{% load django_tables2 %}
+{% load querystring from django_tables2 %}
 {% load get_item table_config_button from helpers %}
 
 {% with last_column_name=table.columns.names|last %}
@@ -42,7 +42,7 @@
                     <tr>
                         <td
                             colspan="{% if last_column_name == 'actions' %}{{ table.columns|length }}{% else %}{{ table.columns|length|add:1 }}{% endif %}"
-                            class="text-center text-muted"
+                            class="text-center text-secondary"
                         >
                             &mdash; {{ table.empty_text }} &mdash;
                         </td>

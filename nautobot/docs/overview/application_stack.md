@@ -41,13 +41,15 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 --- 2.4.0 "Python 3.8"
     Python 3.8 support was removed.
 
---- 3.0.0 "Python 3.9, PostgreSQL <14.0, MySQL <8.0.11"
-    - Python 3.9 support was removed.
-    - Support for versions of PostgreSQL older than 14.0 was removed.
-    - Support for versions of MySQL older than 8.0.11 was removed.
+--- 2.4.20 "Python 3.9"
+    Python 3.9 support was removed.
 
 +++ 3.0.0 "Python 3.13"
     Python 3.13 support was added.
+
+--- 3.1.0 "PostgreSQL <14.0, MySQL <8.0.11"
+    - Support for versions of PostgreSQL older than 14.0 was removed.
+    - Support for versions of MySQL older than 8.0.11 was removed.
 
 ## Notices
 

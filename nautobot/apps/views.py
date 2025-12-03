@@ -30,6 +30,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
+    UIComponentsMixin,
 )
 from nautobot.core.views.paginator import EnhancedPage, EnhancedPaginator, get_paginate_count
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -42,7 +43,12 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.extras.views import check_and_call_git_repository_function, ObjectDynamicGroupsView, ObjectNotesView
+from nautobot.extras.views import (
+    check_and_call_git_repository_function,
+    ObjectApprovalWorkflowView,
+    ObjectDynamicGroupsView,
+    ObjectNotesView,
+)
 
 __all__ = (
     "AdminRequiredMixin",
@@ -61,6 +67,7 @@ __all__ = (
     "NautobotHTMLRenderer",
     "NautobotUIViewSet",
     "NautobotViewSetMixin",
+    "ObjectApprovalWorkflowView",
     "ObjectBulkCreateViewMixin",  # 3.0 TODO: remove this
     "ObjectBulkDestroyViewMixin",
     "ObjectBulkUpdateViewMixin",
@@ -78,6 +85,7 @@ __all__ = (
     "ObjectNotesViewMixin",
     "ObjectPermissionRequiredMixin",
     "ObjectView",
+    "UIComponentsMixin",
     "check_and_call_git_repository_function",
     "check_filter_for_display",
     "csv_format",

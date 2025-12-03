@@ -90,6 +90,20 @@ def extract_page_body(content):
         return content
 
 
+def extract_page_title(content):
+    """
+    Given raw HTML content from an HTTP response, extract the page title section only.
+
+    <div id="page-title" ...>...</header>
+    """
+    try:
+        return re.findall(
+            r"<div class=\"col-4\" id=\"page-title\">(.*?)(?=<\/header)", content, flags=(re.MULTILINE | re.DOTALL)
+        )[0]
+    except IndexError:
+        return content
+
+
 @contextmanager
 def disable_warnings(logger_name):
     """
@@ -127,15 +141,15 @@ def generate_random_device_asset_tag_of_specified_size(size):
 def get_expected_menu_item_name(view_model) -> str:
     """Return the expected menu item name for a given model."""
     name_map = {
-        "VM Interfaces": "Interfaces",
-        "Object Changes": "Change Log",
+        "Approval Workflow Definitions": "Workflow Definitions",
+        "Approval Workflow Stages": "Approval Dashboard",
         "Controller Managed Device Groups": "Device Groups",
+        "Object Changes": "Change Log",
         "Min Max Validation Rules": "Min/Max Rules",
         "Regular Expression Validation Rules": "Regex Rules",
         "Required Validation Rules": "Required Rules",
         "Unique Validation Rules": "Unique Rules",
-        "Approval Workflow Definitions": "Workflow Definitions",
-        "Approval Workflow Stages": "Approval Dashboard",
+        "VM Interfaces": "Interfaces",
     }
 
     expected = bettertitle(view_model._meta.verbose_name_plural)

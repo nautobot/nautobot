@@ -1,8 +1,0 @@
-{% extends 'generic/object_retrieve.html' %}
-{% load helpers %}
-
-{% block extra_breadcrumbs %}
-    {% for ancestor in object.ancestors %}
-        <li class="breadcrumb-item">{{ ancestor|hyperlinked_object:"name" }}</li>
-    {% endfor %}
-{% endblock %}

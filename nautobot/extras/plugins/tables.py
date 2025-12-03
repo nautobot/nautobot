@@ -20,21 +20,21 @@ class InstalledAppsTable(tables.Table):
             {% if record.home_url %}
                 <a href="{% url record.home_url %}" class="btn btn-primary btn-xs" title="Home">
             {% else %}
-                <a href="" class="btn btn-primary btn-xs disabled" title="No home link provided">
+                <a class="btn btn-primary btn-xs disabled" aria-disabled="true" title="No home link provided">
             {% endif %}
                 <i class="mdi mdi-home"></i>
             </a>
             {% if record.config_url %}
                 <a href="{% url record.config_url %}" class="btn btn-warning btn-xs" title="Configure">
             {% else %}
-                <a href="" class="btn btn-warning btn-xs disabled" title="No configuration link provided">
+                <a class="btn btn-warning btn-xs disabled" aria-disabled="true" title="No configuration link provided">
             {% endif %}
                 <i class="mdi mdi-cog"></i>
             </a>
             {% if record.docs_url %}
                 <a href="{% url record.docs_url %}" class="btn btn-info btn-xs" title="Docs">
             {% else %}
-                <a href="" class="btn btn-info btn-xs disabled" title="No docs provided">
+                <a class="btn btn-info btn-xs disabled" aria-disabled="true" title="No docs provided">
             {% endif %}
                 <i class="mdi mdi-book-open-page-variant"></i>
             </a>
@@ -45,7 +45,7 @@ class InstalledAppsTable(tables.Table):
 
     class Meta:
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
         }
         default_columns = ("name", "headline", "version", "actions")
 

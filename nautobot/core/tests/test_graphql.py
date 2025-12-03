@@ -38,6 +38,7 @@ from nautobot.core.graphql.schema import (
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import create_test_user, NautobotTestClient, TestCase
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -403,8 +404,12 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def tearDown(self):
         """Ensure that relationship caches are cleared to avoid leakage into other tests."""
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source', branch_aware=True)}(*)"
+            )
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination', branch_aware=True)}(*)"
+            )
 
     def test_extend_relationship_default_prefix(self):
         """Verify that relationships are correctly added to the schema."""
@@ -1453,9 +1458,7 @@ query {
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
 
-    @skip(
-        "Works in isolation, fails as part of the overall test suite due to issue #446, also something is broken with content types"
-    )
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_relationship_associations(self):
         """Test queries involving relationship associations."""
@@ -2260,6 +2263,19 @@ query {
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
+    def test_query_pagination_with_restricted_permissions(self):
+        # Test for https://github.com/nautobot/nautobot/issues/8155
+        self.user.is_superuser = False
+        self.user.save()
+        try:
+            self.add_permissions("dcim.view_manufacturer")
+            result = self.execute_query("query { manufacturers (limit: 1) { name } }")
+            self.assertIsNone(result.errors)
+            self.assertEqual(len(result.data.get("manufacturers", [])), 1)
+        finally:
+            self.user.is_superuser = True
+            self.user.save()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):
         """Test querying power feeds for their cable peers"""
@@ -2446,6 +2462,23 @@ query {
         self.assertIsNone(result.errors)
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_optimizer_reverse_lookup(self):
+        """
+        Test query optimization in the case of a query mixing reverse and forward nested lookups.
+
+        See https://github.com/nautobot/nautobot/issues/7651.
+        """
+        query = """query { tenant_groups { name tenants { name } } }"""
+        # Prewarm caches of Relationships and such to reduce variation in the number of queries below
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Run it again and assert that the optimized query is run.
+        # Before the fix for #7651 this would result in N+1 queries where N is the number of tenant-groups!
+        with self.assertNumQueries(2):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
 
 
 class GraphQLTypeTestCase(UnitTestTestCase):

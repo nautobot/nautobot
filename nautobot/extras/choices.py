@@ -1,7 +1,6 @@
 from celery import states
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
 #
 # Approval Workflows
@@ -19,16 +18,22 @@ class ApprovalWorkflowStateChoices(ChoiceSet):
     PENDING = "Pending"
     APPROVED = "Approved"
     DENIED = "Denied"
+    CANCELED = "Canceled"
+    COMMENT = "Comment"
 
     CHOICES = (
         (PENDING, "Pending"),
         (APPROVED, "Approved"),
         (DENIED, "Denied"),
+        (CANCELED, "Canceled"),
+        (COMMENT, "Comment"),
     )
     CSS_CLASSES = {
         PENDING: "info",
         APPROVED: "success",
         DENIED: "danger",
+        CANCELED: "warning",
+        COMMENT: "info",
     }
 
 
@@ -156,7 +161,7 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 class ButtonClassChoices(ChoiceSet):
-    CLASS_DEFAULT = "default"
+    CLASS_DEFAULT = "default"  # maps to "secondary" in v3 UI, but kept for backwards compatibility
     CLASS_PRIMARY = "primary"
     CLASS_SUCCESS = "success"
     CLASS_INFO = "info"
@@ -168,21 +173,11 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DEFAULT, "Default"),
         (CLASS_PRIMARY, "Primary (blue)"),
         (CLASS_SUCCESS, "Success (green)"),
-        (CLASS_INFO, "Info (aqua)"),
+        (CLASS_INFO, "Info (blue)"),
         (CLASS_WARNING, "Warning (orange)"),
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),
     )
-
-
-#
-# CustomLinks
-#
-
-
-@class_deprecated_in_favor_of(ButtonClassChoices)
-class CustomLinkButtonClassChoices(ButtonClassChoices):
-    pass
 
 
 #
@@ -512,22 +507,30 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
+    TYPE_AUTHKEY = "authentication-key"
+    TYPE_AUTHPROTOCOL = "authentication-protocol"
     TYPE_KEY = "key"
+    TYPE_NOTES = "notes"
     TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_PRIVALGORITHM = "private-algorithm"
+    TYPE_PRIVKEY = "private-key"
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
-    TYPE_USERNAME = "username"
     TYPE_URL = "url"
-    TYPE_NOTES = "notes"
+    TYPE_USERNAME = "username"
 
     CHOICES = (
+        (TYPE_AUTHKEY, "Authentication Key"),
+        (TYPE_AUTHPROTOCOL, "Authentication Protocol"),
         (TYPE_KEY, "Key"),
+        (TYPE_NOTES, "Notes"),
         (TYPE_PASSWORD, "Password"),
+        (TYPE_PRIVALGORITHM, "Private Algorithm"),
+        (TYPE_PRIVKEY, "Private Key"),
         (TYPE_SECRET, "Secret"),
         (TYPE_TOKEN, "Token"),
-        (TYPE_USERNAME, "Username"),
         (TYPE_URL, "URL"),
-        (TYPE_NOTES, "Notes"),
+        (TYPE_USERNAME, "Username"),
     )
 
 
