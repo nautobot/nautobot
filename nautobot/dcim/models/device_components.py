@@ -712,6 +712,12 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
     # todoindex:
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    port_type = models.CharField(
+        max_length=50,
+        choices=PortTypeChoices,
+        blank=True,
+        help_text="Physical connector type",
+    )
     # todoindex:
     mgmt_only = models.BooleanField(
         default=False,
@@ -803,6 +809,10 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                     "Disconnect the interface or choose a suitable type."
                 }
             )
+
+        # Virtual interfaces cannot have a port type
+        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and self.port_type:
+            raise ValidationError({"port_type": "Virtual and wireless interfaces cannot have a port type."})
 
         # Parent validation
         if self.parent_interface is not None:
