@@ -1843,8 +1843,8 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         elif cf.type == CustomFieldTypeChoices.TYPE_JSON and value is not None:
             return format_html(
                 """<p>
-                    <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
-                            data-target="#cf_{field_key}" aria-expanded="false" aria-controls="cf_{field_key}">
+                    <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#cf_{field_key}" aria-expanded="false" aria-controls="cf_{field_key}">
                         Show/Hide
                     </button>
                 </p>
