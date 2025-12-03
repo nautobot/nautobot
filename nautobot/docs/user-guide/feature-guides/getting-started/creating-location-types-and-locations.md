@@ -41,7 +41,9 @@ To create a Location Type:
     * From this page you can view any existing Location Types
 3. Click on the blue `+ Add` button
 
-![Location Type page](../images/getting-started-nautobot-ui/7-location-type-page.png)
+![Location Type page](../images/getting-started-nautobot-ui/7-location-type-page-light.png#only-light){ .on-glb }
+![Location Type page](../images/getting-started-nautobot-ui/7-location-type-page-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/location-types/`"
 
 The screenshots below show the creation of each Location Type.
 
@@ -69,7 +71,9 @@ Site:
 2. Populate the `Name` to be `Site`
 3. Click on the `Create` button
 
-![Create location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
+![Create location type](../images/getting-started-nautobot-ui/1-create-location-type-light.png#only-light){ .on-glb }
+![Create location type](../images/getting-started-nautobot-ui/1-create-location-type-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/location-types/add/`"
 
 To create a Location of a certain Location Type:
 
@@ -78,7 +82,9 @@ To create a Location of a certain Location Type:
     * From this page you can view any existing Locations
 3. Click on the blue `+ Add` button
 
-![Location page](../images/getting-started-nautobot-ui/8-location-page.png)
+![Location page](../images/getting-started-nautobot-ui/8-location-page-light.png#only-light){ .on-glb }
+![Location page](../images/getting-started-nautobot-ui/8-location-page-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/locations/`"
 
 The screenshots below show the creation of each Location.
 
@@ -111,4 +117,6 @@ Vancouver 1:
 3. Populate the `Name` to be `Vancouver 1`
 4. Click on the `Create` button
 
-![Create location](../images/getting-started-nautobot-ui/6-create-location.png)
+![Create location](../images/getting-started-nautobot-ui/6-create-location-light.png#only-light){ .on-glb }
+![Create location](../images/getting-started-nautobot-ui/6-create-location-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/locations/add/`"
