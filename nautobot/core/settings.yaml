@@ -413,6 +413,7 @@ properties:
       "`CELERY_WORKER_HEARTBEAT_FILE`": "#celery_worker_heartbeat_file"
       "`CELERY_WORKER_READINESS_FILE`": "#celery_worker_readiness_file"
     type: "boolean"
+    version_added: "2.4.24"
   CELERY_REDIS_BACKEND_USE_SSL:
     default: false
     description: "Optional configuration for Celery to use custom SSL certificates to connect to Redis."
@@ -462,6 +463,7 @@ properties:
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
     type: "string"
+    version_added: "2.4.24"
   CELERY_WORKER_PREFETCH_MULTIPLIER:
     default: 4
     description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
@@ -497,6 +499,7 @@ properties:
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
     type: "string"
+    version_added: "2.4.24"
   CELERY_WORKER_REDIRECT_STDOUTS:
     default: true
     description: "If enabled stdout and stderr of running jobs will be redirected to the task logger."
