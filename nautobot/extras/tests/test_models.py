@@ -3636,5 +3636,5 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
         conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
         self.assertEqual(
             conflicts["type_create"],
-            [f"A webhook already exists for create on dcim | device to URL {self.url}"],
+            [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
         )

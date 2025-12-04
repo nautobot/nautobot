@@ -1264,7 +1264,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1290,7 +1290,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
