@@ -1876,7 +1876,6 @@ properties:
           This setting replaces the formerly supported Nautobot-specific settings of `JOB_FILE_IO_STORAGE`,
           `STORAGE_BACKEND` and `STORAGE_CONFIG`, as well as the general Django settings of `DEFAULT_FILE_STORAGE`
           and `STATICFILES_STORAGE`.
-    environment_variable: "NAUTOBOT_JOB_FILE_IO_STORAGE"
     see_also:
       "Django documentation for `STORAGES`": "https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES"
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
