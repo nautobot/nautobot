@@ -281,7 +281,7 @@ STORAGES = {
     # The storage backend to use for Job input files and Job output files
     # Note: default is for backwards compatibility and it's recommended to change if possible for your deployment.
     "nautobotjobfiles": {
-        "BACKEND": os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage"),
+        "BACKEND": "db_file_storage.storage.DatabaseFileStorage",
     },
 }
 
