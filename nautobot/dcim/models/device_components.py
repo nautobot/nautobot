@@ -800,7 +800,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
 
         # Virtual interfaces cannot be connected
-        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and (
+        if self.type in NONCONNECTABLE_IFACE_TYPES and (
             self.cable or getattr(self, "circuit_termination", False)
         ):
             raise ValidationError(
@@ -811,7 +811,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
             )
 
         # Virtual interfaces cannot have a port type
-        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and self.port_type:
+        if self.type in NONCONNECTABLE_IFACE_TYPES and self.port_type:
             raise ValidationError({"port_type": "Virtual and wireless interfaces cannot have a port type."})
 
         # Parent validation
