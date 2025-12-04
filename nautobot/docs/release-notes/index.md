@@ -1,5 +1,9 @@
 # Release Notes
 
+## [3.1 - April 2026](version-3.1.md)
+
+TODO
+
 ## [3.0 - November 2025](version-3.0.md)
 
 - Major UI refresh: Bootstrap 5 migration, new navigation, and global search
