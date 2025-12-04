@@ -689,11 +689,6 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
     modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
     model = InterfaceTemplate
 
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-        cls.device_type = DeviceType.objects.filter(interface_templates__isnull=False).first()
-
     def test_interface_template_sets_interface_status(self):
         """
         When a device is created with a device type associated with the template,
@@ -832,10 +827,11 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
 
     def test_error_raised_when_adding_port_type_to_virtual_or_wireless_interface_template(self):
         """Test that virtual and wireless interfaces cannot have a port type"""
+        device_type = DeviceType.objects.first()
         interface_template = InterfaceTemplate.objects.create(
             name="Test_Template_1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            device_type=self.device_type,
+            device_type=device_type,
         )
 
         interface_template.port_type = PortTypeChoices.TYPE_8P8C
