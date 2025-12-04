@@ -190,10 +190,8 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **Current Stage** - Stage awaiting action.
     - **Actions Needed** - Remaining approvals required.
     - **State** - Current workflow state.
-3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/ss_approve-icon_light.png#only-light) button.
-3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/ss_approve-icon_dark.png#only-dark) button.
-4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/ss_deny-icon_light.png#only-light) button.
-4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/ss_deny-icon_dark.png#only-dark) button.
+3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/ss_approve-icon_light.png#only-light)![Approve button](../../media/development/approval-workflows/ss_approve-icon_dark.png#only-dark) button.
+4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/ss_deny-icon_light.png#only-light)![Deny button](../../media/development/approval-workflows/ss_deny-icon_dark.png#only-dark) button.
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
     <div class="grid cards example-images" markdown>
 
