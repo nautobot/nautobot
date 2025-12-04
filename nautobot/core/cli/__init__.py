@@ -8,7 +8,6 @@ import os
 import sys
 
 import django
-from django.core.exceptions import ImproperlyConfigured
 from django.core.management import CommandError, CommandParser, execute_from_command_line
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
@@ -43,7 +42,6 @@ def _preprocess_settings(settings, config_path):
     - Create Nautobot storage directories if they don't already exist
     - Change database backends to django-prometheus if appropriate
     - Set up 'job_logs' database mirror
-    - Handle our custom `STORAGE_BACKEND` setting.
     - Load plugins based on settings.PLUGINS (potentially affecting INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
     - Load event brokers based on settings.EVENT_BROKERS
     """
@@ -90,36 +88,6 @@ def _preprocess_settings(settings, config_path):
     settings.DATABASES["job_logs"] = settings.DATABASES["default"].copy()
     # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
     settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
-
-    #
-    # Media storage
-    #
-
-    if hasattr(settings, "JOB_FILE_IO_STORAGE"):
-        settings.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings.JOB_FILE_IO_STORAGE
-
-    if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND is not None:
-        settings.STORAGES["default"]["BACKEND"] = settings.STORAGE_BACKEND
-
-        # django-storages
-        if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND.startswith("storages."):
-            try:
-                import storages.utils
-            except ModuleNotFoundError as e:
-                if getattr(e, "name") == "storages":
-                    raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {settings.STORAGE_BACKEND} but django-storages is not present. It "
-                        f"can be installed by running 'pip install django-storages'."
-                    )
-                raise e
-
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
-            def _setting(name, default=None):
-                if name in settings.STORAGE_CONFIG:
-                    return settings.STORAGE_CONFIG[name]
-                return getattr(settings, name, default)
-
-            storages.utils.setting = _setting
 
     #
     # Plugins
