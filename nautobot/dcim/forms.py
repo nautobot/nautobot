@@ -5153,7 +5153,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         ]
 
 
-class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     """Filter form to filter searches."""
 
     model = InterfaceRedundancyGroup
@@ -5183,7 +5183,6 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     class Meta:
         """Meta attributes."""
 
-        model = InterfaceRedundancyGroup
         # Define the fields above for ordering and widget purposes
         fields = [
             "q",
