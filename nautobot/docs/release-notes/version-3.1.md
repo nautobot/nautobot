@@ -8,11 +8,30 @@ This document describes all new features and changes in Nautobot 3.1.
 
 TODO
 
+#### Migrate from legacy PostgreSQL versions as needed
+
+Nautobot 3.1, as a consequence of the [Django 5.2 dependency upgrade](#django-52), drops support for PostgreSQL versions 12.x and 13.x and now requires a minimum of PostgreSQL 14.0. If you have an existing Nautobot deployment on these no-longer-supported versions of PostgreSQL, you will need to upgrade and migrate your database.
+
+TODO: migration docs/references
+
+### App Authors/Maintainers
+
+Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django major version updates, included a small number of breaking changes to Django's Python APIs. For a comprehensive guide, refer to the "Backwards incompatible changes" and "Features removed" sections of Django's release-notes for versions [5.0](https://docs.djangoproject.com/en/5.2/releases/5.0/#backwards-incompatible-changes-in-5-0), [5.1](https://docs.djangoproject.com/en/5.2/releases/5.1/#backwards-incompatible-changes-in-5-1), and [5.2](https://docs.djangoproject.com/en/5.2/releases/5.2/#backwards-incompatible-changes-in-5-2). The most likely impacts we have identified to Nautobot Apps are the following:
+
+- Support for `Model.Meta.index_together` (previously deprecated in Django 4.2) is removed; App models with custom indexes using `index_together` will need to migrate to use `Model.Meta.indexes` instead and create a database migration accordingly.
+- The test method `assertQuerysetEqual()` (previously deprecated in Django 4.2) is removed; App tests using this method will need to migrate to use `assertQuerySetEqual()` (note capitalization) instead.
+
 ## Release Overview
 
 ### Breaking Changes
 
-TODO
+#### Dropped Support for PostgreSQL Versions Less Than 14.0
+
+As a consequence of the [dependency update to Django 5.2](#django-52), support for PostgreSQL versions before 14.0 has been removed from Nautobot.
+
+#### Dropped Support for MySQL Versions Less Than 8.0.11
+
+As a consequence of the [dependency update to Django 5.2](#django-52), support for MySQL versions before 8.0.11 has been removed from Nautobot.
 
 ### Added
 
@@ -20,11 +39,21 @@ TODO
 
 ### Changed
 
+#### File Storage Configuration
+
 TODO
+
+### Deprecated
+
+#### `assertQuerysetEqualAndNotEmpty()` Test Method
+
+The Nautobot test method `assertQuerysetEqualAndNotEmpty()` has been deprecated in favor of the new `assertQuerySetEqualAndNotEmpty()` method (note change in capitalization) to align with Django's `assertQuerySetEqual()` test method. Support for `assertQuerysetEqualAndNotEmpty()` may be removed in a future Nautobot release.
 
 ### Dependencies
 
-TODO
+#### Django 5.2
+
+Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. Nautobot has been updated accordingly, but Apps and third-party dependencies may need to update to newer versions for compatibility with Django 5.2.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
