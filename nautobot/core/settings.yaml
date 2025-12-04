@@ -1826,7 +1826,7 @@ properties:
     see_also:
       "Django documentation for `STATIC_ROOT`": "https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT"
   STORAGES:
-    default: 
+    default:
       default:
         BACKEND: "django.core.files.storage.FileSystemStorage"
       staticfiles:
