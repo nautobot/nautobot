@@ -457,6 +457,7 @@ class PowerOutletTemplateSerializer(ModularDeviceComponentTemplateSerializerMixi
 
 class InterfaceTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=InterfaceTypeChoices)
+    port_type = ChoiceField(choices=PortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = InterfaceTemplate
@@ -691,6 +692,7 @@ class InterfaceSerializer(
     InterfaceCommonSerializer,
 ):
     type = ChoiceField(choices=InterfaceTypeChoices)
+    port_type = ChoiceField(choices=PortTypeChoices, allow_blank=True, required=False)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True, source="_ip_address_count")

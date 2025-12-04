@@ -513,6 +513,7 @@ def common_test_data(cls):
         label="interface2",
         mgmt_only=False,
         type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+        port_type=PortTypeChoices.TYPE_8P8C,
     )
     InterfaceTemplate.objects.create(
         name="Test Interface 3",
@@ -520,7 +521,8 @@ def common_test_data(cls):
         device_type=device_types[2],
         label="interface3",
         mgmt_only=False,
-        type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+        port_type=PortTypeChoices.TYPE_LC,
     )
 
     rear_ports = (
@@ -1646,6 +1648,7 @@ class InterfaceTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCas
     generic_filter_tests = [
         *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("type",),
+        ("port_type",),
     ]
 
     def test_mgmt_only(self):
@@ -2267,6 +2270,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("parent_interface", "parent_interface__name"),
         ("speed",),
         ("duplex",),
+        ("port_type",),
         ("role", "role__id"),
         ("role", "role__name"),
         ("status", "status__id"),
@@ -2304,6 +2308,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
                 name="Parent Interface 1",
                 role=interface_roles[0],
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                port_type=PortTypeChoices.TYPE_OTHER,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=True,
                 mgmt_only=True,
@@ -2314,6 +2319,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
                 device=devices[2],
                 name="Parent Interface 2",
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                port_type=PortTypeChoices.TYPE_OTHER,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=True,
                 mgmt_only=True,
@@ -2324,6 +2330,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
                 name="Parent Interface 3",
                 role=interface_roles[1],
                 type=InterfaceTypeChoices.TYPE_OTHER,
+                port_type=PortTypeChoices.TYPE_OTHER,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=False,
                 mgmt_only=True,

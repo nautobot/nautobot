@@ -31,7 +31,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -920,8 +920,18 @@ class InterfaceTemplateFactory(ModularDeviceComponentTemplateFactory):
     class Meta:
         model = InterfaceTemplate
 
+    class Params:
+        has_port_type = NautobotBoolIterator()
+
     type = factory.Faker("random_element", elements=InterfaceTypeChoices.values())
     name = factory.Sequence(lambda n: f"Interface {n}")
+
+    @factory.lazy_attribute
+    def port_type(self):
+        if self.type in NONCONNECTABLE_IFACE_TYPES or not self.has_port_type:
+            return ""
+
+        return factory.random.randgen.choice(PortTypeChoices.values())
 
 
 class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):

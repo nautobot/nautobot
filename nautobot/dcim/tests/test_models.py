@@ -657,6 +657,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
             device_type=device_type,
             name="Test_Template_1",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            port_type=PortTypeChoices.TYPE_8P8C,
             mgmt_only=True,
         )
         interface_template_2 = InterfaceTemplate.objects.create(
@@ -823,6 +824,22 @@ class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Tes
         iface = device.interfaces.get(name="EthX")
         self.assertEqual(iface.speed, InterfaceSpeedChoices.SPEED_1G)
         self.assertEqual(iface.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    def test_error_raised_when_adding_port_type_to_virtual_or_wireless_interface_template(self):
+        """Test that virtual and wireless interfaces cannot have a port type"""
+        device_type = DeviceType.objects.first()
+        interface_template = InterfaceTemplate.objects.create(
+            name="Test_Template_1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device_type=device_type,
+        )
+
+        interface_template.port_type = PortTypeChoices.TYPE_8P8C
+        with self.assertRaises(ValidationError) as err:
+            interface_template.validated_save()
+        self.assertEqual(
+            err.exception.message_dict["port_type"][0], "Virtual and wireless interfaces cannot have a port type."
+        )
 
 
 class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
@@ -3272,6 +3289,22 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         with self.assertRaises(ValidationError) as cm:
             iface.full_clean()
         self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", str(cm.exception))
+
+    def test_error_raised_when_adding_port_type_to_virtual_or_wireless_interface(self):
+        """Test that an error is raised when adding a port type to a virtual interface"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        interface.port_type = PortTypeChoices.TYPE_8P8C
+        with self.assertRaises(ValidationError) as err:
+            interface.validated_save()
+        self.assertEqual(
+            err.exception.message_dict["port_type"][0], "Virtual and wireless interfaces cannot have a port type."
+        )
 
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
