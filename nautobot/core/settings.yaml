@@ -1017,51 +1017,6 @@ properties:
       "`STORAGES`": "#storages"
     type: "integer"
     version_added: "2.1.0"
-  JOB_FILE_IO_STORAGE:
-    description: >-
-      (Deprecated) Backend storage engine for handling files provided as input to Jobs and files generated as output
-      by Jobs.
-    details: |-
-      !!! warning
-          This setting is deprecated and will be removed in Nautobot v3.1.
-          In its place, you should set [`STORAGES["nautobotjobfiles"]["BACKEND"]`](#storages).
-
-      !!! warning
-          For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this
-          currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database;
-          however this is not typically the best option (see below) and may change in a future major release.
-
-      If your Nautobot server instance(s) and your Celery worker instance(s) share a common
-      [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of
-      Nautobot) then we recommend changing this to `"django.core.files.storage.FileSystemStorage"` to store
-      Job files on the filesystem (which will place them into a `files/` subdirectory under
-      [`MEDIA_ROOT`](#media_root)) instead of in the database.
-
-      If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem,
-      we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options
-      such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
-
-      !!! tip
-          For an example of using `django-storages` with AWS S3 buckets, visit the
-          [django-storages with S3](../guides/s3-django-storage.md) user-guide.
-
-      If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then
-      it's permissible to leave this at its default, but know that storing files in the database is provided here
-      as a "least-worst" option only.
-
-      !!! warning
-          It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as
-          there should be no pre-existing Job output files, although any existing scheduled Jobs that have
-          file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs
-          that output to a file, changing storage backends will of course break any existing links to
-          Job output files in the previous storage backend.
-          Migrating Job stored files from one backend to another is out of scope for this document.
-    environment_variable: "NAUTOBOT_JOB_FILE_IO_STORAGE"
-    see_also:
-      "`STORAGES`": "#storages"
-      "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
-    type: "string"
-    version_added: "2.1.0"
   JOBS_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/jobs"
@@ -1870,40 +1825,6 @@ properties:
       will be staged by the `nautobot-server collectstatic` command.
     see_also:
       "Django documentation for `STATIC_ROOT`": "https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT"
-  STORAGE_BACKEND:
-    description: "(Deprecated) Backend storage engine for handling uploaded files (e.g. image attachments)."
-    details: |-
-      !!! warning
-          This setting is deprecated and will be removed in Nautobot v3.1.
-          In its place, you should set [`STORAGES["default"]["BACKEND"]`](#storages).
-
-      Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/)
-      package, which provides backends for several popular file storage services.
-      If not configured, local filesystem storage will be used.
-
-      !!! tip
-          For an example of using `django-storages` with AWS S3 buckets, visit the
-          [django-storages with S3](../guides/s3-django-storage.md) user-guide.
-
-      The configuration parameters for the specified storage backend are defined under the
-      [`STORAGE_CONFIG`](#storage_config) setting.
-    see_also:
-      "`STORAGES`": "#storages"
-    type: "string"
-  STORAGE_CONFIG:
-    description: "(Deprecated) Dictionary of config parameters for the storage backend configured as STORAGE_BACKEND."
-    details: |-
-      !!! warning
-          This setting is deprecated and will be removed in Nautobot v3.1.
-          In its place, you should set [`STORAGES["default"]["OPTIONS"]`](#storages).
-
-      The specific parameters to be used here are specific to each backend.
-
-      If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ignored.
-    see_also:
-      "`STORAGES`": "#storages"
-      "`django-storages` documentation": "https://django-storages.readthedocs.io/en/stable/"
-    type: "object"
   STORAGES:
     default:
       default:
@@ -1912,15 +1833,11 @@ properties:
         BACKEND: "django.contrib.staticfiles.storage.StaticFilesStorage"
       nautobotjobfiles:
         BACKEND: "db_file_storage.storage.DatabaseFileStorage"
+    description: "The configuration of backend storage engines for handling various types of created files."
     details: |-
       Dictionary defining configuration of storage backends for "default" files (such as user-uploaded image file
       attachments to Devices and Locations), "static" files such as CSS and Javascript assets, and "nautobotjob" files
       (file inputs to and outputs from Nautobot Jobs).
-
-      !!! info
-          This setting replaces and unifies the previous settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`,
-          `STATICFILES_STORAGE`, `STORAGE_BACKEND` and `STORAGE_CONFIG`, which are all now deprecated and will be
-          removed in Nautobot v3.1.
 
       !!! tip
           Nautobot can integrate with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/)
@@ -1954,8 +1871,14 @@ properties:
           Changing this setting after Nautobot has created any of the above file types will of course require
           migrating any existing files to the new storage backend or location. Steps for doing so are out of scope
           for this document.
+
+      +/- 3.1.0
+          This setting replaces the formerly supported Nautobot-specific settings of `JOB_FILE_IO_STORAGE`,
+          `STORAGE_BACKEND` and `STORAGE_CONFIG`, as well as the general Django settings of `DEFAULT_FILE_STORAGE`
+          and `STATICFILES_STORAGE`.
+    environment_variable: "NAUTOBOT_JOB_FILE_IO_STORAGE"
     see_also:
-      "Django documentation for `STORAGES`": "https://docs.djangoproject.com/en/4.2/ref/settings/#std-setting-STORAGES"
+      "Django documentation for `STORAGES`": "https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES"
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
       "`django-storages` documentation": "https://django-storages.readthedocs.io/en/stable/"
     type: "object"

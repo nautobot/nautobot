@@ -129,10 +129,6 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
-# (Deprecated) the storage backend to use for Job input files and Job output files
-if "NAUTOBOT_JOB_FILE_IO_STORAGE" in os.environ and os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"] != "":
-    JOB_FILE_IO_STORAGE = os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"]
-
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 

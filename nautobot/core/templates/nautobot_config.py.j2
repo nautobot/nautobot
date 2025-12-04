@@ -410,12 +410,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
 
-# (Deprecated) Storage backend to use for Job input files and Job output files.
-#
-# Note: the default is for backwards compatibility and it is recommended to change it if possible for your deployment.
-#
-# JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
-
 # Maximum size in bytes of any single file created by Job.create_file().
 #
 # JOB_CREATE_FILE_MAX_SIZE = 10 << 20
@@ -569,6 +563,7 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
 # Storage of various file types
+#
 # STORAGES = {
 #     # The default storage backend, for things like user-uploaded image attachments, etc.
 #     "default": {
