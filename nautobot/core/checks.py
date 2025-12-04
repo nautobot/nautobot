@@ -39,6 +39,12 @@ E006 = Error(
     obj=settings,
 )
 
+E009 = Error(
+    "The key 'nautobotjobfiles' is not present in the settings.STORAGES dictionary. Configuration under this key is required for Nautobot Jobs to work properly.",
+    id="nautobot.core.E007",
+    obj=settings,
+)
+
 W006 = Warning(
     "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
     hint="This setting has been superseded by DEVICE_UNIQUENESS (see Device Constraints).",
@@ -155,6 +161,13 @@ def check_data_validation_engine_installed(app_configs, **kwargs):
     app_name = "nautobot_data_validation_engine"
     if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
         return [E006]
+    return []
+
+
+@register(Tags.compatibility)
+def check_storages_includes_nautobotjobfiles(app_configs, **kwargs):
+    if "nautobotjobfiles" not in settings.STORAGES:
+        return [E009]
     return []
 
 

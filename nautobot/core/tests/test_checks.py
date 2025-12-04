@@ -37,6 +37,16 @@ class CheckCoreSettingsTest(TestCase):
         self.assertEqual(checks.check_maintenance_mode(None), [checks.E005])
 
     @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        },
+    )
+    def test_check_nautobotjobfiles_key_in_storages(self):
+        """Error if STORAGES dict doesn't include 'nautobotjobfiles' as a key."""
+        self.assertEqual(checks.check_storages_includes_nautobotjobfiles(None), [checks.E009])
+
+    @override_settings(
         DEVICE_NAME_AS_NATURAL_KEY=True,
     )
     def test_check_deprecated_device_name_as_natural_key(self):
