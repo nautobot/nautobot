@@ -137,8 +137,8 @@ class BulkEditForm(forms.Form):
         self.nullable_fields = []
 
         # Copy any nullable fields defined in Meta
-        if hasattr(self.Meta, "nullable_fields"):
-            self.nullable_fields = self.Meta.nullable_fields
+        if hasattr(self.Meta, "nullable_fields"):  # pylint: disable=no-member
+            self.nullable_fields = self.Meta.nullable_fields  # pylint: disable=no-member
 
         if edit_all:
             self.fields["pk"].required = False
