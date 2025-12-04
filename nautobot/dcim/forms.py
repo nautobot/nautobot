@@ -225,7 +225,7 @@ class InterfaceCommonForm(forms.Form):
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
         if mode != InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
-            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
+            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {mode}"})
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
@@ -1905,18 +1905,21 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         choices = self.Meta.model._meta.get_field("type").choices
 
         try:
-            if data not in choices.values():
+            # As of Django 5.0 and later, choices is normalized to a list of tuples rather than a dict,
+            # for example: [('Serial', [('de-9', 'DE-9'), ('db-25', 'DB-25')]), ('USB', [('usb-a', 'USB Type A')])]
+            if data not in [inner[0] for outer in choices for inner in outer[1]]:
                 logger.debug(
                     'For %s "%s", the "type" value "%s" is unrecognized and will be replaced by "%s"',
                     self.Meta.model.__name__,
                     self.cleaned_data["name"],
                     data,
-                    choices.TYPE_OTHER,
+                    # Assume ('Other', [('other', 'Other')]) is the last entry in choices
+                    choices[-1][1][-1][0],
                 )
-                data = choices.TYPE_OTHER
+                data = choices[-1][1][-1][0]
         except AttributeError:
-            logger.warning(
-                "Either %s.type.choices is not a ChoiceSet, or %s.type.choices.TYPE_OTHER is not defined",
+            logger.exception(
+                "Either %s.type.choices is incorrectly defined, or %s.type.choices.TYPE_OTHER is incorrectly defined",
                 self.Meta.model.__name__,
                 self.Meta.model.__name__,
             )
@@ -5150,7 +5153,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         ]
 
 
-class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     """Filter form to filter searches."""
 
     model = InterfaceRedundancyGroup
@@ -5180,7 +5183,6 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     class Meta:
         """Meta attributes."""
 
-        model = InterfaceRedundancyGroup
         # Define the fields above for ordering and widget purposes
         fields = [
             "q",

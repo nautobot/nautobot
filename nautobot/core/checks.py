@@ -39,9 +39,9 @@ E006 = Error(
     obj=settings,
 )
 
-W005 = Warning(
-    "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="nautobot.core.W005",
+E009 = Error(
+    "The key 'nautobotjobfiles' is not present in the settings.STORAGES dictionary. Configuration under this key is required for Nautobot Jobs to work properly.",
+    id="nautobot.core.E007",
     obj=settings,
 )
 
@@ -86,13 +86,6 @@ def check_release_check_url(app_configs, **kwargs):
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:
             return [E004]
-    return []
-
-
-@register(Tags.compatibility)
-def check_storage_config_and_backend(app_configs, **kwargs):
-    if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
-        return [W005]
     return []
 
 
@@ -168,6 +161,13 @@ def check_data_validation_engine_installed(app_configs, **kwargs):
     app_name = "nautobot_data_validation_engine"
     if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
         return [E006]
+    return []
+
+
+@register(Tags.compatibility)
+def check_storages_includes_nautobotjobfiles(app_configs, **kwargs):
+    if "nautobotjobfiles" not in settings.STORAGES:
+        return [E009]
     return []
 
 

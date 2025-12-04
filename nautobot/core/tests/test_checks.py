@@ -29,20 +29,22 @@ class CheckCoreSettingsTest(TestCase):
         self.assertEqual(checks.check_release_check_url(None), [checks.E004])
 
     @override_settings(
-        STORAGE_BACKEND=None,
-        STORAGE_CONFIG={"test_key": "test_value"},
-    )
-    def test_check_storage_config_and_backend(self):
-        """Warn if STORAGE_CONFIG and STORAGE_BACKEND aren't mutually set."""
-        self.assertEqual(checks.check_storage_config_and_backend(None), [checks.W005])
-
-    @override_settings(
         MAINTENANCE_MODE=True,
         SESSION_ENGINE="django.contrib.sessions.backends.db",
     )
     def test_check_maintenance_mode(self):
         """Error if MAINTENANCE_MODE is set and yet SESSION_ENGINE is still storing sessions in the db."""
         self.assertEqual(checks.check_maintenance_mode(None), [checks.E005])
+
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        },
+    )
+    def test_check_nautobotjobfiles_key_in_storages(self):
+        """Error if STORAGES dict doesn't include 'nautobotjobfiles' as a key."""
+        self.assertEqual(checks.check_storages_includes_nautobotjobfiles(None), [checks.E009])
 
     @override_settings(
         DEVICE_NAME_AS_NATURAL_KEY=True,

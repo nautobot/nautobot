@@ -927,9 +927,9 @@ class JobFileOutputTest(TransactionTestCase):
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
-    # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
-    # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
-    # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+    # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
+    # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
+    # so override_settings(STORAGES["nautobotjobfiles"]["BACKEND"]) doesn't work the way you'd hope it would.
 
     def test_output_file_too_large(self):
         module = "file_output"
@@ -1264,7 +1264,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1290,7 +1290,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
