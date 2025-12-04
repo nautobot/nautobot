@@ -4,52 +4,66 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0082_alter_controllermanageddevicegroup_radio_profiles_and_more'),
-        ('ipam', '0054_namespace_tenant'),
-        ('virtualization', '0030_alter_virtualmachine_local_config_context_data_owner_content_type_and_more'),
+        ("dcim", "0082_alter_controllermanageddevicegroup_radio_profiles_and_more"),
+        ("ipam", "0054_namespace_tenant"),
+        ("virtualization", "0030_alter_virtualmachine_local_config_context_data_owner_content_type_and_more"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='ipaddress',
-            new_name='ipam_ipaddr_ip_vers_d82ba5_idx',
-            old_fields=('ip_version', 'host', 'mask_length'),
+            model_name="ipaddress",
+            new_name="ipam_ipaddr_ip_vers_d82ba5_idx",
+            old_fields=("ip_version", "host", "mask_length"),
         ),
         migrations.RenameIndex(
-            model_name='prefix',
-            new_name='ipam_prefix_namespa_34fd7d_idx',
-            old_fields=('namespace', 'ip_version', 'network', 'prefix_length'),
+            model_name="prefix",
+            new_name="ipam_prefix_namespa_34fd7d_idx",
+            old_fields=("namespace", "ip_version", "network", "prefix_length"),
         ),
         migrations.RenameIndex(
-            model_name='prefix',
-            new_name='ipam_prefix_network_e89faf_idx',
-            old_fields=('network', 'broadcast', 'prefix_length'),
+            model_name="prefix",
+            new_name="ipam_prefix_network_e89faf_idx",
+            old_fields=("network", "broadcast", "prefix_length"),
         ),
         migrations.RenameIndex(
-            model_name='prefix',
-            new_name='ipam_prefix_namespa_ec3758_idx',
-            old_fields=('namespace', 'network', 'broadcast', 'prefix_length'),
+            model_name="prefix",
+            new_name="ipam_prefix_namespa_ec3758_idx",
+            old_fields=("namespace", "network", "broadcast", "prefix_length"),
         ),
         migrations.RenameIndex(
-            model_name='vrf',
-            new_name='ipam_vrf_namespa_3a222d_idx',
-            old_fields=('namespace', 'name', 'rd'),
+            model_name="vrf",
+            new_name="ipam_vrf_namespa_3a222d_idx",
+            old_fields=("namespace", "name", "rd"),
         ),
         migrations.AlterField(
-            model_name='vrf',
-            name='devices',
-            field=models.ManyToManyField(related_name='vrfs', through='ipam.VRFDeviceAssignment', through_fields=('vrf', 'device'), to='dcim.device'),
+            model_name="vrf",
+            name="devices",
+            field=models.ManyToManyField(
+                related_name="vrfs",
+                through="ipam.VRFDeviceAssignment",
+                through_fields=("vrf", "device"),
+                to="dcim.device",
+            ),
         ),
         migrations.AlterField(
-            model_name='vrf',
-            name='virtual_device_contexts',
-            field=models.ManyToManyField(related_name='vrfs', through='ipam.VRFDeviceAssignment', through_fields=('vrf', 'virtual_device_context'), to='dcim.virtualdevicecontext'),
+            model_name="vrf",
+            name="virtual_device_contexts",
+            field=models.ManyToManyField(
+                related_name="vrfs",
+                through="ipam.VRFDeviceAssignment",
+                through_fields=("vrf", "virtual_device_context"),
+                to="dcim.virtualdevicecontext",
+            ),
         ),
         migrations.AlterField(
-            model_name='vrf',
-            name='virtual_machines',
-            field=models.ManyToManyField(related_name='vrfs', through='ipam.VRFDeviceAssignment', through_fields=('vrf', 'virtual_machine'), to='virtualization.virtualmachine'),
+            model_name="vrf",
+            name="virtual_machines",
+            field=models.ManyToManyField(
+                related_name="vrfs",
+                through="ipam.VRFDeviceAssignment",
+                through_fields=("vrf", "virtual_machine"),
+                to="virtualization.virtualmachine",
+            ),
         ),
     ]

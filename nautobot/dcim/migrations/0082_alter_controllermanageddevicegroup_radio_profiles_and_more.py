@@ -4,21 +4,32 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0081_alter_device_device_redundancy_group_priority_and_more'),
-        ('wireless', '0001_initial'),
+        ("dcim", "0081_alter_device_device_redundancy_group_priority_and_more"),
+        ("wireless", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='controllermanageddevicegroup',
-            name='radio_profiles',
-            field=models.ManyToManyField(blank=True, related_name='controller_managed_device_groups', through='wireless.ControllerManagedDeviceGroupRadioProfileAssignment', through_fields=('controller_managed_device_group', 'radio_profile'), to='wireless.radioprofile'),
+            model_name="controllermanageddevicegroup",
+            name="radio_profiles",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="controller_managed_device_groups",
+                through="wireless.ControllerManagedDeviceGroupRadioProfileAssignment",
+                through_fields=("controller_managed_device_group", "radio_profile"),
+                to="wireless.radioprofile",
+            ),
         ),
         migrations.AlterField(
-            model_name='controllermanageddevicegroup',
-            name='wireless_networks',
-            field=models.ManyToManyField(blank=True, related_name='controller_managed_device_groups', through='wireless.ControllerManagedDeviceGroupWirelessNetworkAssignment', through_fields=('controller_managed_device_group', 'wireless_network'), to='wireless.wirelessnetwork'),
+            model_name="controllermanageddevicegroup",
+            name="wireless_networks",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="controller_managed_device_groups",
+                through="wireless.ControllerManagedDeviceGroupWirelessNetworkAssignment",
+                through_fields=("controller_managed_device_group", "wireless_network"),
+                to="wireless.wirelessnetwork",
+            ),
         ),
     ]

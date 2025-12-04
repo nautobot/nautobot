@@ -4,20 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0132_approval_workflow_seed_data'),
+        ("extras", "0132_approval_workflow_seed_data"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='taggeditem',
-            new_name='extras_tagg_content_717743_idx',
-            old_fields=('content_type', 'object_id'),
+            model_name="taggeditem",
+            new_name="extras_tagg_content_717743_idx",
+            old_fields=("content_type", "object_id"),
         ),
         migrations.AlterField(
-            model_name='dynamicgroup',
-            name='children',
-            field=models.ManyToManyField(related_name='parents', through='extras.DynamicGroupMembership', through_fields=('parent_group', 'group'), to='extras.dynamicgroup'),
+            model_name="dynamicgroup",
+            name="children",
+            field=models.ManyToManyField(
+                related_name="parents",
+                through="extras.DynamicGroupMembership",
+                through_fields=("parent_group", "group"),
+                to="extras.dynamicgroup",
+            ),
         ),
     ]

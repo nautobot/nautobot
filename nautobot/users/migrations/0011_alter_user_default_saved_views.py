@@ -4,16 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0133_rename_taggeditem_content_type_object_id_extras_tagg_content_717743_idx_and_more'),
-        ('users', '0010_user_default_saved_views'),
+        ("extras", "0133_rename_taggeditem_content_type_object_id_extras_tagg_content_717743_idx_and_more"),
+        ("users", "0010_user_default_saved_views"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='default_saved_views',
-            field=models.ManyToManyField(blank=True, related_name='users', through='extras.UserSavedViewAssociation', through_fields=('user', 'saved_view'), to='extras.savedview'),
+            model_name="user",
+            name="default_saved_views",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="users",
+                through="extras.UserSavedViewAssociation",
+                through_fields=("user", "saved_view"),
+                to="extras.savedview",
+            ),
         ),
     ]
