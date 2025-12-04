@@ -39,12 +39,6 @@ E006 = Error(
     obj=settings,
 )
 
-W005 = Warning(
-    "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="nautobot.core.W005",
-    obj=settings,
-)
-
 W006 = Warning(
     "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
     hint="This setting has been superseded by DEVICE_UNIQUENESS (see Device Constraints).",
@@ -86,13 +80,6 @@ def check_release_check_url(app_configs, **kwargs):
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:
             return [E004]
-    return []
-
-
-@register(Tags.compatibility)
-def check_storage_config_and_backend(app_configs, **kwargs):
-    if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
-        return [W005]
     return []
 
 
