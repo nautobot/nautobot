@@ -14,6 +14,14 @@ Nautobot 3.1, as a consequence of the [Django 5.2 dependency upgrade](#django-52
 
 TODO: migration docs/references
 
+#### Migrate Configuration to `STORAGES` as needed
+
+As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting.
+
+If your deployment of Nautobot had overridden any of the above settings (for example, to use [S3 storage](../user-guide/administration/guides/s3-django-storage.md)), you will need to update your `nautobot_config.py` file to use the `STORAGES` setting instead. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
+
+Note that the `NAUTOBOT_JOB_FILE_IO_STORAGE` environment variable is still supported at this time as a way to specifically configure the storage backend for Nautobot Job input/output files.
+
 ### App Authors/Maintainers
 
 Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django major version updates, included a small number of breaking changes to Django's Python APIs. For a comprehensive guide, refer to the "Backwards incompatible changes" and "Features removed" sections of Django's release-notes for versions [5.0](https://docs.djangoproject.com/en/5.2/releases/5.0/#backwards-incompatible-changes-in-5-0), [5.1](https://docs.djangoproject.com/en/5.2/releases/5.1/#backwards-incompatible-changes-in-5-1), and [5.2](https://docs.djangoproject.com/en/5.2/releases/5.2/#backwards-incompatible-changes-in-5-2). The most likely impacts we have identified to Nautobot Apps are the following:
@@ -33,15 +41,17 @@ As a consequence of the [dependency update to Django 5.2](#django-52), support f
 
 As a consequence of the [dependency update to Django 5.2](#django-52), support for MySQL versions before 8.0.11 has been removed from Nautobot.
 
+#### Unified Storage Backend Configuration
+
+As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
+
+Note that the `NAUTOBOT_JOB_FILE_IO_STORAGE` environment variable is still supported at this time as a way to specifically configure the storage backend for Nautobot Job input/output files.
+
 ### Added
 
 TODO
 
 ### Changed
-
-#### File Storage Configuration
-
-TODO
 
 ### Deprecated
 
