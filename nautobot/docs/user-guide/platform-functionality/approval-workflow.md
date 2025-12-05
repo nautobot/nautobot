@@ -148,9 +148,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
     <div class="grid cards example-images" markdown>
 
-    - ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/nav-approval-workflow-definition.png){ .on-glb }
-    - ![Approval Workflow Definition](../../media/development/approval-workflows/approval-workflow-definition.png){ .on-glb }
-    - ![Add Approval Workflow Definition](../../media/development/approval-workflows/add-approval-workflow-definition.png){ .on-glb }
+    - ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/ss_nav-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/ss_nav-approval-workflow-definition_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Definition](../../media/development/approval-workflows/ss_approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Approval Workflow Definition](../../media/development/approval-workflows/ss_approval-workflow-definition_dark.png#only-dark){ .on-glb }
+    - ![Add Approval Workflow Definition](../../media/development/approval-workflows/ss_add-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Add Approval Workflow Definition](../../media/development/approval-workflows/ss_add-approval-workflow-definition_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -172,9 +175,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
     <div class="grid cards example-images" markdown>
 
-    - ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/nav-approval-dashboard1.png){ .on-glb }
-    - ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/nav-approval-dashboard2.png){ .on-glb }
-    - ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/approval-dashboard-approvals.png){ .on-glb }
+    - ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/ss_nav-approval-dashboard1_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/ss_nav-approval-dashboard1_dark.png#only-dark){ .on-glb }
+    - ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/ss_nav-approval-dashboard2_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/ss_nav-approval-dashboard2_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/ss_approval-dashboard-approvals_light.png#only-light){ .on-glb }
+    ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/ss_approval-dashboard-approvals_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -184,13 +190,15 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **Current Stage** - Stage awaiting action.
     - **Actions Needed** - Remaining approvals required.
     - **State** - Current workflow state.
-3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
-4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
+3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/ss_approve-icon_light.png#only-light)![Approve button](../../media/development/approval-workflows/ss_approve-icon_dark.png#only-dark) button.
+4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/ss_deny-icon_light.png#only-light)![Deny button](../../media/development/approval-workflows/ss_deny-icon_dark.png#only-dark) button.
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Workflow Approve](../../media/development/approval-workflows/approve-window.png){ .on-glb }
-    - ![Approval Workflow Deny](../../media/development/approval-workflows/deny-window.png){ .on-glb }
+    - ![Approval Workflow Approve](../../media/development/approval-workflows/ss_approve-window_light.png#only-light){ .on-glb }
+    ![Approval Workflow Approve](../../media/development/approval-workflows/ss_approve-window_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Deny](../../media/development/approval-workflows/ss_deny-window_light.png#only-light){ .on-glb }
+    ![Approval Workflow Deny](../../media/development/approval-workflows/ss_deny-window_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -200,7 +208,8 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Open the **Approval Dashboard** and select the **My Requests** tab.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Dashboard Requests](../../media/development/approval-workflows/approval-dashboard-requests.png){ .on-glb }
+    - ![Approval Dashboard Requests](../../media/development/approval-workflows/ss_approval-dashboard-requests_light.png#only-light){ .on-glb }
+    ![Approval Dashboard Requests](../../media/development/approval-workflows/ss_approval-dashboard-requests_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -223,8 +232,10 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 3. Click the workflow (in My Approvals view) or details button (in My Requests view) for specific workflow.
     <div class="grid cards example-images" markdown>
 
-    - ![My Approvals Workflow](../../media/development/approval-workflows/my-approvals-workflow.png){ .on-glb }
-    - ![My Requests Workflow](../../media/development/approval-workflows/my-requests-workflow.png){ .on-glb }
+    - ![My Approvals Workflow](../../media/development/approval-workflows/ss_my-approvals-workflow_light.png#only-light){ .on-glb }
+    ![My Approvals Workflow](../../media/development/approval-workflows/ss_my-approvals-workflow_dark.png#only-dark){ .on-glb }
+    - ![My Requests Workflow](../../media/development/approval-workflows/ss_my-requests-workflow_light.png#only-light){ .on-glb }
+    ![My Requests Workflow](../../media/development/approval-workflows/ss_my-requests-workflow_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -235,7 +246,8 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 2. Select the required workflow definition.
     <div class="grid cards example-images" markdown>
 
-    - ![Select Approval Workflow Definition](../../media/development/approval-workflows/select-approval-workflow-definition.png){ .on-glb }
+    - ![Select Approval Workflow Definition](../../media/development/approval-workflows/ss_select-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Select Approval Workflow Definition](../../media/development/approval-workflows/ss_select-approval-workflow-definition_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -243,7 +255,8 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 4. Select the details button for a specific workflow.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Workflow Definition details](../../media/development/approval-workflows/approval-workflow-definition-details.png){ .on-glb }
+    - ![Approval Workflow Definition details](../../media/development/approval-workflows/ss_approval-workflow-definition-details_light.png#only-light){ .on-glb }
+    ![Approval Workflow Definition details](../../media/development/approval-workflows/ss_approval-workflow-definition-details_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -267,7 +280,8 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 
 <div class="grid cards example-images" markdown>
 
-- ![Approval Workflow details](../../media/development/approval-workflows/approval-workflow-details.png){ .on-glb }
+- ![Approval Workflow details](../../media/development/approval-workflows/ss_approval-workflow-details_light.png#only-light){ .on-glb }
+![Approval Workflow details](../../media/development/approval-workflows/ss_approval-workflow-details_dark.png#only-dark){ .on-glb }
 
 </div>
 
