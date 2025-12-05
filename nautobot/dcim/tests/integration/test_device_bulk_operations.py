@@ -60,7 +60,7 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
          1 Go to device list page with param for device_type
          2 Selects the row checkbox for the device with that device_type
          3 Submits the bulk edit form
-         4 Checks that the device_type field is blank (i.e. "---------") on the bulk edit form
+         4 Checks that the device_type field is not prefilled (i.e. is "None") on the bulk edit form
         """
 
         # Go to Device list page
@@ -78,7 +78,7 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
 
         # Click the bulk-edit button (it uses formaction)
         bulk_url = reverse("dcim:device_bulk_edit")
-        btn_xpath = f'//button[@type="submit" and @formaction="{bulk_url}"]'
+        btn_xpath = f'//button[@type="submit" and starts-with(@formaction, "{bulk_url}")]'
         bulk_btn = WebDriverWait(self.browser.driver, 2).until(
             expected_conditions.element_to_be_clickable((By.XPATH, btn_xpath))
         )
@@ -87,6 +87,9 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
 
         self.assertTrue(
             WebDriverWait(self.browser.driver, 2).until(
-                lambda d: d.find_element(By.CLASS_NAME, "select2-selection__placeholder").text.strip() == "---------"
+                lambda d: d.find_element(By.ID, "select2-id_device_type-container")
+                .find_element(By.CLASS_NAME, "select2-selection__placeholder")
+                .text.strip()
+                == "---------"
             )
         )

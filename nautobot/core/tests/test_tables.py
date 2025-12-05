@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import tag, TestCase
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
@@ -32,6 +32,7 @@ class TableTestCase(TestCase):
             )
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
+    @tag("example_app")
     def test_tree_model_table_orderable(self):
         """Assert TreeNode model table are orderable."""
         location_type = LocationType.objects.get(name="Campus")
@@ -107,6 +108,7 @@ class TableTestCase(TestCase):
         )
         self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
+    @tag("example_app")
     def test_base_table_apis(self):
         """
         Test BaseTable APIs, specifically visible_columns and configurable_columns.

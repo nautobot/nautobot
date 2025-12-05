@@ -6,7 +6,7 @@
 {% block title %}Assign an IP address{% endblock %}
 
 {% block content %}
-    <form action="#" method="get" class="form form-horizontal">
+    <form action="#" method="get">
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
@@ -18,59 +18,66 @@
             {% endif %}
         {% endfor %}
         <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-                <h3>Assign an IP Address</h3>
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1">
+                <h3 class="mb-16">Assign an IP Address</h3>
                 {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='assign' %}
                 {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
                             {{ form.non_field_errors }}
                         </div>
                     </div>
                 {% endif %}
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Select IP Address</strong></div>
-                <div class="panel-body">
-                    {% render_field form.q %}
+                <div class="card">
+                    <div class="card-header"><strong>Select IP Address</strong></div>
+                    <div class="card-body">
+                        {% render_field form.q %}
+                    </div>
                 </div>
             </div>
-            </div>
         </div>
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
-                <button type="submit" class="btn btn-primary">Search</button>
-                <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-            </div>
+        <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 gap-8 hstack justify-content-center">
+            <button type="submit" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-magnify me-4"></span><!--
+                -->Search
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
         </div>
     </form>
     {% if table %}
-        <div class="row">
-            <form action="{% legacy_querystring request %}" method="post" class="form form-horizontal">
-                {% csrf_token %}
-                <div class="col-md-12" style="margin-top: 20px">
-                    <h3>Search Results</h3>
+        <form action="{% legacy_querystring request %}" method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-12">
+                    <h3 class="my-16">Search Results</h3>
                     {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
-                    <div class="pull-left noprint">
+                    <div class="d-print-none mt-16 text-center">
                         {% if perms.dcim.change_interface %}
                             <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
-                                <span class="mdi mdi-clipboard-tick" aria-hidden="true"></span> Assign Selected IPAddresses to Interface
+                                <span class="mdi mdi-check me-4" aria-hidden="true"></span><!--
+                                -->Assign Selected IP Addresses to Interface
                             </button>
                         {% endif %}
                     </div>
                 </div>
-            </form>
-            {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
-        </div>
+            </div>
+        </form>
+        {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
     {% endif %}
 {% endblock %}
 
 {% block javascript %}
-<script>
-    var clipboard = new ClipboardJS('.btn');
+    <script>
+        var clipboard = new ClipboardJS('.btn');
 
-    clipboard.on('success', function (e) {console.log("success")});
+        clipboard.on('success', function (e) {console.log("success")});
 
-    clipboard.on('error', function (e) {console.log("failed")});
-</script>
+        clipboard.on('error', function (e) {console.log("failed")});
+    </script>
 {% endblock %}

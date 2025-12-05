@@ -5,9 +5,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
-from django.test import TestCase
 import netaddr
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
@@ -34,7 +34,7 @@ class IPAddressToInterfaceTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.namespace = Namespace.objects.first()
+        cls.namespace = Namespace.objects.create(name="IPAM Models Test Namespace")
         cls.status = Status.objects.get(name="Active")
         cls.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=cls.status, namespace=cls.namespace)
         cls.test_device = Device.objects.create(
@@ -171,6 +171,48 @@ class IPAddressToInterfaceTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
         self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
+
+    def test_m2m_save_signal_prevents_iface_ipaddress_and_vminterface_through_defaults(self):
+        """Test that the m2m save signal prevents a VMInterface from using the same IPAddressToInterface instance as an Interface."""
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            self.test_int1.ip_addresses.add(ip_addr, through_defaults={"vm_interface": self.test_vmint1})
+
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+
+    def test_m2m_save_signal_prevents_vminterface_ipaddress_and_interface_through_defaults(self):
+        """Test that the m2m save signal prevents an Interface from using the same IPAddressToInterface instance as a VMInterface."""
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            self.test_vmint1.ip_addresses.add(ip_addr, through_defaults={"interface": self.test_int1})
+
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+
+    def test_m2m_save_signal_prevents_ipaddress_interface_and_vminterface_through_defaults(self):
+        """Test that the m2m save signal prevents an Interface being added to an IPAddress with a VMInterface through_defaults."""
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+
+        with self.assertRaises(ValidationError) as cm:
+            ip_addr.interfaces.add(self.test_int1, through_defaults={"vm_interface": self.test_vmint1})
+
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+
+    def test_m2m_save_signal_prevents_ipaddress_vminterface_and_interface_through_defaults(self):
+        """Test that the m2m save signal prevents a VMInterface being added to an IPAddress with an Interface through_defaults."""
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+
+        with self.assertRaises(ValidationError) as cm:
+            ip_addr.vm_interfaces.add(self.test_vmint1, through_defaults={"interface": self.test_int1})
+
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
 
     def test_primary_ip_retained_when_deleted_from_device_or_module_interface(self):
         """Test primary_ip4 remains set when the same IP is assigned to multiple interfaces and deleted from one."""

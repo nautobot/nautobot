@@ -10,27 +10,10 @@ from nautobot.core.ui.object_detail import (
     Button,
     KeyValueTablePanel,
     ObjectFieldsPanel,
-    ObjectsTablePanel,
 )
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
-
-
-# TODO: can be removed as a part of NAUTOBOT-1051
-class PrefixChildTablePanel(ObjectsTablePanel):
-    def should_render(self, context: Context):
-        if not super().should_render(context):
-            return False
-        return context.get("active_tab") == "prefixes"
-
-
-# TODO: can be removed as a part of NAUTOBOT-1051
-class IPAddressTablePanel(ObjectsTablePanel):
-    def should_render(self, context: Context):
-        if not super().should_render(context):
-            return False
-        return context.get("active_tab") == "ip-addresses"
 
 
 class AddChildPrefixButton(Button):
@@ -39,7 +22,7 @@ class AddChildPrefixButton(Button):
     def should_render(self, context: Context):
         if not super().should_render(context):
             return False
-        return context.get("active_tab") == "prefixes" and context.get("first_available_prefix") is not None
+        return context.get("first_available_prefix") is not None
 
     def get_link(self, context):
         first_available_prefix = context.get("first_available_prefix")
@@ -49,10 +32,12 @@ class AddChildPrefixButton(Button):
 
         params = {
             "prefix": str(first_available_prefix),
-            "namespace": getattr(obj.namespace, "pk", None),
-            "tenant_group": getattr(getattr(obj.tenant, "tenant_group", None), "pk", None),
-            "tenant": getattr(obj.tenant, "pk", None),
+            "namespace": obj.namespace.pk,
         }
+        if obj.tenant:
+            params["tenant"] = obj.tenant.pk
+            if obj.tenant.tenant_group:
+                params["tenant_group"] = obj.tenant.tenant_group.pk
         if obj.locations.exists():
             params["locations"] = [loc.pk for loc in obj.locations.all()]
 
@@ -65,7 +50,7 @@ class AddIPAddressButton(Button):
     def should_render(self, context: Context):
         if not super().should_render(context):
             return False
-        return context.get("active_tab") == "ip-addresses" and context.get("first_available_ip") is not None
+        return context.get("first_available_ip") is not None
 
     def get_link(self, context: Context):
         first_available_ip = context.get("first_available_ip")
@@ -75,10 +60,12 @@ class AddIPAddressButton(Button):
 
         params = {
             "address": first_available_ip,
-            "namespace": getattr(obj.namespace, "pk", None),
-            "tenant_group": getattr(getattr(obj.tenant, "tenant_group", None), "pk", None),
-            "tenant": getattr(obj.tenant, "pk", None),
+            "namespace": obj.namespace.pk,
         }
+        if obj.tenant:
+            params["tenant"] = obj.tenant.pk
+            if obj.tenant.tenant_group:
+                params["tenant_group"] = obj.tenant.tenant_group.pk
         return f"{reverse(self.link_name)}?{urlencode(params)}"
 
 

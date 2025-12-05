@@ -4,86 +4,81 @@
 {% load ui_framework %}
 
 {% block extra_styles %}
-<style>
-    .tile-header {
-        display: block;
-        min-height: 85px;  /* allow room for two rows of tags */
-    }
+    <style>
+        .nb-tiles .nb-tile .nb-tile-header {
+            display: block;
+            min-height: 5.125rem;  /* 82px - allow room for two rows of tags. */
+        }
 
-    .tile-header h2 {
-        margin-bottom: 5px;
-        margin-top: 0;
-    }
+        .nb-tiles .nb-tile .nb-tile-header h2 {
+            margin-bottom: 0.5rem; /* 8px */
+            margin-top: 0;
+        }
 
-    .tile-actions-placeholder {
-        height: 30px;
-        margin-left: 3px;
-        width: 35px;
-    }
+        .nb-tiles .nb-tile .nb-tile-actions-placeholder {
+            height: 2rem; /* 32px */
+            margin-left: 0.25rem; /* 4px */
+            width: 2rem; /* 32px */
+        }
 
-    .tile-description {
-        margin-top: 10px;
-        min-height: 72px;  /* allow room for three rows of text */
-    }
+        .nb-tiles .nb-tile .nb-tile-description {
+            margin-top: 0.5rem; /* 8px */
+            min-height: 3.5rem;  /* 56px - allow room for three rows of text. */
+        }
 
-    .tile-actions {
-        position: absolute;
-        right: 21px;
-        top: 21px;
-    }
+        .nb-tile-actions {
+            position: absolute;
+            right: 1.0625rem; /* 17px */
+            top: 0.8125rem; /* 13px */
+        }
 
-    .tile-actions .btn {
-        padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
-    }
+        .nb-tile-actions .btn {
+            padding: 0.375rem 0.5rem;  /* 6px 8px - enlarge action buttons to 32px x 32px. */
+        }
 
-    .app-details {
-        column-gap: 20px;
-        display: flex;
-        flex-wrap: wrap;
-    }
+        .nb-app-details {
+            column-gap: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+        }
 
-    .app-details dt {
-        margin-top: 20px;
-    }
+        .nb-app-details dt {
+            margin-top: 1.25rem;
+        }
 
-    .app-details ul {
-        list-style: none;
-        padding: 0;
-    }
+        .nb-app-details ul {
+            list-style: none;
+            padding: 0;
+        }
 
-    .app-details > :last-child {
-        flex: 1;
-    }
-</style>
+        .nb-app-details > :last-child {
+            flex: 1;
+        }
+    </style>
 {% endblock %}
 
 {% block document_title %}{% render_title "plain" %}{% endblock %}
 
 {% block content %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            {% render_breadcrumbs %}
+    <div class="row d-print-none mb-16">
+        <div class="col-lg-12">
+            <div class="float-end">
+                <a class="btn btn-primary" href="{% url 'apps:apps_list' %}">See Installed Apps</a>
+            </div>
         </div>
     </div>
 
-    <div class="pull-right noprint">
-        <a class="btn btn-primary" href="{% url 'apps:apps_list' %}">See Installed Apps</a>
-    </div>
-
-    <h1>{% block page_heading %}{% render_title %}{% endblock page_heading %}</h1>
-
     <div class="row">
-        <div class="col-md-12">
-            <section class="tiles">
+        <div class="col-lg-12">
+            <section class="nb-tiles">
                 {% for app in apps %}
-                    <div style="position: relative;">
-                        <a class="tile clickable" data-app="{{ app.package_name }}" href="?app={{ app.package_name }}">
-                            <header class="tile-header">
+                    <div class="position-relative">
+                        <a class="nb-tile nb-clickable" data-app="{{ app.package_name }}" href="?app={{ app.package_name }}">
+                            <header class="nb-tile-header">
                                 <img
                                     alt="{{ app.name }}"
                                     src="{% if app.icon|default:None != None %}{{ app.icon }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
-                                    height="64"
-                                    width="64"
+                                    style="height: 4rem; width: 4rem;"
                                 />
 
                                 <!--
@@ -91,22 +86,22 @@
                                    above `.tile-actions` element for detailed explanation of this solution and why it
                                    is required here.
                                 -->
-                                <div aria-hidden="true" class="tile-actions-placeholder pull-right"></div>
+                                <div aria-hidden="true" class="nb-tile-actions-placeholder float-end"></div>
 
                                 <h2>{{ app.name }}</h2>
 
-                                {% for use_case in app.use_cases %}
-                                    <label class="label label-default">{{ use_case }}</label>
-                                {% endfor %}
+                                {% for use_case in app.use_cases %}<!--
+                                    --><span class="badge bg-body-secondary border mb-4 me-4">{{ use_case }}</span><!--
+                                -->{% endfor %}
                             </header>
 
-                            <p class="tile-description">{{ app.headline }}</p>
+                            <p class="nb-tile-description">{{ app.headline }}</p>
 
-                            <footer class="tile-footer">
+                            <footer class="nb-tile-footer">
                                 <div>By: {{ app.author }}</div>
                                 <div>
-                                    {% if app.installed %}<label class="label label-success">Installed</label>{% endif %}
-                                    <label class="label label-transparent">{{ app.availability }}</label>
+                                    {% if app.installed %}<span class="badge bg-success">Installed</span>{% endif %}
+                                    <span class="badge bg-body-secondary border">{{ app.availability }}</span>
                                 </div>
                             </footer>
                         </a>
@@ -114,52 +109,48 @@
                         <!--
                             Place app action links outside the "main" `a` tile to adhere to HTML rule that forbid
                             nesting anchors within anchors. Absolutely position the actions to make them appear inside
-                            the tile though. Fill their dedicated space with `.tile-actions-placeholder` element.
+                            the tile though. Fill their dedicated space with `.nb-tile-actions-placeholder` element.
                         -->
-                        <div class="tile-actions">
+                        <div class="nb-tile-actions">
                             {% if app.docs|default:None != None %}
-                                <a href="{{ app.docs }}" class="btn btn-info btn-xs" target="_blank" title="Docs">
+                                <a href="{{ app.docs }}" class="btn btn-info btn-sm" target="_blank" data-bs-title="Docs">
                             {% else %}
-                                <a href="" class="btn btn-info btn-xs disabled" target="_blank" title="No docs provided">
+                                <a aria-disabled="true" class="btn btn-info btn-sm disabled" data-bs-title="No docs provided">
                             {% endif %}
-                                <i class="mdi mdi-book-open-page-variant"></i>
-                            </a>
-                        </div>
+                            <span class="mdi mdi-book-open-page-variant"></span>
+                        </a>
+                    </div>
                     </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-
                                     <h4 class="modal-title">
                                         {{ app.name }}
-                                        {% if app.installed %}<label class="label label-success">Installed</label>{% endif %}
+                                        {% if app.installed %}<span class="badge bg-success">Installed</span>{% endif %}
                                     </h4>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
 
                                 <div class="modal-body">
-                                    <div class="app-details">
+                                    <div class="nb-app-details">
                                         <div>
                                             <img
                                                 alt="{{ app.name }}"
                                                 src="{% if app.icon|default:None != None %}{{ app.icon }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
-                                                height="64"
-                                                width="64"
+                                                style="height: 4rem; width: 4rem;"
                                             />
 
-                                            <dl>
-                                                <dt class="text-muted text-uppercase">By</dt>
+                                            <dl class="mb-0">
+                                                <dt class="text-secondary text-uppercase">By</dt>
                                                 <dd>{{ app.author }}</dd>
 
-                                                <dt class="text-muted text-uppercase">License</dt>
-                                                <dd><label class="label label-transparent">{{ app.availability }}</label></dd>
+                                                <dt class="text-secondary text-uppercase">License</dt>
+                                                <dd><label class="badge bg-body-secondary border">{{ app.availability }}</label></dd>
 
                                                 {% if app.requires|length > 0 %}
-                                                    <dt class="text-muted text-uppercase">Requirements</dt>
+                                                    <dt class="text-secondary text-uppercase">Requirements</dt>
                                                     <dd>
                                                         <ul>
                                                             {% for requirement in app.requires %}
@@ -180,8 +171,8 @@
                                                     </dd>
                                                 {% endif %}
 
-                                                <dt class="text-muted text-uppercase">Package name</dt>
-                                                <dd><code>{{ app.package_name }}</code></dd>
+                                                <dt class="text-secondary text-uppercase">Package name</dt>
+                                                <dd class="mb-0"><code>{{ app.package_name }}</code></dd>
                                             </dl>
                                         </div>
 
@@ -212,16 +203,16 @@
                                             {% endif %}
 
                                             <div>
-                                                {% for use_case in app.use_cases %}
-                                                    <label class="label label-default">{{ use_case }}</label>
-                                                {% endfor %}
+                                                {% for use_case in app.use_cases %}<!--
+                                                    --><span class="badge bg-body-secondary border mb-4 me-4">{{ use_case }}</span><!--
+                                                -->{% endfor %}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="modal-footer">
-                                    <button class="btn btn-primary" data-dismiss="modal" type="button">
+                                    <button class="btn btn-primary" data-bs-dismiss="modal" type="button">
                                         Done
                                     </button>
                                 </div>
@@ -236,60 +227,60 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script>
-    (function () {
-        let previousApp = new URLSearchParams(window.location.search).get("app");
-        function toggleAppModal(app, action) {
-            if (app) {
-                const appModal = app ? document.querySelector(`#modal-${app}`) : null;
-                const isShown = $(appModal).data("bs.modal")?.isShown;
+    {{ block.super }}
+    <script>
+        (function () {
+            let previousApp = new URLSearchParams(window.location.search).get("app");
+            function toggleAppModal(app, action) {
+                if (app) {
+                    const appModal = app ? document.querySelector(`#modal-${app}`) : null;
+                    const isShown = $(appModal).data("bs.modal")?.isShown;
 
-                if (action === "hide" ? isShown : !isShown) {
-                    $(appModal).modal(action);
+                    if (action === "hide" ? isShown : !isShown) {
+                        $(appModal).modal(action);
+                    }
+
+                    previousApp = action === "hide" ? null : app;
                 }
-
-                previousApp = action === "hide" ? null : app;
             }
-        }
 
-        const appTilesContainer = document.querySelector(".tiles");
-        const appModals = appTilesContainer.querySelectorAll(".modal");
-        const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
+            const appTilesContainer = document.querySelector(".nb-tiles");
+            const appModals = appTilesContainer.querySelectorAll(".modal");
+            const appModalLinks = appTilesContainer.querySelectorAll("a[data-app]");
 
-        for (const appModal of appModals) {
-            $(appModal).on("hide.bs.modal", function () {
+            for (const appModal of appModals) {
+                $(appModal).on("hide.bs.modal", function () {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
+                        searchParams.delete('app');
+                        const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
+                        const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+                        history.pushState(history.state, "", nextURL);
+                    }
+
+                    previousApp = null;
+                });
+            }
+
+            for (const appModalLink of appModalLinks) {
+                appModalLink.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    history.pushState(history.state, "", appModalLink.href);
+
+                    toggleAppModal(previousApp, "hide");
+                    toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
+                });
+            }
+
+            window.addEventListener("popstate", function onPopState() {
                 const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.get('app') === appModal.id.replace(/^modal-/, '')) {
-                    searchParams.delete('app');
-                    const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
-                    const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
-                    history.pushState(history.state, "", nextURL);
-                }
+                const currentApp = searchParams.get("app");
 
-                previousApp = null;
+                toggleAppModal(previousApp, 'hide');
+                toggleAppModal(currentApp, 'show');
             });
-        }
 
-        for (const appModalLink of appModalLinks) {
-            appModalLink.addEventListener("click", (event) => {
-                event.preventDefault();
-                history.pushState(history.state, "", appModalLink.href);
-
-                toggleAppModal(previousApp, "hide");
-                toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");
-            });
-        }
-
-        window.addEventListener("popstate", function onPopState() {
-            const searchParams = new URLSearchParams(window.location.search);
-            const currentApp = searchParams.get("app");
-
-            toggleAppModal(previousApp, 'hide');
-            toggleAppModal(currentApp, 'show');
-        });
-
-        toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
-    })();
-</script>
+            toggleAppModal(new URLSearchParams(window.location.search).get("app"), "show");
+        })();
+    </script>
 {% endblock javascript %}

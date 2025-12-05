@@ -1,0 +1,29 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block buttons %}
+    <span title="{% if not object.is_active_stage %}This stage is not active{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Approve this stage{% endif %}">
+        {% if object.is_active_stage and request.user not in object.users_that_already_approved %}
+            <a href="{% url 'extras:approvalworkflowstage_approve' object.pk %}?return_url={{request.path}}"
+               class="btn btn-success">
+                <span class="mdi mdi-check"></span> Approve
+            </a>
+        {% else %}
+            <a aria-disabled="true" class="btn btn-success disabled">
+                <span class="mdi mdi-check"></span> Approve
+            </a>
+        {% endif %}
+    </span>
+    <span title="{% if not object.is_active_stage %}This stage is not active{% elif request.user in object.users_that_already_approved %}You already approved this stage{% else %}Deny this stage{% endif %}">
+        {% if object.is_active_stage and request.user not in object.users_that_already_approved %}
+            <a href="{% url 'extras:approvalworkflowstage_deny' object.pk %}?return_url={{request.path}}"
+               class="btn btn-danger">
+                <span class="mdi mdi-close"></span> Deny
+            </a>
+        {% else %}
+            <a aria-disabled="true" class="btn btn-danger disabled">
+                <span class="mdi mdi-close"></span> Deny
+            </a>
+        {% endif %}
+    </span>
+{% endblock buttons %}

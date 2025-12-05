@@ -1,16 +1,20 @@
 from dataclasses import dataclass
+from itertools import chain
 import logging
-from typing import Any, Callable, Literal, Optional, Protocol, Type, Union
+from operator import attrgetter
+from typing import Any, Callable, Iterator, Literal, Optional, Protocol, Type, Union
 from urllib.parse import urlencode
 
 from django.db.models import Model
 from django.template import Context
 from django.urls import NoReverseMatch, reverse
 
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.utils import get_absolute_url, render_component_template
-from nautobot.core.utils import lookup
+from nautobot.core.utils import deprecation, lookup
 from nautobot.core.utils.lookup import get_model_for_view_name, get_model_from_name
+from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +29,32 @@ ModelType = Union[str, Model, Type[Model], None]
 LabelType = Union[Callable[[Context], str], WithStr, None]
 BreadcrumbItemsType = dict[str, list["BaseBreadcrumbItem"]]
 ReverseParams = Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]
+
+
+def context_object_attr(attr_path: str, context_key: str = "object"):
+    """
+    Helper function that creates callable to fetch the object from context and then nested attributes.
+
+    Useful for composing breadcrumbs. For example:
+    ```
+    context = Context({"object": Device.objects.first()})
+    breadcrumbs = Breadcrumbs(items={"detail": [
+        InstanceBreadcrumbItem(instance=context_object_attr("location.location_type")),
+        InstanceBreadcrumbItem(instance=context_object_attr("location")),
+    ]})
+    ```
+    Will render:
+    - url to the device.location.location_type detail page
+    - url to the device.location detail page
+
+    Examples:
+        >>> context_object_attr("location.name")
+        lambda context: context['object'].location.name
+        >>> context_object_attr("location.name", context_key="device")
+        lambda context: context['device'].location.name
+
+    """
+    return lambda context: attrgetter(attr_path)(context[context_key]) if context.get(context_key) else None
 
 
 @dataclass
@@ -124,22 +154,22 @@ class BaseBreadcrumbItem:
             return params
         return {}
 
-    def as_pair(self, context: Context) -> tuple[str, str]:
+    def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
         """
         Construct the (URL, label) pair for the breadcrumb.
 
-        Combines `get_url()` and `get_label()` and applies title casing to the label.
+        Combines `get_url()` and `get_label()` and applies formatting to the label.
 
         Args:
             context (Context): Context object used to resolve the breadcrumb parts.
 
         Returns:
-            tuple[str, Optional[str]]: A tuple of (URL, label), where URL may be an empty string
-            if unresolved, and label is title-cased.
+            Iterator[tuple[str, Optional[str]]]: A tuple of (URL, label), where URL may be an empty string
+            if unresolved, and label.
         """
         url = self.get_url(context) or ""
-        label = helpers.bettertitle(self.get_label(context))
-        return url, label
+        label = self.get_label(context)
+        yield url, label
 
 
 @dataclass
@@ -195,7 +225,7 @@ class ViewNameBreadcrumbItem(BaseBreadcrumbItem):
             try:
                 model = get_model_for_view_name(self.get_view_name(context))
                 if model is not None:
-                    return model._meta.verbose_name_plural
+                    return helpers.bettertitle(model._meta.verbose_name_plural)
             except ValueError:
                 # `get_model_for_view_name` is not working properly with some proper paths like "home"
                 # and because by default we're trying to resolve label by using `list_url` this error may occur in some apps
@@ -222,7 +252,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
 
     Attributes:
         model (Union[str, Type[Model], None, Callable[[Context], Union[str, Type[Model], None]]): Django model class, instance, or dotted path string or callable that returns one of this.
-        model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string.
+        model_key (Optional[str]): Context key to fetch a model class, instance or dotted path string. By default: "object".
         action (str): Action to use when resolving a model-based route (default: "list").
         label_type (Literal["singular", "plural"]): Whether to use `verbose_name` or `verbose_name_plural`.
         reverse_kwargs (Union[dict[str, Any], Callable[[Context], dict[str, Any]], None]): Keyword arguments passed to `reverse()`.
@@ -241,7 +271,7 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
     """
 
     model: Union[ModelType, Callable[[Context], ModelType]] = None
-    model_key: Optional[str] = None
+    model_key: Optional[str] = "object"
     action: str = "list"
     label_type: ModelLabelType = "plural"
     reverse_kwargs: ReverseParams = None
@@ -281,21 +311,26 @@ class ModelBreadcrumbItem(BaseBreadcrumbItem):
 
         model_obj = self.get_model(context)
         name_attr = "verbose_name" if self.label_type == "singular" else "verbose_name_plural"
+        label = ""
 
         if model_obj is not None:
             if isinstance(model_obj, str):
                 model_cls = get_model_from_name(model_obj)
-                return getattr(model_cls._meta, name_attr)
-            return getattr(model_obj._meta, name_attr)
-        return ""
+                label = getattr(model_cls._meta, name_attr)
+            else:
+                label = getattr(model_obj._meta, name_attr)
+
+        return helpers.bettertitle(label)
 
     def get_model(self, context: Context) -> ModelType:
-        if self.model_key:
-            return context.get(self.model_key)
         if self.model:
             if callable(self.model):
                 return self.model(context)
             return self.model
+
+        if self.model_key:
+            return context.get(self.model_key)
+
         return None
 
 
@@ -308,8 +343,8 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
     Label will be generated from object, but you can still override it.
 
     Attributes:
-        instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb.
-        instance (Callable[[Context], Optional[Model]): Callable to fetch the instance from context. If
+        instance_key (Optional[str]): Context key to fetch a Django model instance for building the breadcrumb. Default: "object".
+        instance (Union[Callable[[Context], Optional[Model]], Model, None]): Callable to fetch the instance from context. If
         should_render (Callable[[Context], bool]): Callable to decide whether this item should be rendered or not.
         label (Union[Callable[[Context], str], WithStr, None]): Optional override for the display label in the breadcrumb.
         label_key (Optional[str]): Optional key to take label from the context.
@@ -321,8 +356,8 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         ("/dcim/devices/1234", "Custom Device Label")  # Assuming that under "object" there is a Device instance
     """
 
-    instance_key: str = "object"
-    instance: Optional[Callable[[Context], Optional[Model]]] = None
+    instance_key: Optional[str] = "object"
+    instance: Union[Callable[[Context], Optional[Model]], Model, None] = None
     label: Union[Callable[[Context], str], WithStr, None] = None
 
     def get_url(self, context: Context) -> Optional[str]:
@@ -353,7 +388,7 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
         instance = self.get_instance(context)
         if not instance:
             return ""
-        return getattr(instance, "display", str(instance))
+        return getattr(instance, "page_title", str(instance))
 
     def get_instance(self, context: Context) -> Optional[Model]:
         """
@@ -366,9 +401,145 @@ class InstanceBreadcrumbItem(BaseBreadcrumbItem):
             Optional[Model]: Instance from context.
         """
         if self.instance:
-            return self.instance(context)
+            if callable(self.instance):
+                return self.instance(context)
+            return self.instance
 
-        return context.get(self.instance_key)
+        if self.instance_key:
+            return context.get(self.instance_key)
+
+        return None
+
+
+@dataclass
+class InstanceParentBreadcrumbItem(InstanceBreadcrumbItem):
+    """
+    Breadcrumb item prepared to be "parent" or "group" of given model.
+
+    It will create a breadcrumb item to the object list but will try to filter it by given parent.
+
+    Attributes:
+        parent_key (str): Instance attribute to get the parent instance. Default: "parent".
+        parent (Optional[Model]): Instance or related object (parent).
+        parent_query_param (Optional[str]): Query param name under which parent lookup key will be added into breadcrumb url. If None, will be the same as `parent_key`.
+        parent_lookup_key (Optional[str]): Parent attribute which will be used to build the url and filter the instance list url. Can be set to None to use parent as key.
+
+    Examples:
+        >>> InstanceParentBreadcrumbItem()
+        ("/dcim/devices?parent=<parent.pk>", "Parent")  # Assuming that under "object" there is a Device instance and has "parent"
+        >>> InstanceParentBreadcrumbItem(parent_key="group", parent_lookup_key="name")
+        ("/dcim/devices?group=<group_name>", "Group")  # Assuming that under "object" there is a Device instance and has "group"
+    """
+
+    parent_key: str = "parent"
+    parent: Optional[Model] = None
+    parent_query_param: Optional[str] = None
+    parent_lookup_key: Optional[str] = "pk"
+
+    def __post_init__(self):
+        """
+        Set `parent_query_param` if not filled.
+        """
+        if self.parent_query_param is None:
+            self.parent_query_param = self.parent_key
+
+    def get_url(self, context: Context) -> Optional[str]:
+        """
+        Resolve the URL for the breadcrumb item based on the instance and provided parent.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            Optional[str]: The URL as a string, or None.
+        """
+        instance = self.get_instance(context)
+        related_object = self.get_related_object(instance)
+        if not instance or not related_object:
+            return None
+
+        view_name = lookup.get_route_for_model(instance, "list")
+        return self.reverse_view_name(
+            view_name, context, reverse_query_params=self.get_reverse_query_params(related_object)
+        )
+
+    def get_label(self, context: Context) -> str:
+        """
+        Get the label (display text) for the breadcrumb from instance and provided parent.
+
+        Args:
+            context (Context): The current template context.
+
+        Returns:
+            str: Label as a string.
+        """
+        if self.label or self.label_key:
+            return super().get_label(context)
+        instance = self.get_instance(context)
+        related_object = self.get_related_object(instance)
+        if not instance or not related_object:
+            return ""
+        return getattr(related_object, "page_title", str(related_object))
+
+    def get_reverse_query_params(self, parent: Model) -> Optional[dict]:
+        if self.parent_lookup_key is None:
+            return {self.parent_query_param: parent}
+
+        if hasattr(parent, self.parent_lookup_key):
+            if query_param := getattr(parent, self.parent_lookup_key):
+                return {self.parent_query_param: query_param}
+        return {}
+
+    def get_related_object(self, instance: Model) -> Optional[Model]:
+        if self.parent:
+            return self.parent
+
+        if hasattr(instance, self.parent_key):
+            return getattr(instance, self.parent_key) or None
+
+        return None
+
+
+@dataclass
+class AncestorsInstanceBreadcrumbItem(InstanceBreadcrumbItem):
+    """
+    Item class which can render list of ancestors of given instance.
+
+    By default, it won't include itself.
+
+    Attributes:
+        include_self (bool): Whether to include self as last item of ancestors.
+
+    Examples:
+        >>> AncestorsInstanceBreadcrumbItem(instance=location)
+        ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1")
+        >>> AncestorsInstanceBreadcrumbItem(instance=location, include_self=True)
+        ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1"), ("/dcim/locations/<pk>", "Location")
+    """
+
+    ancestor_item: Callable[[Model], BaseBreadcrumbItem] = lambda instance: InstanceBreadcrumbItem(instance=instance)
+    include_self: bool = False
+
+    def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
+        """
+        Construct the (URL, label) pair for the breadcrumb with all the instance ancestors.
+
+        Creates separate `InstanceBreadcrumbItem` with copied data from self.
+
+        Args:
+            context (Context): Context object used to resolve the breadcrumb parts.
+
+        Returns:
+            Iterator[tuple[str, Optional[str]]]: A tuple of (URL, label), where URL may be an empty string
+            if unresolved, and label.
+        """
+        instance = self.get_instance(context)
+
+        for ancestor in instance.ancestors():
+            yield from self.ancestor_item(ancestor).as_pair(context)
+
+        if self.include_self:
+            yield from self.ancestor_item(instance).as_pair(context)
 
 
 class Breadcrumbs:
@@ -387,14 +558,7 @@ class Breadcrumbs:
          and there is `context['detail'] = True` set in context
 
     !!! important
-        This class automatically adds the:
-        - `InstanceBreadcrumbItem` at the end of `detail` breadcrumbs
-        - `ModelBreadcrumbItem` at the beginning of `list` and `detail` breadcrumbs
-
-        You can override this behavior by subclassing this class and updating
-        the `list_breadcrumb_item` or `detail_breadcrumb_item` attributes.
-
-        If you're using custom action other than `list` / `detail` you need to remember to add above breadcrumbs
+        If you're using custom action other than `list` / `detail` you need to remember to add list view breadcrumb manually
         if you need them in your custom action.
 
     Attributes:
@@ -418,6 +582,7 @@ class Breadcrumbs:
         self,
         items: BreadcrumbItemsType = None,
         template: str = "components/breadcrumbs.html",
+        detail_item_label: LabelType = None,
     ):
         """
         Initialize the Breadcrumbs configuration.
@@ -425,21 +590,20 @@ class Breadcrumbs:
         Args:
             items (Optional[dict[str, list[BreadcrumbItem]]]): Default breadcrumb items for each action.
             template (str): The template used to render the breadcrumbs.
+            detail_item_label (Union[Callable[[Context], str], WithStr, None]): Custom label for last built-in breadcrumb item with link to the object details.
         """
         self.template = template
+        self.detail_item_label = detail_item_label
 
         # Set the default breadcrumbs
         self.items = {
-            "list": [*self.breadcrumb_items],
+            "list": [],
             "detail": [*self.breadcrumb_items],
         }
 
         # If custom items are present, merge with defaults
         if items:
             self.items = {**self.items, **items}
-
-        # Built-in feature: always add the instance details at the end of breadcrumbs path
-        self.items["detail"].append(InstanceBreadcrumbItem())
 
     def get_breadcrumbs_items(self, context: Context) -> list[tuple[str, str]]:
         """
@@ -455,8 +619,9 @@ class Breadcrumbs:
         """
         action = context.get("view_action", "")
         detail = context.get("detail", False)
-        items = self.get_items_for_action(self.items, action, detail)
-        return [item.as_pair(context) for item in items if item.should_render(context)]
+        items = self.get_items_for_action(self.items, action, detail, context)
+        items_pairs = [item.as_pair(context) for item in items if item.should_render(context)]
+        return list(chain.from_iterable(items_pairs))
 
     def filter_breadcrumbs_items(self, items: list[tuple[str, str]], context: Context) -> list[tuple[str, str]]:
         """
@@ -484,8 +649,9 @@ class Breadcrumbs:
         """
         return label and label.strip()
 
-    @staticmethod
-    def get_items_for_action(items: BreadcrumbItemsType, action: str, detail: bool) -> list[BaseBreadcrumbItem]:
+    def get_items_for_action(
+        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
+    ) -> list[BaseBreadcrumbItem]:
         """
         Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
 
@@ -493,6 +659,7 @@ class Breadcrumbs:
             items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
             action (str): Current action name (e.g., "list", "detail").
             detail (bool): Whether this is a detail view (for fallback).
+            context (Context): The view or template context.
 
         Returns:
             list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
@@ -532,7 +699,7 @@ class Breadcrumbs:
         Provide additional data to include in the rendering context, based on the configuration of this component.
 
         Context updated here will be applied to resolving url and labels.
-        Please ote that you can't override `breadcrumb_items` here because items are generated after this method call.
+        Please note that you can't override `breadcrumb_items` here because items are generated after this method call.
 
         Args:
             context (Context): The current context passed to `render()`.
@@ -541,3 +708,64 @@ class Breadcrumbs:
             (dict): A dictionary of extra context variables.
         """
         return {}
+
+
+@deprecation.class_deprecated("Functionality of this class was moved to the AncestorsInstanceBreadcrumbItem.")
+class AncestorsBreadcrumbs(Breadcrumbs):
+    """
+    Breadcrumbs class which can render list of ancestors of given instance.
+
+    Default behavior:
+    - render breadcrumb item with link to the list view
+    - dynamically add list of `InstanceBreadcrumbItem` from `ancestors()`
+    """
+
+    def get_items_for_action(
+        self, items: BreadcrumbItemsType, action: str, detail: bool, context: Context
+    ) -> list[BaseBreadcrumbItem]:
+        """
+        Get the breadcrumb items for a specific action, 'detail' or to asterisk (*) if present.
+
+        For detail action it calls `self.get_detail_items()` method. For other actions, it calls parent class method.
+
+        Args:
+            items (BreadcrumbItemsType): Dictionary mapping action names to breadcrumb item lists.
+            action (str): Current action name (e.g., "list", "detail").
+            detail (bool): Whether this is a detail view (for fallback).
+            context (Context): The view or template context.
+
+        Returns:
+            list[BaseBreadcrumbItem]: List of breadcrumb items for the action.
+        """
+        if not detail:
+            return super().get_items_for_action(items, action, detail, context)
+
+        return self.get_detail_items(context)
+
+    def get_detail_items(self, context: Context) -> list[BaseBreadcrumbItem]:
+        """
+        Build breadcrumb items for a detail view, including the model, its ancestors, and the instance itself.
+
+        Args:
+            context (Context): Template or view context containing the current object.
+
+        Returns:
+            list[BaseBreadcrumbItem]: Ordered breadcrumb items for the given instance.
+        """
+        instance = get_obj_from_context(context)
+        return [
+            ModelBreadcrumbItem(model=instance),
+            *self.get_ancestors_items(instance),
+        ]
+
+    def get_ancestors_items(self, instance: TreeModel) -> list[BaseBreadcrumbItem]:
+        """
+        Create breadcrumb items for all ancestor objects of the given instance.
+
+        Args:
+            instance (TreeModel): Object from context.
+
+        Returns:
+            list[BaseBreadcrumbItem]: Breadcrumb items for each ancestor of the instance.
+        """
+        return [InstanceBreadcrumbItem(instance=ancestor, label=ancestor.name) for ancestor in instance.ancestors()]

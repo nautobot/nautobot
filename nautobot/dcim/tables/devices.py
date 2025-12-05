@@ -11,6 +11,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
@@ -193,7 +194,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    cluster = tables.LinkColumn(viewname="virtualization:cluster", args=[Accessor("cluster__pk")])
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list",
+        url_params={"devices": "pk"},
+        verbose_name="Clusters",
+    )
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
@@ -228,7 +233,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
-            "cluster",
+            "cluster_count",
             "virtual_chassis",
             "vc_position",
             "vc_priority",
@@ -259,7 +264,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
@@ -291,6 +296,7 @@ class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
+    id = tables.Column(linkify=True, verbose_name="ID")
     module_type = tables.Column(
         linkify=lambda record: record.module_type.get_absolute_url(),
         verbose_name="Type",
@@ -311,6 +317,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         model = Module
         fields = (
             "pk",
+            "id",
             "module_type",
             "module_family",
             "parent_module_bay",
@@ -325,6 +332,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
         default_columns = (
             "pk",
+            "id",
             "module_type",
             "module_family",
             "parent_module_bay",
@@ -392,7 +400,7 @@ class ModularDeviceComponentTable(DeviceComponentTable):
         super().__init__(*args, **kwargs)
 
     def render_module(self, record, value, **kwargs):
-        if value and value == self.parent_module:
+        if value == self.parent_module or not value:
             return self.default
         return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
@@ -721,6 +729,8 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
         url_params={"interfaces": "pk"},
         verbose_name="Virtual Device Contexts",
     )
+    speed = tables.Column(verbose_name="Speed", accessor="speed", orderable=True)
+    duplex = tables.Column(verbose_name="Duplex", accessor="duplex", orderable=True)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -734,6 +744,8 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "speed",
+            "duplex",
             "mgmt_only",
             "mtu",
             "vrf",
@@ -759,8 +771,12 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "speed",
             "description",
         )
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class DeviceModuleInterfaceTable(InterfaceTable):
@@ -787,6 +803,8 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "speed",
+            "duplex",
             "parent_interface",
             "bridge",
             "lag",
@@ -831,6 +849,9 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class FrontPortTable(ModularDeviceComponentTable, CableTerminationTable):
@@ -1284,6 +1305,7 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
+    interface__enabled = BooleanColumn()
     interface_redundancy_group = tables.Column(linkify=True, verbose_name="Group Name")
     interface_redundancy_group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
     interface_redundancy_group__protocol_group_id = tables.Column(verbose_name="Group ID")
@@ -1483,7 +1505,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1547,7 +1569,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         """Render capabilities."""
         if not value:
             return format_html("&mdash;")
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
 class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):

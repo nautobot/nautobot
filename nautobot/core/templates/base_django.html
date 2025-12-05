@@ -1,55 +1,58 @@
 {% load static %}
 {% load helpers %}
 {% load plugins %}
+{% load ui_framework %}
+
+{% captureas title_block_content %}
+    {% block title %}{% render_title %}{% endblock %}
+{% endcaptureas %}
 
 <!DOCTYPE html>
-<html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
-<head>
-    <title>{% block title %}Home{% endblock %}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
-    {% include 'inc/media.html' %}
-    {% block extra_styles %}{% endblock %}
-</head>
-<body>
-    {% include 'inc/nav_menu.html' %}
-    <div class="container-fluid wrapper" id="main-content">
-        <div class="banner-alert-area">
-        {% if request.user.is_authenticated %}
-            {% if "BANNER_TOP"|settings_or_config %}
-                <div class="alert alert-info text-center" role="alert">
-                    {{ "BANNER_TOP"|settings_or_config|render_markdown }}
-                </div>
-            {% endif %}
-        {% endif %}
-        {% if settings.MAINTENANCE_MODE %}
-            <div class="alert alert-warning text-center" role="alert">
-                <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
-                <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
-            </div>
-        {% endif %}
-        {% plugin_banners %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span>&times;</span>
-                </button>
-                {{ message }}
-            </div>
-        {% endfor %}
+<html lang="en"{% with cookie_theme=request.COOKIES|get_item:'theme' %}{% if cookie_theme == 'dark' or cookie_theme == 'light' %} data-theme="{{cookie_theme}}" data-bs-theme="{{cookie_theme}}"{% endif %}{% endwith %}>
+    <head>
+        <title>{{ title_block_content }}{% block document_title_extra %}{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+        {% include 'inc/media.html' %}
+        {% block extra_styles %}{% endblock %}
+    </head>
+    <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+        {% include 'inc/nav_menu.html' %}
+        <div id="drawer">
+            {% block drawer %}{% endblock drawer %}
         </div>
-        {% block header %}{% endblock header %}
-        {% block content %}{% endblock content %}
-        <div class="push"></div>
+        <header id="header">
+            <div class="banner-alert-area">
+                {% include 'inc/header_banners.html' %}
+                {% include 'inc/header_messages.html' %}
+            </div>
+            <div class="container-fluid mb-12 mt-16">
+                <div class="row">
+                    <div id="page-title" class="col-4">
+                        {% with copy_title=False %}
+                            {% block page_title %}{% include "inc/page_title.html" with title=title_block_content copy_title=copy_title %}{% endblock %}
+                        {% endwith %}
+                    </div>
+                    {% include 'inc/header.html' %}
+                    <div class="col-12">
+                        {% block breadcrumbs_wrapper %}
+                            {% block breadcrumbs %}{% endblock breadcrumbs %}
+                        {% endblock breadcrumbs_wrapper %}
+                    </div>
+                </div>
+            </div>
+            {% block header %}{% endblock header %}
+        </header>
+        <main class="container-fluid wrapper" id="main-content" tabindex="-1">
+            {% block content %}{% endblock content %}
+        </main>
         {% if request.user.is_authenticated %}
             {% if "BANNER_BOTTOM"|settings_or_config %}
-                <div class="alert alert-info text-center banner-bottom" role="alert">
+                <div class="alert alert-info text-center nb-banner-bottom" role="alert">
                     {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}
         {% endif %}
-    </div>
-    {% include 'modals/modal_theme.html' with name='theme'%}
-    {% include 'inc/footer.html' %}
-    {% include 'inc/javascript.html' %}
-{% block javascript %}{% endblock %}
-</body>
+        {% include 'inc/footer.html' %}
+        {% include 'inc/javascript.html' %}
+        {% block javascript %}{% endblock %}
+    </body>
 </html>

@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
@@ -16,9 +16,11 @@ from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
@@ -31,6 +33,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
@@ -312,11 +315,9 @@ class PathEndpoint(models.Model):
     @property
     def connected_endpoint(self):
         """
-        Caching accessor for the attached CablePath's destination (if any)
+        Return the attached CablePath's destination (if any)
         """
-        if not hasattr(self, "_connected_endpoint"):
-            self._connected_endpoint = self._path.destination if self._path else None
-        return self._connected_endpoint
+        return self._path.destination if self._path else None  # pylint: disable=no-member
 
 
 #
@@ -597,6 +598,86 @@ class BaseInterface(RelationshipModel):
 
         return super().save(*args, **kwargs)
 
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        through_defaults = {
+            "is_source": is_source,
+            "is_destination": is_destination,
+            "is_default": is_default,
+            "is_preferred": is_preferred,
+            "is_primary": is_primary,
+            "is_secondary": is_secondary,
+            "is_standby": is_standby,
+        }
+
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        # This ensures that ips_to_add only contains IPs which need to be added to the interface. This ensures
+        # that len(ips_to_add) accurately represents the results of the action.
+        ips_to_add = set(ip_addresses) - set(self.ip_addresses.all())
+
+        if ips_to_add:
+            self.ip_addresses.add(*ips_to_add, through_defaults=through_defaults)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ips_to_add)
+
+    add_ip_addresses.alters_data = True
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        # The delete() call used previously (ref: https://github.com/nautobot/nautobot/issues/3236)
+        # meant that if None was passed in, it was silently ignored. Rather that raise an exception,
+        # this comprehension maintains backwards compatibility.
+        ip_addresses = {ip for ip in ip_addresses if ip is not None}
+
+        # This checks that the IPs passed in are actually on the interface. By populating
+        # ips_to_remove correctly, we ensure that the only IPs passed to remove() are IPs known
+        # to be on the interface. This ensures that len(ips_to_remove) accurately represents
+        # the results of the action.
+        ips_to_remove = ip_addresses & set(self.ip_addresses.all())
+
+        if ips_to_remove:
+            self.ip_addresses.remove(*ips_to_remove)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ips_to_remove)
+
+    remove_ip_addresses.alters_data = True
+
 
 @extras_features(
     "cable_terminations",
@@ -665,6 +746,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
+    # Operational attributes (distinct from interface type capabilities)
+    speed = models.PositiveIntegerField(null=True, blank=True)
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
@@ -799,72 +883,21 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                         }
                     )
 
-    def add_ip_addresses(
-        self,
-        ip_addresses,
-        is_source=False,
-        is_destination=False,
-        is_default=False,
-        is_preferred=False,
-        is_primary=False,
-        is_secondary=False,
-        is_standby=False,
-    ):
-        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+        # Speed/Duplex validation
+        self._validate_speed_and_duplex()
 
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-            is_source (bool, optional): Is source address. Defaults to False.
-            is_destination (bool, optional): Is destination address. Defaults to False.
-            is_default (bool, optional): Is default address. Defaults to False.
-            is_preferred (bool, optional): Is preferred address. Defaults to False.
-            is_primary (bool, optional): Is primary address. Defaults to False.
-            is_secondary (bool, optional): Is secondary address. Defaults to False.
-            is_standby (bool, optional): Is standby address. Defaults to False.
+    def _validate_speed_and_duplex(self):
+        """Validate speed (Kbps) and duplex based on interface type."""
 
-        Returns:
-            Number of instances added.
-        """
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                instance = self.ip_addresses.through(
-                    ip_address=ip,
-                    interface=self,
-                    is_source=is_source,
-                    is_destination=is_destination,
-                    is_default=is_default,
-                    is_preferred=is_preferred,
-                    is_primary=is_primary,
-                    is_secondary=is_secondary,
-                    is_standby=is_standby,
-                )
-                instance.validated_save()
-        return len(ip_addresses)
+        # Check settings by interface type
+        if self.speed and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
 
-    add_ip_addresses.alters_data = True
+        if self.duplex and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
 
-    def remove_ip_addresses(self, ip_addresses):
-        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-
-        Returns:
-            Number of instances removed.
-        """
-        count = 0
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
-                deleted_count, _ = qs.delete()
-                count += deleted_count
-        return count
-
-    remove_ip_addresses.alters_data = True
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     @property
     def is_connectable(self):
@@ -998,7 +1031,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         related_name="interface_redundancy_group_associations",
     )
-    priority = models.PositiveSmallIntegerField()
+    priority = models.PositiveIntegerField()
     is_metadata_associable_model = False
 
     class Meta:
@@ -1338,4 +1371,5 @@ class ModuleBay(PrimaryModel):
 
         if self.parent_device is not None:
             # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
-            cache.set(f"nautobot.dcim.device.{self.parent_device.pk}.has_module_bays", True, timeout=5)
+            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
+            cache.set(cache_key, True, timeout=5)

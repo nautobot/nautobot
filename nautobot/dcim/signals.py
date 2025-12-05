@@ -381,3 +381,22 @@ def content_type_changed(instance, action, **kwargs):
                     )
                 }
             )
+
+
+#
+# Device/Cluster assignments
+#
+
+
+@receiver(m2m_changed, sender=Device.clusters.through)
+def ensure_device_and_cluster_locations_are_compatible(sender, instance, action, pk_set, **kwargs):
+    """
+    When adding clusters to a device, clean the added DeviceClusterAssignment records to enforce location compatibility.
+    """
+    if action == "post_add" and pk_set:
+        if isinstance(instance, Device):
+            for assignment in instance.cluster_assignments.filter(cluster_id__in=pk_set):
+                assignment.clean()
+        else:  # instance is a Cluster
+            for assignment in instance.device_assignments.filter(device_id__in=pk_set):
+                assignment.clean()

@@ -11,15 +11,23 @@ from django.utils.encoding import is_protected_type
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
-from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
+from nautobot.core.models.querysets import (
+    ClusterToClustersQuerySetMixin,
+    CompositeKeyQuerySetMixin,
+    LocationToLocationsQuerySetMixin,
+    RestrictedQuerySet,
+)
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
     "BaseManager",
     "BaseModel",
+    "ClusterToClustersQuerySetMixin",
     "CompositeKeyQuerySetMixin",
     "ContentTypeRelatedQuerySet",
+    "LocationToLocationsQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -53,12 +61,19 @@ class BaseModel(models.Model):
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
+    is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
         content_type_field="assigned_object_type",
         object_id_field="assigned_object_id",
         related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
+    )
+    associated_data_compliance = GenericRelation(
+        "data_validation.DataCompliance",
+        content_type_field="content_type",
+        object_id_field="object_id",
+        related_query_name="associated_data_compliance_%(app_label)s_%(class)s",  # e.g. 'associated_data_compliance_dcim_device'
     )
 
     class Meta:
@@ -88,6 +103,17 @@ class BaseModel(models.Model):
         raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
     @property
+    def page_title(self):
+        """
+        Property used by Title and Breadcrumbs to display link to the object or title at detail page.
+        """
+        if hasattr(self, "name"):
+            return self.name
+        if hasattr(self, "display"):
+            return self.display
+        return str(self)
+
+    @property
     def present_in_database(self):
         """
         True if the record exists in the database, False if it does not.
@@ -108,7 +134,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"nautobot.{cls._meta.label_lower}._content_type"
+        return construct_cache_key(cls, method_name="_content_type")
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument

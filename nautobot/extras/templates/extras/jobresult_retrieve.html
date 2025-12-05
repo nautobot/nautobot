@@ -7,31 +7,6 @@
 {% load static %}
 {% load buttons %}
 
-{% block breadcrumbs %}
-    <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
-    {% if result.job_model is not None %}
-        <li>{{ result.job_model.grouping }}</li>
-        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.name }}">
-            {{ result.job_model }}
-        </a></li>
-    {% elif associated_record %}
-        {% if associated_record.name %}
-            <li><a href="{% url 'extras:jobresult_list' %}?name={{ associated_record.name|urlencode }}">
-                {{ associated_record.name }}
-            </a></li>
-        {% else %}
-            <li>{{ associated_record }}</li>
-        {% endif %}
-    {% elif job %}
-        <li><a href="{% url 'extras:jobresult_list' %}?name={{ job.class_path|urlencode }}">
-            {{ job.class_path }}
-        </a></li>
-    {% else %}
-        <li>{{ result.name }}</li>
-    {% endif %}
-    <li>{{ result.created }}</li>
-{% endblock breadcrumbs %}
-
 {% block buttons %}
     {% if perms.extras.run_job %}
         {% if result.job_model and result.task_kwargs %}
@@ -67,8 +42,8 @@
 
 {% block extra_nav_tabs %}
     {% if result.data.output %}
-        <li role="presentation">
-            <a href="#output" role="tab" data-toggle="tab">Output</a>
+        <li role="presentation" class="nav-item">
+            <a href="#output" class="nav-link" role="tab" data-bs-toggle="tab">Output</a>
         </li>
     {% endif %}
 {% endblock %}
@@ -78,37 +53,37 @@
 {% endblock content_full_width_page %}
 
 {% block advanced_content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Job Keyword Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Job Positional Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Job Celery Keyword Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=result.celery_kwargs format="json" %}
         </div>
     </div>
 {% endblock advanced_content_left_page %}
 {% block advanced_content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Worker</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tbody>
                 <tr>
                     <td>Worker Hostname</td>
@@ -129,11 +104,11 @@
             </tbody>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Traceback</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=result.traceback format="python" %}
         </div>
     </div>

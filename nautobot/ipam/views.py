@@ -18,16 +18,21 @@ import netaddr
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nautobot.apps.ui import Titles
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.titles import DEFAULT_TITLES
+from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
@@ -39,6 +44,7 @@ from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 
 from . import filters, forms, tables, ui
 from .models import (
@@ -236,6 +242,8 @@ class VRFUIViewSet(NautobotUIViewSet):
                 table_class=tables.VRFDeviceAssignmentTable,
                 table_filter="vrf",
                 table_title="Assigned Devices",
+                related_list_url_name="dcim:device_list",
+                related_field_name="vrfs",
                 exclude_columns=["vrf", "namespace", "rd"],
                 add_button_route=None,
             ),
@@ -341,11 +349,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
         items={
             "detail": [
                 ModelBreadcrumbItem(model=Namespace),
-                InstanceBreadcrumbItem(instance=lambda context: context["object"].namespace),
+                InstanceBreadcrumbItem(instance=context_object_attr("namespace")),
                 ModelBreadcrumbItem(
                     model=Prefix,
                     reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
-                    label_key="verbose_name_plural",
+                    label_type="plural",
                 ),
             ]
         }
@@ -390,7 +398,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 table_attribute="default_ancestors",
                 table_title="Parent Prefixes",
                 exclude_columns=["namespace"],
-                related_field_name="prefixes",
+                related_field_name="ancestors",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,
@@ -401,7 +409,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 table_class=tables.VRFPrefixAssignmentTable,
                 table_attribute="vrf_assignments",
                 table_title="Assigned VRFs",
-                related_field_name="vrfs",
+                related_field_name="prefix",
+                related_list_url_name="ipam:vrf_list",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,
@@ -413,7 +422,26 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 table_attribute="cloud_networks",
                 table_title="Assigned Cloud Networks",
                 exclude_columns=["actions", "assigned_prefix_count", "circuit_count", "cloud_service_count"],
-                related_field_name="cloud_networks",
+                related_field_name="prefixes",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                table_class=VPNTunnelEndpointTable,
+                table_attribute="vpn_tunnel_endpoints",
+                table_title="VPN Tunnel Endpoints Protecting Prefix",
+                exclude_columns=[
+                    "vpn_profile",
+                    "destination_ipaddress",
+                    "destination_fqdn",
+                    "protected_prefixes_dg_count",
+                    "protected_prefixes_count",
+                    "actions",
+                ],
+                related_field_name="protected_prefixes",
                 add_button_route=None,
                 paginate=False,
                 show_table_config_button=False,
@@ -427,13 +455,13 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
-                    ui.PrefixChildTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="prefix_table",
                         add_button_route=None,
                         include_paginator=True,
-                        header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
+                        related_field_name="within",
                     ),
                 ),
             ),
@@ -444,18 +472,24 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_object_attribute="all_ips",
                 url_name="ipam:prefix_ipaddresses",
                 panels=[
-                    ui.IPAddressTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         context_table_key="ip_table",
                         add_button_route=None,
                         include_paginator=True,
-                        header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
+                        related_field_name="prefix",
                     ),
                 ],
             ),
         ],
         extra_buttons=[
+            object_detail.Button(
+                weight=100,
+                label="Available",
+                render_on_tab_id="prefixes",
+                template_path="ipam/inc/toggle_available.html",
+            ),
             ui.AddChildPrefixButton(
                 weight=200,
                 label="Add Child Prefix",
@@ -463,14 +497,22 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
+                render_on_tab_id="prefixes",
+            ),
+            object_detail.Button(
+                weight=100,
+                label="Available",
+                render_on_tab_id="ip-addresses",
+                template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddIPAddressButton(
-                weight=300,
+                weight=200,
                 label="Add an IP Address",
                 link_name="ipam:ipaddress_add",
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
+                render_on_tab_id="ip-addresses",
             ),
         ],
     )
@@ -496,7 +538,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="prefixes",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["ipam.view_prefix"],
     )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -509,7 +550,9 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
+            configurable=True,
             exclude=["namespace"],
+            user=request.user,
             data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
@@ -540,6 +583,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "active_tab": "prefixes",
                 "view_action": "prefixes",
                 "show_available": request.GET.get("show_available", "true") == "true",
+                "badge_count_override": child_prefixes.count(),
             }
         )
 
@@ -561,7 +605,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
         )
 
         ip_table = tables.IPAddressTable(
-            ipaddresses, exclude=["parent__namespace"], data_transform_callback=data_transform_callback
+            ipaddresses,
+            configurable=True,
+            exclude=["parent__namespace"],
+            user=request.user,
+            data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_table.columns.show("pk")
@@ -590,6 +638,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "active_tab": "ip-addresses",
                 "view_action": "ip_addresses",
                 "show_available": request.GET.get("show_available", "true") == "true",
+                "badge_count_override": ipaddresses.count(),
             }
         )
 
@@ -635,6 +684,14 @@ class IPAddressListView(generic.ObjectListView):
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent.namespace")),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -1057,7 +1114,9 @@ class IPAddressVMInterfacesView(generic.ObjectView):
         vm_interfaces = instance.vm_interfaces.restrict(request.user, "view").prefetch_related(
             Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
         )
-        vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
+        vm_interface_table = tables.IPAddressVMInterfaceTable(
+            data=vm_interfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
             "virtualization.delete_vminterface"
         ):
@@ -1196,6 +1255,14 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
     serializer_class = serializers.VLANSerializer
     table_class = tables.VLANDetailTable
     queryset = VLAN.objects.all()
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="vlan_group", parent_lookup_key="name"),
+            ]
+        }
+    )
 
     class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
@@ -1330,6 +1397,14 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

@@ -5,7 +5,13 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags import helpers
-from nautobot.core.ui.breadcrumbs import Breadcrumbs, InstanceBreadcrumbItem, ModelBreadcrumbItem
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -54,7 +60,7 @@ class CircuitTypeUIViewSet(NautobotUIViewSet):
 
 class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
     def get_extra_context(self, context):
-        return {"termination": context["object"]}
+        return {"termination": context["object"], **super().get_extra_context(context)}
 
     def render_key(self, key, value, context):
         if key == "connected_endpoint":
@@ -101,17 +107,12 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
-
     breadcrumbs = Breadcrumbs(
         items={
             "detail": [
-                ModelBreadcrumbItem(model=Circuit),
-                ModelBreadcrumbItem(
-                    model=Circuit,
-                    label=lambda c: c["object"].circuit.provider,
-                    reverse_query_params=lambda c: {"provider": c["object"].circuit.provider.pk},
-                ),
-                InstanceBreadcrumbItem(instance=lambda c: c["object"].circuit),
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(instance=context_object_attr("circuit"), parent_key="provider"),
+                InstanceBreadcrumbItem(instance=context_object_attr("circuit")),
             ]
         }
     )
@@ -191,6 +192,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
@@ -217,7 +226,11 @@ class CircuitUIViewSet(NautobotUIViewSet):
             return True
 
         def get_extra_context(self, context):
-            return {"termination": context[self.context_object_key], "side": self.side}
+            return {
+                "termination": context[self.context_object_key],
+                "side": self.side,
+                **super().get_extra_context(context),
+            }
 
         def get_data(self, context):
             """
@@ -364,6 +377,14 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     object_detail_content = ObjectDetailContent(
         panels=(
@@ -414,7 +435,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },
@@ -459,7 +479,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },

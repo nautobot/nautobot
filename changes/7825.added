@@ -1,4 +1,0 @@
-Added support for disabling a `DistinctViewTab` without hiding it by providing a `disabled_message` in the render context.
-Added support for `hide_if_empty` optional parameter on `DistinctViewTab`.
-Added support for optional `required_permissions` on all `Component` subclasses to hide components when the user lacks appropriate permissions.
-Added special-case support for rendering a related Cluster (including its Cluster Group) and related Rack (including its Rack Group) in `KeyValueTablePanel`.

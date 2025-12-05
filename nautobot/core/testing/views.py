@@ -6,16 +6,18 @@ from unittest import mock, skipIf
 import uuid
 
 from django.apps import apps
-from django.conf import settings
+from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
+from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
+from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import escape
+from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
@@ -23,9 +25,12 @@ from tree_queries.models import TreeNode
 from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags import buttons, helpers
 from nautobot.core.testing import mixins, utils
+from nautobot.core.testing.utils import extract_page_title
+from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
+from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
@@ -189,8 +194,10 @@ class ViewTestCases:
             # Try GET with model-level permission
             with CaptureQueriesContext(connection) as capture_queries_context:
                 response = self.client.get(instance.get_absolute_url())
-            # The object's display name or string representation should appear in the response body
-            self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
+
+            # The object's display name or string representation should appear in the header
+            expected_title = escape(getattr(instance, "page_title", str(instance)))
+            self.assertInHTML(expected_title, extract_page_title(response.content.decode(response.charset)))
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:
@@ -225,11 +232,11 @@ class ViewTestCases:
             self.assertEqual(
                 len(captured_tree_cte_queries),
                 self.allowed_number_of_tree_queries_per_view_type["retrieve"],
-                f"The CTE tree was calculated a different number of times ({len(captured_tree_cte_queries)})"
-                f" than allowed ({self.allowed_number_of_tree_queries_per_view_type['retrieve']}). The allowed number"
-                f" can be configured on the viewset with the `allowed_number_of_tree_queries_per_view_type` dictionary."
-                f" Care should be taken to only increase these numbers where necessary - tree queries can become really"
-                f" slow with bigger datasets."
+                f"This view was expected to execute {self.allowed_number_of_tree_queries_per_view_type['retrieve']}"
+                f" recursive database queries but {len(captured_tree_cte_queries)} were executed."
+                f" If this is expected, please update the {self.__class__.__name__}.allowed_number_of_tree_queries_per_view_type['retrieve']"
+                " property. Care should be taken to only increase these numbers where necessary - recursive queries can become really"
+                " slow with bigger datasets."
                 f" The following queries were used:\n{_query_separator.join(captured_tree_cte_queries)}",
             )
 
@@ -261,6 +268,90 @@ class ViewTestCases:
             return response  # for consumption by child test cases if desired
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_has_timestamps_and_buttons(self):
+            instance = self._get_queryset().first()
+
+            # Add model-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission", actions=["view", "add", "change", "delete"]
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url())
+
+            if hasattr(instance, "created") and hasattr(instance, "last_updated"):
+                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
+                # therefore is subject to off-by-one timing failures.
+
+            object_edit_url = buttons.edit_button(instance)["url"]
+            object_delete_url = buttons.delete_button(instance)["url"]
+            object_clone_url = buttons.clone_button(instance)["url"]
+            render_edit_button = bool(object_edit_url)
+            render_delete_button = bool(object_delete_url)
+            render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
+            action_buttons = []
+            if render_edit_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="edit-button" class="btn btn-warning" href="{}">
+                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit {}
+                            </a>
+                        """,
+                        object_edit_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+            if render_delete_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="delete-button" class="dropdown-item text-danger" href="{}">
+                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete {}
+                            </a>
+                        """,
+                        object_delete_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+            if render_clone_button:
+                action_buttons.append(
+                    format_html(
+                        """
+                            <a id="clone-button" class="dropdown-item" href="{}">
+                                <span class="mdi mdi-plus-thick text-secondary" aria-hidden="true"></span> Clone {}
+                            </a>
+                        """,
+                        object_clone_url,
+                        helpers.bettertitle(self.model._meta.verbose_name),
+                    )
+                )
+
+            # Because we are looking for a hypothetical use of legacy button templates on the page here, we need some
+            # additional logic to know if this assertion should be made in the first place, and be handled in the `if`
+            # below, or fall back to standard button presence check in the `else` case otherwise.
+            content = assert_and_parse_html(
+                self,
+                utils.extract_page_body(response.content.decode(response.charset)),
+                None,
+                "Response's content is not valid HTML:",
+            )
+            for button in action_buttons:
+                button_parsed = assert_and_parse_html(self, button, None, "Button is not valid HTML:")
+                button_id_attribute = re.search(r"id=\"([A-Za-z]+[\w\-\:\.]*)\"", button).group(0)
+                real_count = content.count(button_parsed)
+                if (real_count is None or real_count == 0) and button_id_attribute in str(content):
+                    self.fail(
+                        f"Couldn't find {button} in response, but an element with `{button_id_attribute}` has been found. Is the page using legacy button template?\n{content}",
+                    )
+                else:
+                    # If it wasn't for the legacy button template check above, this would be the only thing needed here.
+                    self.assertBodyContains(response, button, html=True)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
             instance = self._get_queryset().first()
 
@@ -276,18 +367,104 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_custom_actions(self):
-            instance = self._get_queryset().first()
-            for url_name, required_permissions in self.custom_action_required_permissions.items():
-                url = reverse(url_name, kwargs={"pk": instance.pk})
-                self.assertHttpStatus(self.client.get(url), 403)
-                for permission in required_permissions[:-1]:
-                    self.add_permissions(permission)
-                    self.assertHttpStatus(self.client.get(url), 403)
+            base_view = lookup.get_view_for_model(self.model)
+            if not issubclass(base_view, NautobotViewSetMixin):
+                self.skipTest(f"View {base_view} is not using NautobotUIViewSet")
 
-                self.add_permissions(required_permissions[-1])
-                self.assertHttpStatus(self.client.get(url), 200)
-                # delete the permissions here so that repetitive calls to add_permissions do not create duplicate permissions.
-                self.remove_permissions(*required_permissions)
+            instance = self._get_queryset().first()
+            for action_func in base_view.get_extra_actions():
+                if not action_func.detail:
+                    continue
+                if "get" not in action_func.mapping:
+                    continue
+                if action_func.url_name == "data-compliance" and not getattr(base_view, "object_detail_content", None):
+                    continue
+                with self.subTest(action=action_func.url_name):
+                    if action_func.url_name in self.custom_action_required_permissions:
+                        required_permissions = self.custom_action_required_permissions[action_func.url_name]
+                    else:
+                        base_action = action_func.kwargs.get("custom_view_base_action")
+                        if base_action is None:
+                            if action_func.__name__ not in PERMISSIONS_ACTION_MAP:
+                                self.fail(f"Missing custom_view_base_action for action {action_func.__name__}")
+                            base_action = PERMISSIONS_ACTION_MAP[action_func.__name__]
+
+                        required_permissions = [
+                            f"{self.model._meta.app_label}.{base_action}_{self.model._meta.model_name}"
+                        ]
+                        required_permissions += action_func.kwargs.get("custom_view_additional_permissions", [])
+
+                    try:
+                        url = self._get_url(action_func.url_name, instance)
+                        self.assertHttpStatus(self.client.get(url), [403, 404])
+                        for permission in required_permissions[:-1]:
+                            self.add_permissions(permission)
+                            self.assertHttpStatus(self.client.get(url), [403, 404])
+
+                        self.add_permissions(required_permissions[-1])
+                        self.assertHttpStatus(self.client.get(url, follow=True), 200)
+                    finally:
+                        # delete the permissions here so that we start from a clean slate on the next loop
+                        self.remove_permissions(*required_permissions)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_body_content_table_list_url(self):
+            """
+            Testing that the badge links on related object panels are working as expected.
+            """
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            if not instance:
+                # We should have a better mechanism to test against an empty instance, but this will remove blocker for now.
+                self.skipTest("No instances to test against.")
+            errors = []
+            model_name = self.model._meta.model_name
+
+            response = self.client.get(instance.get_absolute_url())
+            self.assertHttpStatus(response, 200)
+            context = response.context
+            if not context.get("object_detail_content"):
+                self.skipTest("Model is not using UIViewSet")
+            for tab in context["object_detail_content"].tabs:
+                if not tab.should_render(context):
+                    continue
+                tab_label = f"'{tab.label}'" if tab.label else "main"
+                for panel in tab.panels:
+                    if not isinstance(panel, ObjectsTablePanel) or panel.context_table_key:
+                        continue
+                    extra_context = panel.get_extra_context(context)
+                    list_url = extra_context.get("body_content_table_list_url")
+                    table_title = panel.label or extra_context.get("body_content_table_verbose_name_plural")
+                    if not list_url:
+                        # If `header_extra_content_template_path` is not set,
+                        # we don't render the badge in the header nor the link
+                        if not panel.header_extra_content_template_path or not panel.enable_related_link:
+                            continue
+                        errors.append(
+                            (
+                                f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link does not exist."
+                                " Please ensure the related model has a list view, or override with a custom list URL via 'related_list_url_name=app:model_list'."
+                                " If the link should not be enabled, you must explicitly set 'enable_related_link=False' on the ObjectsTablePanel."
+                            )
+                        )
+                        continue
+                    try:
+                        list_response = self.client.get(list_url)
+                    except Exception as e:
+                        errors.append(
+                            f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {e}"
+                        )
+                    else:
+                        self.assertHttpStatus(list_response, 200)
+                        for error in list_response.context["errors"]:
+                            errors.append(
+                                (
+                                    f"Error on {model_name} {tab_label} tab: panel '{table_title}' badge link '{list_url}': {error}."
+                                )
+                            )
+            if errors:
+                self.fail("\n".join(errors))
 
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
@@ -305,7 +482,8 @@ class ViewTestCases:
             if getattr(obj, "is_contact_associable_model", False):
                 self.assertBodyContains(
                     response,
-                    f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
+                    f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
+                    html=True,
                 )
             else:
                 self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
@@ -327,7 +505,8 @@ class ViewTestCases:
                 if getattr(obj, "is_contact_associable_model", False):
                     self.assertBodyContains(
                         response,
-                        f'href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)"',
+                        f'<a aria-controls="contacts" class="nav-link" data-bs-toggle="tab" href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" role="tab">Contacts<span class="badge bg-primary">{obj.associated_contacts.count()}</span></a>',
+                        html=True,
                     )
                 else:
                     self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
@@ -344,10 +523,12 @@ class ViewTestCases:
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
         expected_create_form_buttons = [
-            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
-            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+            '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
         ]
-        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_edit_form_buttons = [
+            '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>'
+        ]
 
         def test_create_object_without_permission(self):
             # Try GET without permission
@@ -375,10 +556,10 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
             for button in self.expected_create_form_buttons:
-                self.assertBodyContains(response, button)
+                self.assertBodyContains(response, button, html=True)
             # The response content should not contain the expected form buttons
             for button in self.expected_edit_form_buttons:
-                self.assertNotContains(response, button)
+                self.assertNotContains(response, button, html=True)
 
             # Try POST with model-level permission
             request = {
@@ -492,10 +673,12 @@ class ViewTestCases:
 
         form_data = {}
         update_data = {}
-        expected_edit_form_buttons = ['<button type="submit" name="_update" class="btn btn-primary">Update</button>']
+        expected_edit_form_buttons = [
+            '<button type="submit" name="_update" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Update</button>',
+        ]
         expected_create_form_buttons = [
-            '<button type="submit" name="_create" class="btn btn-primary">Create</button>',
-            '<button type="submit" name="_addanother" class="btn btn-primary">Create and Add Another</button>',
+            '<button type="submit" name="_create" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create</button>',
+            '<button type="submit" name="_addanother" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-check me-4"></span><!---->Create and Add Another</button>',
         ]
 
         def test_edit_object_without_permission(self):
@@ -526,11 +709,11 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             # The response content should contain the expected form buttons
             for button in self.expected_edit_form_buttons:
-                self.assertBodyContains(response, button)
+                self.assertBodyContains(response, button, html=True)
 
             # The response content should not contain the unexpected form buttons
             for button in self.expected_create_form_buttons:
-                self.assertNotContains(response, button)
+                self.assertNotContains(response, button, html=True)
 
             # Try POST with model-level permission
             update_data = self.update_data or self.form_data
@@ -842,8 +1025,8 @@ class ViewTestCases:
                 response = self.client.get(self._get_url("list"))
                 self.assertHttpStatus(response, 200)
                 # There should be some rows
-                self.assertBodyContains(response, '<tr class="even')
-                self.assertBodyContains(response, '<tr class="odd')
+                self.assertBodyContains(response, 'class="even')
+                self.assertBodyContains(response, 'class="odd')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
@@ -856,8 +1039,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
             # There should be only one row in the table
-            self.assertIn('<tr class="even', content)
-            self.assertNotIn('<tr class="odd', content)
+            self.assertEqual(content.split("<main")[1].count("<tr "), 1)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -902,8 +1084,7 @@ class ViewTestCases:
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             # There should be at least two rows in the table
-            self.assertIn('<tr class="even', content)
-            self.assertIn('<tr class="odd', content)
+            self.assertGreaterEqual(content.split("<main")[1].count("<tr "), 2)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -931,11 +1112,14 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
 
-            list_url = self.get_list_url()
+            # Check if title is rendered correctly
             title = self.get_title()
-
-            # Check if breadcrumb is rendered correctly
-            self.assertBodyContains(response, f'<a href="{list_url}">{title}</a>', html=True)
+            expected_title = (
+                '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
+                '<img alt="Nautobot chevron" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
+                f"{title}</h1>"
+            )
+            self.assertBodyContains(response, expected_title, html=True)
 
             with self.subTest("Assert import-objects URL is absent due to user permissions"):
                 self.assertNotIn(
@@ -1184,6 +1368,7 @@ class ViewTestCases:
                                 sorted(passed_bulk_edit_data.get(key).values_list("pk", flat=True)), sorted(value)
                             )
                         else:
+                            self.assertIn(key, bulk_edit_form.fields)
                             self.assertEqual(passed_bulk_edit_data.get(key), bulk_edit_form.fields[key].clean(value))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1243,7 +1428,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
             # Assert the table which shows all the selected objects is not part of the html body in edit all case
-            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
+            self.assertNotIn('<table class="table table-hover nb-table-headings">', response_body)
             # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
             for pk in pk_list:
                 self.assertNotIn(str(pk), response_body)
@@ -1373,6 +1558,7 @@ class ViewTestCases:
 
             response = self.client.post(self._get_url("bulk_delete"), data)
             job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertIsNotNone(job_result)
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),
@@ -1397,7 +1583,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
             # Assert the table which shows all the selected objects is not part of the html body in delete all case
-            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
+            self.assertNotIn('<table class="table table-hover nb-table-headings">', response_body)
             # Assert none of the hidden input fields for each of the pks that would be deleted is part of the html body
             for pk in self._get_queryset().values_list("pk", flat=True):
                 self.assertNotIn(str(pk), response_body)
@@ -1427,10 +1613,6 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all pks is not part of the html.
-            self.assertNotIn(str(first_pk), response_body)
-            self.assertNotIn(str(second_pk), response_body)
-            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
@@ -1466,6 +1648,7 @@ class ViewTestCases:
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
             job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertIsNotNone(job_result)
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),

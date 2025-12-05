@@ -3,6 +3,7 @@ import json
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.urls import NoReverseMatch, reverse
 import factory
 import faker
 
@@ -555,10 +556,19 @@ class SavedViewFactory(BaseModelFactory):
     name = factory.LazyAttributeSequence(lambda o, n: f"Sample {o.view} Saved View - {n + 1}")
     owner = random_instance(User, allow_null=False)
     ct = random_instance(lambda: ContentType.objects.filter(FeatureQuery("saved_views").get_query()), allow_null=False)
-    view = factory.LazyAttribute(lambda o: f"{o.ct.app_label}:{o.ct.model}_list")
     config = factory.Faker("pydict")
     is_shared = NautobotBoolIterator()
+
     # is_global_default currently just defaults to False for all randomly generated saved views
+    @factory.lazy_attribute
+    def view(self):
+        view_name = f"{self.ct.app_label}:{self.ct.model}_list"
+        try:
+            reverse(view_name)
+        except NoReverseMatch:
+            # It might be a model from a plugin. i.e. example_app
+            view_name = "plugins:" + view_name
+        return view_name
 
 
 class StaticGroupAssociationFactory(OrganizationalModelFactory):

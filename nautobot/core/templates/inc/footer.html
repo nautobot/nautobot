@@ -2,53 +2,105 @@
 {% load helpers %}
 {% load plugins %}
 
-<style>
-    /* Styles for viewports narrower than 1232px, i.e. bootstrap 'xs' and 'sm' layouts */
-    @media (max-width: 1232px) {
-        .footer-col-1, .footer-col-2, .footer-col-3 {
-            text-align: center !important;
-        }
-    }
-    @media (max-width: 767px) {
-        .footer .footer-links {
-            white-space: normal !important;
-        }
-    }
-
-</style>
-    <footer class="footer" id="footer">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-xl-4 col-lg-4 col-md-3 col-sm-12 col-xs-12 text-left footer-col-1 no-wrap">
-                    {% if request.user.is_authenticated  %}
-                        <p class="text-muted">
-                            {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
-                            {{ settings.HOSTNAME }} {% if request.user.is_authenticated %} (v{{ settings.VERSION }}) {% endif %}
-                        </p>
-                    {% endif %}
-                </div>
-                <div class="col-xl-4 col-lg-3 col-md-3 col-sm-12 col-xs-12 text-center footer-col-2">
-                    <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
-                </div>
-                <div class="col-xl-4 col-lg-5 col-md-6 col-sm-12 col-xs-12 text-right footer-col-3 noprint">
-                    {% if request.user.is_authenticated  %}
-                    <p class="text-muted footer-links">
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
-                        {% if settings.BRANDING_URLS.docs %}
-                            <a href="{{ settings.BRANDING_URLS.docs }}" target="_blank">Docs</a>
-                        {% else %}
-                            <a href="{% static 'docs/index.html' %}" target="_blank">Docs</a>
-                        {% endif %}
+<footer id="footer">
+    <div class="container-fluid bg-body-secondary border-top text-secondary">
+        <div class="row row-cols-1 row-cols-lg-3">
+            <div class="col align-items-center d-flex flex-wrap fs-5 gap-8 justify-content-center lh-sm py-10 text-center flex-lg-nowrap justify-content-lg-start text-lg-start">
+                {% if request.user.is_authenticated %}
+                    {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}
+                        <a
+                            class="align-items-center d-inline-flex fs-5 gap-4 my-n4 text-decoration-none"
+                            href="{{ settings.BRANDING_POWERED_BY_URL }}"
+                            target="_blank"
+                        >
+                            <img alt="Nautobot" src="{% static 'img/nautobot_logo.svg' %}" style="height: 1.25rem;" />
+                            Powered
+                        </a>
                         &middot;
-                        <img src="{% static 'img/jinja_logo.svg' %}" style="height:20px"> <a href="{% url 'render_jinja_template' %}">Jinja Renderer</a> &middot;
-                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
-                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}" target="_blank">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}" target="_blank">Help</a>
-                    </p>
                     {% endif %}
-                </div>
+                    <span>
+                        {{ settings.HOSTNAME }}
+                        {% if request.user.is_authenticated %}
+                            (v{{ settings.VERSION }})
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="col fs-5 lh-sm py-10 text-center">
+                {% now 'Y-m-d H:i:s T' %}
+            </div>
+            <div class="col align-items-center d-flex flex-wrap gap-8 justify-content-center py-6 text-center flex-lg-nowrap justify-content-lg-end text-lg-end">
+                {% if request.user.is_authenticated %}
+                    <div class="d-flex" data-bs-toggle="tooltip" data-bs-title="Theme">
+                        <a
+                            data-bs-toggle="modal"
+                            data-bs-target="#theme_modal"
+                            href="#theme_modal"
+                            id="btn-theme-modal"
+                        >
+                            <span class="mdi mdi-theme-light-dark"></span>
+                        </a>
+                    </div>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="Docs"
+                        href="{% if settings.BRANDING_URLS.docs %}{{ settings.BRANDING_URLS.docs }}{% else %}{% static 'docs/index.html' %}{% endif %}"
+                        target="_blank"
+                    >
+                        <span class="mdi mdi-book-open-page-variant"></span>
+                    </a>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="Jinja Renderer"
+                        href="{% url 'render_jinja_template' %}"
+                        target="_blank"
+                    >
+                        <svg style="height: 1.25rem; width: 1.25rem;" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                            <use href="{% static 'img/jinja_logo.svg' %}#jinja_logo" />
+                        </svg>
+                    </a>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="API"
+                        href="{% url 'api_docs' %}"
+                        target="_blank"
+                    >
+                        <span class="mdi mdi-cloud-braces"></span>
+                    </a>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="GraphQL"
+                        href="{% url 'graphql' %}"
+                        target="_blank"
+                    >
+                        <span class="mdi mdi-graphql"></span>
+                    </a>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="Code"
+                        href="{{ settings.BRANDING_URLS.code }}"
+                        target="_blank"
+                    >
+                        <span class="mdi mdi-xml"></span>
+                    </a>
+                    &middot;
+                    <a
+                        data-bs-toggle="tooltip"
+                        data-bs-title="Help"
+                        href="{{ settings.BRANDING_URLS.help }}"
+                        target="_blank"
+                    >
+                        <span class="mdi mdi-lifebuoy"></span>
+                    </a>
+                {% endif %}
             </div>
         </div>
-    </footer>
+    </div>
+</footer>
+
+{% include 'modals/modal_theme.html' with name='theme'%}
