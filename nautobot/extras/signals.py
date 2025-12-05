@@ -565,7 +565,7 @@ pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership
 @receiver(pre_delete, sender=JobResult)
 def job_result_delete_associated_files(instance, **kwargs):
     """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
-    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) == DatabaseFileStorage:
         for file_proxy in instance.files.all():
             delete_file(file_proxy, "file")
     else:

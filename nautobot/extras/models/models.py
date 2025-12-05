@@ -615,7 +615,7 @@ def database_storage():
 
 
 def _job_storage():
-    return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+    return get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"])()
 
 
 def _upload_to(instance, filename):
@@ -625,7 +625,7 @@ def _upload_to(instance, filename):
     Because django-db-file-storage has specific requirements for this path to configure the FileAttachment model,
     this needs to inspect which storage backend is in use in order to make the right determination.
     """
-    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) == DatabaseFileStorage:
         # must be a string of the form
         # "<app_label>.<ModelName>/<data field name>/<filename field name>/<mimetype field name>/filename"
         return f"extras.FileAttachment/bytes/filename/mimetype/{filename}"
@@ -639,7 +639,7 @@ class FileProxy(BaseModel):
     The `file` field can be used like a file handle.
 
     The file contents are stored and retrieved from `FileAttachment` objects,
-    if `settings.JOB_FILE_IO_STORAGE` is set to use DatabaseFileStorage,
+    if `settings.STORAGES["nautobotjobfiles"]["BACKEND"]` is set to use DatabaseFileStorage,
     otherwise they're written to whatever other file storage backend is in use.
 
     When using DatabaseFileStorage, the associated `FileAttachment` is removed when `delete()` is called.
@@ -671,7 +671,7 @@ class FileProxy(BaseModel):
     natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) == DatabaseFileStorage:
             delete_file_if_needed(self, "file")
         else:
             # TODO check whether there's an existing file with a different filename and delete it if so?
@@ -679,10 +679,10 @@ class FileProxy(BaseModel):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) != DatabaseFileStorage:
+        if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) != DatabaseFileStorage:
             self.file.delete()
         super().delete(*args, **kwargs)
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) == DatabaseFileStorage:
             delete_file(self, "file")
 
 

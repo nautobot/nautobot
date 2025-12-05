@@ -95,11 +95,14 @@ def _preprocess_settings(settings, config_path):
     # Media storage
     #
 
-    if settings.STORAGE_BACKEND is not None:
-        settings.DEFAULT_FILE_STORAGE = settings.STORAGE_BACKEND
+    if hasattr(settings, "JOB_FILE_IO_STORAGE"):
+        settings.STORAGES["nautobotjobfiles"]["BACKEND"] = settings.JOB_FILE_IO_STORAGE
+
+    if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND is not None:
+        settings.STORAGES["default"]["BACKEND"] = settings.STORAGE_BACKEND
 
         # django-storages
-        if settings.STORAGE_BACKEND.startswith("storages."):
+        if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND.startswith("storages."):
             try:
                 import storages.utils
             except ModuleNotFoundError as e:

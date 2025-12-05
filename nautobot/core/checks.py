@@ -39,6 +39,14 @@ E006 = Error(
     obj=settings,
 )
 
+# E007 and E008 are dynamically constructed inline below
+
+E009 = Error(
+    "The key 'nautobotjobfiles' is not present in the settings.STORAGES dictionary. Configuration under this key is required for Nautobot Jobs to work properly.",
+    id="nautobot.core.E009",
+    obj=settings,
+)
+
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
@@ -57,6 +65,8 @@ W007 = Warning(
     hint=f"DEVICE_UNIQUENESS must be one of: {', '.join(DeviceUniquenessChoices.values())}.",
     id="nautobot.core.W007",
 )
+
+# W008 is dynamically constructed inline below
 
 MIN_POSTGRESQL_MAJOR_VERSION = 12
 MIN_POSTGRESQL_MINOR_VERSION = 0
@@ -91,7 +101,7 @@ def check_release_check_url(app_configs, **kwargs):
 
 @register(Tags.compatibility)
 def check_storage_config_and_backend(app_configs, **kwargs):
-    if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
+    if getattr(settings, "STORAGE_CONFIG", None) and not getattr(settings, "STORAGE_BACKEND", None):
         return [W005]
     return []
 
@@ -172,6 +182,13 @@ def check_data_validation_engine_installed(app_configs, **kwargs):
 
 
 @register(Tags.compatibility)
+def check_storages_includes_nautobotjobfiles(app_configs, **kwargs):
+    if "nautobotjobfiles" not in settings.STORAGES:
+        return [E009]
+    return []
+
+
+@register(Tags.compatibility)
 def check_deprecated_device_name_as_natural_key(app_configs, **kwargs):
     """
     Warn if the deprecated DEVICE_NAME_AS_NATURAL_KEY setting is still defined.
@@ -199,3 +216,27 @@ def check_valid_value_for_device_uniqueness(app_configs, **kwargs):
     except AttributeError:
         return [W007]
     return []
+
+
+@register(Tags.compatibility)
+def check_for_deprecated_storage_settings(app_configs, **kwargs):
+    """Warn if any deprecated storage settings are set."""
+    warnings = []
+    for setting_name, replacement in [
+        ("DEFAULT_FILE_STORAGE", 'STORAGES["default"]["BACKEND"]'),
+        ("JOB_FILE_IO_STORAGE", 'STORAGES["nautobotjobfiles"]["BACKEND"]'),
+        ("STATICFILES_STORAGE", 'STORAGES["staticfiles"]["BACKEND"]'),
+        ("STORAGE_CONFIG", 'STORAGES[...]["OPTIONS"]'),
+        ("STORAGE_BACKEND", 'STORAGES["default"]["BACKEND"]'),
+    ]:
+        if settings.is_overridden(setting_name):
+            warnings.append(
+                Warning(
+                    msg=f"The setting {setting_name} is deprecated and support will be removed in Nautobot 3.1.",
+                    hint=f"You should migrate to setting {replacement} instead.",
+                    obj=settings,
+                    id="nautobot.core.W008",
+                )
+            )
+
+    return warnings
