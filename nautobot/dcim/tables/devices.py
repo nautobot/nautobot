@@ -400,7 +400,7 @@ class ModularDeviceComponentTable(DeviceComponentTable):
         super().__init__(*args, **kwargs)
 
     def render_module(self, record, value, **kwargs):
-        if value and value == self.parent_module:
+        if value == self.parent_module or not value:
             return self.default
         return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
