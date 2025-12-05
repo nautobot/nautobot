@@ -46,7 +46,6 @@ from nautobot.core.views.utils import (
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import (
     check_and_call_git_repository_function,
-    ObjectApprovalWorkflowView,
     ObjectDynamicGroupsView,
     ObjectNotesView,
 )
@@ -68,7 +67,6 @@ __all__ = (
     "NautobotHTMLRenderer",
     "NautobotUIViewSet",
     "NautobotViewSetMixin",
-    "ObjectApprovalWorkflowView",
     "ObjectBulkCreateViewMixin",  # 3.0 TODO: remove this
     "ObjectBulkDestroyViewMixin",
     "ObjectBulkUpdateViewMixin",
