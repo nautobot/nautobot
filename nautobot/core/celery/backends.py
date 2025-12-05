@@ -1,3 +1,5 @@
+from celery import states
+from django.utils import timezone
 from django_celery_results.backends import DatabaseBackend
 
 from nautobot.core.utils.logging import sanitize
@@ -79,6 +81,50 @@ class NautobotDatabaseBackend(DatabaseBackend):
             )
 
         return extended_props
+
+    def _store_result(
+        self,
+        task_id,
+        result,
+        state,
+        traceback=None,
+        request=None,
+        using=None,
+    ):
+        """
+        Store return value and status of an executed task.
+
+        Overrides parent to ensure date_started uses Django's timezone.now() instead of the database
+        Now() function for consistency with date_created and date_done timestamps.
+        """
+        content_type, content_encoding, result = self.encode_content(result)
+
+        meta = {
+            **self._get_meta_from_request(request),
+            "children": self.current_task_children(request),
+        }
+        _, _, encoded_meta = self.encode_content(meta)
+
+        task_props = {
+            "content_encoding": content_encoding,
+            "content_type": content_type,
+            "meta": encoded_meta,
+            "result": result,
+            "status": state,
+            "task_id": task_id,
+            "traceback": traceback,
+            "using": using,
+        }
+
+        task_props.update(self._get_extended_properties(request, traceback))
+
+        # Use Django's timezone.now() instead of database Now() for consistency
+        # with date_created (auto_now_add) and date_done (timezone.now())
+        if state == states.STARTED:
+            task_props["date_started"] = timezone.now()
+
+        self.TaskModel._default_manager.store_result(**task_props)
+        return result
 
     def prepare_exception(self, exc, serializer=None):
         """Overload default to explicitly sanitize the traceback message result."""
