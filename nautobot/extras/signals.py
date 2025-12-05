@@ -12,7 +12,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.files.storage import get_storage_class
+from django.core.files.storage import storages
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
@@ -565,7 +565,7 @@ pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership
 @receiver(pre_delete, sender=JobResult)
 def job_result_delete_associated_files(instance, **kwargs):
     """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
-    if get_storage_class(settings.STORAGES["nautobotjobfiles"]["BACKEND"]) == DatabaseFileStorage:
+    if isinstance(storages.create_storage(storages.backends["nautobotjobfiles"]), DatabaseFileStorage):
         for file_proxy in instance.files.all():
             delete_file(file_proxy, "file")
     else:
