@@ -4,11 +4,10 @@
         "../development/docker-compose.yml",
         "../development/docker-compose.postgres.yml",
         "../development/docker-compose.dev.yml",
-        "../development/docker-compose.vscode-rdb.yml",
-        "../development/docker-compose.static-ports.yml"
+        "../development/docker-compose.nohealthcheck.yml"
     ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+        // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
     },
     "service": "nautobot",
     "shutdownAction": "stopCompose",
@@ -19,14 +18,15 @@
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
-                "DavidAnson.vscode-markdownlint",
+                "eamodio.gitlens",
                 "EditorConfig.EditorConfig",
+                "github.vscode-github-actions",
                 "GitHub.vscode-pull-request-github",
+                "mhutchie.git-graph",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
                 "samuelcolvin.jinjahtml",
-                "tamasfe.even-better-toml",
-                "rioj7.command-variable" // Used for dynamic port finding in tests
+                "tamasfe.even-better-toml"
             ],
             "settings": {
                 // Global editor settings
@@ -61,48 +61,35 @@
                 "python.pythonPath": "/usr/local/bin/python",
                 "launch": {
                     "version": "0.2.0",
-                    "inputs": [
-                        {
-                            "id": "celeryport",
-                            "type": "command",
-                            "command": "extension.commandvariable.file.content",
-                            "args": {
-                                "fileName": "${workspaceFolder}/.service_ports.json",
-                                "json": "content.celery_worker['6898']",
-                                "default": "6898",
-                            }
-                        },
-                        {
-                            "id": "nautobotport",
-                            "type": "command",
-                            "command": "extension.commandvariable.file.content",
-                            "args": {
-                                "fileName": "${workspaceFolder}/.service_ports.json",
-                                "json": "content.nautobot['6899']",
-                                "default": "6899",
-                            }
-                        }
-                    ],
                     "configurations": [
                         {
-                            "name": "Python: Nautobot",
+                            "name": "Local: Nautobot",
                             "type": "debugpy",
-                            "request": "attach",
-                            "connect": {
-                                "host": "127.0.0.1",
-                                "port": "${input:nautobotport}"
-                            },
+                            "request": "launch",
+                            "args": [
+                                "runserver",
+                                "--config=development/nautobot_config.py"
+                            ],
                             "django": true,
+                            "autoStartBrowser": false,
+                            "program": "${workspaceFolder}/nautobot/core/cli/__main__.py",
+                            "justMyCode": false
                         },
                         {
-                            "name": "Python: Nautobot-Celery",
+                            "name": "Local: Nautobot-Celery",
                             "type": "debugpy",
-                            "request": "attach",
-                            "connect": {
-                                "host": "celery_worker",
-                                "port": "${input:celeryport}"
-                            },
-                            "django": true
+                            "request": "launch",
+                            "args": [
+                                "celery",
+                                "worker",
+                                "-l",
+                                "INFO",
+                                "--events"
+                            ],
+                            "django": true,
+                            "autoStartBrowser": false,
+                            "program": "${workspaceFolder}/nautobot/core/cli/__main__.py",
+                            "justMyCode": false
                         }
                     ]
                 }
@@ -111,6 +98,5 @@
     },
     "workspaceFolder": "/source",
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
-    "postAttachCommand": "bash .devcontainer/postStartCommand.sh",
-    "initializeCommand": "bash .devcontainer/initializeCommand.sh",
+    "overrideCommand": true
 }
