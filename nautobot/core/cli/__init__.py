@@ -96,7 +96,7 @@ def _preprocess_settings(settings, config_path):
     #
 
     if hasattr(settings, "JOB_FILE_IO_STORAGE"):
-        settings.STORAGES["nautobotjobfiles"]["BACKEND"] = settings.JOB_FILE_IO_STORAGE
+        settings.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings.JOB_FILE_IO_STORAGE
 
     if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND is not None:
         settings.STORAGES["default"]["BACKEND"] = settings.STORAGE_BACKEND

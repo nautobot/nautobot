@@ -8,7 +8,6 @@ import uuid
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError

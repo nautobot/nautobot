@@ -1014,7 +1014,6 @@ properties:
     environment_variable: "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"
     is_constance_config: true
     see_also:
-      "`JOB_FILE_IO_STORAGE`": "#job_file_io_storage"
       "`STORAGES`": "#storages"
     type: "integer"
     version_added: "2.1.0"
