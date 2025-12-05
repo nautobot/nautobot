@@ -1,0 +1,1 @@
+Deprecated support for the settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which are replaced with Django's unified `STORAGES` setting. Support for these variables will be removed entirely in Nautobot v3.1.

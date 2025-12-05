@@ -129,8 +129,9 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
-# The storage backend to use for Job input files and Job output files
-JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+# (Deprecated) the storage backend to use for Job input files and Job output files
+if "NAUTOBOT_JOB_FILE_IO_STORAGE" in os.environ and os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"] != "":
+    JOB_FILE_IO_STORAGE = os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"]
 
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
@@ -271,9 +272,21 @@ SANITIZER_PATTERNS = [
     ),
 ]
 
-# Storage
-STORAGE_BACKEND = None
-STORAGE_CONFIG = {}
+# Storage of various file types
+STORAGES = {
+    # The default storage backend, for things like user-uploaded image attachments, etc.
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # The storage backend to use for static file serving
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    # The storage backend to use for Job input files and Job output files
+    "nautobotjobfiles": {
+        "BACKEND": "db_file_storage.storage.DatabaseFileStorage",
+    },
+}
 
 # Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
 # Default message directs the user to #nautobot on NTC's Slack community.
