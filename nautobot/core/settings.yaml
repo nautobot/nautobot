@@ -1018,7 +1018,6 @@ properties:
     type: "integer"
     version_added: "2.1.0"
   JOB_FILE_IO_STORAGE:
-    default: "db_file_storage.storage.DatabaseFileStorage"
     description: >-
       (Deprecated) Backend storage engine for handling files provided as input to Jobs and files generated as output
       by Jobs.
@@ -1872,7 +1871,6 @@ properties:
     see_also:
       "Django documentation for `STATIC_ROOT`": "https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT"
   STORAGE_BACKEND:
-    default: null
     description: "(Deprecated) Backend storage engine for handling uploaded files (e.g. image attachments)."
     details: |-
       !!! warning
@@ -1893,7 +1891,6 @@ properties:
       "`STORAGES`": "#storages"
     type: "string"
   STORAGE_CONFIG:
-    default: {}
     description: "(Deprecated) Dictionary of config parameters for the storage backend configured as STORAGE_BACKEND."
     details: |-
       !!! warning
