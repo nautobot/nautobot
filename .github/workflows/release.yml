@@ -6,13 +6,12 @@ on:
 
 jobs:
   # Publish to GitHub followed by pypi
-  publish_python:
-    if: "${{ ! github.event.release.draft }}"
-    name: "Publish Python Packages"
+  build-package:
+    name: "Build package with poetry"
     runs-on: "ubuntu-24.04"
+    if: "${{ ! github.event.release.draft }}"
     steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v4"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
@@ -20,22 +19,54 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Build Documentation"
-        run: "poetry run mkdocs build --no-directory-urls --strict"
+        run: "poetry run invoke build-and-check-docs"
       - name: "Run Poetry Build"
         run: "poetry build"
+      - name: "Check that the release tag matches the version in pyproject.toml"
+        run: |
+          if [ "${{ github.ref_name }}" != "v$(poetry version -s)" ]; then exit 1; fi
+      - uses: "actions/upload-artifact@v4"
+        with:
+          name: "distfiles"
+          path: "dist/"
+          if-no-files-found: "error"
+
+  publish-package-github:
+    name: "Publish Package to GitHub"
+    runs-on: "ubuntu-24.04"
+    if: "${{ ! github.event.release.draft }}"
+    permissions:
+      contents: "write"
+    needs: "build-package"
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Retrieve built package from cache"
+        uses: "actions/download-artifact@v4"
+        with:
+          name: "distfiles"
+          path: "dist/"
       - name: "Upload binaries to release"
-        uses: "svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd" # v2
+        run: "gh release upload ${{ github.ref_name }} dist/*.{tar.gz,whl}"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  publish-pypi:
+    name: "Publish Package to PyPI"
+    runs-on: "ubuntu-24.04"
+    if: "${{ ! github.event.release.draft }}"
+    needs: "build-package"
+    environment: "pypi"
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: "write"
+    steps:
+      - name: "Retrieve built package from cache"
+        uses: "actions/download-artifact@v4"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          file: "dist/*"
-          tag: "${{ github.ref }}"
-          overwrite: true
-          file_glob: true
+          name: "distfiles"
+          path: "dist/"
       - name: "Push to PyPI"
-        uses: "pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc" # release/v1
-        with:
-          user: "__token__"
-          password: "${{ secrets.PYPI_API_TOKEN }}"
+        uses: "pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e" # v1.13.0
 
   publish_containers:
     if: "${{ ! github.event.release.draft }}"
