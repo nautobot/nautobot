@@ -65,8 +65,8 @@ class FilterTestCases:
 
             if len(test_values) < 2:
                 raise ValueError(
-                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name} "
-                    f"(found {len(test_values)} option(s): {test_values}) but need at least 2 of them"
+                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name}. "
+                    "At least 3 unique values are required to test multivalue filters."
                 )
             return test_values
 
