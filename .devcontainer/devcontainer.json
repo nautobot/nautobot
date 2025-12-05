@@ -7,7 +7,7 @@
         "../development/docker-compose.nohealthcheck.yml"
     ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+        // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
     },
     "service": "nautobot",
     "shutdownAction": "stopCompose",
