@@ -390,8 +390,9 @@ class _RelatedProxy:
     def __init__(self, manager, user, *, depth, allowed_relations):
         qs = manager.all()
         # Determine child model permission; if lacking, we will still iterate but yield brief facades
-        related_model = getattr(qs, "model", None)
         has_child_perm = False
+        related_model = qs.model
+
         if related_model is not None and hasattr(related_model, "_meta"):
             perm_label = f"{related_model._meta.app_label}.view_{related_model._meta.model_name}"
             has_child_perm = user.is_superuser or user.has_perm(perm_label)
