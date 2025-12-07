@@ -405,9 +405,7 @@ class _ProxiedRelatedQuerySet:
             if self._depth == 0:
                 return [_FKBriefFacade(obj) for obj in result]
 
-            return [
-                _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1) for obj in result
-            ]
+            return [_PermissionFilteredProxy(obj, self._user, depth=self._depth - 1) for obj in result]
 
         # Single index
         if self._depth == 0:
@@ -446,6 +444,9 @@ class _RelatedProxy:
         # the manager's prefetch_cache_name. This caching logic ensures that if the instance already holds
         # cached children, we should use the cached collection rather than applying the restrict() method to
         # the queryset.
+        #
+        # TODO: Determine whether we need to flesh out the comments in re: prefetch Nautobot does already. Is it
+        # TODO: for this code path?
         use_prefetched_queryset = False
         cache = getattr(manager, "instance", None)
         if cache is not None:
@@ -479,9 +480,7 @@ class _RelatedProxy:
         self._depth = 0 if not has_view_access_to_child_model else depth
 
     def all(self):
-        return _ProxiedRelatedQuerySet(
-            self._qs, self._user, depth=self._depth, hide_children=self._hide_children
-        )
+        return _ProxiedRelatedQuerySet(self._qs, self._user, depth=self._depth, hide_children=self._hide_children)
 
     def count(self):
         if self._hide_children:
@@ -545,8 +544,8 @@ class _FKBriefFacade:
             # In the UI, the IP's prefix namespace is displayed. Since ipam.ipaddress and ipam.prefix have separate
             # permissions, we don't currently make namespace available to IP objects.
             self.address = str(instance.address)
-            self.host = str(instance.host)  
-        
+            self.host = str(instance.host)
+
         self._str = str(instance)
 
     def __str__(self):
@@ -622,6 +621,7 @@ class _PermissionFilteredProxy:
 
     def _handle_zero_arg_accessor(self, method):
         print(f" In _handle_zero_arg_accessor for {method}")
+
         def _wrapper():
             result = method()
             # Model instance -> proxy recurse if depth allows
@@ -639,6 +639,9 @@ class _PermissionFilteredProxy:
         return _wrapper
 
 
+#
+# First cut at a permission-filtered proxy. Quick, but currently doesn't show all attributes available in
+# object table views (e.g. device.device_type.manufacturer)
 def build_permission_filtered_proxy(obj, user, *, depth=1):
     """Return a proxy for `obj` that behaves like the instance but enforces permissions on child relations."""
     return _PermissionFilteredProxy(obj, user, depth=depth)
