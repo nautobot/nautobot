@@ -15,6 +15,7 @@ from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
+from nautobot.dcim.models.device_components import ModularComponentModel
 
 logger = logging.getLogger(__name__)
 
@@ -323,109 +324,184 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
 class _ProxiedRelatedQuerySet:
     """A minimal iterable wrapper around a queryset that yields proxied children."""
 
-    def __init__(self, queryset, user, *, depth, allowed_relations):
+    def __init__(self, queryset, user, *, depth, hide_children=False):
+        print(f"_ProxiedRelatedQuerySet: Initialized with hide_children={hide_children} and depth={depth}")
         self._qs = queryset
         self._user = user
         self._depth = depth
-        self._allowed = set(allowed_relations or ())
+        self._hide_children = hide_children
 
     def __iter__(self):
-        if self._depth <= 0:
+        if self._hide_children:
+            return
+
+        if self._depth == 0:
             # Depth exhausted: yield brief facades rather than nothing so that parent->child brief info is visible
             for obj in self._qs:
                 yield _FKBriefFacade(obj)
             return
+
         for obj in self._qs:
-            yield _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1, allowed_relations=self._allowed)
+            yield _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1)
 
     def __len__(self):
+        if self._hide_children:
+            return 0
+
         return self._qs.count()
 
     def all(self):
         return self
 
     def count(self):
+        if self._hide_children:
+            return 0
+
         return self._qs.count()
 
     def exists(self):
+        if self._hide_children:
+            return False
+
         return self._qs.exists()
 
     def first(self):
+        if self._hide_children:
+            return None
+
         obj = self._qs.first()
         if obj is None:
             return None
-        if self._depth <= 0:
+
+        if self._depth == 0:
             return _FKBriefFacade(obj)
-        return _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1, allowed_relations=self._allowed)
+
+        return _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1)
 
     def last(self):
+        if self._hide_children:
+            return None
+
         obj = self._qs.last()
         if obj is None:
             return None
-        if self._depth <= 0:
+
+        if self._depth == 0:
             return _FKBriefFacade(obj)
-        return _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1, allowed_relations=self._allowed)
+
+        return _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1)
 
     def __getitem__(self, key):
+        if self._hide_children:
+            if isinstance(key, slice):
+                return []
+
+            raise IndexError("Child objects are not visible")
+
         result = self._qs[key]
 
         # Slice access: iterate result queryset into proxied list
         if isinstance(key, slice):
-            if self._depth <= 0:
+            if self._depth == 0:
                 return [_FKBriefFacade(obj) for obj in result]
+
             return [
-                _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1, allowed_relations=self._allowed)
-                for obj in result
+                _PermissionFilteredProxy(obj, self._user, depth=self._depth - 1) for obj in result
             ]
 
         # Single index
-        if self._depth <= 0:
+        if self._depth == 0:
             return _FKBriefFacade(result)
-        return _PermissionFilteredProxy(result, self._user, depth=self._depth - 1, allowed_relations=self._allowed)
+
+        return _PermissionFilteredProxy(result, self._user, depth=self._depth - 1)
 
 
 class _RelatedProxy:
     """Related manager proxy returning a permission-filtered, depth-aware iterable from all()."""
 
-    def __init__(self, manager, user, *, depth, allowed_relations):
+    def __init__(self, manager, user, *, depth):
         qs = manager.all()
+        print(f"_RelatedProxy: Initial queryset: {qs} of type {type(qs)}")
         # Determine child model permission; if lacking, we will still iterate but yield brief facades
-        has_child_perm = False
         related_model = qs.model
-
+        print(f"_RelatedProxy: Related model: '{related_model}' of type {type(related_model)}")
+        has_view_access_to_child_model = False
+        is_modular_component = False
         if related_model is not None and hasattr(related_model, "_meta"):
             perm_label = f"{related_model._meta.app_label}.view_{related_model._meta.model_name}"
-            has_child_perm = user.is_superuser or user.has_perm(perm_label)
+            print(f"Does user {user} have permission to view {related_model.__name__}? {perm_label}")
+            print(f"User is superuser: {user.is_superuser}")
+            print(f"User has permission: {user.has_perm(perm_label)}")
+            has_view_access_to_child_model = user.is_superuser or user.has_perm(perm_label)
+            is_modular_component = issubclass(related_model, ModularComponentModel)
+        else:
+            print(f"DEBUG: No related model found for {manager}")
 
-        use_prefetch = False
+        #
+        # prefetch caching
+        #
+        # In api.views.RenderJinjaView._build_prefetch_qs, we build querysets using prefetch_related for
+        # some models, notably IP addresses for Interfaces and VMInterfaces. When prefetch_related evaluates,
+        # each parent instance populated by that queryset receives a _prefetched_objects_cache entry keyed by
+        # the manager's prefetch_cache_name. This caching logic ensures that if the instance already holds
+        # cached children, we should use the cached collection rather than applying the restrict() method to
+        # the queryset.
+        use_prefetched_queryset = False
         cache = getattr(manager, "instance", None)
         if cache is not None:
             cache = getattr(manager.instance, "_prefetched_objects_cache", {})
             cache_name = getattr(manager, "prefetch_cache_name", None)
-            use_prefetch = bool(cache_name and cache_name in cache)
+            print(f"Cache name: {cache_name}")
+            print(f"Cache: {cache}")
+            use_prefetched_queryset = bool(cache_name and cache_name in cache)
+        else:
+            print(f"No queryset cache found for {related_model.__name__} in {manager}")
 
         # If user has permission on child model, apply restriction; otherwise, leave qs unrestricted
-        self._qs = qs if use_prefetch else (qs.restrict(user, "view") if (has_child_perm and hasattr(qs, "restrict")) else qs)
+        print(f"if: {use_prefetched_queryset=} and {has_view_access_to_child_model=} and {hasattr(qs, 'restrict')=}")
+        if use_prefetched_queryset:
+            print(f"Using prefetched queryset for {related_model.__name__}")
+            self._qs = qs
+        elif hasattr(qs, "restrict"):
+            print(f"Restricting queryset to user {user} for {related_model.__name__}")
+            print(f"Has view access to child model: {has_view_access_to_child_model}")
+            print(f"Has restrict method: {hasattr(qs, 'restrict')}")
+            self._qs = qs.restrict(user, "view")
+        else:
+            print(f"Using unrestricted queryset for {related_model.__name__}")
+            self._qs = qs
+
+        print()
         self._user = user
+        # Modular components should be completely hidden when the user lacks explicit permission.
+        self._hide_children = bool(is_modular_component and not has_view_access_to_child_model)
         # If lacking child permission, force depth to 0 so that brief facades are yielded
-        self._depth = 0 if not has_child_perm else depth
-        self._allowed = set(allowed_relations or ())
+        self._depth = 0 if not has_view_access_to_child_model else depth
 
     def all(self):
-        if self._depth <= 0:
-            return _ProxiedRelatedQuerySet(self._qs, self._user, depth=0, allowed_relations=self._allowed)
-        return _ProxiedRelatedQuerySet(self._qs, self._user, depth=self._depth, allowed_relations=self._allowed)
+        return _ProxiedRelatedQuerySet(
+            self._qs, self._user, depth=self._depth, hide_children=self._hide_children
+        )
 
     def count(self):
+        if self._hide_children:
+            return 0
+
         return self._qs.count()
 
     def exists(self):
+        if self._hide_children:
+            return False
+
         return self._qs.exists()
 
     def __iter__(self):
         return iter(self.all())
 
     def __len__(self):
+        if self._hide_children:
+            return 0
+
         return self._qs.count()
 
     def __getitem__(self, key):
@@ -433,16 +509,19 @@ class _RelatedProxy:
 
     def filter(self, *args, **kwargs):
         qs = self._qs.filter(*args, **kwargs)
-        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, allowed_relations=self._allowed)
+        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, hide_children=self._hide_children)
 
     def exclude(self, *args, **kwargs):
         qs = self._qs.exclude(*args, **kwargs)
-        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, allowed_relations=self._allowed)
+        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, hide_children=self._hide_children)
 
     def order_by(self, *fields):
         qs = self._qs.order_by(*fields)
-        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, allowed_relations=self._allowed)
+        return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth, hide_children=self._hide_children)
 
+    #
+    # This calls all().first() and all().last() rather than simply first() and last() by design.
+    # The all() method returns a _ProxiedRelatedQuerySet, which is a proxy that applies permission-filtering to the queryset.
     def first(self):
         return self.all().first()
 
@@ -457,17 +536,17 @@ class _FKBriefFacade:
         ct = ContentType.objects.get_for_model(instance.__class__)
         self.id = instance.pk
         self.object_type = f"{ct.app_label}.{ct.model}"
+        for attr in ["name", "display"]:
+            if hasattr(instance, attr):
+                setattr(self, attr, getattr(instance, attr))
+
         if hasattr(instance, "address"):
             #
             # In the UI, the IP's prefix namespace is displayed. Since ipam.ipaddress and ipam.prefix have separate
             # permissions, we don't currently make namespace available to IP objects.
             self.address = str(instance.address)
-            self.host = str(instance.host)
-        if hasattr(instance, "name"):
-            self.name = instance.name
-        if hasattr(instance, "display"):
-            self.display = instance.display
-
+            self.host = str(instance.host)  
+        
         self._str = str(instance)
 
     def __str__(self):
@@ -481,50 +560,27 @@ class _FKBriefFacade:
 class _PermissionFilteredProxy:
     """Proxy that preserves normal attribute access while applying permission-filtering to relations."""
 
-    def __init__(self, obj, user, *, depth=1, allowed_relations=None):
+    def __init__(self, obj, user, *, depth=1):
         self._obj = obj
         self._user = user
-        self._depth = depth
-        self._allowed = set(allowed_relations or ())
+        self._depth = max(depth, 0)
+
+        print(f"Initialized _PermissionFilteredProxy for {obj} with depth {depth}")
 
     def __str__(self):
         return str(self._obj)
 
     def __getattr__(self, name):
         value = getattr(self._obj, name)
+        print(f"  --> [{self._obj}] _PermissionFilteredProxy - Processing {name=}: '{value}'")
 
         # Related managers (reverse FK / M2M / forward M2M) - expose depth-aware, permission-filtered wrapper
         if hasattr(value, "all"):
-            if self._allowed and name not in self._allowed:
-                return _RelatedProxy(value, self._user, depth=0, allowed_relations=self._allowed)
-
-            # Pass current depth to allow immediate children when depth == 1; the iterable yields depth-1 for children
-            return _RelatedProxy(value, self._user, depth=self._depth, allowed_relations=self._allowed)
+            return self._handle_related_manager(value, name)
 
         # Forward FK or other model instance - wrap to continue permission enforcement when traversing further
         if hasattr(value, "_meta") and hasattr(value, "pk"):
-            # Enforce depth and permissions for forward FK traversal
-            if self._depth <= 0:
-                return _FKBriefFacade(value)
-
-            rel_model = value.__class__
-            perm_label = f"{rel_model._meta.app_label}.view_{rel_model._meta.model_name}"
-
-            has_model_perm = self._user.is_superuser or self._user.has_perm(perm_label)
-            is_visible = False
-            if has_model_perm:
-                if self._user.is_superuser:
-                    # Superusers can see the object; skip the DB exists() check
-                    is_visible = True
-                else:
-                    is_visible = rel_model.objects.restrict(self._user, "view").filter(pk=value.pk).exists()
-
-            if has_model_perm and is_visible:
-                return _PermissionFilteredProxy(
-                    value, self._user, depth=self._depth - 1, allowed_relations=self._allowed
-                )
-
-            return _FKBriefFacade(value)
+            return self._handle_model_instance(value)
 
         # get_/has_ zero-arg method exposure with wrapped return
         if callable(value) and (name.startswith(("get_", "has_"))):
@@ -532,31 +588,57 @@ class _PermissionFilteredProxy:
                 sig = inspect.signature(value)
             except (TypeError, ValueError):
                 sig = None
+
             if sig is not None and len(sig.parameters) == 0:
-
-                def _wrapper():
-                    result = value()
-                    # Model instance -> proxy recurse if depth allows
-                    if hasattr(result, "_meta") and hasattr(result, "pk"):
-                        if self._depth <= 0:
-                            return result
-                        return _PermissionFilteredProxy(
-                            result, self._user, depth=self._depth - 1, allowed_relations=self._allowed
-                        )
-                    # Manager or queryset-like
-                    if hasattr(result, "all") or hasattr(result, "filter"):
-                        qs = result.all() if hasattr(result, "all") else result
-                        qs = qs.restrict(self._user, "view") if hasattr(qs, "restrict") else qs
-                        return _ProxiedRelatedQuerySet(
-                            qs, self._user, depth=self._depth, allowed_relations=self._allowed
-                        )
-                    return result
-
-                return _wrapper
+                return self._handle_zero_arg_accessor(value)
 
         return value
 
+    def _handle_related_manager(self, manager, attr_name):
+        print(f" In _handle_related_manager for {attr_name}")
+        print(f"  --> [{self._obj}] _PermissionFilteredProxy - Returning _RelatedProxy with depth {self._depth}")
+        return _RelatedProxy(manager, self._user, depth=self._depth)
 
-def build_permission_filtered_proxy(obj, user, *, depth=1, allowed_relations=None):
+    def _handle_model_instance(self, instance):
+        print(f" In _handle_model_instance for {instance}")
+        if self._depth <= 0:
+            return _FKBriefFacade(instance)
+
+        rel_model = instance.__class__
+        perm_label = f"{rel_model._meta.app_label}.view_{rel_model._meta.model_name}"
+
+        has_model_perm = self._user.is_superuser or self._user.has_perm(perm_label)
+        is_visible = False
+        if has_model_perm:
+            if self._user.is_superuser:
+                is_visible = True
+            else:
+                is_visible = rel_model.objects.restrict(self._user, "view").filter(pk=instance.pk).exists()
+
+        if has_model_perm and is_visible:
+            return _PermissionFilteredProxy(instance, self._user, depth=self._depth - 1)
+
+        return _FKBriefFacade(instance)
+
+    def _handle_zero_arg_accessor(self, method):
+        print(f" In _handle_zero_arg_accessor for {method}")
+        def _wrapper():
+            result = method()
+            # Model instance -> proxy recurse if depth allows
+            if hasattr(result, "_meta") and hasattr(result, "pk"):
+                if self._depth == 0:
+                    return result
+                return _PermissionFilteredProxy(result, self._user, depth=self._depth - 1)
+            # Manager or queryset-like
+            if hasattr(result, "all") or hasattr(result, "filter"):
+                qs = result.all() if hasattr(result, "all") else result
+                qs = qs.restrict(self._user, "view") if hasattr(qs, "restrict") else qs
+                return _ProxiedRelatedQuerySet(qs, self._user, depth=self._depth)
+            return result
+
+        return _wrapper
+
+
+def build_permission_filtered_proxy(obj, user, *, depth=1):
     """Return a proxy for `obj` that behaves like the instance but enforces permissions on child relations."""
-    return _PermissionFilteredProxy(obj, user, depth=depth, allowed_relations=allowed_relations)
+    return _PermissionFilteredProxy(obj, user, depth=depth)
