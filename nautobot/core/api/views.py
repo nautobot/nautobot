@@ -1039,38 +1039,36 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         content_type_object_model_class = content_type_object.model_class()
 
         try:
+            object_pk = validated_data["object_uuid"]
             #
             # Don't wrap anything if the user is a superuser. Firstly, because superusers
             # have no restrictions anyway and secondly, it provides end users a way to compare
             # renders done by regular users to a baseline.
             if request.user.is_superuser:
-                context_object = content_type_object_model_class.objects.get(pk=validated_data["object_uuid"])
+                context_object = content_type_object_model_class.objects.get(pk=object_pk)
             else:
-                qs = self._build_prefetch_qs(request, content_type_object_model_class)
-                context_object = build_permission_filtered_proxy(
-                    qs.get(pk=validated_data["object_uuid"]), request.user, depth=depth
-                )
+                qs = self._build_prefetch_qs(content_type_object_model_class, object_pk, request.user)
+                context_object = build_permission_filtered_proxy(qs.get(), request.user, depth=depth)
         except content_type_object_model_class.DoesNotExist:
             raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
 
         return context_object
 
-    def _build_prefetch_qs(self, request, content_type_obj_model_class):
+    def _build_prefetch_qs(self, content_type_obj_model_class, object_pk, user):
         object_content_type_label = content_type_obj_model_class._meta.label_lower
-        base_qs = content_type_obj_model_class.objects.restrict(request.user, "view")
-        # return base_qs
+        base_qs = content_type_obj_model_class.objects.restrict(user, "view").filter(pk=object_pk)
 
         qs_builder_method_name = f"_{object_content_type_label.replace('.', '_')}_prefetch_qs"
 
         if method := getattr(self, qs_builder_method_name, None):
-            return method(request, base_qs)  # pylint: disable=not-callable
+            return method(base_qs)  # pylint: disable=not-callable
 
         logger.debug(f"Building base qs for {object_content_type_label}")
         return base_qs
 
     #
     # Prefetch optimizations
-    def _dcim_device_prefetch_qs(self, request, base_qs):
+    def _dcim_device_prefetch_qs(self, base_qs):
         return base_qs.prefetch_related(
             Prefetch(
                 "interfaces",
@@ -1080,7 +1078,7 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             )
         )
 
-    def _virtualization_virtualmachine_prefetch_qs(self, request, base_qs):
+    def _virtualization_virtualmachine_prefetch_qs(self, base_qs):
         return base_qs.prefetch_related(
             Prefetch(
                 "vm_interfaces",
