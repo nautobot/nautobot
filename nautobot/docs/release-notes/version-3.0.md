@@ -214,7 +214,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 ### Security in v3.0.2
 
-- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `celery` to `~5.6.0` to include a security fix (https://github.com/celery/celery/pull/9997).
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `celery` to `~5.6.0` to include a security fix (`https://github.com/celery/celery/pull/9997`).
 - [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `urllib3` to version `2.6.1` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#8271](https://github.com/nautobot/nautobot/issues/8271) - Updated dependency `Django` to `~4.2.27` to protect against CVE-2025-13372 and CVE-2025-64460.
 
