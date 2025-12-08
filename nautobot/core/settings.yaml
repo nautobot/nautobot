@@ -1959,7 +1959,7 @@ properties:
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
       "`django-storages` documentation": "https://django-storages.readthedocs.io/en/stable/"
     type: "object"
-    version_added: "3.0.2"
+    version_added: "3.0.3"
   STRICT_FILTERING:
     default: true
     description: >-
