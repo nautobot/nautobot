@@ -9,6 +9,7 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceSpeedChoices,
     InterfaceTypeChoices,
+    PortTypeChoices,
     RackWidthChoices,
 )
 from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
@@ -385,6 +386,7 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             "device": cls.device.pk,
             "name": "test interface form 0.0",
             "type": InterfaceTypeChoices.TYPE_2GFC_SFP,
+            "port_type": PortTypeChoices.TYPE_LC,
             "status": cls.status.pk,
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "tagged_vlans": [cls.vlan.pk],
@@ -445,12 +447,14 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
                 device=devices[0],
                 name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_2GFC_SFP,
+                port_type=PortTypeChoices.TYPE_LC,
                 status=self.status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_LAG,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=self.status,
             ),
             Interface.objects.create(

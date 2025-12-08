@@ -1,0 +1,2 @@
+Added port_type field to Interface and InterfaceTemplate models to track physical connector type.
+
