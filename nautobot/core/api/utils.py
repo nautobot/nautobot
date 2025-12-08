@@ -462,6 +462,9 @@ class _RelatedProxy:
         print(f"if: {use_prefetched_queryset=} and {has_view_access_to_child_model=} and {hasattr(qs, 'restrict')=}")
         if use_prefetched_queryset:
             print(f"Using prefetched queryset for {related_model.__name__}")
+            # Django stores a cloned QuerySet (with its result cache populated) in
+            # `_prefetched_objects_cache`, so we can still treat it like a normal queryset.
+            # Permission enforcement is still handled by depth clamping / FK facades below.
             self._qs = qs
         elif hasattr(qs, "restrict"):
             print(f"Restricting queryset to user {user} for {related_model.__name__}")
@@ -532,6 +535,7 @@ class _FKBriefFacade:
     """Read-only, non-traversable facade for forward foreign keys."""
 
     def __init__(self, instance):
+        print(f"_FKBriefFacade: Initialized with instance {instance}")
         ct = ContentType.objects.get_for_model(instance.__class__)
         self.id = instance.pk
         self.object_type = f"{ct.app_label}.{ct.model}"
@@ -599,8 +603,8 @@ class _PermissionFilteredProxy:
         return _RelatedProxy(manager, self._user, depth=self._depth)
 
     def _handle_model_instance(self, instance):
-        print(f" In _handle_model_instance for {instance}")
-        if self._depth <= 0:
+        print(f" In _handle_model_instance for {instance} ({self._depth=})")
+        if self._depth == 0:
             return _FKBriefFacade(instance)
 
         rel_model = instance.__class__
