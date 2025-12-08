@@ -1,2 +1,2 @@
 Updated dependency `celery` to `~5.6.0` to include a security fix (https://github.com/celery/celery/pull/9997).
-Updated dependency `urllib3` to version `2.6.0` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+Updated dependency `urllib3` to version `2.6.1` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
