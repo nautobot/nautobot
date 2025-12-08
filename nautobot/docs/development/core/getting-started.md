@@ -180,6 +180,7 @@ Available tasks:
   check-migrations             Check for missing migrations.
   check-schema                 Render the REST API schema and check for problems.
   cli                          Launch a bash shell inside the running Nautobot (or other) Docker container.
+  compress-images              Check whether included images are well-optimized, and optionally compress them if desirable.
   createsuperuser              Create a new Nautobot superuser account (default: "admin"), will prompt for password.
   debug                        Start Nautobot and its dependencies in debug mode.
   destroy                      Destroy all containers and volumes.
