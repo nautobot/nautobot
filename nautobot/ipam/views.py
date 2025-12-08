@@ -42,6 +42,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
+from nautobot.load_balancers.tables import LoadBalancerPoolMemberTable, VirtualServerTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.vpn.tables import VPNTunnelEndpointTable
@@ -712,6 +713,21 @@ class IPAddressView(generic.ObjectView):
         )
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
 
+        # Load balancer pool members table
+        load_balancer_pool_members = (
+            instance.load_balancer_pool_members.all()
+            .restrict(request.user, "view")
+            .select_related("tenant", "load_balancer_pool", "health_check_monitor")
+        )
+        load_balancer_pool_members_table = LoadBalancerPoolMemberTable(load_balancer_pool_members, orderable=False)
+
+        # Virtual servers table
+        virtual_servers = instance.virtual_servers.all().restrict(request.user, "view")
+        virtual_servers_table = VirtualServerTable(virtual_servers, orderable=False)
+        virtual_servers_table.Meta.default_columns = tuple(
+            field for field in virtual_servers_table.Meta.default_columns if field != "vip"
+        )
+
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -765,6 +781,8 @@ class IPAddressView(generic.ObjectView):
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
+            "load_balancer_pool_members_table": load_balancer_pool_members_table,
+            "virtual_servers_table": virtual_servers_table,
             **super().get_extra_context(request, instance),
         }
 
