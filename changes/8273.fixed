@@ -1,1 +1,0 @@
-Fixed logic for rendering `module` column in device-component tables for components not belonging to a module.

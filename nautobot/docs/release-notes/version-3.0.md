@@ -210,6 +210,46 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.2 (2025-12-08)
+
+### Security in v3.0.2
+
+- [#8271](https://github.com/nautobot/nautobot/issues/8271) - Updated dependency `Django` to `~4.2.27` to protect against CVE-2025-13372 and CVE-2025-64460.
+
+### Fixed in v3.0.2
+
+- [#8255](https://github.com/nautobot/nautobot/issues/8255) - Marked system `ScheduledJobs` table as non-version-controlled.
+- [#8266](https://github.com/nautobot/nautobot/issues/8266) - Fixed a bug where JSON custom field types were not being displayed in the UI.
+- [#8273](https://github.com/nautobot/nautobot/issues/8273) - Fixed logic for rendering `module` column in device-component tables for components not belonging to a module.
+- [#8280](https://github.com/nautobot/nautobot/issues/8280) - Fixed Device Type front and rear images not always fully visible.
+
+### Documentation in v3.0.2
+
+- [#8218](https://github.com/nautobot/nautobot/issues/8218) - Updated the Jobs Getting Started documentation to include the 3.0 screenshots.
+- [#8225](https://github.com/nautobot/nautobot/issues/8225) - Updated the VPN documentation to include the 3.0 screenshots.
+- [#8230](https://github.com/nautobot/nautobot/issues/8230) - Updated the index and `django-admin` documentation to include the 3.0 screenshots.
+- [#8245](https://github.com/nautobot/nautobot/issues/8245) - Updated the release checklist steps for accuracy and clarity.
+
+### Housekeeping in v3.0.2
+
+- [#8194](https://github.com/nautobot/nautobot/issues/8194) - Updated SoftwareImageFiles and Versions documentation to include 3.0 screenshots.
+- [#8219](https://github.com/nautobot/nautobot/issues/8219) - Updated ui-component-framework documentation to include 3.0 screenshots.
+- [#8227](https://github.com/nautobot/nautobot/issues/8227) - Updated DynamicGroup documentation to include 3.0 screenshots.
+- [#8231](https://github.com/nautobot/nautobot/issues/8231) - Updated JobButton documentation to include 3.0 screenshots.
+- [#8233](https://github.com/nautobot/nautobot/issues/8233) - Added `invoke compress-images` task to auto-compress images in documentation and others.
+- [#8233](https://github.com/nautobot/nautobot/issues/8233) - Added `compress-images` job to `ci_pullrequest` workflow.
+- [#8233](https://github.com/nautobot/nautobot/issues/8233) - Run `invoke compress-images` against current images.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `@eslint/js` to `^9.39.1`.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `eslint` to `^9.39.1`.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `globals` to `^16.5.0`.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `postcss-loader` to `^8.2.0`.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `prettier` to `^3.6.2`.
+- [#8237](https://github.com/nautobot/nautobot/issues/8237) - Updated development npm dependency `sass` to `^1.94.2`.
+- [#8238](https://github.com/nautobot/nautobot/issues/8238) - Updated development dependency `ruff` to `~0.14.6`.
+- [#8241](https://github.com/nautobot/nautobot/issues/8241) - Updated Data Validation Engine documentation to include 3.0 screenshots.
+- [#8259](https://github.com/nautobot/nautobot/issues/8259) - Updated git-as-data-source documentation to include 3.0 screenshots.
+- [#8286](https://github.com/nautobot/nautobot/issues/8286) - Added ObjectDataComplianceViewMixin to `nautobot.apps.views`.
+
 ## v3.0.1 (2025-11-24)
 
 ### Added in v3.0.1
