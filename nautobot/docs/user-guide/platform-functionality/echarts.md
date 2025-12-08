@@ -170,7 +170,8 @@ Each chart comes with two default toolbox icons:
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Echarts Toolbox](../../media/development/echarts/toolbox.png){ .on-glb }
+- ![Echarts Toolbox](../../media/development/echarts/ss_toolbox_light.png#only-light){ .on-glb }
+![Echarts Toolbox](../../media/development/echarts/ss_toolbox_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -200,7 +201,8 @@ chart = EChartsBase(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Bar echart with line](../../media/development/echarts/combined_with-line-bar.png){ .on-glb }
+- ![Bar echart with line](../../media/development/echarts/ss_combined_with-line-bar_light.png#only-light){ .on-glb }
+![Bar echart with line](../../media/development/echarts/ss_combined_with-line-bar_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -273,7 +275,8 @@ object_detail_content = object_detail.ObjectDetailContent(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Bar echarts data](../../media/development/echarts/bar-echarts-data.png){ .on-glb }
+- ![Bar echarts data](../../media/development/echarts/ss_bar-echarts-data_light.png#only-light){ .on-glb }
+![Bar echarts data](../../media/development/echarts/ss_bar-echarts-data_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -303,7 +306,8 @@ object_detail_content = object_detail.ObjectDetailContent(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Echarts Pie](../../media/development/echarts/pie-echarts-data.png){ .on-glb }
+- ![Echarts Pie](../../media/development/echarts/ss_pie-echarts-data_light.png#only-light){ .on-glb }
+![Echarts Pie](../../media/development/echarts/ss_pie-echarts-data_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -333,7 +337,8 @@ object_detail_content = object_detail.ObjectDetailContent(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Echarts Line](../../media/development/echarts/line-echarts-data.png){ .on-glb }
+- ![Echarts Line](../../media/development/echarts/ss_line-echarts-data_light.png#only-light){ .on-glb }
+![Echarts Line](../../media/development/echarts/ss_line-echarts-data_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -374,7 +379,8 @@ This produces data in the format:
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Bar echarts queryset records](../../media/development/echarts/bar-echarts-queryset-records.png){ .on-glb }
+- ![Bar echarts queryset records](../../media/development/echarts/ss_bar-echarts-queryset-records_light.png#only-light){ .on-glb }
+![Bar echarts queryset records](../../media/development/echarts/ss_bar-echarts-queryset-records_dark.png#only-dark){ .on-glb }
 
 </div>
 

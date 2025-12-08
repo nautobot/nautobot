@@ -238,14 +238,14 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 label="EChart - Bar queryset",
                 chart_kwargs={
                     "chart_type": ui.EChartsTypeChoices.BAR,
-                    "header": "Devices and Prefixes by Location Type",
-                    "description": "Example chart with queryset_to_nested_dict_records_as_series. Please run `nautobot-server generate_test_data` to see data here.",
+                    "header": "Devices and Prefixes by Status",
+                    "description": "Example chart with queryset_to_nested_dict_keys_as_series",
                     "data": lambda context: ui.queryset_to_nested_dict_records_as_series(
                         Location.objects.annotate(
                             device_count=count_related(Device, "location"),
                             prefix_count=count_related(Prefix, "locations"),
                         ),
-                        record_key="location_type__nestable",
+                        record_key="status",
                         value_keys=["prefix_count", "device_count"],
                     ),
                 },
