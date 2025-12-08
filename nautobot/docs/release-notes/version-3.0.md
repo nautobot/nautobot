@@ -214,6 +214,8 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 ### Security in v3.0.2
 
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `celery` to `~5.6.0` to include a security fix (https://github.com/celery/celery/pull/9997).
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `urllib3` to version `2.6.1` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#8271](https://github.com/nautobot/nautobot/issues/8271) - Updated dependency `Django` to `~4.2.27` to protect against CVE-2025-13372 and CVE-2025-64460.
 
 ### Fixed in v3.0.2
@@ -229,6 +231,12 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8225](https://github.com/nautobot/nautobot/issues/8225) - Updated the VPN documentation to include the 3.0 screenshots.
 - [#8230](https://github.com/nautobot/nautobot/issues/8230) - Updated the index and `django-admin` documentation to include the 3.0 screenshots.
 - [#8245](https://github.com/nautobot/nautobot/issues/8245) - Updated the release checklist steps for accuracy and clarity.
+
+### Dependencies in v3.0.2
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tables2` to `~2.8.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-timezone-field` to `~7.2.1`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tree-queries` to `~0.23.0`.
 
 ### Housekeeping in v3.0.2
 
@@ -248,7 +256,15 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8238](https://github.com/nautobot/nautobot/issues/8238) - Updated development dependency `ruff` to `~0.14.6`.
 - [#8241](https://github.com/nautobot/nautobot/issues/8241) - Updated Data Validation Engine documentation to include 3.0 screenshots.
 - [#8259](https://github.com/nautobot/nautobot/issues/8259) - Updated git-as-data-source documentation to include 3.0 screenshots.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `coverage` to `~7.13.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `ruff` to `~0.14.8`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `tblib` to `~3.2.2`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-gen-files` to `~0.6.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.5.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-material` to `~9.7.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocstrings-python` to `~1.19.0`.
 - [#8286](https://github.com/nautobot/nautobot/issues/8286) - Added ObjectDataComplianceViewMixin to `nautobot.apps.views`.
+- [#8294](https://github.com/nautobot/nautobot/issues/8294) - Fixed incorrect generic filter test error message.
 
 ## v3.0.1 (2025-11-24)
 
