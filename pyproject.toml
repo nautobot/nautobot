@@ -25,7 +25,7 @@ packages = [
 ]
 include = [
     # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
-    "nautobot/project-static/docs/**/*",
+    {path = "nautobot/project-static/docs/**/*", format = ["sdist", "wheel"]},
 ]
 exclude = [
     # Source code of the documentation doesn't need to be included since we package the rendered docs
