@@ -1777,6 +1777,7 @@ class DeviceTestCase(
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
     tenancy_related_name = "devices"
+    exclude_q_filter_predicates = ["primary_ip4__host__ipstr", "primary_ip6__host__ipstr"]
     generic_filter_tests = [
         ("asset_tag",),
         ("cluster", "clusters__id"),

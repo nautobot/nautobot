@@ -802,6 +802,8 @@ class DeviceFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "primary_ip4__host__ipstr": "icontains",
+            "primary_ip6__host__ipstr": "icontains",
             "comments": "icontains",
         },
     )
@@ -1024,7 +1026,15 @@ class PowerPortFilterSet(
 
     class Meta:
         model = PowerPort
-        fields = ["id", "name", "maximum_draw", "allocated_draw", "description", "label", "tags"]
+        fields = [
+            "id",
+            "name",
+            "maximum_draw",
+            "allocated_draw",
+            "description",
+            "label",
+            "tags",
+        ]
 
 
 class PowerOutletFilterSet(
@@ -1037,7 +1047,15 @@ class PowerOutletFilterSet(
 
     class Meta:
         model = PowerOutlet
-        fields = ["id", "name", "feed_leg", "power_port", "description", "label", "tags"]
+        fields = [
+            "id",
+            "name",
+            "feed_leg",
+            "power_port",
+            "description",
+            "label",
+            "tags",
+        ]
 
 
 class InterfaceFilterSet(
@@ -1246,7 +1264,11 @@ class InterfaceFilterSet(
         }.get(value, queryset.none())
 
 
-class FrontPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin, BaseFilterSet):
+class FrontPortFilterSet(
+    ModularDeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    BaseFilterSet,
+):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1256,10 +1278,22 @@ class FrontPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTermina
 
     class Meta:
         model = FrontPort
-        fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
+        fields = [
+            "id",
+            "name",
+            "type",
+            "description",
+            "label",
+            "rear_port_position",
+            "tags",
+        ]
 
 
-class RearPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin, BaseFilterSet):
+class RearPortFilterSet(
+    ModularDeviceComponentModelFilterSetMixin,
+    CableTerminationModelFilterSetMixin,
+    BaseFilterSet,
+):
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=FrontPort.objects.all(),
@@ -1433,7 +1467,9 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
     location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
     location = MultiValueCharFilter(
-        method="filter_device", field_name="device__location__name", label="Location (name)"
+        method="filter_device",
+        field_name="device__location__name",
+        label="Location (name)",
     )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
@@ -1660,7 +1696,16 @@ class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
         """Meta attributes for filter."""
 
         model = InterfaceRedundancyGroup
-        fields = ["id", "name", "description", "secrets_group", "virtual_ip", "protocol", "protocol_group_id", "tags"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "secrets_group",
+            "virtual_ip",
+            "protocol",
+            "protocol_group_id",
+            "tags",
+        ]
 
     # 2.0 TODO(jathan): Eliminate these methods.
     def filter_virtual_ip(self, queryset, name, value):
@@ -1675,7 +1720,10 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet):
     """Filter for InterfaceRedundancyGroupAssociation."""
 
     q = SearchFilter(
-        filter_predicates={"interface_redundancy_group__name": "icontains", "interface__name": "icontains"}
+        filter_predicates={
+            "interface_redundancy_group__name": "icontains",
+            "interface__name": "icontains",
+        }
     )
 
     interface_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
@@ -2204,7 +2252,10 @@ class ModuleBayFilterSet(NautobotFilterSet):
 
 
 class VirtualDeviceContextFilterSet(
-    NautobotFilterSet, TenancyModelFilterSetMixin, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+    NautobotFilterSet,
+    TenancyModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+    StatusModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={

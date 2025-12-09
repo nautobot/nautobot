@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
+from nautobot.dcim.transforms import IPString
+
 from . import lookups
 from .constants import IPV4_BYTE_LENGTH
 from .formfields import IPNetworkFormField
@@ -111,3 +113,4 @@ VarbinaryIPField.register_lookup(lookups.NetHost)
 VarbinaryIPField.register_lookup(lookups.NetIn)
 VarbinaryIPField.register_lookup(lookups.NetHostContained)
 VarbinaryIPField.register_lookup(lookups.NetFamily)
+VarbinaryIPField.register_lookup(IPString)
