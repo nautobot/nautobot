@@ -42,8 +42,12 @@ E006 = Error(
 # E007 and E008 are dynamically constructed inline below
 
 E009 = Error(
-    "The key 'nautobotjobfiles' is not present in the settings.STORAGES dictionary. Configuration under this key is required since Nautobot v2.4.25 and v3.0.3 for Nautobot Jobs to work properly.",
-    hint='Nautobot defaults to setting STORAGES["nautobotjobfiles"]["BACKEND"] to "db_file_storage.storage.DatabaseFileStorage", but in many cases you should override this. Refer to https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.',
+    "You appear to have overridden settings.STORAGES incorrectly. "
+    "In addition to the Django standard keys of 'default' and 'staticfiles', "
+    "Nautobot also requires the key 'nautobotjobfiles' to define storage configuration for Job input/output files.",
+    hint='Nautobot defaults to setting STORAGES["nautobotjobfiles"]["BACKEND"] to '
+    '"db_file_storage.storage.DatabaseFileStorage", but in many cases you should override this. '
+    "Refer to https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
     id="nautobot.core.E009",
     obj=settings,
 )
@@ -233,8 +237,10 @@ def check_for_deprecated_storage_settings(app_configs, **kwargs):
         if settings.is_overridden(setting_name):
             warnings.append(
                 Warning(
-                    msg=f"The setting {setting_name} is deprecated since Nautobot v2.4.25 and v3.0.3, and support will be removed in Nautobot 3.1.",
-                    hint=f"You should migrate to setting {replacement} instead.",
+                    msg=f"The setting {setting_name} is deprecated since Nautobot v3.0.3, "
+                    "and support will be removed in Nautobot 3.1.",
+                    hint=f"You should migrate to setting {replacement} instead. Refer to "
+                    "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
                     obj=settings,
                     id="nautobot.core.W008",
                 )
