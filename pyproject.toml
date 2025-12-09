@@ -34,7 +34,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 # Background task processing
-celery = "~5.5.3"
+celery = "~5.6.0"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
@@ -78,18 +78,19 @@ django-storages = {version = "~1.14.6", optional = true}
 # Structured logging for Django
 django-structlog = {version = "~10.0.0", extras = ["celery"]}
 # Advanced HTML tables
-django-tables2 = "~2.7.5"
+django-tables2 = "~2.8.0"
 # Tags
 django-taggit = "~6.1.0"
 # Represent time zones in Django
-django-timezone-field = "~7.1"
+django-timezone-field = "~7.2.1"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.21.2"
+django-tree-queries = "~0.23.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
+# Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
 drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.15.0"
@@ -188,13 +189,13 @@ markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
 markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
-mkdocs-gen-files = "~0.5.0"
+mkdocs-gen-files = "~0.6.0"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
-mkdocs-macros-plugin = "~1.4.1"
+mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
-mkdocs-material = "~9.6.23"
+mkdocs-material = "~9.7.0"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -202,7 +203,7 @@ mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.18.2"
+mkdocstrings-python = "~1.19.0"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -216,13 +217,13 @@ pylint-django = "~2.6.1"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.33"
 # Combination linter and code formatter
-ruff = "~0.14.3"
+ruff = "~0.14.8"
 # YAML linting
 yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
-# Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
-coverage = "<=6.4.0"
+# Test code coverage measurement
+coverage = "~7.13.0"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
@@ -234,7 +235,7 @@ selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
-tblib = "~3.1.0"
+tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~2.19.0"
 
