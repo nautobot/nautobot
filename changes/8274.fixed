@@ -1,0 +1,1 @@
+Fixed unintended omission of the rendered documentation from `.whl` packages.
