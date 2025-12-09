@@ -1,0 +1,1 @@
+Removed a redundant error condition in Interface form validation when setting interface mode to tagged-all.
