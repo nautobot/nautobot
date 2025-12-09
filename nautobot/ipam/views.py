@@ -723,10 +723,7 @@ class IPAddressView(generic.ObjectView):
 
         # Virtual servers table
         virtual_servers = instance.virtual_servers.all().restrict(request.user, "view")
-        virtual_servers_table = VirtualServerTable(virtual_servers, orderable=False)
-        virtual_servers_table.Meta.default_columns = tuple(
-            field for field in virtual_servers_table.Meta.default_columns if field != "vip"
-        )
+        virtual_servers_table = VirtualServerTable(virtual_servers, orderable=False, exclude=["vip"])
 
         paginate = {
             "paginator_class": EnhancedPaginator,
