@@ -417,6 +417,7 @@ This produces data in the format:
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Bar echarts queryset keys](../../media/development/echarts/bar-echars-queryset-keys.png){ .on-glb }
+- ![Bar echarts queryset keys](../../media/development/echarts/ss_bar-echars-queryset-keys_light.png#only-light){ .on-glb }
+![Bar echarts queryset keys](../../media/development/echarts/ss_bar-echars-queryset-keys_light.png#only-dark){ .on-glb }
 
 </div>
