@@ -714,10 +714,7 @@ class IPAddressView(generic.ObjectView):
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
 
         # Load balancer pool members table
-        load_balancer_pool_members = (
-            instance.load_balancer_pool_members.all()
-            .restrict(request.user, "view")
-        )
+        load_balancer_pool_members = instance.load_balancer_pool_members.all().restrict(request.user, "view")
         load_balancer_pool_members_table = LoadBalancerPoolMemberTable(load_balancer_pool_members, orderable=False)
 
         # Virtual servers table
