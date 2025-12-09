@@ -1,0 +1,1 @@
+Added support for defining Job input/output file storage via Django's `STORAGES` setting. This deprecates the separate settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which will be removed entirely in Nautobot v3.1.
