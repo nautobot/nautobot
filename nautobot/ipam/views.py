@@ -717,7 +717,6 @@ class IPAddressView(generic.ObjectView):
         load_balancer_pool_members = (
             instance.load_balancer_pool_members.all()
             .restrict(request.user, "view")
-            .select_related("tenant", "load_balancer_pool", "health_check_monitor")
         )
         load_balancer_pool_members_table = LoadBalancerPoolMemberTable(load_balancer_pool_members, orderable=False)
 
