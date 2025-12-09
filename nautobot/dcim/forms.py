@@ -224,9 +224,6 @@ class InterfaceCommonForm(forms.Form):
         if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
-        if mode != InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
-            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
-
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
@@ -5150,7 +5147,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         ]
 
 
-class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     """Filter form to filter searches."""
 
     model = InterfaceRedundancyGroup
@@ -5180,7 +5177,6 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     class Meta:
         """Meta attributes."""
 
-        model = InterfaceRedundancyGroup
         # Define the fields above for ordering and widget purposes
         fields = [
             "q",
