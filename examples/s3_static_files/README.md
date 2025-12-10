@@ -20,23 +20,40 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
-# TODO (glennmatthews) STATICFILES_STORAGE is replaced with STORAGES["staticfiles"], need a similar pattern for Jobs
-STORAGE_BACKEND = "storages.backends.s3.S3Storage"
-
-STORAGE_CONFIG = {
-    "AWS_ACCESS_KEY_ID": "...",
-    "AWS_SECRET_ACCESS_KEY": "...",
-    "AWS_STORAGE_BUCKET_NAME": "my-bucket-name",
-    "AWS_S3_REGION_NAME": "us-west-1",
-    "AWS_DEFAULT_ACL": "public-read",
-    "AWS_QUERYSTRING_AUTH": False,
-    "AWS_LOCATION": "subfolder/name/"
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": "...",
+            "secret_key": "...",
+            "bucket_name": "my-bucket-name",
+            "region_name": "us-west-1",
+            "default_acl": "public-read",
+            "querystring_auth": False,
+            "location": "subfolder/name/",
+            # ... additional options as needed
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            # base options as above...
+            "location": "other_subfolder/name/",
+            # ... additional options as needed
+        },
+    },
+    "nautobotjobfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            # base options as above...
+            "location": "some_jobs_subfolder/",
+            # ... additional options as needed
+        },
+    },
 }
-JOB_FILE_IO_STORAGE = STORAGE_BACKEND
-STATICFILES_STORAGE = STORAGE_BACKEND
 ```
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, `boto3` [internally looks up IAM credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
+If `access_key` and/or `secret_key` are not set, `boto3` [internally looks up IAM credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
 
 ## Bucket Creation
 

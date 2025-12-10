@@ -400,7 +400,7 @@ class ModularDeviceComponentTable(DeviceComponentTable):
         super().__init__(*args, **kwargs)
 
     def render_module(self, record, value, **kwargs):
-        if value and value == self.parent_module:
+        if value == self.parent_module or not value:
             return self.default
         return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
@@ -744,6 +744,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "mgmt_only",
@@ -771,6 +772,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "description",
         )
@@ -803,6 +805,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "parent_interface",
@@ -833,6 +836,8 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
+            "speed",
             "parent_interface",
             "lag",
             "mtu",
