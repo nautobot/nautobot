@@ -1798,8 +1798,8 @@ class AsyncStatsPanel(Panel):
 
         Args:
             api_url_name (str): The API URL to call, e.g. `"dcim-api:location_stats"`. This API is expected to return,
-                at minimum, a dict of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
-                Refer to `LocationViewSet.stats` for an example implementation.
+                at minimum, a list of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
+                Refer to `StatsSerializer` and `LocationViewSet.stats` for an example implementation.
         """
         self.api_url_name = api_url_name
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)

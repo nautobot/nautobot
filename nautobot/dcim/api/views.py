@@ -21,6 +21,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.serializers import StatsSerializer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
@@ -169,15 +170,18 @@ class LocationViewSet(NautobotModelViewSet):
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
 
-    # TODO: add @extend_schema() for OpenAPI
+    @extend_schema(
+        filters=False,
+        responses={200: StatsSerializer(many=True)},
+    )
     @action(detail=True, url_path="stats")
     def stats(self, request, pk):
-        """Return statistics for count of related models associated to this Location and its descendants."""
+        """Retrieve statistics for counts of related models associated to this Location and its descendants."""
         obj = get_object_or_404(self.queryset, pk=pk)
         descendants_pks = obj.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
         distinct = len(descendants_pks) > 1
 
-        result = {}
+        result = []
         for related_model, query in [
             (Rack, "location__in"),
             (Device, "location__in"),
@@ -187,15 +191,21 @@ class LocationViewSet(NautobotModelViewSet):
             (VirtualMachine, "cluster__location__in"),
         ]:
             qs = related_model.objects.restrict(request.user, "view").filter(**{query: descendants_pks})
-            if distinct:
+            if distinct or related_model == Circuit:
                 qs = qs.distinct()
             count = qs.count()
-            result[related_model._meta.label_lower] = {
-                "title": bettertitle(related_model._meta.verbose_name_plural),
-                "count": count,
-                "ui_url": reverse(validated_viewname(related_model, "list"), request=request) + f"?location={obj.pk}",
-                "api_url": reverse(validated_api_viewname(related_model, "list"), request=request) + f"?location={obj.pk}",
-            }
+            result.append(
+                {
+                    "title": bettertitle(related_model._meta.verbose_name_plural),
+                    "count": count,
+                    "ui_url": (
+                        reverse(validated_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                    "api_url": (
+                        reverse(validated_api_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                }
+            )
 
         return Response(result)
 

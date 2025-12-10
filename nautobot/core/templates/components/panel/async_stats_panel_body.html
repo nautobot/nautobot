@@ -9,19 +9,29 @@
     async function getStats() {
         try {
             const response = await fetch("{{ api_url }}");
-            if (response.ok) {
-                const stats = await response.json();
-                return stats;
-            } //else {}
+            if (!response.ok) {
+                return response.statusText;
+            }
+            const stats = await response.json();
+            return stats;
         } catch (error) {
+            return error.message;
         }
     }
 
     getStats().then(stats => {
-        console.log(stats);
         const rowElem = document.querySelector('div[id="{{ body_id }}"] div.card-body div.row');
         rowElem.textContent = "";
-        for (let row of Object.values(stats)) {
+        if (typeof(stats) == "string") {
+            const errorElem = document.createElement("div");
+            errorElem.classList.toggle("col-12", true);
+            errorElem.classList.toggle("text-center", true);
+            errorElem.classList.toggle("text-danger", true);
+            errorElem.textContent = `Unable to retrieve related-object statistics for this Location: ${stats}`;
+            rowElem.appendChild(errorElem);
+            return;
+        }
+        for (let row of stats) {
             const colElem = document.createElement("div");
             colElem.classList.toggle("col", true);
             colElem.classList.toggle("text-center", true);
