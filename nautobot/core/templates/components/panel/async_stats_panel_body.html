@@ -1,0 +1,48 @@
+{% load static %}
+<div class="row row-cols-3">
+    <div class="col offset-4 text-center">
+        <img src="{% static 'img/ajax-loader.gif' %}">
+    </div>
+</div>
+
+<script type="text/javascript">
+    async function getStats() {
+        try {
+            const response = await fetch("{{ api_url }}");
+            if (response.ok) {
+                const stats = await response.json();
+                return stats;
+            } //else {}
+        } catch (error) {
+        }
+    }
+
+    getStats().then(stats => {
+        console.log(stats);
+        const rowElem = document.querySelector('div[id="{{ body_id }}"] div.card-body div.row');
+        rowElem.textContent = "";
+        for (let row of Object.values(stats)) {
+            const colElem = document.createElement("div");
+            colElem.classList.toggle("col", true);
+            colElem.classList.toggle("text-center", true);
+            const h2Elem = document.createElement("h2");
+            const aElem = document.createElement("a");
+            aElem.textContent = row["count"];
+            aElem.href = row["ui_url"];
+            aElem.classList.toggle("btn", true);
+            aElem.classList.toggle("btn-lg", true);
+            if (row["count"] > 0) {
+                aElem.classList.toggle("btn-primary", true);
+            } else {
+                aElem.classList.toggle("btn-secondary", true);
+            }
+            const pElem = document.createElement("p");
+            pElem.textContent = row["title"];
+            h2Elem.appendChild(aElem);
+            colElem.appendChild(h2Elem);
+            colElem.appendChild(pElem);
+            rowElem.appendChild(colElem);
+        }
+    });
+
+</script>

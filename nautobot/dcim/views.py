@@ -456,19 +456,11 @@ class LocationUIViewSet(NautobotUIViewSet):
                 },
                 footer_content_template_path="dcim/footer_convert_to_contact_or_team_record.html",
             ),
-            object_detail.StatsPanel(
+            object_detail.AsyncStatsPanel(
                 weight=100,
                 label="Stats",
                 section=SectionChoices.RIGHT_HALF,
-                filter_name="location",
-                related_models=[
-                    Rack,
-                    Device,
-                    Prefix,
-                    VLAN,
-                    (Circuit, "circuit_terminations__location__in"),
-                    (VirtualMachine, "cluster__location__in"),
-                ],
+                api_url_name="dcim-api:location-stats",
             ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
