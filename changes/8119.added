@@ -1,0 +1,1 @@
+Added `TreeModel.cacheable_descendants_pks` method to be usable for improved performance.

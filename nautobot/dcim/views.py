@@ -505,9 +505,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
             # ensure it is only performed once rather than as a subquery for each of the different count stats.
-            related_locations = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            related_locations = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
 
             rack_groups = (
                 RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
@@ -710,7 +708,7 @@ class RackGroupUIViewSet(NautobotUIViewSet):
             racks = (
                 Rack.objects.restrict(request.user, "view")
                 # Note this filter - we want the table to include racks assigned to child rack groups as well
-                .filter(rack_group__in=instance.descendants(include_self=True))
+                .filter(rack_group__in=instance.cacheable_descendants_pks(include_self=True))
                 .select_related("role", "location", "tenant")
             )
 

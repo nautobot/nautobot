@@ -1744,9 +1744,7 @@ class StatsPanel(Panel):
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
-            self.filter_pks = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            self.filter_pks = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
         else:
             self.filter_pks = [instance.pk]
 
