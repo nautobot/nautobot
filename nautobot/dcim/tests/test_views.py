@@ -210,10 +210,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    # One query for the natural slug, one for `LocationViewSet.get_extra_context`, and additional for distinct (which may be fixable?)
-    # See: https://github.com/nautobot/nautobot/pull/7530#discussion_r2432836062
-    # and https://github.com/nautobot/nautobot/pull/7530#discussion_r2432620239 for additional context
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 3}
+    # One query for the max_tree_depth to calculate the natural slug, one for the RackGroup filtering.
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -446,7 +444,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+    # One for max_depth lookup, one for retrieving descendants in order to find all related Racks
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -470,6 +469,11 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTest
             "description": "Updated description",
             "location": location.pk,
         }
+
+    def setUp(self):
+        super().setUp()
+        # Ensure that the related-racks table is renderable in the detail view.
+        self.add_permissions("dcim.view_rack")
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
