@@ -1,2 +1,0 @@
-Fixed inability to set a default saved view for list views defined in an App.
-Fixed inability to use UI Component Framework `BulkButton` for a model defined in an App.

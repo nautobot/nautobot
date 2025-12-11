@@ -1,1 +1,0 @@
-Added support for custom Celery worker health probes based on files.
