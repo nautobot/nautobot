@@ -180,13 +180,24 @@ class TreeModel(TreeNode):
             old_instance = self.__class__.objects.without_tree_fields().select_related("parent").get(pk=self.pk)
             parent_changed = old_instance.parent != self.parent
         else:
-            parent_changed = False
-        if parent_changed:
+            old_instance = None
+            parent_changed = True
+
+        if parent_changed and old_instance is not None:
             for ancestor in old_instance.ancestors(include_self=False):
                 cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
                 cache.delete_pattern(f"{cache_key}(*)")
+
         super().save(*args, **kwargs)
+
         if parent_changed:
             for ancestor in self.ancestors(include_self=False):
                 cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
                 cache.delete_pattern(f"{cache_key}(*)")
+
+    def delete(self, *args, **kwargs):
+        for ancestor in self.ancestors(include_self=False):
+            cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
+            cache.delete_pattern(f"{cache_key}(*)")
+
+        return super().delete(*args, **kwargs)
