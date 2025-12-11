@@ -223,6 +223,11 @@ class SettingsJSONSchemaTestCase(TestCase):
                     )
                 continue
             with self.subTest(f"Checking for settings schema property {key} in nautobot.core.settings"):
+                if "default" not in self.settings_schema["properties"][key]:
+                    # Should be undefined by default
+                    self.assertNotIn(key, keys)
+                    continue
+                # Else, make sure it's defined and has the correct value
                 try:
                     self.assertIn(key, keys)
                 except AssertionError as err:
