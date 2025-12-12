@@ -10,7 +10,7 @@
                 <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
                     {% block buttons %}
                         <a href="{% url cancel_route pk=approval_workflow.pk %}?return_url={{ request.path }}{{ return_url_extra }}"
-                            class="btn btn-secondary">
+                           class="btn btn-secondary">
                             <span class="mdi mdi-cancel" aria-hidden="true"></span>
                             Cancel Approval Workflow
                         </a>
