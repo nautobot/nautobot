@@ -3,7 +3,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.templatetags.perms import can_add, can_change, can_delete
+from nautobot.core.templatetags.perms import can_add, can_cancel, can_change, can_delete
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
 from nautobot.extras import models
@@ -297,13 +297,17 @@ def consolidate_detail_view_action_buttons(context):
     object_edit_url = action_url(instance, "edit")
     object_delete_url = action_url(instance, "delete")
     object_clone_url = action_url(instance, "add")
+    object_cancel_url = action_url(instance, "cancel")
     render_edit_button = bool(object_edit_url and can_change(context["user"], instance))
     render_delete_button = bool(object_delete_url and can_delete(context["user"], instance))
     render_clone_button = bool(
         hasattr(instance, "clone_fields") and object_clone_url and can_add(context["user"], instance)
     )
+    render_cancel_button = bool(object_cancel_url and can_cancel(context["user"], instance))
 
-    detail_view_action_button_count = sum([render_edit_button, render_delete_button, render_clone_button])
+    detail_view_action_button_count = sum(
+        [render_edit_button, render_delete_button, render_clone_button, render_cancel_button]
+    )
 
     if detail_view_action_button_count == 0:
         return {
@@ -325,6 +329,7 @@ def consolidate_detail_view_action_buttons(context):
     edit_button_classes = "btn btn-warning"
     delete_button_classes = "dropdown-item text-danger"
     clone_button_classes = "dropdown-item"
+    cancel_button_classes = "dropdown-item"
     clone_icon = "mdi mdi-plus-thick text-secondary"
     delete_button_fragment = f"<li>{delete_button_fragment}</li>"
 
@@ -399,6 +404,25 @@ def consolidate_detail_view_action_buttons(context):
                     }
                 ),
                 icon="mdi mdi-trash-can-outline",
+                button_class=delete_button_classes,
+            )
+        )
+
+    if render_cancel_button:
+        if render_clone_button or render_delete_button:
+            detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
+        detail_view_action_buttons.append(
+            format_html(
+                delete_button_fragment,
+                label=f"Cancel {bettertitle(context['verbose_name'])}",
+                attrs=render_tag_attrs(
+                    {
+                        "id": "cancel-button",
+                        "class": cancel_button_classes,
+                        "href": object_cancel_url,
+                    }
+                ),
+                icon="mdi mdi-cancel",
                 button_class=delete_button_classes,
             )
         )

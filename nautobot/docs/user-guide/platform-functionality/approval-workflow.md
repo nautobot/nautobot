@@ -118,7 +118,8 @@ A concrete instance of a workflow triggered for a specific object under review.
 
 - Automatically changes to `Denied` if any stage is denied.
 - Automatically changes to `Approved` if all stages are approved.
-- Calls object’s `on_workflow_approved()` or `on_workflow_denied()` when final state is reached.
+- Automatically changes to `Canceled` if Approval was canceled directly.
+- Calls object’s `on_workflow_approved()`, `on_workflow_denied()` or `on_workflow_canceled()` when final state is reached.
 
 ### ApprovalWorkflowStage
 

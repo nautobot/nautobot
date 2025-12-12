@@ -1,9 +1,23 @@
 {% extends base_template %}
+{% load buttons %}
 {% load approvals %}
 {% load helpers %}
 
 {% block content %}
     <div class="row">
+        {% if approval_workflow.is_active and request.user == approval_workflow.user %}
+            <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
+                <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
+                    {% block buttons %}
+                        <a href="{% url cancel_route pk=approval_workflow.pk %}?return_url={{ request.path }}{{ return_url_extra }}"
+                            class="btn btn-secondary">
+                            <span class="mdi mdi-cancel" aria-hidden="true"></span>
+                            Cancel Approval Workflow
+                        </a>
+                    {% endblock buttons %}
+                </div>
+            </div>
+        {% endif %}
         <div class="col-lg-6">
             <div class="card">
                 <div class="card-header">

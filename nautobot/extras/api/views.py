@@ -288,6 +288,48 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     serializer_class = serializers.ApprovalWorkflowSerializer
     filterset_class = filters.ApprovalWorkflowFilterSet
 
+    class ApprovalWorkflowViewPermission(TokenPermissions):
+        """
+        Enforce `view_approvalworkflowstage` permission (instead of default `add_approvalworkflowstage` for POST).
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.view_approvalworkflowstage"],
+        }
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={"200": serializers.ApprovalWorkflowSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ApprovalWorkflowViewPermission],
+    )
+    def cancel(self, request, pk=None):
+        instance = self.get_object()
+
+        if not (
+            request.user.is_superuser or instance.user == request.user  # only submitter can cancel an approval workflow
+        ):
+            return Response(
+                {
+                    "detail": "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not instance.is_active:
+            return Response(
+                {"detail": "Can't cancel finished approval workflow."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        instance.cancel()
+        serializer = serializers.ApprovalWorkflowSerializer(instance, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
     """ApprovalWorkflowStage viewset."""
@@ -345,6 +387,12 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
             return Response(
                 {"detail": "You do not have permission to approve this stage."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if workflow.is_canceled:
+            return Response(
+                {"detail": f"You can't {action_type} canceled approval workflow."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if self._user_already_approved_or_denied(user, stage, action_type):
@@ -431,6 +479,11 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if stage.approval_workflow.is_canceled:
+            return Response(
+                {"detail": "You can't comment canceled approval workflow."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         comment = request.data.get("comments", "")
         if not comment:
             return Response(

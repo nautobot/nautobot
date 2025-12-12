@@ -336,6 +336,110 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
             str(cm.exception),
         )
 
+    def test_is_canceled(self):
+        with self.subTest("return False if Approval is not canceled"):
+            for state in [
+                ApprovalWorkflowStateChoices.PENDING,
+                ApprovalWorkflowStateChoices.APPROVED,
+                ApprovalWorkflowStateChoices.DENIED,
+            ]:
+                self.approval_workflow.current_state = state
+                self.approval_workflow.save()
+                self.assertFalse(self.approval_workflow.is_canceled)
+
+        with self.subTest("return True if Approval is canceled"):
+            self.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+            self.approval_workflow.save()
+            self.assertTrue(self.approval_workflow.is_canceled)
+
+    def test_is_active(self):
+        with self.subTest("return False if Approval is not in pending state"):
+            for state in [
+                ApprovalWorkflowStateChoices.APPROVED,
+                ApprovalWorkflowStateChoices.DENIED,
+                ApprovalWorkflowStateChoices.CANCELED,
+            ]:
+                self.approval_workflow.current_state = state
+                self.approval_workflow.save()
+                self.assertFalse(self.approval_workflow.is_active)
+
+        with self.subTest("return True if Approval is in pending state"):
+            self.approval_workflow.current_state = ApprovalWorkflowStateChoices.PENDING
+            self.approval_workflow.save()
+            self.assertTrue(self.approval_workflow.is_active)
+
+    @mock.patch("nautobot.extras.models.jobs.ScheduledJob.on_workflow_canceled")
+    def test_cancel_approval_workflow_for_scheduledjob(self, mock_on_workflow_canceled):
+        # check if all stages are in pending state
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        # save number of resposnes before cancel action
+        responses_count = ApprovalWorkflowStageResponse.objects.filter(
+            approval_workflow_stage__approval_workflow=self.approval_workflow
+        ).count()
+
+        # do cancel approval workflow
+        self.approval_workflow.cancel()
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
+        mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
+
+        # check if cancel action doesn't change anything in ApprovalWorkfloStages and ApprovalWorkflowStageResponse
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED).count(),
+        )
+        self.assertEqual(
+            responses_count,
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage__approval_workflow=self.approval_workflow
+            ).count(),
+        )
+
+    @mock.patch("nautobot.extras.models.jobs.ScheduledJob.on_workflow_canceled")
+    def test_cancel_approval_workflow_for_scheduledjob_with_approved_stage(self, mock_on_workflow_canceled):
+        done_state = ApprovalWorkflowStateChoices.APPROVED
+        # check if all stages are in pending state
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        pending_stage = self.approval_workflow.active_stage
+        pending_stage.state = done_state
+        pending_stage.save()
+        # check if 2 stages are in pending state
+        self.assertEqual(
+            2,
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        # check if 1 stages are in approved state
+        self.assertEqual(1, self.approval_workflow.approval_workflow_stages.filter(state=done_state).count())
+        # save number of resposnes before cancel action
+        responses_count = ApprovalWorkflowStageResponse.objects.filter(
+            approval_workflow_stage__approval_workflow=self.approval_workflow
+        ).count()
+
+        # do cancel approval workflow
+        self.approval_workflow.cancel()
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
+        mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
+
+        # check if 2 stages are in canceled state
+        self.assertEqual(
+            2,
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED).count(),
+        )
+        # check if 1 stages are in approved state
+        self.assertEqual(1, self.approval_workflow.approval_workflow_stages.filter(state=done_state).count())
+        # check if cancel action doesn't change anything ApprovalWorkflowStageResponse
+        self.assertEqual(
+            responses_count,
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage__approval_workflow=self.approval_workflow
+            ).count(),
+        )
+
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """

@@ -191,7 +191,7 @@ class ApprovalWorkflow(OrganizationalModel):
         max_length=CHARFIELD_MAX_LENGTH,
         choices=ApprovalWorkflowStateChoices,
         default=ApprovalWorkflowStateChoices.PENDING,
-        help_text="Current state of the approval workflow. Eligible values are: Pending, Approved, Denied.",
+        help_text="Current state of the approval workflow. Eligible values are: Pending, Approved, Denied, Canceled.",
     )
     decision_date = models.DateTimeField(
         blank=True,
@@ -245,6 +245,31 @@ class ApprovalWorkflow(OrganizationalModel):
         )
         return first_nonapproved_stage
 
+    @property
+    def is_canceled(self):
+        return self.current_state == ApprovalWorkflowStateChoices.CANCELED
+
+    @property
+    def is_active(self):
+        return self.current_state == ApprovalWorkflowStateChoices.PENDING
+
+    def cancel(self):
+        """Cancel Approval Workflow.
+
+        Cancel Approval Workglow and change all PENDING ApprovalWorkflowStage to CANCEL state.
+        Stages already approved or denied don't change.
+        """
+
+        decision_date = timezone.now()
+        self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).update(
+            state=ApprovalWorkflowStateChoices.CANCELED, decision_date=decision_date
+        )
+
+        self.current_state = ApprovalWorkflowStateChoices.CANCELED
+        self.decision_date = decision_date
+        self.save()
+        self.object_under_review.on_workflow_canceled(self)
+
     def save(self, *args, **kwargs):
         """
         Override the save() method to
@@ -264,25 +289,22 @@ class ApprovalWorkflow(OrganizationalModel):
         # TODO need to check of the object fits the model_constraints of the approval workflow
         if self.user:
             self.user_name = self.user.username
-        # Check if there is one or more denied/canceled response for this stage instance
+        # Check if there is one or more denied response for this stage instance
         previous_state = self.current_state
         denied_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.DENIED)
-        if denied_stages.exists():
+        # check current_state is needed to not override what what set in `cancel` method.
+        if denied_stages.exists() and self.current_state != ApprovalWorkflowStateChoices.CANCELED:
             self.current_state = ApprovalWorkflowStateChoices.DENIED
         else:
-            canceled_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED)
-            if canceled_stages.exists():
-                self.current_state = ApprovalWorkflowStateChoices.CANCELED
-            else:
-                # Check if all stages are approved
-                approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
-                approval_workflow_stage_count = (
-                    self.approval_workflow_definition.approval_workflow_stage_definitions.count()
-                )
-                if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
-                    self.current_state = ApprovalWorkflowStateChoices.APPROVED
+            # Check if all stages are approved
+            approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
+            approval_workflow_stage_count = (
+                self.approval_workflow_definition.approval_workflow_stage_definitions.count()
+            )
+            if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
+                self.current_state = ApprovalWorkflowStateChoices.APPROVED
 
-        # If the state is changed to APPROVED or DENIED or CANCELED from PENDING, set the decision date
+        # If the state is changed to APPROVED or DENIED from PENDING, set the decision date
         if previous_state != self.current_state:
             self.decision_date = timezone.now()
         super().save(*args, **kwargs)
@@ -447,25 +469,17 @@ class ApprovalWorkflowStage(OrganizationalModel):
         if approved_responses.count() >= self.approval_workflow_stage_definition.min_approvers:
             self.state = ApprovalWorkflowStateChoices.APPROVED
 
-        # Check if there is one or more denied/canceled response for this stage instance
-        # If so, set the stage as denied/canceled even tho previously the stage could be approved by enough number of approvers
+        # Check if there is one or more denied response for this stage instance
+        # If so, set the stage as denied even tho previously the stage could be approved by enough number of approvers
         denied_responses = self.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.DENIED)
         if denied_responses.exists():
             self.state = ApprovalWorkflowStateChoices.DENIED
-        else:
-            canceled_responses = self.approval_workflow_stage_responses.filter(
-                state=ApprovalWorkflowStateChoices.CANCELED
-            )
-            if canceled_responses.exists():
-                self.state = ApprovalWorkflowStateChoices.CANCELED
-
         # Set the decision date if the state is changed to APPROVED or DENIED
         decision_made = (
             self.state
             in [
                 ApprovalWorkflowStateChoices.APPROVED,
                 ApprovalWorkflowStateChoices.DENIED,
-                ApprovalWorkflowStateChoices.CANCELED,
             ]
             and previous_state != self.state
         )
@@ -474,17 +488,12 @@ class ApprovalWorkflowStage(OrganizationalModel):
         super().save(*args, **kwargs)
 
         # Modify the parent ApprovalWorkflow to potentially update its state as well
-        # If this stage is approved or denied or canceled.
+        # If this stage is approved or denied.
         if decision_made:
             approval_workflow = self.approval_workflow
             # Check if there is one or more denied response for this stage instance
-            denied_or_canceled_stages = approval_workflow.approval_workflow_stages.filter(
-                state__in=[ApprovalWorkflowStateChoices.DENIED, ApprovalWorkflowStateChoices.CANCELED]
-            )
-            if (
-                denied_or_canceled_stages.exists()
-                and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING
-            ):
+            denied_stages = approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.DENIED)
+            if denied_stages.exists() and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING:
                 approval_workflow.save(using=kwargs.get("using"))
             # Check if all stages are approved
             approved_stages = approval_workflow.approval_workflow_stages.filter(
@@ -559,7 +568,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
         super().save(*args, **kwargs)
         # Call save() on the parent ApprovalWorkflowStage to potentially update its state as well
         # If this stage is approved or denied and the approval workflow stage instance needs to be updated.
-        if self.state in [ApprovalWorkflowStateChoices.DENIED, ApprovalWorkflowStateChoices.CANCELED]:
+        if self.state == ApprovalWorkflowStateChoices.DENIED:
             # Check if the stage instance needs to be updated.
             if self.approval_workflow_stage.state == ApprovalWorkflowStateChoices.PENDING:
                 self.approval_workflow_stage.save(using=kwargs.get("using"))

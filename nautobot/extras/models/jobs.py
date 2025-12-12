@@ -1333,6 +1333,14 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
+    def on_workflow_canceled(self, approval_workflow):
+        """When denied, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
+        self.save()
+
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.canceled", payload=publish_event_payload)
+
     def get_approval_template(self):
         """
         Return a custom template path to be used for the approval UI.

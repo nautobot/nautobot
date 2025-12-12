@@ -333,6 +333,43 @@ class ApprovalWorkflowUIViewSet(
         ],
     )
 
+    @action(
+        detail=True,
+        url_path="cancel",
+        methods=["get", "post"],
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_approvalworkflow"],
+    )
+    def cancel(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if not (request.user.is_superuser or instance.user == request.user):
+            messages.error(
+                request,
+                "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
+            )
+            return redirect(self.get_return_url(request, instance))
+
+        if not instance.is_active:
+            messages.error(request, "Can't cancel finished approval workflow.")
+            return redirect(self.get_return_url(request, instance))
+
+        if request.method == "GET":
+            template_name = "extras/approval_workflow/cancel.html"
+            return render(
+                request,
+                template_name,
+                {
+                    "obj": instance,
+                    "object_under_review": instance.object_under_review,
+                    "return_url": self.get_return_url(request, instance),
+                },
+            )
+        instance.cancel()
+        instance.refresh_from_db()
+        messages.success(request, f"You canceled {instance}.")
+        return redirect(self.get_return_url(request, instance))
+
 
 class ApprovalWorkflowStageUIViewSet(
     ObjectDetailViewMixin,
@@ -440,6 +477,10 @@ class ApprovalWorkflowStageUIViewSet(
             messages.error(request, "You are not permitted to approve this workflow stage.")
             return redirect(self.get_return_url(request, instance))
 
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can't approve canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
+
         if request.method == "GET":
             if existing_response := ApprovalWorkflowStageResponse.objects.filter(
                 approval_workflow_stage=instance, user=request.user
@@ -497,6 +538,10 @@ class ApprovalWorkflowStageUIViewSet(
             messages.error(request, "You are not permitted to deny this workflow stage.")
             return redirect(self.get_return_url(request, instance))
 
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can't deny canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
+
         if request.method == "GET":
             if existing_response := ApprovalWorkflowStageResponse.objects.filter(
                 approval_workflow_stage=instance, user=request.user
@@ -547,6 +592,9 @@ class ApprovalWorkflowStageUIViewSet(
             return redirect(self.get_return_url(request, instance))
 
         # We don't enforce approver-group/superuser check here, anyone can comment, not just an approver.
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can't comment canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
             if existing_response := ApprovalWorkflowStageResponse.objects.filter(
@@ -727,6 +775,7 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "object": obj,
                 "verbose_name": helpers.bettertitle(obj._meta.verbose_name),
                 "verbose_name_plural": obj._meta.verbose_name_plural,
+                "cancel_route": "extras:approvalworkflow_cancel",
                 "approval_workflow": approval_workflow,
                 "base_template": base_template,
                 "active_tab": "approval_workflow",

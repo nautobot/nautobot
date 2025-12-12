@@ -301,6 +301,28 @@ class ApprovalWorkflowViewTestCase(
             "current_state": ApprovalWorkflowStateChoices.DENIED,
         }
 
+    def test_approval_workflow_view(self):
+        """This test test a view called ApprovalWorkflowUIViewSet."""
+        with self.subTest("Test Stage view when Approval Workflow is CANCELED/FINISHED"):
+            pass
+            # self.client.force_login(self.user)
+            # self.add_permissions("extras.view_approvalworkflowstage", "extras.view_approvalworkflow")
+
+            # url = reverse("extras:approval_workflows")
+            # response = self.client.get(url)
+            # self.assertHttpStatus(response, 200)
+
+        with self.subTest("Test Stage view when Approval Workflow is OPEN"):
+            pass
+
+    def test_approval_workflow_object_view(self):
+        "This test will test a view called ObjectApprovalWorkflowView."
+        with self.subTest("Test Stage view when Approval Workflow is CANCELED/FINISHED"):
+            pass
+
+        with self.subTest("Test Stage view when Approval Workflow is OPEN"):
+            pass
+
 
 class ApprovalWorkflowStageViewTestCase(
     ViewTestCases.GetObjectViewTestCase,
