@@ -9,6 +9,7 @@ from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as Tree
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache
+from nautobot.core.utils.cache import construct_cache_key
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):

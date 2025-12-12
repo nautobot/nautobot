@@ -446,6 +446,7 @@ class LocationUIViewSet(NautobotUIViewSet):
                 label="Stats",
                 section=SectionChoices.RIGHT_HALF,
                 api_url_name="dcim-api:location-stats",
+                body_id="stats",
             ),
             LocationRackGroupsPanel(
                 label="Rack Groups",

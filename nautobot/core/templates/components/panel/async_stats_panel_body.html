@@ -1,6 +1,6 @@
 {% load static %}
 <div class="row row-cols-3">
-    <div class="col offset-4 text-center">
+    <div class="col-md-4 col-md-offset-4 text-center">
         <img src="{% static 'img/ajax-loader.gif' %}">
     </div>
 </div>
@@ -20,11 +20,11 @@
     }
 
     getStats().then(stats => {
-        const rowElem = document.querySelector('div[id="{{ body_id }}"] div.card-body div.row');
+        const rowElem = document.querySelector('div[id="{{ body_id }}"] div.row');
         rowElem.textContent = "";
         if (typeof(stats) == "string") {
             const errorElem = document.createElement("div");
-            errorElem.classList.toggle("col-12", true);
+            errorElem.classList.toggle("col-md-12", true);
             errorElem.classList.toggle("text-center", true);
             errorElem.classList.toggle("text-danger", true);
             errorElem.textContent = `Unable to retrieve related-object statistics for this Location: ${stats}`;
@@ -33,7 +33,7 @@
         }
         for (let row of stats) {
             const colElem = document.createElement("div");
-            colElem.classList.toggle("col", true);
+            colElem.classList.toggle("col-md-4", true);
             colElem.classList.toggle("text-center", true);
             const h2Elem = document.createElement("h2");
             const aElem = document.createElement("a");
