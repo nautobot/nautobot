@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0082_alter_controllermanageddevicegroup_radio_profiles_and_more"),
+        ("dcim", "0083_alter_controllermanageddevicegroup_radio_profiles_and_more"),
         ("ipam", "0054_namespace_tenant"),
         ("virtualization", "0030_alter_virtualmachine_local_config_context_data_owner_content_type_and_more"),
     ]

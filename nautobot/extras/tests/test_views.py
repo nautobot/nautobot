@@ -1657,10 +1657,10 @@ class CustomFieldTestCase(
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="value", errors=["This field is required."]
         )
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
 
@@ -2957,7 +2957,7 @@ class SecretsGroupTestCase(
         self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
 
         # Checks that formset errors are raised in the context
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
         )
 
@@ -2986,7 +2986,7 @@ class SecretsGroupTestCase(
         response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
         self.assertEqual(response.status_code, 200)
 
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"],
             form_index=0,
             field="secret",

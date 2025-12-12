@@ -1,0 +1,1 @@
+Removed support for settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`. These are all now incorporated into the Django standard `STORAGES` settings variable.
