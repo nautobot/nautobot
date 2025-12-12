@@ -1,0 +1,1 @@
+Improved performance of Location detail view by adding caching of a repeated expensive database query and asynchronous loading of related-object statistics.

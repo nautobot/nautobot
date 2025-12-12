@@ -29,7 +29,6 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
-from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.exceptions import AbortTransaction
@@ -80,7 +79,7 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.ipam.models import IPAddress, Prefix, VLAN
+from nautobot.ipam.models import IPAddress
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -456,19 +455,11 @@ class LocationUIViewSet(NautobotUIViewSet):
                 },
                 footer_content_template_path="dcim/footer_convert_to_contact_or_team_record.html",
             ),
-            object_detail.StatsPanel(
+            object_detail.AsyncStatsPanel(
                 weight=100,
                 label="Stats",
                 section=SectionChoices.RIGHT_HALF,
-                filter_name="location",
-                related_models=[
-                    Rack,
-                    Device,
-                    Prefix,
-                    VLAN,
-                    (Circuit, "circuit_terminations__location__in"),
-                    (VirtualMachine, "cluster__location__in"),
-                ],
+                api_url_name="dcim-api:location-stats",
             ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
@@ -505,9 +496,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
             # ensure it is only performed once rather than as a subquery for each of the different count stats.
-            related_locations = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            related_locations = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
 
             rack_groups = (
                 RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
@@ -710,7 +699,7 @@ class RackGroupUIViewSet(NautobotUIViewSet):
             racks = (
                 Rack.objects.restrict(request.user, "view")
                 # Note this filter - we want the table to include racks assigned to child rack groups as well
-                .filter(rack_group__in=instance.descendants(include_self=True))
+                .filter(rack_group__in=instance.cacheable_descendants_pks(include_self=True))
                 .select_related("role", "location", "tenant")
             )
 
