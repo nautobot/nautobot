@@ -509,7 +509,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         distinct=True,
         verbose_name="Virtual Machines",
     )
-    actions = ButtonsColumn(Prefix)
+    actions = ButtonsColumn(IPAddress)
 
     class Meta(BaseTable.Meta):
         model = IPAddress
