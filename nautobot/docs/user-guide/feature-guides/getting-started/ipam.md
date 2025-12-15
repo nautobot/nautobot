@@ -24,7 +24,9 @@ To create a RIR:
 4. There is a checkbox to flag `Private` (internal use) only
 5. Click on the `Create` button
 
-![Add RIR](../images/getting-started-nautobot-ui/27-add-rir.png)
+![Add RIR](../images/getting-started-nautobot-ui/27-add-rir-light.png#only-light){ .on-glb }
+![Add RIR](../images/getting-started-nautobot-ui/27-add-rir-dark.png#only-dark.png){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/rirs/add/`"
 
 ## Creating a Prefix
 
@@ -42,7 +44,9 @@ To create a prefix:
 6. Optionally select a `RIR` from the drop-down selector
 7. Click on the `Create` button (not shown)
 
-![Add prefix](../images/getting-started-nautobot-ui/30-add-prefix.png)
+![Add prefix](../images/getting-started-nautobot-ui/30-add-prefix-light.png#only-light){ .on-glb }
+![Add prefix](../images/getting-started-nautobot-ui/30-add-prefix-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/prefixes/add/`"
 
 ## Creating IP Addresses
 
@@ -60,7 +64,9 @@ To create an IP address:
 7. Select `Active` for `Status` from the drop-down selector
 8. Click on the `Create` button
 
-![Add IP address](../images/getting-started-nautobot-ui/32-add-ip-addr.png)
+![Add IP address](../images/getting-started-nautobot-ui/32-add-ip-addr-light.png#only-light){ .on-glb }
+![Add IP address](../images/getting-started-nautobot-ui/32-add-ip-addr-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/ipam/ip-addresses/bulk-add/`"
 
 ## Assigning IP Addresses
 
@@ -68,30 +74,34 @@ To assign an IP Address to a specific Device and Interface:
 
 1. Click on **Devices** in the left side navigation menu
 2. Click on **Devices** to go to the main page for Devices
-3. Find the Device whose Interface you wish to associate to an IP Address and click on it, for example `ams01-leaf-01`
-4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in, such as `Ethernet3`
+3. Find the Device whose Interface you wish to associate to an IP Address and click on it, for example `ams01-asw-01`
+4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in, such as `TenGigabitEthernet1/1/1`
 5. Click on the edit button for the Interface (a pencil icon)
 
-![Assign IP address 1](../images/getting-started-nautobot-ui/33-assign-address.png)
+![Assign IP address 1](../images/getting-started-nautobot-ui/33-assign-address-light.png#only-light){ .on-glb }
+![Assign IP address 1](../images/getting-started-nautobot-ui/33-assign-address-dark.png#only-dark){ .on-glb }
 
-![Assign IP address 2](../images/getting-started-nautobot-ui/34-assign-address-2.png)
+![Assign IP address 2](../images/getting-started-nautobot-ui/34-assign-address-2-light.png#only-light){ .on-glb }
+![Assign IP address 2](../images/getting-started-nautobot-ui/34-assign-address-2-dark.png#only-dark){ .on-glb }
 
 Once on the `Editing Interface` page:
 
-1. Select an `IP Address` from the drop-down selector, such as `10.0.1.0/32`
+1. Select an `IP Address` from the drop-down selector, such as `10.0.0.1/32`
 2. Click on the `Update` button
     * This will take you back to the Interfaces page for the Device, where you will see the assignment shown under the `IP Addresses` column
 
-![Assign IP address 3](../images/getting-started-nautobot-ui/35-assign-address-3.png)
+![Assign IP address 3](../images/getting-started-nautobot-ui/35-assign-address-3-light.png#only-light){ .on-glb }
+![Assign IP address 3](../images/getting-started-nautobot-ui/35-assign-address-3-dark.png#only-dark){ .on-glb }
 
 ## Finding an IP Address for an Interface
 
 1. Click on **Devices** in the left side navigation menu
 2. Click on **Devices** to go to the main page for Devices
-3. Search for the Device you are interested in (`ams01-edge-01` in this example) and click on the link to go to the main page for the Device
+3. Search for the Device you are interested in (`ams01-asw-01` in this example) and click on the link to go to the main page for the Device
 4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
 
-![Verify IP address](../images/getting-started-nautobot-ui/36-verify-address.png)
+![Verify IP address](../images/getting-started-nautobot-ui/36-verify-address-light.png#only-light){ .on-glb }
+![Verify IP address](../images/getting-started-nautobot-ui/36-verify-address-dark.png#only-dark){ .on-glb }
 
 ## Finding IP Addresses in a Prefix
 
@@ -102,6 +112,8 @@ To find information on a particular Prefix:
 3. Find the Prefix you are interested in and click on the link, such as `10.10.10.0/24`
 4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab
 
-![Verify prefix 1](../images/getting-started-nautobot-ui/37-verify-prefix.png)
+![Verify prefix 1](../images/getting-started-nautobot-ui/37-verify-prefix-light.png#only-light){ .on-glb }
+![Verify prefix 1](../images/getting-started-nautobot-ui/37-verify-prefix-dark.png#only-dark){ .on-glb }
 
-![Verify prefix 2](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
+![Verify prefix 2](../images/getting-started-nautobot-ui/38-verify-prefix2-light.png#only-light){ .on-glb }
+![Verify prefix 2](../images/getting-started-nautobot-ui/38-verify-prefix2-dark.png#only-dark){ .on-glb }
