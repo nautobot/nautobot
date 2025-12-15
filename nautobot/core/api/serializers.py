@@ -892,3 +892,12 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     context = serializers.DictField(default=dict)
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
+
+
+class StatsSerializer(serializers.Serializer):
+    """Serializer for rendering linkable statistics, e.g. related object counts for a Location."""
+
+    title = serializers.CharField()
+    count = serializers.IntegerField()
+    ui_url = serializers.URLField()
+    api_url = serializers.URLField()

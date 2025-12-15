@@ -1591,10 +1591,12 @@ class StatsPanel(Panel):
     ):
         """
         Instantiate a `StatsPanel`.
-        filter_name (str) is a valid query filter append to the anchor tag for each stat button.
-        e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
-        related_models is a list of model classes and/or tuples of (model_class, query_string).
-        e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
+
+        Args:
+            filter_name (str): a valid query filter append to the anchor tag for each stat button. e.g. the `tenant`
+                query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
+            related_models (str): a list of model classes and/or tuples of (model_class, query_string).
+                e.g. `[Device, Prefix, (Circuit, "circuit_terminations__location__in")]`
         """
 
         self.filter_name = filter_name
@@ -1618,9 +1620,7 @@ class StatsPanel(Panel):
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
-            self.filter_pks = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            self.filter_pks = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
         else:
             self.filter_pks = [instance.pk]
 
@@ -1653,6 +1653,40 @@ class StatsPanel(Panel):
                 self.body_content_template_path, context, stats=stats, filter_name=self.filter_name
             )
         return ""
+
+
+class AsyncStatsPanel(Panel):
+    def __init__(
+        self,
+        *,
+        api_url_name,
+        body_content_template_path="components/panel/async_stats_panel_body.html",
+        **kwargs,
+    ):
+        """
+        Instantiate an `AsyncStatsPanel`.
+
+        This *appears* like a regular `StatsPanel`, but (to improve UI performance and UX in cases where the stats
+        tabulation may be time-consuming) makes a separate AJAX call to the given `api_url_name` to retrieve the stats,
+        and populates the panel client-side with the response.
+
+        Args:
+            api_url_name (str): The API URL to call, e.g. `"dcim-api:location_stats"`. This API is expected to return,
+                at minimum, a list of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
+                Refer to `StatsSerializer` and `LocationViewSet.stats` for an example implementation.
+        """
+        self.api_url_name = api_url_name
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    def should_render(self, context: Context):
+        """Always render this panel."""
+        return True
+
+    def get_extra_context(self, context: Context):
+        return {
+            "api_url": reverse(self.api_url_name, kwargs={"pk": get_obj_from_context(context).pk}),
+            "body_id": self.body_id,
+        }
 
 
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):

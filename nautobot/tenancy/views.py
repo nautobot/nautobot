@@ -56,7 +56,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             # Because we are filtering on its tenant_group as well as the tenant group's descendants
             # i.e. `instance.descendants(include_self=True)`
             tenants = Tenant.objects.restrict(request.user, "view").filter(
-                tenant_group__in=instance.descendants(include_self=True)
+                tenant_group__in=instance.cacheable_descendants_pks(include_self=True)
             )
 
             tenant_table = tables.TenantTable(tenants)

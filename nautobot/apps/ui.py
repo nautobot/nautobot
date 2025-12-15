@@ -29,6 +29,7 @@ from nautobot.core.ui.nav import (
     NavMenuTab,
 )
 from nautobot.core.ui.object_detail import (
+    AsyncStatsPanel,
     BaseTextPanel,
     Button,
     Component,
@@ -53,6 +54,7 @@ from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
     "AncestorsBreadcrumbs",
+    "AsyncStatsPanel",
     "Banner",
     "BannerClassChoices",
     "BaseBreadcrumbItem",
