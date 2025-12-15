@@ -326,7 +326,7 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        instance.cancel()
+        instance.cancel(user=request.user, comments=request.data.get("comments"))
         serializer = serializers.ApprovalWorkflowSerializer(instance, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 

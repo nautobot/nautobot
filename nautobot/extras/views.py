@@ -354,6 +354,13 @@ class ApprovalWorkflowUIViewSet(
             return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance.active_stage, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
+
             template_name = "extras/approval_workflow/cancel.html"
             return render(
                 request,
@@ -361,10 +368,12 @@ class ApprovalWorkflowUIViewSet(
                 {
                     "obj": instance,
                     "object_under_review": instance.object_under_review,
+                    "form": form,
                     "return_url": self.get_return_url(request, instance),
                 },
             )
-        instance.cancel()
+
+        instance.cancel(user=request.user, comments=request.data.get("comments"))
         instance.refresh_from_db()
         messages.success(request, f"You canceled {instance}.")
         return redirect(self.get_return_url(request, instance))

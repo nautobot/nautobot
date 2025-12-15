@@ -253,14 +253,32 @@ class ApprovalWorkflow(OrganizationalModel):
     def is_active(self):
         return self.current_state == ApprovalWorkflowStateChoices.PENDING
 
-    def cancel(self):
-        """Cancel Approval Workflow.
+    def cancel(self, user: User, comments: str | None = None):
+        """
+        Cancel the approval workflow.
 
-        Cancel Approval Workglow and change all PENDING ApprovalWorkflowStage to CANCEL state.
-        Stages already approved or denied don't change.
+        Args:
+            user(User): The user performing the cancellation.
+            comments(Optional(str)): Optional comments explaining the reason for cancellation.
+
+        This method:
+            - Records a CANCELED response for the given user on the active stage.
+            - Cancels all PENDING workflow stages.
+            - Updates the workflow state and decision date.
+            - Calls `on_workflow_canceled` on the object under review.
+
+        Stages that are already APPROVED or DENIED are not modified.
         """
 
         decision_date = timezone.now()
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=self.active_stage, user=user
+        )
+        approval_workflow_stage_response.comments = comments
+        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage_response.save()
+
         self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).update(
             state=ApprovalWorkflowStateChoices.CANCELED, decision_date=decision_date
         )
@@ -539,6 +557,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Comment, Approved, Denied.",
     )
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_version_controlled = False
 
@@ -549,7 +568,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
 
         db_table = "extras_approvaluserresponse"
         verbose_name = "Approval Workflow Stage Response"
-        ordering = ["approval_workflow_stage", "user"]
+        ordering = ["approval_workflow_stage", "created"]
 
     def __str__(self):
         """Stringify instance."""
