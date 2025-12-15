@@ -166,7 +166,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
-## v2.4.24 (2025-12-12)
+## v2.4.24 (2025-12-15)
 
 ### Security in v2.4.24
 
@@ -177,6 +177,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Added in v2.4.24
 
 - [#694](https://github.com/nautobot/nautobot/issues/694) - Added support for defining Job input/output file storage via Django's `STORAGES` setting. This deprecates the separate settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which will be removed entirely in Nautobot v3.1.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `TreeModel.cacheable_descendants_pks` method to be usable for improved performance.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `nautobot.apps.api.StatsSerializer` and `nautobot.apps.ui.AsyncStatsPanel` to allow for defining a StatsPanel that renders asynchronously.
 - [#8215](https://github.com/nautobot/nautobot/issues/8215) - Added support for custom Celery worker health probes based on files.
 
 ### Deprecated in v2.4.24
@@ -185,6 +187,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.24
 
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Improved performance of Location detail view by adding caching of a repeated expensive database query and asynchronous loading of related-object statistics.
 - [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to set a default saved view for list views defined in an App.
 - [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to use UI Component Framework `BulkButton` for a model defined in an App.
 - [#8274](https://github.com/nautobot/nautobot/issues/8274) - Fixed unintended omission of the rendered documentation from `.whl` packages.
