@@ -338,7 +338,6 @@ class ApprovalWorkflowUIViewSet(
         url_path="cancel",
         methods=["get", "post"],
         custom_view_base_action="view",
-        custom_view_additional_permissions=["extras.view_approvalworkflow"],
     )
     def cancel(self, request, *args, **kwargs):
         instance = self.get_object()
