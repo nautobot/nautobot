@@ -1,0 +1,2 @@
+Updated `pyproject.toml` to be compatible with PEP 621.
+Updated Nautobot development environment to require Poetry 2.x.

@@ -263,7 +263,7 @@ There are a few things you'll need:
 * A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
 * A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
-* A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+* A recent version (at least 2.1.x) of [Poetry](https://python-poetry.org/docs/#installation)
 
 #### Install Poetry
 
@@ -283,6 +283,12 @@ curl -sSL https://install.python-poetry.org | python3 -
     While there are certain cases where running `pip install poetry` is valid, such as in Nautobot's automated release deployments where Nautobot is not actually installed, installing Poetry into Nautobot's runtime development environment is not one of them!
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
+
+After successfully installing Poetry, you may wish to add the `poetry-plugin-shell` plugin to it:
+
+```no-highlight
+poetry self add poetry-plugin-shell
+```
 
 #### Install Hadolint
 
@@ -323,6 +329,9 @@ Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyD
 . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
 (nautobot-Ams_xyDt-py3.12) $
 ```
+
+!!! hint
+    If the above command fails, you might need to run `poetry self add poetry-plugin-shell` then try again.
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
 
@@ -388,7 +397,7 @@ Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) 
     Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
-    Use `poetry shell` to enter the virtualenv.
+    If necessary, first run `poetry self add poetry-plugin-shell`, then you can use `poetry shell` to enter the virtualenv.
 
 Nautobot's configuration file is `nautobot_config.py`.
 
