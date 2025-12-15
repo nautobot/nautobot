@@ -1,0 +1,58 @@
+{% load static %}
+<div class="row row-cols-3">
+    <div class="col-md-4 col-md-offset-4 text-center">
+        <img src="{% static 'img/ajax-loader.gif' %}">
+    </div>
+</div>
+
+<script type="text/javascript">
+    async function getStats() {
+        try {
+            const response = await fetch("{{ api_url }}");
+            if (!response.ok) {
+                return response.statusText;
+            }
+            const stats = await response.json();
+            return stats;
+        } catch (error) {
+            return error.message;
+        }
+    }
+
+    getStats().then(stats => {
+        const rowElem = document.querySelector('div[id="{{ body_id }}"] div.row');
+        rowElem.textContent = "";
+        if (typeof(stats) == "string") {
+            const errorElem = document.createElement("div");
+            errorElem.classList.toggle("col-md-12", true);
+            errorElem.classList.toggle("text-center", true);
+            errorElem.classList.toggle("text-danger", true);
+            errorElem.textContent = `Unable to retrieve related-object statistics for this Location: ${stats}`;
+            rowElem.appendChild(errorElem);
+            return;
+        }
+        for (let row of stats) {
+            const colElem = document.createElement("div");
+            colElem.classList.toggle("col-md-4", true);
+            colElem.classList.toggle("text-center", true);
+            const h2Elem = document.createElement("h2");
+            const aElem = document.createElement("a");
+            aElem.textContent = row["count"];
+            aElem.href = row["ui_url"];
+            aElem.classList.toggle("btn", true);
+            aElem.classList.toggle("btn-lg", true);
+            if (row["count"] > 0) {
+                aElem.classList.toggle("btn-primary", true);
+            } else {
+                aElem.classList.toggle("btn-secondary", true);
+            }
+            const pElem = document.createElement("p");
+            pElem.textContent = row["title"];
+            h2Elem.appendChild(aElem);
+            colElem.appendChild(h2Elem);
+            colElem.appendChild(pElem);
+            rowElem.appendChild(colElem);
+        }
+    });
+
+</script>
