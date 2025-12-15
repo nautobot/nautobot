@@ -166,6 +166,50 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.24 (2025-12-15)
+
+### Security in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `celery` to `~5.6.0` to include a security fix (`https://github.com/celery/celery/pull/9997`).
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `urllib3` to version `2.6.1` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#8271](https://github.com/nautobot/nautobot/issues/8271) - Updated dependency `Django` to `~4.2.27` to protect against CVE-2025-13372 and CVE-2025-64460.
+
+### Added in v2.4.24
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Added support for defining Job input/output file storage via Django's `STORAGES` setting. This deprecates the separate settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which will be removed entirely in Nautobot v3.1.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `TreeModel.cacheable_descendants_pks` method to be usable for improved performance.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `nautobot.apps.api.StatsSerializer` and `nautobot.apps.ui.AsyncStatsPanel` to allow for defining a StatsPanel that renders asynchronously.
+- [#8215](https://github.com/nautobot/nautobot/issues/8215) - Added support for custom Celery worker health probes based on files.
+
+### Deprecated in v2.4.24
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Deprecated support for the settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which are replaced with Django's unified `STORAGES` setting. Support for these variables will be removed entirely in Nautobot v3.1.
+
+### Fixed in v2.4.24
+
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Improved performance of Location detail view by adding caching of a repeated expensive database query and asynchronous loading of related-object statistics.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to set a default saved view for list views defined in an App.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to use UI Component Framework `BulkButton` for a model defined in an App.
+- [#8274](https://github.com/nautobot/nautobot/issues/8274) - Fixed unintended omission of the rendered documentation from `.whl` packages.
+- [#8291](https://github.com/nautobot/nautobot/issues/8291) - Removed a redundant error condition in Interface form validation when setting interface mode to tagged-all.
+
+### Dependencies in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tables2` to `~2.8.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-timezone-field` to `~7.2.1`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tree-queries` to `~0.23.0`.
+
+### Housekeeping in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `coverage` to `~7.13.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `ruff` to `~0.14.8`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `tblib` to `~3.2.2`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-gen-files` to `~0.6.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.5.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-material` to `~9.7.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocstrings-python` to `~1.19.0`.
+- [#8295](https://github.com/nautobot/nautobot/issues/8295) - Fixed incorrect generic filter test error message.
+
 ## v2.4.23 (2025-11-24)
 
 ### Added in v2.4.23

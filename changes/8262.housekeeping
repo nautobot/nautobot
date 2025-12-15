@@ -1,7 +1,0 @@
-Updated development dependency `coverage` to `~7.13.0`.
-Updated development dependency `ruff` to `~0.14.8`.
-Updated development dependency `tblib` to `~3.2.2`.
-Updated documentation dependency `mkdocs-gen-files` to `~0.6.0`.
-Updated documentation dependency `mkdocs-macros-plugin` to `~1.5.0`.
-Updated documentation dependency `mkdocs-material` to `~9.7.0`.
-Updated documentation dependency `mkdocstrings-python` to `~1.19.0`.
