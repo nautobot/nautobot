@@ -27,13 +27,13 @@
                     <li>
                         {% url 'plugins:nautobot_version_control:branch_list' as branch_list_url %}
                         <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_list_url }}">
-                            <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
+                            <img alt="branch icon" src="{% static 'nautobot-icons/branch.svg' %}">
                             <span>Branches</span>
                         </a>
                     </li>
                     <li>
                         <form data-bs-theme="dark" id="sidenav-branch-picker">
-                            <img alt="branch icon" src="{% static 'nautobot-icons/branch.svg' %}">
+                            <img alt="globe icon" src="{% static 'nautobot-icons/globe.svg' %}">
                             <select
                                 aria-label="Find a branch..."
                                 class="form-select nautobot-select2-api"
@@ -55,16 +55,37 @@
                     <li>
                         {% if nav_menu_version_control.active_branch == 'main' %}
                             <button class="nb-sidenav-list-item nb-sidenav-list-item-flat" disabled type="button">
-                                <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
+                                <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
                                 <span>View diffs</span>
                             </button>
                         {% else %}
                             {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
                             <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_diffs_url }}">
-                                <img alt="history icon" src="{% static 'nautobot-icons/history.svg' %}">
+                                <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
                                 <span>View diffs</span>
                             </a>
                         {% endif %}
+                    </li>
+                    <li class="nb-sidenav-list-divider"></li>
+                    <li>
+                        <form data-bs-theme="dark" id="sidenav-timetravel-picker">
+                            <span class="nb-sidenav-list-item nb-sidenav-list-item-flat">
+                                {# djlint:off B081 #}
+                                <img alt="history icon" data-toggle src="{% static 'nautobot-icons/history.svg' %}">
+                                {# djlint:on B081 #}
+                                <input
+                                    id="timetravel-date-picker"
+                                    class="bg-transparent border-0 form-control fw-medium text-uppercase"
+                                    data-input
+                                    name="timetravel_date"
+                                    placeholder="Time Travel"
+                                    value="{{ request.GET.timetravel_date }}"
+                                >
+                                <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
+                                    <span class="mdi mdi-close"></span>
+                                </button>
+                            </span>
+                        </form>
                     </li>
                     <li class="nb-sidenav-list-divider"></li>
                 {% endif %}

@@ -1,3 +1,4 @@
+import flatpickr from 'flatpickr';
 import { getCookie, removeCookie, setCookie } from './cookie.js';
 
 const SIDENAV_COLLAPSED_KEY = 'sidenav_collapsed';
@@ -50,7 +51,7 @@ export const initializeSidenav = () => {
     toggler.addEventListener('click', toggleSidenav);
   }
 
-  [...document.querySelectorAll('.nb-sidenav-list-item:not(.nb-flat)')].forEach((sidenavListItem) => {
+  [...document.querySelectorAll('.nb-sidenav-list-item:not(.nb-sidenav-list-item-flat)')].forEach((sidenavListItem) => {
     sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
@@ -84,4 +85,21 @@ export const initializeSidenav = () => {
     document.querySelector('.select2-dropdown').setAttribute('data-bs-theme', 'dark');
     document.querySelector('.select2-dropdown .select2-search__field').setAttribute('placeholder', 'Find a branch...');
   });
+
+  const sidenavTimeTravelPickerInput = document.querySelector('#sidenav-timetravel-picker');
+  if (sidenavTimeTravelPickerInput) {
+    flatpickr(sidenavTimeTravelPickerInput, {
+      allowInput: true,
+      maxDate: 'today',
+      onChange: (_selectedDates, dateStr, instance) => {
+        instance.input.blur();
+        document.querySelector('#timetravel-cancel').classList.toggle('d-none', !dateStr);
+        instance.input.form.submit();
+      },
+      onReady: (_selectedDates, dateStr) => {
+        document.querySelector('#timetravel-cancel').classList.toggle('d-none', !dateStr);
+      },
+      wrap: true,
+    });
+  }
 };
