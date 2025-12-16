@@ -11,7 +11,7 @@ While use of Platforms is optional, they provide great value in many use cases.
 To create a Platform:
 
 1. Click on **Devices** in the top navigation menu
-2. Find **Platforms** and click on the **+** icon in the menu
+2. Find **Platforms** and click on the **Platforms** in the menu
     * This takes you to the `Add a new platform` form
 3. Provide a `Name` (required)
 4. Select a `Manufacturer` from the drop-down selector (optional)
@@ -58,7 +58,7 @@ in the Search Bar.
 !!! tip
     See the [Search Bar](search-bar.md) section of this guide for more information on using the Search Bar
 
-1. Type the device name in the Search Bar in the upper-left of the page
+1. Type the device name in the Search Bar in the upper-middle of the page
 2. Click on the device name on the results page
 3. Click on the `Edit` button on the main page for the Device
 
