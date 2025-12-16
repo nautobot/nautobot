@@ -89,12 +89,13 @@ def get_changes_for_model(model):
 def get_detail_view_components_context_for_model(model) -> dict:
     """Helper method for DistinctViewTabs etc. to retrieve the UI Component Framework context for the base detail view.
 
-    Functionally equivalent to calling `get_breadcrumbs_for_model()`, `get_object_detail_content_for_model()`, and
-    `get_view_titles_for_model()`, but marginally more efficient.
+    Functionally equivalent to calling `get_breadcrumbs_for_model()`, `get_object_detail_content_for_model()`,
+    `get_view_titles_for_model()` and ``get_extra_detail_view_action_buttons_for_model()` but marginally more efficient.
     """
     context = {
         "breadcrumbs": None,
         "object_detail_content": None,
+        "extra_detail_view_action_buttons": None,
         "view_titles": None,
     }
 
@@ -106,6 +107,8 @@ def get_detail_view_components_context_for_model(model) -> dict:
             context["view_titles"] = view.get_view_titles(model, view_type="")
         if hasattr(view, "object_detail_content"):
             context["object_detail_content"] = view.object_detail_content
+        if hasattr(view, "extra_detail_view_action_buttons"):
+            context["extra_detail_view_action_buttons"] = view.extra_detail_view_action_buttons
 
     return context
 
@@ -258,6 +261,12 @@ def get_object_detail_content_for_model(model):
     """Get the UI Component Framework 'object_detail_content' for the given model's related UIViewSet or ObjectView."""
     view = get_view_for_model(model)
     return getattr(view, "object_detail_content", None)
+
+
+def get_extra_detail_view_action_buttons_for_model(model):
+    """Get the UI Component Framework 'extra_detail_view_action_buttons' for the given model's related UIViewSet or ObjectView."""
+    view = get_view_for_model(model)
+    return getattr(view, "extra_detail_view_action_buttons", None)
 
 
 def get_related_field_for_models(from_model, to_model):

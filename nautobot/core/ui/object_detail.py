@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Callable
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -22,6 +23,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.templatetags.buttons import action_url, render_tag_attrs
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -125,6 +127,68 @@ class ObjectDetailContent:
     @tabs.setter
     def tabs(self, value):
         self._tabs = value
+
+
+@dataclass
+class ExtraDetailViewActionButton:
+    """Represents an extra action button for detail views.
+
+    Attributes:
+        action: The action name (used for URL routing and button ID)
+        icon: Material Design Icon class (e.g., "mdi mdi-cancel")
+        permission_check: callable to check if button should render
+        label: Optional custom label (if None, uses "Action ObjectName")
+        button_class: CSS class for the button type (defaults to dropdown-item)
+    """
+
+    action: str
+    icon: str
+    permission_check: Callable
+    label: str | None = None
+    button_class: str = "dropdown-item"
+
+    def get_action_url(self, instance) -> str | None:
+        return action_url(instance, self.action)
+
+    def can_render(self, user, instance) -> bool:
+        """Check if button should be rendered based on permissions."""
+        if self.permission_check and callable(self.permission_check):
+            return bool(self.get_action_url(instance) and self.permission_check(user, instance))
+        return False
+
+    def get_label(self, context: Context) -> str:
+        """Generate button label."""
+        if self.label:
+            return self.label
+        return f"{bettertitle(self.action)} {bettertitle(context['verbose_name'])}"
+
+    def render(self, instance, context: Context):
+        """Render the button HTML."""
+        object_action_url = self.get_action_url(instance)
+        if not object_action_url:
+            logger.warning(
+                f"Cannot render button for action '{self.action}' without URL. "
+                f"Ensure endpoint for this action is implemented for {get_view_for_model(instance._meta.model)}."
+            )
+
+        attrs = {
+            "id": f"{self.action}-button",
+            "class": self.button_class,
+            "href": object_action_url,
+        }
+
+        dropdown_item_fragment = """
+            <a {attrs}>
+                <span class="{icon}" aria-hidden="true"></span> {label}
+            </a>
+        """
+
+        return format_html(
+            f"<li>{dropdown_item_fragment}</li>",
+            label=self.get_label(context),
+            attrs=render_tag_attrs(attrs),
+            icon=self.icon,
+        )
 
 
 class Component:

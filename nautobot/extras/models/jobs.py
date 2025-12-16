@@ -1334,7 +1334,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
     def on_workflow_canceled(self, approval_workflow):
-        """When denied, set decision_date to decision_date from approval workflow."""
+        """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
         self.save()
 

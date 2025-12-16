@@ -35,6 +35,6 @@ def can_delete(user, instance):
 @register.filter()
 def can_cancel(user, instance):
     if isinstance(instance, ApprovalWorkflow):
-        return instance.user == user and instance.is_active
+        return (user.is_superuser or instance.user == user) and instance.is_active
     else:
-        return _check_permission(user, instance, "change")
+        raise NotImplementedError

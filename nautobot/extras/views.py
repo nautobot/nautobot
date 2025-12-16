@@ -35,6 +35,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
@@ -332,6 +333,13 @@ class ApprovalWorkflowUIViewSet(
             ),
         ],
     )
+    extra_detail_view_action_buttons = [
+        object_detail.ExtraDetailViewActionButton(
+            action="cancel",
+            icon="mdi mdi-cancel",
+            permission_check=can_cancel,
+        )
+    ]
 
     @action(
         detail=True,
