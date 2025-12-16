@@ -29,7 +29,8 @@ To create a Platform:
     - nxos_ssh (used for ssh login)
     - junos
 
-![Add platform](../images/getting-started-nautobot-ui/10-add-platform.png)
+![Add platform](../images/getting-started-nautobot-ui/ss_10-add-platform_light.png#only-light){ .on-glb }
+![Add platform](../images/getting-started-nautobot-ui/ss_10-add-platform_dark.png#only-dark){ .on-glb }
 
 Once completed, you will be sent to the Platforms page, where all the Platform variants are shown.
 
@@ -38,7 +39,8 @@ Once completed, you will be sent to the Platforms page, where all the Platform v
     the **Device Onboarding App**, you may be required to override the default Name value with that of the
     Netmiko [device_type](https://github.com/ktbyers/netmiko/blob/2dc032b64c3049d3048966441ee30a0139bebc81/netmiko/ssh_autodetect.py#L50)
 
-![Platforms page](../images/getting-started-nautobot-ui/11-platforms-page.png)
+![Platforms page](../images/getting-started-nautobot-ui/ss_11-platforms-page_light.png#only-light){ .on-glb }
+![Platforms page](../images/getting-started-nautobot-ui/ss_11-platforms-page_dark.png#only-dark){ .on-glb }
 
 ## Adding a Platform to an Existing or New Device
 
@@ -60,7 +62,8 @@ in the Search Bar.
 2. Click on the device name on the results page
 3. Click on the `Edit` button on the main page for the Device
 
-![Device main page](../images/getting-started-nautobot-ui/43-get-to-device-main-page.png)
+![Device main page](../images/getting-started-nautobot-ui/ss_43-get-to-device-main-page_light.png#only-light){ .on-glb }
+![Device main page](../images/getting-started-nautobot-ui/ss_43-get-to-device-main-page_dark.png#only-dark){ .on-glb }
 
 ### Reaching the `Add a new device` Page
 
@@ -75,4 +78,5 @@ For a new Device, follow the steps to [create a new Device](creating-devices.md)
 !!! tip
     The only choices that will appear in the `Platform` drop-down selector will be those Platforms that have the same Manufacturer specified in the Device's `Hardware` section.
 
-![Add platform](../images/getting-started-nautobot-ui/44-add-platform.png)
+![Add platform](../images/getting-started-nautobot-ui/ss_44-add-platform_light.png#only-light){ .on-glb }
+![Add platform](../images/getting-started-nautobot-ui/ss_44-add-platform_dark.png#only-dark){ .on-glb }
