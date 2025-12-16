@@ -19,7 +19,7 @@ Nautobot requires any IP allocation be attributed to a RIR.
 To create a RIR:
 
 1. Click on **IPAM** in the left sidebar menu
-2. Find **RIRs** and click on the **+**; this takes you to the `Add a new RIR` form
+2. Find **RIRs**, click on the **RIRs** to open the RIR List. From there, locate and click on `Add a new RIR` button
 3. Specify the RIR `Name`
 4. There is a checkbox to flag `Private` (internal use) only
 5. Click on the `Create` button
@@ -36,8 +36,8 @@ Each Prefix can be assigned to a particular Location, an RIR and virtual routing
 To create a prefix:
 
 1. Click on **IPAM** in the left sidebar menu
-2. Look for **Prefixes** and click on the **+**
-    * This will take you to the `Add a new prefix` form
+2. Look for **Prefixes** and click on the **Prefixes** to open Prefixes List
+    * Then locate and click on the `Add a new prefix` button
 3. Populate the `Prefix` in CIDR notation
 4. If all addresses in the Prefix are usable, change the `Type` to "Pool"
 5. Select a `Status` from the drop-down selector
@@ -53,8 +53,8 @@ To create a prefix:
 To create an IP address:
 
 1. Click on **IPAM** in the left side navigation menu
-2. Find **IP Addresses** and click on the **+**
-    * This will take you to the `Add a new IP address` form
+2. Find **IP Addresses** and click on the **IP Addresses** to open IP Addresses List
+    * Then locate and click on the `Add a new IP address` button
 3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
 4. Populate an Address pattern
     * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's
