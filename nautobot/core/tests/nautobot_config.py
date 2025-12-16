@@ -19,7 +19,10 @@ JOBS_ROOT = os.path.join(
 )
 
 # Enable both example apps
-PLUGINS = []
+PLUGINS = [
+    "example_app",
+    "example_app_with_view_override",
+]
 
 # Hard-code the SECRET_KEY for simplicity
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # noqa: S105  # hardcoded-password-string
