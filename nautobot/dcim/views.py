@@ -290,7 +290,7 @@ class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
         data = super().get_data(context)
         obj = get_obj_from_context(context, self.context_object_key)
 
-        if obj and obj.latitude and obj.longitude:
+        if obj and obj.latitude is not None and obj.longitude is not None:
             data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
         else:
             data["GPS Coordinates"] = None
