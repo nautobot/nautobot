@@ -381,7 +381,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         ).count()
 
         # do cancel approval workflow
-        self.approval_workflow.cancel()
+        self.approval_workflow.cancel(user=self.users[0])
         self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
         mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
 
@@ -421,7 +421,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         ).count()
 
         # do cancel approval workflow
-        self.approval_workflow.cancel()
+        self.approval_workflow.cancel(user=self.users[0])
         self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
         mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
 
@@ -432,12 +432,15 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         )
         # check if 1 stages are in approved state
         self.assertEqual(1, self.approval_workflow.approval_workflow_stages.filter(state=done_state).count())
-        # check if cancel action doesn't change anything ApprovalWorkflowStageResponse
+        # check if cancel action add one ApprovalWorkflowStageResponse
         self.assertEqual(
-            responses_count,
+            responses_count + 1,
             ApprovalWorkflowStageResponse.objects.filter(
                 approval_workflow_stage__approval_workflow=self.approval_workflow
             ).count(),
+        )
+        self.assertTrue(
+            ApprovalWorkflowStageResponse.objects.filter(user=self.users[0]).exists(),
         )
 
 

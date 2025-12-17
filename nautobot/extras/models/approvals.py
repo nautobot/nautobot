@@ -275,7 +275,8 @@ class ApprovalWorkflow(OrganizationalModel):
         approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
             approval_workflow_stage=self.active_stage, user=user
         )
-        approval_workflow_stage_response.comments = comments
+        if comments:
+            approval_workflow_stage_response.comments = comments
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.CANCELED
         approval_workflow_stage_response.save()
 
