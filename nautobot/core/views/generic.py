@@ -88,7 +88,7 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     queryset: ClassVar[Optional[QuerySet]] = None  # TODO: required, declared Optional only to avoid breaking change
     template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
-    extra_detail_view_action_buttons = None
+    extra_detail_view_action_buttons = []
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")

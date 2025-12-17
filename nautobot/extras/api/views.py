@@ -86,6 +86,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
+from nautobot.extras.templatetags.perms import can_cancel
 from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
@@ -310,9 +311,7 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     def cancel(self, request, pk=None):
         instance = self.get_object()
 
-        if not (
-            request.user.is_superuser or instance.user == request.user  # only submitter can cancel an approval workflow
-        ):
+        if not can_cancel(request.user, instance):
             return Response(
                 {
                     "detail": "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter."

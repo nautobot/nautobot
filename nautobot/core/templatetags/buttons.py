@@ -303,10 +303,12 @@ def consolidate_detail_view_action_buttons(context):
     render_clone_button = bool(
         hasattr(instance, "clone_fields") and object_clone_url and can_add(context["user"], instance)
     )
+    # Get extra action buttons from model-level lookup
+    extra_action_buttons = lookup.get_extra_detail_view_action_buttons_for_model(instance._meta.model)
 
     detail_view_action_button_count = sum([render_edit_button, render_delete_button, render_clone_button])
 
-    if detail_view_action_button_count == 0:
+    if detail_view_action_button_count == 0 and not extra_action_buttons:
         return {
             "detail_view_action_buttons": detail_view_action_buttons,
         }
@@ -355,7 +357,7 @@ def consolidate_detail_view_action_buttons(context):
             )
 
     # Render a generic "Actions" dropdown button if the edit button is not present
-    elif detail_view_action_button_count >= 1:
+    elif detail_view_action_button_count >= 1 or extra_action_buttons:
         detail_view_action_buttons.append(
             format_html(
                 """
@@ -404,16 +406,17 @@ def consolidate_detail_view_action_buttons(context):
             )
         )
 
-    # Get extra action buttons from model-level lookup
-    extra_action_buttons = lookup.get_extra_detail_view_action_buttons_for_model(instance._meta.model)
+    for index, extra_action_button in enumerate(extra_action_buttons):
+        rendered_action_button = extra_action_button.render(context)
+        if not rendered_action_button:
+            continue
 
-    if extra_action_buttons:
-        for extra_action_button in extra_action_buttons:
-            if not extra_action_button.can_render(context["user"], instance):
-                continue
-            if render_clone_button or render_delete_button:
-                detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
-            detail_view_action_buttons.append(extra_action_button.render(instance, context))
+        # Add divider:
+        # - on first loop ONLY if list already has >1 item
+        # - on every subsequent loop
+        if index > 0 or detail_view_action_button_count >= 1:
+            detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
+        detail_view_action_buttons.append(rendered_action_button)
 
     return {
         "detail_view_action_buttons": detail_view_action_buttons,

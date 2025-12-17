@@ -266,7 +266,7 @@ def get_object_detail_content_for_model(model):
 def get_extra_detail_view_action_buttons_for_model(model):
     """Get the UI Component Framework 'extra_detail_view_action_buttons' for the given model's related UIViewSet or ObjectView."""
     view = get_view_for_model(model)
-    return getattr(view, "extra_detail_view_action_buttons", None)
+    return getattr(view, "extra_detail_view_action_buttons", [])
 
 
 def get_related_field_for_models(from_model, to_model):
