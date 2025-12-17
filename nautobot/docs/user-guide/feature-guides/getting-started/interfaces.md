@@ -34,9 +34,10 @@ Creating a Device Type is very similar to [creating a Device](creating-devices.m
 
 To create a Device Type:
 
-1. Click on **Devices** on the left sidebar.
-2. Locate **Device Types** option in the drop-down menu
-3. Click on the `+` button to add a new Device Type
+1. Click on **Devices** in the left sidebar menu
+2. Under the **DEVICE TYPES** section, select **Device Types**
+    * From this page you can view any existing Device Types
+3. Click on the `Add device type` button to add new Device Type
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
     * Device Type requires **Manufacturer**, **Model**, and **Height** values at creation
     * In this example, select `APC` from the **Manufacturer** drop-down selector, name the Device Type **Model** `APDU9941`, and input 5 for the **Height**

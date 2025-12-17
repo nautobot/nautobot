@@ -36,10 +36,10 @@ Locations:
 
 To create a Location Type:
 
-1. Click on **Organization** in the top menu
-2. Click on **Location Types** in the **Organization** drop-down menu
+1. Click on **Organization** in the side nav bar
+2. Under the **LOCATIONS** section, select **Location Types**
     * From this page you can view any existing Location Types
-3. Click on the blue `+ Add` button
+3. Click on the `+ Add Location Type` button
 
 ![Location Type page](../images/getting-started-nautobot-ui/7-location-type-page-light.png#only-light){ .on-glb }
 ![Location Type page](../images/getting-started-nautobot-ui/7-location-type-page-dark.png#only-dark){ .on-glb }
@@ -77,10 +77,10 @@ Site:
 
 To create a Location of a certain Location Type:
 
-1. Click on **Organization** in the top menu
-2. Click on **Locations** in the **Organization** drop-down menu
+1. Click on **Organization** in the side nav bar
+2. Under the **LOCATIONS** section, select **Locations**
     * From this page you can view any existing Locations
-3. Click on the blue `+ Add` button
+3. Click on the `+ Add Location` button
 
 ![Location page](../images/getting-started-nautobot-ui/8-location-page-light.png#only-light){ .on-glb }
 ![Location page](../images/getting-started-nautobot-ui/8-location-page-dark.png#only-dark){ .on-glb }
@@ -101,21 +101,24 @@ Canada:
 1. Select **Country** from the Location Type drop-down menu selector
 2. Select **North America** as the `Parent` from the drop-down menu selector
 3. Populate the `Name` to be `Canada`
-4. Click on the `Create and Add Another` button
+4. Select `Active` from the Status drop-down menu selector
+5. Click on the `Create and Add Another` button
 
 Vancouver:
 
 1. Select **Market** from the Location Type drop-down menu selector
 2. Select **Canada** as the `Parent` from the drop-down menu selector
 3. Populate the `Name` to be `Vancouver`
-4. Click on the `Create and Add Another` button
+4. Select `Active` from the Status drop-down menu selector
+5. Click on the `Create and Add Another` button
 
 Vancouver 1:
 
 1. Select **Site** from the Location Type drop-down menu selector
 2. Select **Vancouver** as the `Parent` from the drop-down menu selector
 3. Populate the `Name` to be `Vancouver 1`
-4. Click on the `Create` button
+4. Select `Active` from the Status drop-down menu selector
+5. Click on the `Create` button
 
 ![Create location](../images/getting-started-nautobot-ui/6-create-location-light.png#only-light){ .on-glb }
 ![Create location](../images/getting-started-nautobot-ui/6-create-location-dark.png#only-dark){ .on-glb }
