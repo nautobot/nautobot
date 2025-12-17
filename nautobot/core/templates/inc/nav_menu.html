@@ -32,8 +32,20 @@
                         </a>
                     </li>
                     <li>
-                        <form data-bs-theme="dark" id="sidenav-branch-picker">
+                        <form
+                            action="{% url 'plugins-api:nautobot_version_control-api:select_branch' %}"
+                            data-bs-theme="dark"
+                            id="sidenav-branch-picker"
+                            method="post"
+                        >
                             <img alt="globe icon" src="{% static 'nautobot-icons/globe.svg' %}">
+                            {% csrf_token %}
+                            <input
+                                id="sidenav-branch-picker-return-url"
+                                name="return_url"
+                                type="hidden"
+                                value="{{ request.build_absolute_uri }}"
+                            >
                             <select
                                 aria-label="Find a branch..."
                                 class="form-select nautobot-select2-api"
@@ -68,23 +80,34 @@
                     </li>
                     <li class="nb-sidenav-list-divider"></li>
                     <li>
-                        <form data-bs-theme="dark" id="sidenav-timetravel-picker">
-                            <span class="nb-sidenav-list-item nb-sidenav-list-item-flat">
-                                {# djlint:off B081 #}
-                                <img alt="history icon" data-toggle src="{% static 'nautobot-icons/history.svg' %}">
-                                {# djlint:on B081 #}
-                                <input
-                                    id="timetravel-date-picker"
-                                    class="bg-transparent border-0 form-control fw-medium text-uppercase"
-                                    data-input
-                                    name="timetravel_date"
-                                    placeholder="Time Travel"
-                                    value="{{ request.GET.timetravel_date }}"
-                                >
-                                <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
-                                    <span class="mdi mdi-close"></span>
-                                </button>
-                            </span>
+                        <form
+                            action="{% url 'plugins-api:nautobot_version_control-api:select_time_travel_date' %}"
+                            class="nb-sidenav-list-item nb-sidenav-list-item-flat"
+                            data-bs-theme="dark"
+                            id="sidenav-timetravel-picker"
+                            method="post"
+                        >
+                            {# djlint:off B081 #}
+                            <img alt="history icon" data-toggle src="{% static 'nautobot-icons/history.svg' %}">
+                            {# djlint:on B081 #}
+                            {% csrf_token %}
+                            <input
+                                id="sidenav-timetravel-return-url"
+                                name="return_url"
+                                type="hidden"
+                                value="{{ request.build_absolute_uri }}"
+                            >
+                            <input
+                                id="timetravel-date-picker"
+                                class="bg-transparent border-0 form-control fw-medium text-uppercase"
+                                data-input
+                                name="version_control_time_travel_date"
+                                placeholder="Time Travel"
+                                value="{{ nav_menu_version_control.active_time_travel_date }}"
+                            >
+                            <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
+                                <span class="mdi mdi-close"></span>
+                            </button>
                         </form>
                     </li>
                     <li class="nb-sidenav-list-divider"></li>

@@ -117,9 +117,18 @@ def nav_menu(request):
 
     nav_menu_version_control = None
     if "nautobot_version_control" in django_settings.PLUGINS:
-        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+        from nautobot_version_control.constants import (  # pylint: disable=import-error
+            DOLT_DEFAULT_BRANCH,
+            DOLT_TIME_TRAVEL_KEYWORD,
+        )
+        from nautobot_version_control.utils import active_branch_name  # pylint: disable=import-error
 
-        nav_menu_version_control = {"active_branch": active_branch()}
+        nav_menu_version_control = {
+            "active_branch": active_branch_name(),
+            # In unit tests using RequestFactory, SessionMiddleware is not automatically applied to set request.session
+            "active_time_travel_date": getattr(request, "session", {}).get(DOLT_TIME_TRAVEL_KEYWORD, ""),
+            "default_branch": DOLT_DEFAULT_BRANCH,
+        }
 
     return {"nav_menu": nav_menu_object, "nav_menu_version_control": nav_menu_version_control}
 

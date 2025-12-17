@@ -79,12 +79,30 @@ export const initializeSidenav = () => {
     });
   });
 
+  const sidenavBranchPickerReturnUrl = document.querySelector('#sidenav-branch-picker-return-url');
+  if (sidenavBranchPickerReturnUrl) {
+    // Remove any existing version-control query params from the return URL as they would override the form action
+    const return_url = new URL(sidenavBranchPickerReturnUrl.value);
+    return_url.searchParams.delete('branch');
+    return_url.searchParams.delete('version_control_time_travel_date');
+    sidenavBranchPickerReturnUrl.value = return_url.toString();
+  }
+
   const sidenavBranchPickerSelect = $('#sidenav-branch-picker-select');
   sidenavBranchPickerSelect.on('change', (event) => event.currentTarget.form.submit());
   sidenavBranchPickerSelect.on('select2:open', () => {
     document.querySelector('.select2-dropdown').setAttribute('data-bs-theme', 'dark');
     document.querySelector('.select2-dropdown .select2-search__field').setAttribute('placeholder', 'Find a branch...');
   });
+
+  const sidenavTimeTravelReturnUrl = document.querySelector('#sidenav-timetravel-return-url');
+  if (sidenavTimeTravelReturnUrl) {
+    // Remove any existing version-control query params from the return URL as they would override the form action
+    const return_url = new URL(sidenavTimeTravelReturnUrl.value);
+    return_url.searchParams.delete('branch');
+    return_url.searchParams.delete('version_control_time_travel_date');
+    sidenavTimeTravelReturnUrl.value = return_url.toString();
+  }
 
   const sidenavTimeTravelPickerInput = document.querySelector('#sidenav-timetravel-picker');
   if (sidenavTimeTravelPickerInput) {
