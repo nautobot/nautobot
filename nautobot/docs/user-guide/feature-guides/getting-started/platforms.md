@@ -10,15 +10,16 @@ While use of Platforms is optional, they provide great value in many use cases.
 
 To create a Platform:
 
-1. Click on **Devices** in the top navigation menu
-2. Find **Platforms** and click on the **Platforms** in the menu
-    * This takes you to the `Add a new platform` form
-3. Provide a `Name` (required)
-4. Select a `Manufacturer` from the drop-down selector (optional)
-5. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
-6. Provide `NAPALM arguments` (optional)
-7. Provide `Description` (optional)
-8. Click on the `Create` button
+1. Click on **Devices** in the left sidebar menu
+2. Under the **Platforms** section, select **Platforms**
+    * From this page you can view any existing Platforms
+3. Click on the `Add Platform` button
+4. Provide a `Name` (required)
+5. Select a `Manufacturer` from the drop-down selector (optional)
+6. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
+7. Provide `NAPALM arguments` (optional)
+8. Provide `Description` (optional)
+9. Click on the `Create` button
 
 !!! tip
     NAPALM Driver Options include:
