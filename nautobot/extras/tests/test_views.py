@@ -364,6 +364,8 @@ class ApprovalWorkflowViewTestCase(
 
         with self.subTest("Test Stage view when Approval Workflow is CANCELED"):
             approval_workflow = self.approval_workflows[0]
+            approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+            approval_workflow.save()
             self.user.is_superuser = True
             self.user.save()
 
