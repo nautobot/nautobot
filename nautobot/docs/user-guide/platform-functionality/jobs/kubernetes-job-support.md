@@ -87,7 +87,7 @@ This environment variable should store a [Kubernetes Job](https://kubernetes.io/
 }
 ```
 
-If you are using the Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), you can load the job manifest via `extraEnvVars`:
+If you are using the Nautobot [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), you can load the job manifest via `extraEnvVars`:
 
 ```yaml
 nautobot:
