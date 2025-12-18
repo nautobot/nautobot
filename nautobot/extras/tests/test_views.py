@@ -788,6 +788,18 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.APPROVED)
         self.assertEqual(new_response.comments, "Approved!")
 
+    def test_approve_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not approve canceled approval workflow.")
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_endpoint(self):
         """Test the deny endpoint."""
@@ -889,6 +901,18 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(
             response, f"You denied {approval_workflow_stage}."
         )  # Assert the denial message is present
+
+    def test_deny_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not deny canceled approval workflow.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_comment_endpoint(self):
@@ -1070,6 +1094,17 @@ class ApprovalWorkflowStageViewTestCase(
         # assert state is still APPROVED
         self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.APPROVED)
         self.assertEqual(edited_response.comments, "Edit approved comment")
+
+    def test_comment_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not comment canceled approval workflow.")
 
 
 class ApprovalWorkflowStageResponseViewTestCase(

@@ -495,7 +495,7 @@ class ApprovalWorkflowStageUIViewSet(
             return redirect(self.get_return_url(request, instance))
 
         if instance.approval_workflow.is_canceled:
-            messages.error(request, "Can't approve canceled approval workflow.")
+            messages.error(request, "Can not approve canceled approval workflow.")
             return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
@@ -556,7 +556,7 @@ class ApprovalWorkflowStageUIViewSet(
             return redirect(self.get_return_url(request, instance))
 
         if instance.approval_workflow.is_canceled:
-            messages.error(request, "Can't deny canceled approval workflow.")
+            messages.error(request, "Can not deny canceled approval workflow.")
             return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
@@ -610,7 +610,7 @@ class ApprovalWorkflowStageUIViewSet(
 
         # We don't enforce approver-group/superuser check here, anyone can comment, not just an approver.
         if instance.approval_workflow.is_canceled:
-            messages.error(request, "Can't comment canceled approval workflow.")
+            messages.error(request, "Can not comment canceled approval workflow.")
             return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
