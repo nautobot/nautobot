@@ -16,12 +16,12 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
 
 ### `NAUTOBOT_KUBERNETES_JOB_MANIFEST`
 
-This environment variable should store a [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) template as a Python dictionary. Below is a sample kubernetes job manifest.
+This environment variable should store a [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) manifest as a JSON string. Below is a sample kubernetes job manifest.
 
 !!!important
     Ensure this job template uses the same Docker image as your Nautobot Kubernetes deployment. You can specify the image name in spec.template.spec.containers.image. Additionally, configure and map the required environment variables to corresponding [Kubernetes ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) instances. These variables can be defined in the spec.template.spec.containers.env list. For consistency, it is recommended to use the same environment configuration for this Job manifest as that of your Nautobot Kubernetes deployment.
 
-```python
+```json
 {
     "apiVersion": "batch/v1",
     "kind": "Job",
@@ -35,38 +35,38 @@ This environment variable should store a [Kubernetes Job](https://kubernetes.io/
                         "env": [
                             {
                                 "name": "MYSQL_DATABASE",
-                                "valueFrom": {"configMapKeyRef": {"key": "MYSQL_DATABASE", "name": "dev-env"}},
+                                "valueFrom": {"configMapKeyRef": {"key": "MYSQL_DATABASE", "name": "dev-env"}}
                             },
                             {
                                 "name": "NAUTOBOT_REDIS_PORT",
-                                "valueFrom": {"configMapKeyRef": {"key": "NAUTOBOT_REDIS_PORT", "name": "dev-env"}},
+                                "valueFrom": {"configMapKeyRef": {"key": "NAUTOBOT_REDIS_PORT", "name": "dev-env"}}
                             },
                             {
                                 "name": "POSTGRES_DB",
-                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_DB", "name": "dev-env"}},
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_DB", "name": "dev-env"}}
                             },
                             {
                                 "name": "POSTGRES_PASSWORD",
-                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_PASSWORD", "name": "dev-env"}},
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_PASSWORD", "name": "dev-env"}}
                             },
                             {
                                 "name": "POSTGRES_USER",
-                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_USER", "name": "dev-env"}},
-                            },
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_USER", "name": "dev-env"}}
+                            }
                             ...
-                        ]
+                        ],
                         "name": "nautobot-job",
-                        "image": "local/nautobot-dev:local-py3.11",
+                        "image": "networktocode/nautobot:latest",
                         "ports": [{"containerPort": 8080, "protocol": "TCP"}],
-                        "tty": True,
+                        "tty": true,
                         "volumeMounts": [
                             {"mountPath": "/opt/nautobot/media", "name": "media-root"},
                             {
                                 "mountPath": "/opt/nautobot/nautobot_config.py",
                                 "name": "nautobot-cm1",
-                                "subPath": "nautobot_config.py",
-                            },
-                        ],
+                                "subPath": "nautobot_config.py"
+                            }
+                        ]
                     }
                 ],
                 "volumes": [
@@ -74,17 +74,35 @@ This environment variable should store a [Kubernetes Job](https://kubernetes.io/
                     {
                         "configMap": {
                             "items": [{"key": "nautobot_config.py", "path": "nautobot_config.py"}],
-                            "name": "nautobot-cm1",
+                            "name": "nautobot-cm1"
                         },
-                        "name": "nautobot-cm1",
-                    },
+                        "name": "nautobot-cm1"
+                    }
                 ],
-                "restartPolicy": "Never",
+                "restartPolicy": "Never"
             }
         },
-        "backoffLimit": 0,
-    },
+        "backoffLimit": 0
+    }
 }
+```
+
+If you are using the Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), you can load the job manifest via `extraEnvVars`:
+
+```yaml
+nautobot:
+  ...
+  extraEnvVars:
+    - name: "NAUTOBOT_KUBERNETES_JOB_MANIFEST"
+      value: |
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {"name": "nautobot-job"},
+            "spec": {
+                ...
+            }
+        }
 ```
 
 ### `NAUTOBOT_KUBERNETES_JOB_POD_NAME`
