@@ -33,7 +33,7 @@
                     </li>
                     <li>
                         <form
-                            action="{% url 'plugins-api:nautobot_version_control-api:select_branch' %}"
+                            action="{% url 'plugins-api:nautobot_version_control-api:select-branch' %}"
                             data-bs-theme="dark"
                             id="sidenav-branch-picker"
                             method="post"
@@ -81,7 +81,7 @@
                     <li class="nb-sidenav-list-divider"></li>
                     <li>
                         <form
-                            action="{% url 'plugins-api:nautobot_version_control-api:select_time_travel_date' %}"
+                            action="{% url 'plugins-api:nautobot_version_control-api:select-time-travel-date' %}"
                             class="nb-sidenav-list-item nb-sidenav-list-item-flat"
                             data-bs-theme="dark"
                             id="sidenav-timetravel-picker"
@@ -103,7 +103,7 @@
                                 data-input
                                 name="version_control_time_travel_date"
                                 placeholder="Time Travel"
-                                value="{{ nav_menu_version_control.active_time_travel_date }}"
+                                value="{{ nav_menu_version_control.active_time_travel_date|default:"" }}"
                             >
                             <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
                                 <span class="mdi mdi-close"></span>
