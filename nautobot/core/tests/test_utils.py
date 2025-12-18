@@ -356,7 +356,7 @@ class GetFooForModelTest(TestCase):
         )
         self.assertEqual(
             lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
-            [],  # default should be an empty lis
+            (),  # default should be an empty list
         )
         self.assertEqual(
             context["extra_detail_view_action_buttons"],
@@ -394,7 +394,7 @@ class GetFooForModelTest(TestCase):
     def test_get_extra_detail_view_action_buttons(self):
         self.assertEqual(
             lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
-            [],  # default should be an empty list
+            (),  # default should be an empty list
         )
         self.assertEqual(
             lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
