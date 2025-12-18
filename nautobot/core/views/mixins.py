@@ -1162,7 +1162,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 **BulkDeleteObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
-                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
                 return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
             else:
                 scheduled_job.delete()
@@ -1197,7 +1197,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 **BulkEditObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
-                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
                 return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
             else:
                 scheduled_job.delete()
