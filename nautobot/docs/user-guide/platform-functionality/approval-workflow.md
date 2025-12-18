@@ -118,7 +118,8 @@ A concrete instance of a workflow triggered for a specific object under review.
 
 - Automatically changes to `Denied` if any stage is denied.
 - Automatically changes to `Approved` if all stages are approved.
-- Calls object’s `on_workflow_approved()` or `on_workflow_denied()` when final state is reached.
+- Automatically changes to `Canceled` if Approval was canceled directly.
+- Calls object’s `on_workflow_approved()`, `on_workflow_denied()` or `on_workflow_canceled()` when final state is reached.
 
 ### ApprovalWorkflowStage
 
@@ -285,6 +286,18 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 
 </div>
 
+#### Cancel Approval Workflow
+
+User can cancel his own Approval Workflow.
+
+1. Go to Approval Workflow view [see](#check-state-as-object-operatorapprover)
+2. Use Actions button dropdown and select `Cancel Approval Workflow`
+    - ![Approval Workflow cancel](../../media/development/approval-workflows/ss_cancel-approval-workflow_light.png#only-light){ .on-glb }
+    ![Approval Workflow cancel](../../media/development/approval-workflows/ss_cancel-approval_workflow_dark.png#only-dark){ .on-glb }
+3. Confirm using confirmation form
+    - ![Approval Workflow cancellation form](../../media/development/approval-workflows/ss_approval-workflow-cancellation-form_light.png#only-light){ .on-glb }
+    ![Approval Workflow cancellation form](../../media/development/approval-workflows/ss_approval-workflow-cancellation-form_dark.png#only-dark){ .on-glb }
+
 ### Using Approval Workflow via API
 
 #### Approve/Deny a Stage
@@ -293,7 +306,7 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Approved for deployment"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/approve
 ```
@@ -302,7 +315,7 @@ http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Deny reason"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
 ```
@@ -316,7 +329,7 @@ Retrieves a list of approval workflow stages filtered by their status relative t
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```
 
@@ -325,11 +338,22 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 ```
 
 If the parameter is omitted, all stages are returned regardless of approval status.
+
+#### Cancel Workflow
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=3.0; indent=4" \
+-d '{"comment": "Cancel reason"}' \
+http://nautobot/api/extras/approval-workflow/$APPROVAL_WORKFLOW_ID/cancel
+```
 
 ## Permissions by Persona
 

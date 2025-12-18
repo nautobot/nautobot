@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Callable
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -277,7 +278,6 @@ class Button(Component):
         """Render this button to HTML, possibly including any associated JavaScript."""
         if not self.should_render(context):
             return ""
-
         button = render_component_template(self.template_path, context, **self.get_extra_context(context))
         if self.javascript_template_path:
             button += format_html(
@@ -340,6 +340,60 @@ class FormButton(Button):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
+        }
+
+
+class ExtraDetailViewActionButton(Button):
+    def __init__(
+        self,
+        action: str,
+        permission_check: Callable,
+        link_name: str,
+        label: str | None = None,
+        template_path="components/button/extradetailviewactionbutton.html",
+        **kwargs,
+    ):
+        """Represents an extra action button for detail views.
+
+        Args:
+            action: The action name (used for URL routing and button ID)
+            permission_check: callable to check if button should render
+            label: Optional custom label (if None, uses "Action ObjectName")
+            link_name (str): View name to link to action, for example "extras:approvalworkflow_cancel".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered.
+            template_path (str): Dropdown-specific template file.
+        """
+        self.action = action
+        self.permission_check = permission_check
+        if not callable(permission_check):
+            raise TypeError(f"permission_check must be callable, got {type(permission_check).__name__}")
+        super().__init__(template_path=template_path, label=label, link_name=link_name, **kwargs)
+
+    def should_render(self, context: Context) -> bool:
+        """Check if button should be rendered based on permissions."""
+        obj = get_obj_from_context(context, self.context_object_key)
+        return bool(self.get_link(context) and self.permission_check(context["user"], obj))
+
+    def render_label(self, context: Context) -> str:
+        """Generate button label."""
+        if self.label:
+            return self.label
+        return f"{bettertitle(self.action)} {bettertitle(context['verbose_name'])}"
+
+    def render(self, context: Context):
+        """Render the dropdown item button HTML."""
+        if not self.should_render(context):
+            return ""
+
+        button = render_component_template(self.template_path, context, **self.get_extra_context(context))
+        return button
+
+    def get_extra_context(self, context: Context):
+        """Add the label of ExtraDetailViewActionButton to the other Button context."""
+        return {
+            **super().get_extra_context(context),
+            "label": self.render_label(context),
         }
 
 

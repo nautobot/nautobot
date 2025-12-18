@@ -1,0 +1,1 @@
+Improved `consolidate_detail_view_action_buttons` template tag to support model-defined ExtraDetailViewActionButton instances.
