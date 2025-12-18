@@ -421,7 +421,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         ).count()
 
         # do cancel approval workflow
-        self.approval_workflow.cancel(user=self.users[0])
+        self.approval_workflow.cancel(user=self.users[0], comments="Cancel this.")
         self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
         mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
 
@@ -440,7 +440,7 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
             ).count(),
         )
         self.assertTrue(
-            ApprovalWorkflowStageResponse.objects.filter(user=self.users[0]).exists(),
+            ApprovalWorkflowStageResponse.objects.filter(user=self.users[0], comments="Cancel this.").exists(),
         )
 
 
@@ -3145,6 +3145,16 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             with time_machine.travel("2024-03-10 17:00 -0400"):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
+
+    def test_on_workflow_canceled(self):
+        """Should change decision_date and schedule_job should be disabled."""
+        decision_date = datetime(2025, 1, 1)
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.assertIsNone(self.daily_utc_job.decision_date)
+        self.daily_utc_job.on_workflow_canceled(approval_workflow)
+        self.assertEqual(self.daily_utc_job.decision_date, approval_workflow.decision_date)
+        self.assertFalse(self.daily_utc_job.enabled)
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")

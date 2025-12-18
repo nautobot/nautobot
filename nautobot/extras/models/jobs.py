@@ -1336,6 +1336,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.enabled = False
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}

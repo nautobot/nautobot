@@ -35,6 +35,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
@@ -83,7 +84,6 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
-from nautobot.extras.templatetags.perms import can_cancel
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
@@ -350,8 +350,7 @@ class ApprovalWorkflowUIViewSet(
     )
     def cancel(self, request, *args, **kwargs):
         instance = self.get_object()
-
-        if not can_cancel(request.user, instance):
+        if not can_cancel(request.user, instance) and instance.is_active:
             messages.error(
                 request,
                 "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
@@ -359,7 +358,7 @@ class ApprovalWorkflowUIViewSet(
             return redirect(self.get_return_url(request, instance))
 
         if not instance.is_active:
-            messages.error(request, "Can't cancel finished approval workflow.")
+            messages.error(request, "Can not cancel finished approval workflow.")
             return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":

@@ -31,6 +31,7 @@ from nautobot.core.api.views import (
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.perms import can_cancel
 from nautobot.extras import filters
 from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
@@ -86,7 +87,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.templatetags.perms import can_cancel
 from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
@@ -291,12 +291,24 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
 
     class ApprovalWorkflowViewPermission(TokenPermissions):
         """
-        Enforce `view_approvalworkflowstage` permission (instead of default `add_approvalworkflowstage` for POST).
+        Enforce `view_approvalworkflow` permission (instead of default `add_approvalworkflow` for POST).
         """
 
         perms_map = {
-            "POST": ["%(app_label)s.view_approvalworkflowstage"],
+            "POST": ["%(app_label)s.view_approvalworkflow"],
         }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /cancel/ endpoint.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"cancel": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
 
     @extend_schema(
         methods=["post"],
@@ -311,7 +323,7 @@ class ApprovalWorkflowViewSet(NautobotModelViewSet):
     def cancel(self, request, pk=None):
         instance = self.get_object()
 
-        if not can_cancel(request.user, instance):
+        if not can_cancel(request.user, instance) and instance.is_active:
             return Response(
                 {
                     "detail": "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter."

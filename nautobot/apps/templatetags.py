@@ -90,6 +90,7 @@ from nautobot.core.templatetags.helpers import (
 )
 from nautobot.core.templatetags.perms import (
     can_add,
+    can_cancel,
     can_change,
     can_delete,
     can_view,
@@ -114,7 +115,6 @@ from nautobot.extras.templatetags.job_buttons import (
 from nautobot.extras.templatetags.log_levels import (
     log_level,
 )
-from nautobot.extras.templatetags.perms import can_cancel
 from nautobot.extras.templatetags.plugins import (
     plugin_banners,
     plugin_buttons,
