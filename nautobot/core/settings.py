@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import os.path
 import platform
@@ -1197,7 +1198,7 @@ DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
 
 # A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
-KUBERNETES_JOB_MANIFEST = {}
+KUBERNETES_JOB_MANIFEST = json.loads(os.getenv("NAUTOBOT_KUBERNETES_JOB_MANIFEST", "{}"))
 
 # Name of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
