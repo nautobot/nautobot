@@ -821,7 +821,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
 
     object_detail_content = None
-    extra_detail_view_action_buttons = []
+    extra_detail_view_action_buttons = ()
 
     def retrieve(self, request, *args, **kwargs):
         """

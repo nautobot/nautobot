@@ -558,7 +558,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
         default=ApprovalWorkflowStateChoices.PENDING,
         help_text="User response to this approval workflow stage instance. Eligible values are: Pending, Comment, Approved, Denied.",
     )
-    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
     is_version_controlled = False
 
@@ -569,7 +569,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
 
         db_table = "extras_approvaluserresponse"
         verbose_name = "Approval Workflow Stage Response"
-        ordering = ["approval_workflow_stage", "created"]
+        ordering = ["approval_workflow_stage", "last_updated"]
 
     def __str__(self):
         """Stringify instance."""

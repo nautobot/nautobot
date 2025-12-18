@@ -387,8 +387,20 @@ def consolidate_detail_view_action_buttons(context):
                 button_class=clone_button_classes,
             )
         )
+
+    for extra_action_button in extra_action_buttons:
+        rendered_action_button = extra_action_button.render(context)
+        if not rendered_action_button:
+            continue
+        detail_view_action_buttons.append(rendered_action_button)
+
+    # delete button should be rendered as a last one
     if render_delete_button:
-        if render_clone_button:
+        # Add a divider before the Delete button when there are multiple actions,
+        # or when there are exactly two actions and Edit is not one of them.
+        # If Edit is rendered, we do not create the Actions dropdown;
+        # instead, we show a standalone Edit dropdown.
+        if len(detail_view_action_buttons) >= 2 or (len(detail_view_action_buttons) == 2 and not render_edit_button):
             detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
         detail_view_action_buttons.append(
             format_html(
@@ -405,18 +417,6 @@ def consolidate_detail_view_action_buttons(context):
                 button_class=delete_button_classes,
             )
         )
-
-    for index, extra_action_button in enumerate(extra_action_buttons):
-        rendered_action_button = extra_action_button.render(context)
-        if not rendered_action_button:
-            continue
-
-        # Add divider:
-        # - on first loop ONLY if list already has >1 item
-        # - on every subsequent loop
-        if index > 0 or detail_view_action_button_count >= 1:
-            detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
-        detail_view_action_buttons.append(rendered_action_button)
 
     return {
         "detail_view_action_buttons": detail_view_action_buttons,

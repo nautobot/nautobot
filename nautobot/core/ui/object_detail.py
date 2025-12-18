@@ -23,7 +23,6 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.templatetags.buttons import action_url
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -349,6 +348,7 @@ class ExtraDetailViewActionButton(Button):
         self,
         action: str,
         permission_check: Callable,
+        link_name: str,
         label: str | None = None,
         template_path="components/button/extradetailviewactionbutton.html",
         **kwargs,
@@ -359,26 +359,21 @@ class ExtraDetailViewActionButton(Button):
             action: The action name (used for URL routing and button ID)
             permission_check: callable to check if button should render
             label: Optional custom label (if None, uses "Action ObjectName")
+            link_name (str): View name to link to action, for example "extras:approvalworkflow_cancel".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered.
             template_path (str): Dropdown-specific template file.
         """
         self.action = action
         self.permission_check = permission_check
-        self.label = label
-        super().__init__(template_path=template_path, label=label, **kwargs)
-
-    def get_link(self, context: Context) -> str | None:
-        """
-        Get the hyperlink URL (if any) for this action button.
-        """
-        obj = get_obj_from_context(context, self.context_object_key)
-        return action_url(obj, self.action)
+        if not callable(permission_check):
+            raise TypeError(f"permission_check must be callable, got {type(permission_check).__name__}")
+        super().__init__(template_path=template_path, label=label, link_name=link_name, **kwargs)
 
     def should_render(self, context: Context) -> bool:
         """Check if button should be rendered based on permissions."""
-        if self.permission_check and callable(self.permission_check):
-            obj = get_obj_from_context(context, self.context_object_key)
-            return bool(self.get_link(context) and self.permission_check(context["user"], obj))
-        return False
+        obj = get_obj_from_context(context, self.context_object_key)
+        return bool(self.get_link(context) and self.permission_check(context["user"], obj))
 
     def render_label(self, context: Context) -> str:
         """Generate button label."""

@@ -338,6 +338,7 @@ class ApprovalWorkflowUIViewSet(
             action="cancel",
             icon="mdi mdi-cancel",
             permission_check=can_cancel,
+            link_name="extras:approvalworkflow_cancel",
             weight=100,
         )
     ]
