@@ -1,0 +1,2 @@
+Fixed handling of `DecimalFields` (such as `Location.latitude` and `Location.longitude`) with `MinMaxValidationRule`.
+Fixed rendering of Location latitude/longitude in detail view when either one is exactly zero.
