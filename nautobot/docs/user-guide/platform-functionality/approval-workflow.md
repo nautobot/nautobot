@@ -306,7 +306,7 @@ User can cancel his own Approval Workflow.
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Approved for deployment"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/approve
 ```
@@ -315,7 +315,7 @@ http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Deny reason"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
 ```
@@ -329,7 +329,7 @@ Retrieves a list of approval workflow stages filtered by their status relative t
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```
 
@@ -338,7 +338,7 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 ```
 
@@ -350,7 +350,7 @@ If the parameter is omitted, all stages are returned regardless of approval stat
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Cancel reason"}' \
 http://nautobot/api/extras/approval-workflow/$APPROVAL_WORKFLOW_ID/cancel
 ```
