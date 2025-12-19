@@ -104,7 +104,7 @@ graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.25.1"
+jsonschema = "^4.7.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^33.1.0"
 # Rendering of markdown files to HTML
@@ -112,17 +112,17 @@ Markdown = "~3.8.2"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.7", optional = true}
 # NAPALM automation library
-napalm = {version = ">=5.1.0,<6.0.0", optional = true}
+napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.15.1"
+netutils = "^1.14.0"
 # HTML sanitization
 nh3 = "~0.3.2"
 # Handling of version numbers
-packaging = ">=25.0"
+packaging = ">=23.1"
 # Image processing library
 Pillow = "~12.0.0"
 # Custom prometheus metrics
