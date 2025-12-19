@@ -1,0 +1,8 @@
+<li>
+    <a href="{{ link }}" class="dropdown-item"
+       {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}
+    >
+        {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+        {{ label }}
+    </a>
+</li>

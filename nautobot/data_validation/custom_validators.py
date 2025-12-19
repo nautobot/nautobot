@@ -9,8 +9,10 @@ A common clean method for all these classes looks for any
 validation rules that have been defined for the given model.
 """
 
+from decimal import Decimal
 import inspect
 import logging
+from math import isclose
 import os
 import re
 from typing import Optional
@@ -96,19 +98,29 @@ class BaseValidator(CustomValidator):
                     }
                 )
 
-            elif not isinstance(field_value, (int, float)):
+            elif not isinstance(field_value, (int, float, Decimal)):
                 self.validation_error(
                     {
                         rule.field: f"Unable to validate against min/max rule {rule} because the field value is not numeric."
                     }
                 )
 
-            elif rule.min is not None and field_value is not None and field_value < rule.min:
+            elif (
+                rule.min is not None
+                and field_value is not None
+                and field_value < rule.min
+                and not isclose(field_value, rule.min)  # to handle differences in Decimal vs float precision
+            ):
                 self.validation_error(
                     {rule.field: rule.error_message or f"Value is less than minimum value: {rule.min}"}
                 )
 
-            elif rule.max is not None and field_value is not None and field_value > rule.max:
+            elif (
+                rule.max is not None
+                and field_value is not None
+                and field_value > rule.max
+                and not isclose(field_value, rule.max)  # to handle differences in Decimal vs float precision
+            ):
                 self.validation_error(
                     {rule.field: rule.error_message or f"Value is more than maximum value: {rule.max}"}
                 )
