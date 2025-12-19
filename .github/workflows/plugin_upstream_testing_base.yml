@@ -23,7 +23,7 @@ on:
         default: "develop"
 
 env:
-  PYTHON_VERSION: "3.12" # maximum version currently supported by both develop and ltm-1.6
+  PYTHON_VERSION: "3.12" # maximum version currently supported by both develop and ltm-2.4
   APP_NAME: ${{ inputs.app_name || inputs.plugin_name }}
 
 jobs:
