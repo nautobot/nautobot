@@ -1,0 +1,111 @@
+{% load static %}
+
+<script>
+    (function initMediaFailure() {
+        // Create React-style `ref` reference to the media failure alert element.
+        const failureAlertRef = { current: null };
+
+        // Store all media failures inside `Map` containing `Set` values to ensure uniqueness of all reported failures.
+        const failures = new Map();
+
+        function handleFailure(element) {
+            // Get media `filename` by stripping down `href` or `src` element attribute of its `base` (static) path and query params.
+            const base = `${window.location.origin}{% static '' %}`;
+            const filename = (element.href || element.src || '').replace(base, '').replace(/\?.*$/, '');
+
+            if (filename) {
+                // Update `failures` with a proper entry corresponding to the current media failure and update media failure alert.
+                const elements = failures.get(filename) || new Set();
+                elements.add(element);
+                failures.set(filename, elements);
+                updateFailureAlert();
+            }
+        }
+
+        function updateFailureAlert() {
+            const innerHTML = `
+                <div style="margin: auto; max-width: 800px;">
+                    <h2 style="margin-top: 0; text-align: center;">Static Media Failure</h2>
+                    <p>The following static media file(s) failed to load:</p>
+                    <ul>
+                        ${Array.from(failures.entries())
+                            .map((entry) => {
+                                const filename = entry[0];
+                                const element = Array.from(entry[1])[0];
+                                const href = element.href || element.src;
+                                return `<li><a href="${href}" target="_blank"><code style="color: #d9534f;">${filename}</code></a></li>`;
+                            })
+                            .join('\n')}
+                    </ul>
+                    <p>Check the following:</p>
+                    <ul>
+                        <li style="margin-bottom: 12px;">
+                            <code>
+                                <strong>nautobot-server collectstatic</strong>
+                            </code>
+                            was run during the most recent upgrade. This installs the most recent iteration of each static file
+                            into the static root path.
+                        </li>
+                        <li style="margin-bottom: 12px;">
+                            The HTTP service (e.g. NGINX) is configured to serve files from the <code>STATIC_ROOT</code> path.
+                            Refer to
+                            <a href="https://docs.nautobot.com/projects/core/en/v{{ settings.VERSION }}/installation/" target="_blank">
+                                the installation documentation
+                            </a>
+                            for further guidance.
+                            <ul>
+                                {% if request.user.is_staff or request.user.is_superuser %}
+                                    <li>
+                                        <code>
+                                            STATIC_ROOT: <strong>{{ settings.STATIC_ROOT }}</strong>
+                                        </code>
+                                    </li>
+                                {% endif %}
+                                <li>
+                                    <code>
+                                        STATIC_URL: <strong>{{ settings.STATIC_URL }}</strong>
+                                    </code>
+                                </li>
+                            </ul>
+                        </li>
+                        <li style="margin-bottom: 12px;">
+                            The file(s) listed above exists in the static root directory and is readable by the HTTP process.
+                        </li>
+                    </ul>
+                    <p>
+                        Click <a href="">here</a> to reload {{ settings.BRANDING_TITLE }}.
+                    </p>
+                </div>
+            `;
+
+            // If media failure alert already exists, just update its content and return early.
+            if (failureAlertRef.current) {
+                failureAlertRef.current.innerHTML = innerHTML;
+                return;
+            }
+
+            // If media failure alert does not exist yet, create one.
+            const alert = document.createElement('div');
+            alert.classList.add('alert', 'alert-danger', 'media-failure-banner');
+            alert.setAttribute('role', 'alert');
+            alert.innerHTML = innerHTML;
+
+            // Copy and hardcode Bootstrap `"alert alert-danger"` styles here to make the alert core styles independent of other CSS.
+            alert.style.setProperty('background-color', '#fce8e9');
+            alert.style.setProperty('border', '1px solid #f07162');
+            alert.style.setProperty('border-radius', '10px');
+            alert.style.setProperty('color', '#e01f1f');
+            alert.style.setProperty('margin', '20px');
+            alert.style.setProperty('margin-top', '0');
+            alert.style.setProperty('padding', '20px');
+
+            // Update React-style `ref` to simplify later alert updates if required and place the alert as the first child of document body.
+            failureAlertRef.current = alert;
+            document.body.prepend(alert);
+        }
+
+        // Export `media` "API" to `window` global object to enable accessing it from other scripts.
+        window.nb = window.nb || {};
+        window.nb.media = { failures, handleFailure }
+    })();
+</script>
