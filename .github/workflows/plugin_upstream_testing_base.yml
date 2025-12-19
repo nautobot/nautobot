@@ -1,5 +1,5 @@
 ---
-name: "Nautobot Plugin Upstream Testing - Base"
+name: "Nautobot App Upstream Testing - Base"
 
 on:
   workflow_call:
@@ -7,8 +7,11 @@ on:
       invoke_context_name:
         required: true
         type: string
+      plugin_name: # Temporary to allow existing workflows to continue working; will be removed in future
+        required: false
+        type: string
       app_name:
-        required: true
+        required: false # Temporary to allow existing workflows to continue working; will be required in future
         type: string
       nautobot_branch:
         required: false
@@ -21,12 +24,26 @@ on:
 
 env:
   PYTHON_VERSION: "3.12" # maximum version currently supported by both develop and ltm-1.6
+  APP_NAME: ${{ inputs.app_name || inputs.plugin_name }}
 
 jobs:
   build:
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
+      - name: "Check Inputs and Warn on Deprecation"
+        run: |
+          if [ -z "${{ env.APP_NAME }}" ]; then
+            echo "::error::Both 'app_name' and 'plugin_name' are missing. One is required."
+            exit 1
+          fi
+          
+          if [ -n "${{ inputs.plugin_name }}" ] && [ -z "${{ inputs.app_name }}" ]; then
+            echo "::warning::'plugin_name' is deprecated and will be removed in a future release. Please switch to 'app_name'."
+            # This adds a notice to the GitHub Actions UI Summary page
+            echo "### ⚠️ Deprecation Notice" >> $GITHUB_STEP_SUMMARY
+            echo "'plugin_name' is deprecated. Please update your workflow to use 'app_name' instead." >> $GITHUB_STEP_SUMMARY
+          fi
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
