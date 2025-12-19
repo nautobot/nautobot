@@ -3364,6 +3364,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         label="Management only",
         help_text="This interface is used only for out-of-band management",
     )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Description")
     ip_addresses = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
