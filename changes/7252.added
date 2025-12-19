@@ -1,0 +1,1 @@
+Added `NAUTOBOT_KUBERNETES_JOB_MANIFEST` environment variable to configure `KUBERNETES_JOB_MANIFEST` setting.
