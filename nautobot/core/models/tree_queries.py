@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
@@ -138,7 +139,8 @@ class TreeModel(TreeNode):
                 queryset = queryset.restrict(restrict_to_user, "view")
             pk_list = list(queryset.values_list("pk", flat=True))
             # cache is explicitly invalidated by TreeModel.save() and TreeModel.delete() methods
-            cache.set(cache_key, pk_list, timeout=None)
+            # However since this is a *per-instance* cache we don't want it to grow indefinitely over time.
+            cache.set(cache_key, pk_list, timeout=settings.CACHES["default"]["TIMEOUT"])
         return pk_list
 
     @property
