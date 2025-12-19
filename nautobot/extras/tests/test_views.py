@@ -721,7 +721,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
         self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
 
         request = {
@@ -2299,7 +2299,7 @@ class NoteTestCase(
             "assigned_object_type": content_type.pk,
             "assigned_object_id": cls.location.pk,
         }
-        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" aria-describedby="id_object_note_helptext" id="id_object_note"></textarea>'
 
     def test_note_on_bulk_update_perms(self):
         self.add_permissions("dcim.add_location", "extras.add_note")
@@ -3594,7 +3594,7 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            '<input type="checkbox" name="_ignore_singleton_lock" class="form-check-input" aria-describedby="id__ignore_singleton_lock_helptext" id="id__ignore_singleton_lock" checked>',
             content,
         )
 
