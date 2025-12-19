@@ -1,1 +1,0 @@
-Added documentation about using `custom_view_base_action` and `custom_view_additional_permissions` to control permission requirements for custom NautobotUIViewSet actions.

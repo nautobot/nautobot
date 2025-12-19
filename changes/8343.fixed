@@ -1,1 +1,0 @@
-Fixed issue where Bulk Edit and Bulk Destroy jobs submitted for approval in the Approval Workflow displayed `{scheduled_job.name}` instead of the actual job name in the success message.

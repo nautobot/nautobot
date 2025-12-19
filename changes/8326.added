@@ -1,4 +1,0 @@
-Added option to close Approval Workflow directly.
-Added support for ExtraDetailViewActionButton to define additional object detail view action buttons, integrated into the consolidated action button system.
-Added new field `last_updated` to `ApprovalWorkflowStageResponse` to improve ordering.
-Added new property `is_canceled` and `is_active` to `ApprovalWorkflow` model.
