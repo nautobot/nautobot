@@ -66,7 +66,7 @@ jobs:
           builder: "${{ steps.buildx.outputs.name }}"
           context: "./"
           push: false
-          tags: "${{ inputs.app_name }}/nautobot:${{ inputs.nautobot_branch }}-py${{ env.PYTHON_VERSION }}"
+          tags: "${{ env.APP_NAME }}/nautobot:${{ inputs.nautobot_branch }}-py${{ env.PYTHON_VERSION }}"
           file: "./development/Dockerfile"
           cache-from: "type=gha,scope=nautobot-${{ inputs.nautobot_branch }}"
           build-args: |
