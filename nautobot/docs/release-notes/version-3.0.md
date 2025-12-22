@@ -243,6 +243,8 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8306](https://github.com/nautobot/nautobot/issues/8306) - Fixed missing description field on interface creation form.
 - [#8330](https://github.com/nautobot/nautobot/issues/8330) - Fixed action buttons in IPAddress table incorrectly linking to actions for Prefixes.
 - [#8343](https://github.com/nautobot/nautobot/issues/8343) - Fixed issue where Bulk Edit and Bulk Destroy jobs submitted for approval in the Approval Workflow displayed `{scheduled_job.name}` instead of the actual job name in the success message.
+- [#8340](https://github.com/nautobot/nautobot/issues/8340) - Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
+- [#8352](https://github.com/nautobot/nautobot/issues/8352) - Fixed inability to use filters in any "Basic" filter forms that had dependencies on other filter fields (for example, the "Rack" filter on the Device filter form has a dependency on the "Rack Group" and "Location" filters).
 
 ### Dependencies in v3.0.3
 
