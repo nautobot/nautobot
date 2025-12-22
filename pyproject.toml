@@ -167,8 +167,6 @@ exclude = [
     "nautobot/docs/**/*",
 ]
 
-<<<<<<< HEAD
-=======
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
 # Background task processing
@@ -296,7 +294,6 @@ remote_storage = ["django-storages"]
 # saml = ["social-auth-core[saml]"]
 sso = ["social-auth-core"]
 
->>>>>>> develop
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 # Currently pinned to 5.2.0 due to https://github.com/django-commons/django-debug-toolbar/issues/2168
