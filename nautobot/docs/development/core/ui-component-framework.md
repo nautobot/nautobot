@@ -66,6 +66,20 @@ Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `Obj
 - `Panel`s in the "main" tab or any extra tabs
 - Extra `Button`s to display at the top of the page (beyond the default "actions" dropdown)
 
+### ExtraDetailViewActionButton
+
+Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `ObjectView`) that implements the UI Framework does so by defining an `extra_detail_view_action_buttons` attribute. This attribute should be a list of `ExtraDetailViewActionButton` instances, which provide a clean, declarative way to add extra action buttons to your detail views.
+The `ExtraDetailViewActionButton` class automatically handles URL generation, permission checking, and HTML rendering for you, reducing boilerplate code while maintaining consistency across your application.
+
+Extra detail view action buttons are rendered as part of the consolidated action button system, which is implemented by the consolidate_detail_view_action_buttons template tag.
+
+This tag is responsible for assembling all action buttons shown on an object detail view, including:
+
+- Built-in actions (Edit, Clone, Delete)
+- Model-defined ExtraDetailViewActionButton instances
+
+Only buttons that pass their respective permission checks are rendered.
+
 ### Tabs
 
 A `Tab` is one of the major building blocks of your UI. The user can toggle between tabs, each of which displays distinct page content, typically consisting of one or more `Panel`s. Multiple tabs can be rendered in a single HTML response (for example, the "main" and "advanced" tabs are both part of the same page; toggling between them is a client-side action only and does not require Nautobot to reload or re-render the page), while to optimize performance, certain other tabs may correspond to distinct `View`s that are retrieved and rendered on request. The UI Framework supports both patterns.
