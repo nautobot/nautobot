@@ -1,5 +1,5 @@
 ---
-name: "Nautobot Plugin Upstream Testing - Base"
+name: "Nautobot App Upstream Testing - Base"
 
 on:
   workflow_call:
@@ -7,26 +7,47 @@ on:
       invoke_context_name:
         required: true
         type: string
-      plugin_name:
-        required: true
+      plugin_name: # Temporary to allow existing workflows to continue working; will be removed in future
+        required: false
         type: string
+      app_name:
+        required: false # Temporary to allow existing workflows to continue working; will be required in future
+        type: string
+      nautobot_branch:
+        required: false
+        type: string
+        default: "develop"
+      app_branch:
+        required: false
+        type: string
+        default: "develop"
 
 env:
-  PYTHON_VERSION: "3.11" # maximum version currently supported by both develop and ltm-1.6
+  PYTHON_VERSION: "3.12" # maximum version currently supported by both develop and ltm-2.4
+  APP_NAME: ${{ inputs.app_name || inputs.plugin_name }}
 
 jobs:
   build:
     continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "ubuntu-latest"
     steps:
+      - name: "Check Inputs and Warn on Deprecation"
+        run: |
+          if [ -z "${{ env.APP_NAME }}" ]; then
+            echo "::error::Both 'app_name' and 'plugin_name' are missing. One is required."
+            exit 1
+          fi
+          
+          if [ -n "${{ inputs.plugin_name }}" ] && [ -z "${{ inputs.app_name }}" ]; then
+            echo "::warning::'plugin_name' is deprecated and will be removed in a future release. Please switch to 'app_name'."
+            # This adds a notice to the GitHub Actions UI Summary page
+            echo "### ⚠️ Deprecation Notice" >> $GITHUB_STEP_SUMMARY
+            echo "'plugin_name' is deprecated. Please update your workflow to use 'app_name' instead." >> $GITHUB_STEP_SUMMARY
+          fi
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
-          ref: "${{ matrix.nautobot-version == 'develop' && 'develop' || matrix.nautobot-version == 'next' && 'next-3.0' || env.GITHUB_REF_NAME || 'develop' }}"
+          ref: "${{ inputs.app_branch }}"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
@@ -35,7 +56,7 @@ jobs:
           python-version: "${{ env.PYTHON_VERSION }}"
       # This deviates from the app CI since we can't force invoke to run locally using the `INVOKE_APPNAME_LOCAL` environment variable
       - name: "Constrain Nautobot version and regenerate lock file"
-        run: "poetry add --lock git+https://github.com/nautobot/nautobot.git#${{ matrix.nautobot-version }} --python ${{ env.PYTHON_VERSION }}"
+        run: "poetry add --lock git+https://github.com/nautobot/nautobot.git#${{ inputs.nautobot_branch }} --python ${{ env.PYTHON_VERSION }}"
       - name: "Set up Docker Buildx"
         id: "buildx"
         uses: "docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9" # v1
@@ -45,78 +66,67 @@ jobs:
           builder: "${{ steps.buildx.outputs.name }}"
           context: "./"
           push: false
-          tags: "${{ inputs.plugin_name }}/nautobot:${{ matrix.nautobot-version }}-py${{ env.PYTHON_VERSION }}"
+          tags: "${{ env.APP_NAME }}/nautobot:${{ inputs.nautobot_branch }}-py${{ env.PYTHON_VERSION }}"
           file: "./development/Dockerfile"
-          cache-from: "type=gha,scope=nautobot-${{ matrix.nautobot-version }}"
+          cache-from: "type=gha,scope=nautobot-${{ inputs.nautobot_branch }}"
           build-args: |
-            NAUTOBOT_VER=${{ matrix.nautobot-version }}
+            NAUTOBOT_VER=${{ inputs.nautobot_branch }}
             PYTHON_VER=${{ env.PYTHON_VERSION }}
             CI=true
-          outputs: "type=docker,dest=/tmp/nautobot_${{ matrix.nautobot-version }}.tar"
+          outputs: "type=docker,dest=/tmp/nautobot_${{ inputs.nautobot_branch }}.tar"
       - name: Upload docker image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "docker_nautobot_${{ matrix.nautobot-version }}"
-          path: "/tmp/nautobot_${{ matrix.nautobot-version }}.tar"
+          name: "docker_nautobot_${{ inputs.nautobot_branch }}"
+          path: "/tmp/nautobot_${{ inputs.nautobot_branch }}.tar"
+          retention-days: 1 # Default is 90 days; we only need this for the following jobs in this workflow
   unittest:
     name: "Run Unit Tests"
     needs: "build"
-    strategy:
-      fail-fast: false
-      matrix:
-        nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "ubuntu-latest"
     steps:
       # Try to download the artifact first so the job can be skipped if the artifact is not found
       - name: Download docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: "docker_nautobot_${{ matrix.nautobot-version }}"
+          name: "docker_nautobot_${{ inputs.nautobot_branch }}"
           path: /tmp
       - name: Load docker image
-        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
+        run: "docker load --input /tmp/nautobot_${{ inputs.nautobot_branch }}.tar"
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
-          ref: "${{ matrix.nautobot-version == 'develop' && 'develop' || matrix.nautobot-version == 'next' && 'next-3.0' || env.GITHUB_REF_NAME || 'develop' }}"
+          ref: "${{ inputs.app_branch }}"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
           python-version: "${{ env.PYTHON_VERSION }}"
-      - name: "Copy credentials"
-        run: "cp development/creds.example.env development/creds.env"
       - name: "Run Tests"
-        run: "INVOKE_${{ inputs.invoke_context_name }}_NAUTOBOT_VER=${{ matrix.nautobot-version }} INVOKE_${{ inputs.invoke_context_name }}_PYTHON_VER=${{ env.PYTHON_VERSION }} poetry run invoke unittest --failfast --keepdb"
+        run: "INVOKE_${{ inputs.invoke_context_name }}_NAUTOBOT_VER=${{ inputs.nautobot_branch }} INVOKE_${{ inputs.invoke_context_name }}_PYTHON_VER=${{ env.PYTHON_VERSION }} poetry run invoke unittest --failfast --keepdb"
   check-migrations:
-    name: "Run 'nautobot-server makemigrations --dry-run --check'"
+    name: "Run 'inv check-migrations'"
     needs: "build"
-    strategy:
-      fail-fast: false
-      matrix:
-        nautobot-version: ["develop", "next"]
-    runs-on: "ubuntu-24.04"
+    runs-on: "ubuntu-latest"
     steps:
       # Try to download the artifact first so the job can be skipped if the artifact is not found
       - name: Download docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: "docker_nautobot_${{ matrix.nautobot-version }}"
+          name: "docker_nautobot_${{ inputs.nautobot_branch }}"
           path: /tmp
       - name: Load docker image
-        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
+        run: "docker load --input /tmp/nautobot_${{ inputs.nautobot_branch }}.tar"
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
-          ref: "${{ matrix.nautobot-version == 'develop' && 'develop' || matrix.nautobot-version == 'next' && 'next-3.0' || env.GITHUB_REF_NAME || 'develop' }}"
+          ref: "${{ inputs.app_branch }}"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
           python-version: "${{ env.PYTHON_VERSION }}"
-      - name: "Copy credentials"
-        run: "cp development/creds.example.env development/creds.env"
       - name: "Run check migrations"
-        run: "INVOKE_${{ inputs.invoke_context_name }}_NAUTOBOT_VER=${{ matrix.nautobot-version }} INVOKE_${{ inputs.invoke_context_name }}_PYTHON_VER=${{ env.PYTHON_VERSION }} poetry run invoke check-migrations"
+        run: "INVOKE_${{ inputs.invoke_context_name }}_NAUTOBOT_VER=${{ inputs.nautobot_branch }} INVOKE_${{ inputs.invoke_context_name }}_PYTHON_VER=${{ env.PYTHON_VERSION }} poetry run invoke check-migrations"
