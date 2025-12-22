@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
@@ -107,7 +108,8 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
         max_depth = cache.get(cache_key)
         if max_depth is None:
             max_depth = self.max_tree_depth()
-            cache.set(cache_key, max_depth)
+            # cache is explicitly invalidated by nautobot.core.signals.invalidate_max_depth_cache as needed
+            cache.set(cache_key, max_depth, timeout=None)
         return max_depth
 
 
@@ -137,7 +139,9 @@ class TreeModel(TreeNode):
             if restrict_to_user:
                 queryset = queryset.restrict(restrict_to_user, "view")
             pk_list = list(queryset.values_list("pk", flat=True))
-            cache.set(cache_key, pk_list)
+            # cache is explicitly invalidated by TreeModel.save() and TreeModel.delete() methods
+            # However since this is a *per-instance* cache we don't want it to grow indefinitely over time.
+            cache.set(cache_key, pk_list, timeout=settings.CACHES["default"]["TIMEOUT"])
         return pk_list
 
     @property
@@ -163,7 +167,7 @@ class TreeModel(TreeNode):
             # Expected to occur at times during bulk-delete operations
             pass
         display_str += self.name  # pylint: disable=no-member  # we checked with hasattr() above
-        cache.set(cache_key, display_str, 5)
+        cache.set(cache_key, display_str, timeout=5)
         return display_str
 
     @classmethod
