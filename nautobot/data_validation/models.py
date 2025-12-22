@@ -39,7 +39,8 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.data_validation.signals.invalidate_validation_rule_caches
+            cache.set(cache_key, queryset, timeout=None)
         return queryset
 
     @property
@@ -55,7 +56,8 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model, enabled=True)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.data_validation.signals.invalidate_validation_rule_caches
+            cache.set(cache_key, queryset, timeout=None)
         return queryset
 
     @property
