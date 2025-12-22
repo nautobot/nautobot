@@ -1,0 +1,1 @@
+Fixed inability to use filters in any "Basic" filter forms that had dependencies on other filter fields (for example, the "Rack" filter on the Device filter form has a dependency on the "Rack Group" and "Location" filters).
