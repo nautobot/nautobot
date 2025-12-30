@@ -277,5 +277,9 @@ Bumping version from 3.0.1 to 3.0.2a0
 
 After the main-to-develop pull request is merged into `develop`, create a new branch off of `next` (typically named `develop-to-next-post-<x.y.z>`) and `git merge develop`. Resolve any merge conflicts as appropriate (if you're lucky, there may only be one, a version number clash in `pyproject.toml`), then open a pull request to `next`.
 
+When resolving conflicts, always keep the Nautobot app version number from the **current branch** (not the incoming one). Once conflicts are resolved, open a pull request to `next`.
+
+During the pull request, the CI pipeline may fail at the **changelog** step. This is expected in this case and should not be a cause for concern (the error can be safely ignored).
+
 !!! important
     Do not squash merge this branch into `next`. Make sure to select `Create a merge commit` when merging in GitHub.
