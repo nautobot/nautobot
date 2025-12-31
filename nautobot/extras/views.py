@@ -1390,7 +1390,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
-    action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -1910,7 +1909,7 @@ class GraphQLQueryUIViewSet(
     filterset_class = filters.GraphQLQueryFilterSet
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
-    action_buttons = ("add",)
+    action_buttons = ("add", "export")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
