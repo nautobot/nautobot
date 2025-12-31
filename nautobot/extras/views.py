@@ -820,7 +820,6 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ComputedFieldSerializer
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    action_buttons = ("add",)
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -1246,7 +1245,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     form_class = forms.CustomFieldForm
     table_class = tables.CustomFieldTable
     template_name = "extras/customfield_update.html"
-    action_buttons = ("add",)
 
     class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
