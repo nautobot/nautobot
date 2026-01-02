@@ -11,9 +11,9 @@ To create a Tenant:
 1. Click on **Organization** on the left sidebar menu
 2. Under **Tenancy** section, select **Tenants**
     * From this page you can view any existing Tenants
-3. Click the `+ Add Tenant` button.
-4. Populate the `Name` field
-5. Click the `Create` button
+    * Click the `+ Add Tenant` button.
+3. Populate the `Name` field
+4. Click the `Create` button
 
 ![Add tenant](../images/getting-started-nautobot-ui/12-add-tenant-light.png#only-light){ .on-glb }
 ![Add tenant](../images/getting-started-nautobot-ui/12-add-tenant-dark.png#only-dark){ .on-glb }
