@@ -166,6 +166,16 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.25 (2026-01-05)
+
+### Added in v2.4.25
+
+- [#7252](https://github.com/nautobot/nautobot/issues/7252) - Added `NAUTOBOT_KUBERNETES_JOB_MANIFEST` environment variable to configure `KUBERNETES_JOB_MANIFEST` setting.
+
+### Fixed in v2.4.25
+
+- [#8340](https://github.com/nautobot/nautobot/issues/8340) - Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
+
 ## v2.4.24 (2025-12-15)
 
 ### Security in v2.4.24
