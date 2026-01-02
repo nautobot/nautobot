@@ -160,3 +160,28 @@ There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lo
 - `family` - Given an IP address family of 4 or 6, provide hosts or networks that are that IP version type, e.g. `host__family=6` would include 2001:db8::1 in the result
 
 > Note: The fields denoted with `**` are only supported in the MySQL dialect (and not Postgresql) at the current time.
+
+These lookups are mapped to the filters on Prefix's with minor modifications such as accounting for bad networks or stripping whitespace.
+
+| Filter Name             | Lookup                           |
+| ----------------------- | -------------------------------- |
+| `address` (IP)          | `net_in`                         |
+| `prefix`                | `net_equals()`                   |
+| `prefix_exact`          | `net_equals()`                   |
+| `within`                | `net_contained()`                |
+| `within_include`        | `net_contained_or_equal()`       |
+| `contains` (CIDR input) | `net_contains_or_equals()`       |
+| `contains` (host input) | Custom logic for host input      |
+
+!!! tip
+    The `prefix_exact` filter behaves similarly to `prefix`, but with one key difference, it rejects networks where host bits are set.
+
+    For example:
+
+    - `prefix=10.32.0.34/28` **matches** `10.32.0.32/28`
+    - `prefix_exact=10.32.0.34/28` **returns no results**
+
+    This is useful when consumers need strict, unambiguous matching and want to avoid implicit normalization by the filtering layer.
+
+!!! note
+	  # there is a difference between queryset and filterset... need to document
