@@ -29,7 +29,9 @@ The following example will show:
 ### Creating the VLANs
 
 1. Click on **IPAM** in the left sidebar menu
-2. Look for the **VLANS** option and click on the **+** to go to the `Add a new VLAN` form
+2. Under the **VLANS** section, select **VLANS**.
+    * From this page, you can view existing VLANs.
+    * Click the `+ Add VLAN` button.
 3. Populate `ID` with `200`
 4. Populate `Name` with `vlan 200`
 5. Select `Status` as `Active`
@@ -74,12 +76,13 @@ you'll see the three VLANs and the Location assignment for each one. Each `vlan 
 
 To assign a VLAN to an Interface:
 
-1. Select **Devices** to go to the Devices main page
-2. Click on the name of the Device you wish to add a VLAN to (`ang01-edge-01`) in this example
-3. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
-4. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
-    * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
-    * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
+1. Click on the **Devices** in the left sidebar menu
+2. Under the **Devices** section, select **Devices** to view existing devices.
+3. Click on the Devices you wish to add a VLAN to (`ang01-edge-01`) in this example
+4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
+    * On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
+        * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
+        * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 
 ![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface-light.png#only-light){ .on-glb }
 ![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface-dark.png#only-dark){ .on-glb }
