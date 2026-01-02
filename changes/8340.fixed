@@ -1,0 +1,1 @@
+Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
