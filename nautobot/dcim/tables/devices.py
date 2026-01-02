@@ -1260,6 +1260,7 @@ class DeviceRedundancyGroupTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "description",
             "status",
             "failover_strategy",
             "controller_count",
