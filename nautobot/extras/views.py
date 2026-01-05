@@ -1898,6 +1898,7 @@ class GraphQLQueryUIViewSet(
     ObjectListViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
+    ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDataComplianceViewMixin,
@@ -1909,7 +1910,7 @@ class GraphQLQueryUIViewSet(
     filterset_class = filters.GraphQLQueryFilterSet
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
-    action_buttons = ("add", "export")
+    action_buttons = ("add", "export", "import")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
