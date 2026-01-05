@@ -1018,16 +1018,28 @@ class Device(PrimaryModel, ConfigContextModel):
         # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
         # This query looks for modules that are installed in a module_bay and attached to this device
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
-        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
-        qs = Module.objects.all()
-        if not self.has_module_bays:
-            # Short-circuit to avoid an expensive nested query
-            return qs.none()
-        query = Q()
-        for level in range(recursion_depth):
-            recursive_query = "parent_module_bay__parent_module__" * level
-            query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
-        return qs.filter(query)
+
+        def get_parent_pks():
+            recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
+            qs = Module.objects.all()
+            if not self.has_module_bays:
+                # Short-circuit to avoid an expensive nested query
+                return qs.none()
+            query = Q()
+            for level in range(recursion_depth):
+                recursive_query = "parent_module_bay__parent_module__" * level
+                query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+            return qs.filter(query).values_list('id', flat=True)
+
+        cache_key = f"nautobot.dcim.device.{self.pk}.module_bay_parent_pks"
+        module_bay_parent_pks = cache.get(cache_key)
+
+        if not module_bay_parent_pks:
+            modules = get_parent_pks()
+            cache.set(cache_key, modules, timeout=30)
+            return modules
+
+        return module_bay_parent_pks
 
     @property
     def all_console_ports(self):
