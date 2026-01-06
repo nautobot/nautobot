@@ -820,7 +820,6 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ComputedFieldSerializer
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    action_buttons = ("add",)
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -1246,7 +1245,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     form_class = forms.CustomFieldForm
     table_class = tables.CustomFieldTable
     template_name = "extras/customfield_update.html"
-    action_buttons = ("add",)
 
     class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
@@ -1392,7 +1390,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
-    action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -1896,23 +1893,14 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 #
 
 
-class GraphQLQueryUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
-    ObjectNotesViewMixin,
-):
+class GraphQLQueryUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
     form_class = forms.GraphQLQueryForm
     filterset_class = filters.GraphQLQueryFilterSet
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
-    action_buttons = ("add",)
+    action_buttons = ("add", "export", "import")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
