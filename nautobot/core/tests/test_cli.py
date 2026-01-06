@@ -53,7 +53,7 @@ class TestPreprocessSettings(TestCase):
     def load_settings_module(self):
         # Load the testing nautobot_config.py as a self-contained module
         config_path = os.path.join(os.path.dirname(__file__), "nautobot_config.py")
-        spec = importlib.util.spec_from_file_location("nautobot_config", config_path)
+        spec = importlib.util.spec_from_file_location("test_nautobot_config", config_path)
         settings_module = importlib.util.module_from_spec(spec)
         # nautobot.core.cli.load_settings would do the below, but obviously we don't want to do that here:
         # sys.modules["nautobot_config"] = settings_module

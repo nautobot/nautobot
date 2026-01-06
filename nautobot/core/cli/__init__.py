@@ -3,6 +3,7 @@ Utilities and primitives for the `nautobot-server` CLI command.
 """
 
 import argparse
+from copy import deepcopy
 import importlib.util
 import logging
 import os
@@ -83,6 +84,9 @@ def _preprocess_settings(settings_module, config_path):
     # If metrics are enabled and postgres is the backend, set the driver to the
     # one provided by django-prometheus.
     if settings_module.METRICS_ENABLED:
+        # Avoid modifying nautobot.core.settings.DATABASES by accident!
+        settings_module.DATABASES = deepcopy(settings_module.DATABASES)
+
         if "postgres" in settings_module.DATABASES["default"]["ENGINE"]:
             settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
         elif "mysql" in settings_module.DATABASES["default"]["ENGINE"]:
@@ -91,13 +95,16 @@ def _preprocess_settings(settings_module, config_path):
     # Create secondary db connection for job logging. This still writes to the default db, but because it's a separate
     # connection, it allows allows us to "escape" from transaction.atomic() and ensure that job log entries are saved
     # to the database even when the rest of the job transaction is rolled back.
-    settings_module.DATABASES["job_logs"] = settings_module.DATABASES["default"].copy()
+    settings_module.DATABASES["job_logs"] = deepcopy(settings_module.DATABASES["default"])
     # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
     settings_module.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
 
     #
     # Media storage
     #
+
+    # Avoid modifying nautobot.core.settings.STORAGES by accident!
+    settings_module.STORAGES = deepcopy(settings_module.STORAGES)
 
     if hasattr(settings_module, "JOB_FILE_IO_STORAGE"):
         settings_module.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings_module.JOB_FILE_IO_STORAGE
@@ -112,8 +119,8 @@ def _preprocess_settings(settings_module, config_path):
             except ModuleNotFoundError as e:
                 if getattr(e, "name") == "storages":
                     raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {settings_module.STORAGE_BACKEND} but django-storages is not present. It "
-                        f"can be installed by running 'pip install django-storages'."
+                        f"STORAGE_BACKEND is set to {settings_module.STORAGE_BACKEND} but django-storages is not present. "
+                        "It can be installed by running 'pip install django-storages'."
                     )
                 raise e
 
