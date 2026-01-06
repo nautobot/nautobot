@@ -697,9 +697,9 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
         "runjob_with_job_result",
         f"{job_result.pk}",
     ]
-    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+    transaction.on_commit(lambda: job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}"))
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
+    transaction.on_commit(lambda: job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}"))
     api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
     return job_result
 
