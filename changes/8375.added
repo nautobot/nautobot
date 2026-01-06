@@ -1,1 +1,1 @@
-Update documentation with recommendations for upgrading from version 1.x to 3.x.
+Added `prefix_exact` filter and updated REST API filter documentation.
