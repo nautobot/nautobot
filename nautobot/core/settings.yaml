@@ -1098,6 +1098,7 @@ properties:
   KUBERNETES_JOB_MANIFEST:
     default: {}
     description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_MANIFEST"
     type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:

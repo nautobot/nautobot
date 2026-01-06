@@ -29,7 +29,8 @@ class MetadataTypeManager(BaseManager.from_queryset(RestrictedQuerySet)):
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         return queryset
 
     get_for_model.cache_key_prefix = "nautobot.extras.metadatatype.get_for_model"
