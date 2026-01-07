@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0012_alter_objectpermission_options'),
+        ('users', '0010_user_default_saved_views'),
     ]
 
     operations = [
@@ -15,3 +15,4 @@ class Migration(migrations.Migration):
             options={'ordering': ['name']},
         ),
     ]
+
