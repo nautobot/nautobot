@@ -34,6 +34,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
+from nautobot.core.utils.module_loading import import_function_from_app_if_present
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
@@ -57,7 +58,6 @@ from nautobot.extras.models.mixins import (
     NotesMixin,
     SavedViewMixin,
 )
-from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,

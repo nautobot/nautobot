@@ -31,6 +31,31 @@ def import_string_optional(dotted_path):
         raise
 
 
+def import_function_from_app_if_present(dotted_path, default_return=None):
+    """
+    If a given App is in `settings.PLUGINS`, import the given function from that App, else return a usable stub instead.
+
+    Args:
+        dotted_path (str): Path to a function to possibly import, such as "nautobot_version_control.utils.active_branch"
+        default_return (Any): Value to return from the wrapper function if the App isn't installed/enabled.
+
+    Returns:
+        func (Callable): Wrapper function that either calls the requested function, or simply returns `default_return`.
+    """
+
+    # Defer calls to evaluate settings.PLUGINS so that import_function_from_app_if_present can be called at import time
+    def wrapped_function(*args, **kwargs):
+        from django.conf import settings
+
+        app_name, _ = dotted_path.split(".", 1)
+        if app_name in settings.PLUGINS:
+            return import_string(dotted_path)(*args, **kwargs)
+
+        return default_return
+
+    return wrapped_function
+
+
 @contextmanager
 def _temporarily_add_to_sys_path(path):
     """

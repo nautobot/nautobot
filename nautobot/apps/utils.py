@@ -53,6 +53,7 @@ from nautobot.core.utils.lookup import (
     get_view_titles_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
+from nautobot.core.utils.module_loading import import_function_from_app_if_present
 from nautobot.core.utils.permissions import (
     get_permission_for_model,
     permission_is_exempt,
@@ -73,7 +74,6 @@ from nautobot.core.utils.requests import (
     is_single_choice_field,
     normalize_querydict,
 )
-from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     check_if_key_is_graphql_safe,

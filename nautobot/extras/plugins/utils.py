@@ -87,31 +87,6 @@ def load_plugin(plugin_name, settings_module):
         settings_module.CONSTANCE_CONFIG_FIELDSETS.update({f"{plugin_config.verbose_name}": app_config.keys()})
 
 
-def import_function_from_app_if_present(dotted_path, default_return=None):
-    """
-    If a given App is in `settings.PLUGINS`, import the given function from that App, else return a usable stub instead.
-
-    Args:
-        dotted_path (str): Path to a function to import, such as "nautobot_version_control.utils.active_branch"
-        default_return (Any): Value to return from the stub function if the App isn't installed/enabled.
-
-    Returns:
-        func (Callable): either the requested function, or a lambda function that just returns `default_return`.
-    """
-
-    # Defer calls to evaluate settings.PLUGINS so that import_function_from_app_if_present can be called at import time
-    def wrapped_function(*args, **kwargs):
-        from django.conf import settings
-
-        app_name, _ = dotted_path.split(".", 1)
-        if app_name in settings.PLUGINS:
-            return import_string(dotted_path)(*args, **kwargs)
-
-        return default_return
-
-    return wrapped_function
-
-
 def get_sso_backend_name(social_auth_module):
     """
     Return the name parameter of the social auth module defined in the module itself.

@@ -24,6 +24,7 @@ from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
+from nautobot.core.utils.module_loading import import_function_from_app_if_present
 from nautobot.extras.choices import ButtonClassChoices, JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
@@ -41,7 +42,6 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
 )
-from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class

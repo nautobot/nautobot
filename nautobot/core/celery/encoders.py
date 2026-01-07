@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.extras.plugins.utils import import_function_from_app_if_present
+from nautobot.core.utils.module_loading import import_function_from_app_if_present
 
 active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
 

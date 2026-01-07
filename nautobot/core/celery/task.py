@@ -8,8 +8,8 @@ from django.contrib.auth import get_user_model
 from kombu.utils.uuid import uuid
 
 from nautobot.core.branching import BranchContext
+from nautobot.core.utils.module_loading import import_function_from_app_if_present
 from nautobot.extras.models.jobs import JOB_LOGS
-from nautobot.extras.plugins.utils import import_function_from_app_if_present
 
 active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
 
