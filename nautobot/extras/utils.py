@@ -687,7 +687,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         f"{job_result.pk}",
     ]
 
-    def create_and_read_kubernetes_job():
+    def create_kubernetes_job():
         """Create and read the Kubernetes job after the transaction commits."""
         configuration = kubernetes.client.Configuration()
         configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
@@ -702,7 +702,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
 
-    transaction.on_commit(create_and_read_kubernetes_job)
+    transaction.on_commit(create_kubernetes_job)
     return job_result
 
 
