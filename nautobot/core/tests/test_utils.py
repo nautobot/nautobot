@@ -20,7 +20,11 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
+from nautobot.core.utils.module_loading import (
+    check_name_safe_to_import_privately,
+    import_function_from_app_if_present,
+    import_string_optional,
+)
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import (
     filters as dcim_filters,
@@ -1189,6 +1193,27 @@ class TestModuleLoadingUtils(TestCase):
                 permitted, reason = check_name_safe_to_import_privately(invalid)
                 self.assertFalse(permitted)
                 self.assertIsInstance(reason, str)
+
+    @tag("example_app")
+    def test_import_function_from_app_if_present(self):
+        with self.subTest("Installed app should load and make the given function callable"):
+            leet_speak = import_function_from_app_if_present("example_app.jinja_filters.leet_speak")
+            self.assertEqual(leet_speak("hello world!"), "h3110 w0r1d!")
+
+        with self.subTest("Import errors for an installed app should bubble up"):
+            no_such_function = import_function_from_app_if_present("example_app.no_such_module.no_such_function")
+            with self.assertRaises(ImportError):
+                no_such_function()
+
+        with self.subTest("Non-installed app should give a function that does nothing"):
+            do_nothing = import_function_from_app_if_present("no_such_app.no_such_function")
+            self.assertIsNone(do_nothing())
+
+        with self.subTest("Non-installed app should give a function taking args/kwargs and return the given default"):
+            deploy_nautobot = import_function_from_app_if_present(
+                "nautobot_auto_deployer_3000.deploy_nautobot", default_return="Success!"
+            )
+            self.assertEqual(deploy_nautobot("3.0", variant="all_apps_included"), "Success!")
 
     def test_import_string_optional(self):
         with self.subTest("Nonexistent module should return None"):
