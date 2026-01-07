@@ -73,7 +73,7 @@ from nautobot.core.utils.requests import (
     is_single_choice_field,
     normalize_querydict,
 )
-from nautobot.extras.plugins.utils import load_function_from_app_if_present
+from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     check_if_key_is_graphql_safe,
@@ -150,11 +150,11 @@ __all__ = (
     "get_worker_count",
     "hex_to_rgb",
     "image_upload",
+    "import_function_from_app_if_present",
     "is_single_choice_field",
     "is_url",
     "is_uuid",
     "lighten_color",
-    "load_function_from_app_if_present",
     "maybe_prefetch_related",
     "maybe_select_related",
     "merge_dicts_without_collision",

@@ -57,7 +57,7 @@ from nautobot.extras.models.mixins import (
     NotesMixin,
     SavedViewMixin,
 )
-from nautobot.extras.plugins.utils import load_function_from_app_if_present
+from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -72,6 +72,9 @@ if TYPE_CHECKING:
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
+
+
+active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
 
 logger = logging.getLogger(__name__)
 
@@ -1481,7 +1484,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
-        active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
         if branch_name := active_branch():
             # TODO: what do we do when merging a branch's ScheduledJob down to main?
             celery_kwargs["nautobot_job_branch_name"] = branch_name

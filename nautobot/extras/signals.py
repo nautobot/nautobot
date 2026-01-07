@@ -41,14 +41,20 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
 )
-from nautobot.extras.plugins.utils import load_function_from_app_if_present
+from nautobot.extras.plugins.utils import import_function_from_app_if_present
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
+
 logger = logging.getLogger(__name__)
+
+active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
+is_version_controlled_model = import_function_from_app_if_present(
+    "nautobot_version_control.utils.is_version_controlled_model"
+)
 
 
 #
@@ -224,10 +230,8 @@ def _object_change_branch_name(instance):
     # we need to ensure that the corresponding ObjectChange also is created there, even if we're otherwise working
     # in a non-default branch at the moment. Failing to do so would result in a Dolt error on transaction commit:
     # "Cannot commit changes on more than one branch / database"
-    active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
     if branch_name := active_branch():
         from nautobot_version_control.constants import DOLT_DEFAULT_BRANCH  # pylint: disable=import-error
-        from nautobot_version_control.utils import is_version_controlled_model  # pylint: disable=import-error
 
         if is_version_controlled_model(instance.__class__) or branch_name == DOLT_DEFAULT_BRANCH:
             return None  # no need to switch branches

@@ -4,7 +4,9 @@ import logging
 
 from django.db import models
 
-from nautobot.extras.plugins.utils import load_function_from_app_if_present
+from nautobot.extras.plugins.utils import import_function_from_app_if_present
+
+active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,6 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
         raise ValueError("method_name must be specified for the given obj")
 
     if branch_aware:
-        active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
         if branch_name := active_branch():
             tokens += ["branch", branch_name]
 

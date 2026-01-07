@@ -9,7 +9,9 @@ from kombu.utils.uuid import uuid
 
 from nautobot.core.branching import BranchContext
 from nautobot.extras.models.jobs import JOB_LOGS
-from nautobot.extras.plugins.utils import load_function_from_app_if_present
+from nautobot.extras.plugins.utils import import_function_from_app_if_present
+
+active_branch = import_function_from_app_if_present("nautobot_version_control.utils.active_branch")
 
 
 class NautobotTask(Task):
@@ -43,7 +45,6 @@ class NautobotTask(Task):
         **options,
     ):
         if "nautobot_job_branch_name" not in options:
-            active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
             if branch_name := active_branch():
                 options["nautobot_job_branch_name"] = branch_name
 
@@ -79,7 +80,6 @@ class NautobotTask(Task):
         task = app._tasks[self.name]
 
         if "nautobot_job_branch_name" not in options:
-            active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
             if branch_name := active_branch():
                 options["nautobot_job_branch_name"] = branch_name()
 

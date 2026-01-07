@@ -1,1 +1,1 @@
-Added `nautobot.apps.utils.load_function_from_app_if_present` helper function.
+Added `nautobot.apps.utils.import_function_from_app_if_present` helper function.
