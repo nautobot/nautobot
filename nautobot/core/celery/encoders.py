@@ -1,9 +1,10 @@
 import logging
 from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
+
+from nautobot.extras.plugins.utils import load_function_from_app_if_present
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,9 @@ class NautobotKombuJSONEncoder(JSONEncoder):
                 "display": getattr(obj, "display", str(obj)),
             }
 
-            if "nautobot_version_control" in settings.PLUGINS:
-                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
-
-                data["__nautobot_branch__"] = active_branch()
+            active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
+            if branch := active_branch():
+                data["__nautobot_branch__"] = branch
 
             return data
 

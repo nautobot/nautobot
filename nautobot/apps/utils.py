@@ -73,6 +73,7 @@ from nautobot.core.utils.requests import (
     is_single_choice_field,
     normalize_querydict,
 )
+from nautobot.extras.plugins.utils import load_function_from_app_if_present
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     check_if_key_is_graphql_safe,
@@ -153,6 +154,7 @@ __all__ = (
     "is_url",
     "is_uuid",
     "lighten_color",
+    "load_function_from_app_if_present",
     "maybe_prefetch_related",
     "maybe_select_related",
     "merge_dicts_without_collision",

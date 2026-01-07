@@ -40,11 +40,11 @@ class BranchContext:
         self.auto_dolt_commit = None
 
     def __enter__(self):
-        if self.branch_name is None or "nautobot_version_control" not in settings.PLUGINS:
-            if self.branch_name is not None:
-                LOGGER.warning(
-                    "nautobot_version_control is not installed, ignoring requested branch %s", self.branch_name
-                )
+        if self.branch_name is None:
+            return
+
+        if "nautobot_version_control" not in settings.PLUGINS:
+            LOGGER.warning("nautobot_version_control is not installed, ignoring requested branch %s", self.branch_name)
             return
 
         from nautobot_version_control.utils import active_branch, checkout_branch  # pylint: disable=import-error

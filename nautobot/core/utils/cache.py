@@ -2,8 +2,9 @@
 
 import logging
 
-from django.conf import settings
 from django.db import models
+
+from nautobot.extras.plugins.utils import load_function_from_app_if_present
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +56,10 @@ def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):
     if method_name_must_be_set and method_name is None:
         raise ValueError("method_name must be specified for the given obj")
 
-    if branch_aware and "nautobot_version_control" in settings.PLUGINS:
-        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
-
-        tokens += ["branch", active_branch()]
+    if branch_aware:
+        active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
+        if branch_name := active_branch():
+            tokens += ["branch", branch_name]
 
     cache_key = ".".join(tokens)
 

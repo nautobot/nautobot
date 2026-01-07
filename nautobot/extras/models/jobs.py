@@ -57,6 +57,7 @@ from nautobot.extras.models.mixins import (
     NotesMixin,
     SavedViewMixin,
 )
+from nautobot.extras.plugins.utils import load_function_from_app_if_present
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -1480,10 +1481,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
-        if "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
-
-            branch_name = active_branch()
+        active_branch = load_function_from_app_if_present("nautobot_version_control.utils.active_branch")
+        if branch_name := active_branch():
             # TODO: what do we do when merging a branch's ScheduledJob down to main?
             celery_kwargs["nautobot_job_branch_name"] = branch_name
         if job_model.soft_time_limit > 0:
