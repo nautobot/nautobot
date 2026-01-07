@@ -2,6 +2,7 @@ from unittest import mock
 import uuid
 
 from django.core.cache import cache
+from django.test import override_settings
 
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
@@ -129,15 +130,34 @@ class UtilsTestCase(TestCase):
             "Registry should be restored to original state",
         )
 
+    @override_settings(
+        KUBERNETES_JOB_POD_NAME="test-pod",
+        KUBERNETES_JOB_POD_NAMESPACE="test-namespace",
+        KUBERNETES_JOB_MANIFEST={
+            "metadata": {"name": "test-job"},
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [],
+                            }
+                        ]
+                    }
+                }
+            },
+        },
+        KUBERNETES_SSL_CA_CERT_PATH="/path/to/ca.crt",
+        KUBERNETES_TOKEN_PATH="/path/to/token",  # noqa: S106
+        KUBERNETES_DEFAULT_SERVICE_ADDRESS="https://kubernetes.default.svc",
+    )
     @mock.patch("nautobot.extras.utils.transaction.on_commit")
     @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="test-token\n")
     @mock.patch("nautobot.extras.utils.kubernetes.client.BatchV1Api")
     @mock.patch("nautobot.extras.utils.kubernetes.client.ApiClient")
     @mock.patch("nautobot.extras.utils.kubernetes.client.Configuration")
-    @mock.patch("nautobot.extras.utils.settings")
     def test_run_kubernetes_job_and_return_job_result(
         self,
-        mock_settings,
         mock_configuration,
         mock_api_client,
         mock_batch_api,
@@ -153,27 +173,6 @@ class UtilsTestCase(TestCase):
         # Mock the log method to avoid database writes during test
         job_result.log = mock.Mock()
         job_kwargs = '{"key": "value"}'
-
-        # Setup settings mocks
-        mock_settings.KUBERNETES_JOB_POD_NAME = "test-pod"
-        mock_settings.KUBERNETES_JOB_POD_NAMESPACE = "test-namespace"
-        mock_settings.KUBERNETES_JOB_MANIFEST = {
-            "metadata": {"name": "test-job"},
-            "spec": {
-                "template": {
-                    "spec": {
-                        "containers": [
-                            {
-                                "command": [],
-                            }
-                        ]
-                    }
-                }
-            },
-        }
-        mock_settings.KUBERNETES_SSL_CA_CERT_PATH = "/path/to/ca.crt"
-        mock_settings.KUBERNETES_TOKEN_PATH = "/path/to/token"  # noqa: S105
-        mock_settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS = "https://kubernetes.default.svc"
 
         # Setup kubernetes client mocks
         mock_config_instance = mock.MagicMock()
