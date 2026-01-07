@@ -99,7 +99,7 @@ def load_function_from_app_if_present(dotted_path, default_return=None):
         default_return (Any): Value to return from the stub function if the App isn't installed/enabled.
 
     Returns:
-        Callable: either the requested function, or a lambda function that does nothing and returns `default_return`.
+        func (Callable): either the requested function, or a lambda function that just returns `default_return`.
     """
     from django.conf import settings
 
