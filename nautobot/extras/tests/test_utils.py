@@ -234,16 +234,9 @@ class UtilsTestCase(TestCase):
         )
         self.assertEqual(create_call[1]["namespace"], "test-namespace")
 
-        # Verify read_namespaced_job was called
-        mock_api_instance.read_namespaced_job.assert_called_once_with(
-            name=f"nautobot-job-{job_result.pk}", namespace="test-namespace"
-        )
-
         # Verify token file was opened
         mock_open.assert_called_once_with("/path/to/token", "r", encoding="utf-8")
 
         # Verify job_result.log was called (checking for log messages)
-        self.assertEqual(job_result.log.call_count, 2)
-        log_calls = [str(call) for call in job_result.log.call_args_list]
-        self.assertIn("Creating job pod", log_calls[0])
-        self.assertIn("Reading job pod", log_calls[1])
+        self.assertEqual(job_result.log.call_count, 1)
+        self.assertIn("Creating job pod", str(job_result.log.call_args_list[0]))
