@@ -701,8 +701,6 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-            job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
-            api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
 
     transaction.on_commit(create_and_read_kubernetes_job)
     return job_result
