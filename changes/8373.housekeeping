@@ -1,0 +1,1 @@
+Removed custom `verbose_name` from `ObjectPermission` model. 
