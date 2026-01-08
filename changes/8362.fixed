@@ -1,0 +1,1 @@
+Fixed an IntegrityError when using kubernetes workers to run jobs.
