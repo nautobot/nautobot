@@ -9,11 +9,9 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
 
-from nautobot.core.authentication import ObjectPermissionBackend
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.core.utils import lookup
-from nautobot.core.utils.permissions import time_travel_contextvar
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import ObjectChange, Status
 from nautobot.ipam.models import Namespace, Prefix
@@ -666,46 +664,3 @@ class ObjectPermissionAPIViewTestCase(TestCase):
             response_user2.data["count"], ObjectChange.objects.filter(Q(user=obj_user2) | Q(action="delete")).count()
         )
         self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
-
-
-class ObjectPermissionBackendTest(TestCase):
-    def setUp(self):
-        self.backend = ObjectPermissionBackend()
-        self.user = User.objects.create(username="user1")
-        self.add_permissions("dcim.add_device", "dcim.view_device")
-
-    def test_time_travel_blocks_non_view_permission(self):
-        perm = "dcim.add_device"
-        time_travel_contextvar.set(True)
-
-        result = self.backend.has_perm(self.user, perm)
-
-        self.assertFalse(result)
-
-    def test_time_travel_blocks_non_view_permission_for_superuser(self):
-        perm = "dcim.add_device"
-        time_travel_contextvar.set(True)
-        self.user.is_superuser = True
-        self.user.save()
-
-        self.assertTrue(self.user.is_superuser)
-
-        result = self.backend.has_perm(self.user, perm)
-
-        self.assertFalse(result)
-
-    def test_time_travel_allows_view_permission(self):
-        perm = "dcim.view_device"
-        time_travel_contextvar.set(True)
-
-        result = self.backend.has_perm(self.user, perm)
-
-        self.assertTrue(result)
-
-    def test_no_time_travel_does_not_block_permissions(self):
-        perm = "dcim.add_device"
-        time_travel_contextvar.set(False)
-
-        result = self.backend.has_perm(self.user, perm)
-
-        self.assertTrue(result)

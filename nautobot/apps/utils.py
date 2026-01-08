@@ -59,7 +59,6 @@ from nautobot.core.utils.permissions import (
     qs_filter_from_constraints,
     resolve_permission,
     resolve_permission_ct,
-    time_travel_contextvar,
 )
 from nautobot.core.utils.querysets import (
     maybe_prefetch_related,
@@ -175,7 +174,6 @@ __all__ = (
     "shallow_compare_dict",
     "swap_status_initials",
     "task_queues_as_choices",
-    "time_travel_contextvar",
     "to_meters",
     "validate_jinja2",
 )

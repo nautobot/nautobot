@@ -1,9 +1,9 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.test.utils import override_settings
 
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.core.utils.permissions import time_travel_contextvar
 from nautobot.users.models import ObjectPermission, Token
 
 # Use the proper swappable User model
@@ -126,30 +126,80 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
         self.user.clear_config("invalid")
 
 
+@override_settings(PLUGINS=["nautobot_version_control"])
 class UserHasPermTest(ModelTestCases.BaseModelTestCase):
     model = User
 
     def setUp(self):
         self.user = User.objects.create_user(username="testuser")
-        self.add_permissions("dcim.view_device")
+        self.add_permissions("dcim.add_device", "dcim.view_device")
 
     @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
-    def test_has_perm_delegates_to_super_when_time_travel_disabled(
-        self,
-        mock_super_has_perm,
-    ):
-        perm = "dcim.view_device"
-        time_travel_contextvar.set(False)
-        result = self.user.has_perm(perm)
+    def test_time_travel_blocks_non_view_permission(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
 
-        self.assertTrue(result)
-        mock_super_has_perm.assert_called_once_with(perm, None)
+            is_time_travel_mode.return_value = True
+
+            perm = "dcim.add_device"
+            result = self.user.has_perm(perm)
+            self.assertFalse(result)
+            mock_super_has_perm.assert_not_called()
 
     @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
-    @mock.patch("nautobot.users.models._user_has_perm")
-    def test_has_perm_uses_user_has_perm_when_time_travel_enabled(self, mock_user_has_perm, mock_super_has_perm):
-        perm = "dcim.view_device"
-        time_travel_contextvar.set(True)
-        self.user.has_perm(perm)
-        mock_user_has_perm.assert_called_once_with(self.user, perm, None)
-        mock_super_has_perm.assert_not_called()
+    def test_time_travel_blocks_non_view_permission_for_superuser(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+
+            is_time_travel_mode.return_value = True
+            perm = "dcim.add_device"
+            self.user.is_superuser = True
+            self.user.save()
+
+            self.assertTrue(self.user.is_superuser)
+
+            result = self.user.has_perm(perm)
+            self.assertFalse(result)
+            mock_super_has_perm.assert_not_called()
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_time_travel_allows_view_permission(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+
+            is_time_travel_mode.return_value = True
+            perm = "dcim.view_device"
+            result = self.user.has_perm(perm)
+            self.assertTrue(result)
+            mock_super_has_perm.assert_called_once_with(perm, None)
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_no_time_travel_does_not_block_permissions(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+
+            is_time_travel_mode.return_value = False
+            perm = "dcim.add_device"
+            result = self.user.has_perm(perm)
+            self.assertTrue(result)
+            mock_super_has_perm.assert_called_once_with(perm, None)

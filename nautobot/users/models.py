@@ -2,7 +2,7 @@ import binascii
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import _user_has_perm, AbstractUser, Group, UserManager as UserManager_
+from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
@@ -14,7 +14,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
-from nautobot.core.utils.permissions import time_travel
+from nautobot.core.utils.permissions import resolve_permission
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 __all__ = (
@@ -76,26 +76,35 @@ class User(BaseModel, AbstractUser):
 
     def has_perm(self, perm, obj=None):
         """
-        Override Django's default permission check to support time-travel mode.
+        Override Django's default permission check to enforce read-only access
+        during Nautobot Version Control time-travel mode.
 
-        When time-travel mode is inactive, this method delegates entirely to
-        Django's standard permission handling via the parent implementation.
+        If the ``nautobot_version_control`` plugin is installed and time-travel
+        mode is active, all non-view permissions (e.g. add, change, delete) are
+        explicitly denied, regardless of the user's role or superuser status.
 
-        When time-travel mode is active, permission evaluation is performed
-        explicitly using Django's internal permission resolution logic,
-        bypassing any custom short-circuiting that may occur in the default
-        implementation.
+        When the plugin is not installed or time-travel mode is inactive, this
+        method delegates entirely to Django's standard permission handling via
+        the parent implementation.
 
         Args:
             perm (str): Permission string in the form "app_label.codename".
             obj (Optional[Model]): Optional object-level permission target.
 
         Returns:
-            bool: True if the user has the requested permission, False otherwise.
+            bool: False when time-travel mode is active and the requested
+                permission is not a view permission; otherwise, the boolean result
+                returned by Django's default permission resolution logic.
         """
-        if not time_travel():
-            return super().has_perm(perm, obj)
-        return _user_has_perm(self, perm, obj)
+        if "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+
+            if is_time_travel_mode():
+                _app_label, action, _model_name = resolve_permission(perm)
+                if action != "view":
+                    return False
+
+        return super().has_perm(perm, obj)
 
     def get_config(self, path, default=None):
         """

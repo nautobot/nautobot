@@ -1,10 +1,6 @@
-import contextvars
-
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-
-time_travel_contextvar = contextvars.ContextVar("time_travel_contextvar", default=False)
 
 
 def get_permission_for_model(model, action):
@@ -105,7 +101,3 @@ def qs_filter_from_constraints(constraints, tokens=None):
             return Q()
 
     return params
-
-
-def time_travel() -> bool:
-    return time_travel_contextvar.get()
