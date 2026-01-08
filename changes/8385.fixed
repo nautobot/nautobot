@@ -1,0 +1,1 @@
+Added logic to handle the case of change logging for changes to a non-version-controlled model while a non-default branch is checked out via the Version Control app.
