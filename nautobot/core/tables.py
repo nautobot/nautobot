@@ -9,7 +9,7 @@ from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
-from django.utils.html import escape, format_html, format_html_join
+from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
@@ -768,18 +768,22 @@ class CustomFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        # TODO: this logic could be unified with _ObjectCustomFieldsPanel.render_value
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
-            template = helpers.render_boolean(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            template = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
-            template = format_html('<span class="badge bg-secondary">{}</span>', value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
-            template = format_html('<a href="{}">{}</a>', value, value)
-        else:
-            template = escape(value)
+            value = helpers.render_boolean(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON and value is not None:
+            value = helpers.render_json(value, pretty_print=True)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            value = helpers.render_markdown(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT and value:
+            value = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT and value:
+            value = format_html('<span class="badge bg-secondary">{}</span>', value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL and value:
+            value = format_html('<a href="{}">{}</a>', value, value)
+        # else (TEXT, INTEGER, DATE) or None value -- no need to do special rendering
 
-        return template
+        return value
 
 
 class RelationshipColumn(django_tables2.Column):
