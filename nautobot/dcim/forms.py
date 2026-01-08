@@ -45,6 +45,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
+    VLANSBulkEditFormMixin,
 )
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
@@ -3649,7 +3650,7 @@ class InterfaceBulkEditForm(
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
-            self.cleaned_data["remove_tagged_vlans"] = []
+            self.cleaned_data["remove_tagged_vlans"] = VLAN.objects.filter(pk__in=Interface.objects.filter(tagged_vlans__isnull=False).values_list("tagged_vlans", flat=True))
 
 
 #
