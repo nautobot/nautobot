@@ -97,9 +97,9 @@ class User(BaseModel, AbstractUser):
                 returned by Django's default permission resolution logic.
         """
         if "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
 
-            if is_time_travel_mode():
+            if get_time_travel_datetime() is not None:
                 _app_label, action, _model_name = resolve_permission(perm)
                 if action != "view":
                     return False

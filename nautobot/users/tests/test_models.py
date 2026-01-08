@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -142,9 +143,9 @@ class UserHasPermTest(ModelTestCases.BaseModelTestCase):
                 "nautobot_version_control.utils": mock.MagicMock(),
             },
         ):
-            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
 
-            is_time_travel_mode.return_value = True
+            get_time_travel_datetime.return_value = (date.today() + timedelta(days=1)).isoformat()
 
             perm = "dcim.add_device"
             result = self.user.has_perm(perm)
@@ -159,9 +160,9 @@ class UserHasPermTest(ModelTestCases.BaseModelTestCase):
                 "nautobot_version_control.utils": mock.MagicMock(),
             },
         ):
-            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
 
-            is_time_travel_mode.return_value = True
+            get_time_travel_datetime.return_value = date.today() + timedelta(days=1)
             perm = "dcim.add_device"
             self.user.is_superuser = True
             self.user.save()
@@ -180,9 +181,9 @@ class UserHasPermTest(ModelTestCases.BaseModelTestCase):
                 "nautobot_version_control.utils": mock.MagicMock(),
             },
         ):
-            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
 
-            is_time_travel_mode.return_value = True
+            get_time_travel_datetime.return_value = date.today() + timedelta(days=1)
             perm = "dcim.view_device"
             result = self.user.has_perm(perm)
             self.assertTrue(result)
@@ -196,9 +197,9 @@ class UserHasPermTest(ModelTestCases.BaseModelTestCase):
                 "nautobot_version_control.utils": mock.MagicMock(),
             },
         ):
-            from nautobot_version_control.utils import is_time_travel_mode  # pylint: disable=import-error
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
 
-            is_time_travel_mode.return_value = False
+            get_time_travel_datetime.return_value = None
             perm = "dcim.add_device"
             result = self.user.has_perm(perm)
             self.assertTrue(result)
