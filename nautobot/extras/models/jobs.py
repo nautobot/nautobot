@@ -897,7 +897,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
             # TODO: make this branch aware!
-            return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
+            return run_kubernetes_job_and_return_job_result(job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
