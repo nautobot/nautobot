@@ -216,6 +216,29 @@ def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
         cache.delete_pattern(f"{cache_key}(*)")
 
 
+def _object_change_branch_name(instance):
+    """
+    Get the version-control branch name (if any) that needs to be switched to for ObjectChanges on a given instance.
+    """
+    if "nautobot_version_control" not in settings.PLUGINS:
+        return None
+
+    # When modifying non-version-controlled models, which only get committed to DOLT_DEFAULT_BRANCH,
+    # we need to ensure that the corresponding ObjectChange also is created there, even if we're otherwise working
+    # in a non-default branch at the moment. Failing to do so would result in a Dolt error on transaction commit:
+    # "Cannot commit changes on more than one branch / database"
+    from nautobot_version_control.constants import DOLT_DEFAULT_BRANCH  # pylint: disable=import-error
+    from nautobot_version_control.utils import (  # pylint: disable=import-error
+        active_branch,
+        is_version_controlled_model,
+    )
+
+    if is_version_controlled_model(instance.__class__) or active_branch() == DOLT_DEFAULT_BRANCH:
+        return None  # no need to switch branches
+
+    return DOLT_DEFAULT_BRANCH  # need to switch temporarily to the default `main` branch for this record
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -244,21 +267,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        # When modifying non-version-controlled models, which only get committed to DOLT_DEFAULT_BRANCH,
-        # we need to ensure that the corresponding ObjectChange also is created there, even if we're otherwise working
-        # in a non-default branch at the moment. Failing to do so would result in a Dolt error on transaction commit:
-        # "Cannot commit changes on more than one branch / database"
-        branch_name = None
-        if "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.constants import DOLT_DEFAULT_BRANCH  # pylint: disable=import-error
-            from nautobot_version_control.utils import (  # pylint: disable=import-error
-                active_branch,
-                is_version_controlled_model,
-            )
-
-            if not is_version_controlled_model(instance.__class__) and active_branch() != DOLT_DEFAULT_BRANCH:
-                branch_name = DOLT_DEFAULT_BRANCH
-
+        branch_name = _object_change_branch_name(instance)
         user = change_context.get_user(instance)
 
         with BranchContext(branch_name=branch_name, user=user, autocommit=False):
@@ -345,21 +354,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        # When modifying non-version-controlled models, which only get committed to DOLT_DEFAULT_BRANCH,
-        # we need to ensure that the corresponding ObjectChange also is created there, even if we're otherwise working
-        # in a non-default branch at the moment. Failing to do so would result in a Dolt error on transaction commit:
-        # "Cannot commit changes on more than one branch / database"
-        branch_name = None
-        if "nautobot_version_control" in settings.PLUGINS:
-            from nautobot_version_control.constants import DOLT_DEFAULT_BRANCH  # pylint: disable=import-error
-            from nautobot_version_control.utils import (  # pylint: disable=import-error
-                active_branch,
-                is_version_controlled_model,
-            )
-
-            if not is_version_controlled_model(instance.__class__) and active_branch() != DOLT_DEFAULT_BRANCH:
-                branch_name = DOLT_DEFAULT_BRANCH
-
+        branch_name = _object_change_branch_name(instance)
         user = change_context.get_user(instance)
 
         with BranchContext(branch_name=branch_name, user=user, autocommit=False):
