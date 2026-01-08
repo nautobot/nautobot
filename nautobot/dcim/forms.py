@@ -45,7 +45,6 @@ from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
-    VLANSBulkEditFormMixin,
 )
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
