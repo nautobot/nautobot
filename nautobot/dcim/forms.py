@@ -4516,6 +4516,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
+        to_field_name="name",
         required=False,
         label="Device",
         query_params={

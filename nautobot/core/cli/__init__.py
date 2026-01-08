@@ -3,7 +3,9 @@ Utilities and primitives for the `nautobot-server` CLI command.
 """
 
 import argparse
+from copy import deepcopy
 import importlib.util
+import logging
 import os
 import sys
 
@@ -34,43 +36,46 @@ USAGE = """%(prog)s --help
        %(prog)s [-c CONFIG_PATH] SUBCOMMAND ..."""
 
 
-def _preprocess_settings(settings, config_path):
+logger = logging.getLogger(__name__)
+
+
+def _preprocess_settings(settings_module, config_path):
     """
     After loading nautobot_config.py and nautobot.core.settings, but before starting Django, modify the settings module.
 
-    - Set settings.SETTINGS_PATH for ease of reference
+    - Set settings_module.SETTINGS_PATH for ease of reference
     - Handle `EXTRA_*` settings
     - Create Nautobot storage directories if they don't already exist
     - Change database backends to django-prometheus if appropriate
     - Set up 'job_logs' database mirror
     - Handle our custom `STORAGE_BACKEND` setting.
-    - Load plugins based on settings.PLUGINS (potentially affecting INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
-    - Load event brokers based on settings.EVENT_BROKERS
+    - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
+    - Load event brokers based on settings_module.EVENT_BROKERS
     """
-    settings.SETTINGS_PATH = config_path
+    settings_module.SETTINGS_PATH = config_path
 
     # Any setting that starts with EXTRA_ and matches a setting that is a list or tuple
     # will automatically append the values to the current setting.
     # "It might make sense to make this less magical"
     extras = {}
-    for setting in dir(settings):
+    for setting in dir(settings_module):
         if setting == setting.upper() and setting.startswith("EXTRA_"):
             base_setting = setting[6:]
-            if isinstance(getattr(settings, base_setting), (list, tuple)):
-                extras[base_setting] = getattr(settings, setting)
+            if isinstance(getattr(settings_module, base_setting), (list, tuple)):
+                extras[base_setting] = getattr(settings_module, setting)
     for base_setting, extra_values in extras.items():
-        base_value = getattr(settings, base_setting)
-        setattr(settings, base_setting, base_value + type(base_value)(extra_values))
+        base_value = getattr(settings_module, base_setting)
+        setattr(settings_module, base_setting, base_value + type(base_value)(extra_values))
 
     #
     # Storage directories
     #
-    os.makedirs(settings.GIT_ROOT, exist_ok=True)
-    os.makedirs(settings.JOBS_ROOT, exist_ok=True)
-    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-    os.makedirs(os.path.join(settings.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
-    os.makedirs(os.path.join(settings.MEDIA_ROOT, "image-attachments"), exist_ok=True)
-    os.makedirs(settings.STATIC_ROOT, exist_ok=True)
+    os.makedirs(settings_module.GIT_ROOT, exist_ok=True)
+    os.makedirs(settings_module.JOBS_ROOT, exist_ok=True)
+    os.makedirs(settings_module.MEDIA_ROOT, exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "image-attachments"), exist_ok=True)
+    os.makedirs(settings_module.STATIC_ROOT, exist_ok=True)
 
     #
     # Databases
@@ -78,48 +83,85 @@ def _preprocess_settings(settings, config_path):
 
     # If metrics are enabled and postgres is the backend, set the driver to the
     # one provided by django-prometheus.
-    if settings.METRICS_ENABLED:
-        if "postgres" in settings.DATABASES["default"]["ENGINE"]:
-            settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
-        elif "mysql" in settings.DATABASES["default"]["ENGINE"]:
-            settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.mysql"
+    if settings_module.METRICS_ENABLED:
+        # Avoid modifying nautobot.core.settings.DATABASES by accident!
+        settings_module.DATABASES = deepcopy(settings_module.DATABASES)
+
+        if "postgres" in settings_module.DATABASES["default"]["ENGINE"]:
+            settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
+        elif "mysql" in settings_module.DATABASES["default"]["ENGINE"]:
+            settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.mysql"
 
     # Create secondary db connection for job logging. This still writes to the default db, but because it's a separate
     # connection, it allows allows us to "escape" from transaction.atomic() and ensure that job log entries are saved
     # to the database even when the rest of the job transaction is rolled back.
-    settings.DATABASES["job_logs"] = settings.DATABASES["default"].copy()
+    settings_module.DATABASES["job_logs"] = deepcopy(settings_module.DATABASES["default"])
     # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
-    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+    settings_module.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
 
     #
     # Media storage
     #
 
-    if hasattr(settings, "JOB_FILE_IO_STORAGE"):
-        settings.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings.JOB_FILE_IO_STORAGE
+    # Avoid modifying nautobot.core.settings.STORAGES by accident!
+    settings_module.STORAGES = deepcopy(settings_module.STORAGES)
 
-    if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND is not None:
-        settings.STORAGES["default"]["BACKEND"] = settings.STORAGE_BACKEND
+    if hasattr(settings_module, "JOB_FILE_IO_STORAGE"):
+        settings_module.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings_module.JOB_FILE_IO_STORAGE
+
+    if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND is not None:
+        settings_module.STORAGES["default"]["BACKEND"] = settings_module.STORAGE_BACKEND
 
         # django-storages
-        if hasattr(settings, "STORAGE_BACKEND") and settings.STORAGE_BACKEND.startswith("storages."):
+        if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND.startswith("storages."):
             try:
                 import storages.utils
             except ModuleNotFoundError as e:
                 if getattr(e, "name") == "storages":
                     raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {settings.STORAGE_BACKEND} but django-storages is not present. It "
-                        f"can be installed by running 'pip install django-storages'."
+                        f"STORAGE_BACKEND is set to {settings_module.STORAGE_BACKEND} but django-storages is not present. "
+                        "It can be installed by running 'pip install django-storages'."
                     )
                 raise e
 
             # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
             def _setting(name, default=None):
-                if name in settings.STORAGE_CONFIG:
-                    return settings.STORAGE_CONFIG[name]
-                return getattr(settings, name, default)
+                if name in settings_module.STORAGE_CONFIG:
+                    return settings_module.STORAGE_CONFIG[name]
+                return getattr(settings_module, name, default)
 
             storages.utils.setting = _setting
+
+    # Django 4.2 will throw an exception if both:
+    # - DEFAULT_FILE_STORAGE/STATICFILES_STORAGE is set in nautobot_config.py (recommended until Nautobot v2.4.24)
+    # - STORAGES is configured in nautobot.core.settings (which it is nowadays).
+    # Unfortunately, it's not implemented as a standard system check (which we could opt out of) but is instead
+    # hard-coded, so we hack around it instead by explicitly copying any non-default *_STORAGE to STORAGES
+    # and then unsetting *_STORAGE.
+    for setting_name, storages_key, default_value in [
+        ("DEFAULT_FILE_STORAGE", "default", "django.core.files.storage.FileSystemStorage"),
+        ("STATICFILES_STORAGE", "staticfiles", "django.contrib.staticfiles.storage.StaticFilesStorage"),
+    ]:
+        if hasattr(settings_module, setting_name):
+            # Make sure we don't clobber any existing explicit configuration in STORAGES:
+            if settings_module.STORAGES[storages_key]["BACKEND"] not in (
+                default_value,  # Nautobot/Django default
+                getattr(settings_module, setting_name),  # same as explicitly set value for setting_name
+            ):
+                raise ImproperlyConfigured(
+                    f"It looks like you've configured both {setting_name} and STORAGES['{storages_key}']['BACKEND'],"
+                    "but their values do not match."
+                )
+
+            # No clobbering, but undesired, so warn the user and handle it:
+            logger.warning(
+                f"It looks like you've configured {setting_name} in {settings_module.SETTINGS_PATH}. "
+                "This setting is deprecated since Nautobot v2.4.24, and support will be removed in Nautobot v3.1. "
+                f"You should migrate to configuring STORAGES['{storages_key}']['BACKEND'] instead. Refer to "
+                "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance."
+            )
+            settings_module.STORAGES[storages_key]["BACKEND"] = getattr(settings_module, setting_name)
+            delattr(settings_module, setting_name)
 
     #
     # Plugins
@@ -127,13 +169,13 @@ def _preprocess_settings(settings, config_path):
 
     # Process the plugins and manipulate the specified config settings that are
     # passed in.
-    load_plugins(settings)
+    load_plugins(settings_module)
 
     #
     # Event Broker
     #
 
-    load_event_brokers(settings.EVENT_BROKERS)
+    load_event_brokers(settings_module.EVENT_BROKERS)
 
 
 def load_settings(config_path):
@@ -144,10 +186,10 @@ def load_settings(config_path):
             "Please provide a valid --config-path path, or use 'nautobot-server init' to create a new configuration."
         )
     spec = importlib.util.spec_from_file_location("nautobot_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["nautobot_config"] = module
-    spec.loader.exec_module(module)
-    _preprocess_settings(module, config_path)
+    settings_module = importlib.util.module_from_spec(spec)
+    sys.modules["nautobot_config"] = settings_module
+    spec.loader.exec_module(settings_module)
+    _preprocess_settings(settings_module, config_path)
 
 
 class _VerboseHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
