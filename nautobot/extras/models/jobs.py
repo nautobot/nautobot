@@ -253,6 +253,7 @@ class Job(PrimaryModel):
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
     is_data_compliance_model = False
+    is_version_controlled = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -533,6 +534,7 @@ class JobLogEntry(BaseModel):
 
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    is_version_controlled = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
@@ -585,6 +587,7 @@ class JobQueue(PrimaryModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
     is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         ordering = ["name"]
@@ -616,6 +619,7 @@ class JobQueueAssignment(BaseModel):
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         unique_together = ["job", "job_queue"]
@@ -695,6 +699,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
     is_data_compliance_model = False
+    is_version_controlled = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1277,6 +1282,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
     is_data_compliance_model = False
+    is_version_controlled = False
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
