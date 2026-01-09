@@ -770,17 +770,17 @@ class CustomFieldColumn(django_tables2.Column):
 
     def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         # TODO: this logic could be unified with _ObjectCustomFieldsPanel.render_value
-        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN and value is not None:
             value = helpers.render_boolean(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON and value is not None:
             value = helpers.render_json(value, pretty_print=True)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN and value is not None:
             value = helpers.render_markdown(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT and value:
             value = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT and value is not None:
             value = format_html('<span class="badge bg-secondary">{}</span>', value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL and value:
             value = format_html('<a href="{}">{}</a>', value, value)
         # else (TEXT, INTEGER, DATE) or None value -- no need to do special rendering
 
