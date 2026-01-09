@@ -36,6 +36,7 @@ class BaseTable(django_tables2.Table):
         attrs = {
             "class": "table table-hover nb-table-headings",
         }
+        default = mark_safe('<span class="text-secondary">&mdash;</span>')
 
     def __init__(
         self,
@@ -757,13 +758,13 @@ class CustomFieldColumn(django_tables2.Column):
     Display custom fields in the appropriate format.
     """
 
-    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
-    empty_values = (None, "", [])
-
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
         kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.key}")
         kwargs["verbose_name"] = customfield.label
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+            # Add [] to empty_values so when there is no choice populated i.e. [], "—" is returned automatically.
+            kwargs.setdefault("empty_values", (None, "", []))
 
         super().__init__(*args, **kwargs)
 
@@ -771,15 +772,15 @@ class CustomFieldColumn(django_tables2.Column):
         # TODO: this logic could be unified with _ObjectCustomFieldsPanel.render_value
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             value = helpers.render_boolean(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON and value is not None:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON:
             value = helpers.render_json(value, pretty_print=True)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN:
             value = helpers.render_markdown(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT and value:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
             value = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT and value:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
             value = format_html('<span class="badge bg-secondary">{}</span>', value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL and value:
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
             value = format_html('<a href="{}">{}</a>', value, value)
         # else (TEXT, INTEGER, DATE) or None value -- no need to do special rendering
 
