@@ -1,1 +1,0 @@
-Restored (still-deprecated) support for explicit configuration of `STATICFILES_STORAGE` and `DEFAULT_FILE_STORAGE` in `nautobot_config.py` that was inadvertently broken when deprecating these settings in the previous release.
