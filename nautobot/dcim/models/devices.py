@@ -1011,6 +1011,20 @@ class Device(PrimaryModel, ConfigContextModel):
         return module_bays_exists
 
     @property
+    def _all_module_pks(self):
+        # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
+        # This query looks for modules that are installed in a module_bay and attached to this device
+        # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
+
+        def get_pks():
+            print('No hits in the cache, fetching keys')
+            qs = self.all_modules().values_list('pk', flat=True)
+            return list(qs)
+
+        cache_key = f"nautobot.dcim.device.{self.pk}.module_bay_parent_pks"
+        return cache.get_or_set(cache_key, get_pks, timeout=30)
+
+    @property
     def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
@@ -1018,28 +1032,16 @@ class Device(PrimaryModel, ConfigContextModel):
         # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
         # This query looks for modules that are installed in a module_bay and attached to this device
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
-
-        def get_parent_pks():
-            recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
-            qs = Module.objects.all()
-            if not self.has_module_bays:
-                # Short-circuit to avoid an expensive nested query
-                return qs.none()
-            query = Q()
-            for level in range(recursion_depth):
-                recursive_query = "parent_module_bay__parent_module__" * level
-                query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
-            return qs.filter(query).values_list('id', flat=True)
-
-        cache_key = f"nautobot.dcim.device.{self.pk}.module_bay_parent_pks"
-        module_bay_parent_pks = cache.get(cache_key)
-
-        if not module_bay_parent_pks:
-            modules = get_parent_pks()
-            cache.set(cache_key, modules, timeout=30)
-            return modules
-
-        return module_bay_parent_pks
+        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
+        qs = Module.objects.all()
+        if not self.has_module_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
+        query = Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_module_bay__parent_module__" * level
+            query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+        return qs.filter(query)
 
     @property
     def all_console_ports(self):
@@ -1047,56 +1049,56 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Console Ports that are installed in the device or in modules that are installed in the device.
         """
         # TODO: These could probably be optimized to reduce the number of joins
-        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_console_server_ports(self):
         """
         Return all Console Server Ports that are installed in the device or in modules that are installed in the device.
         """
-        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_front_ports(self):
         """
         Return all Front Ports that are installed in the device or in modules that are installed in the device.
         """
-        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_interfaces(self):
         """
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
-        return Interface.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return Interface.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_module_bays(self):
         """
         Return all Module Bays that are installed in the device or in modules that are installed in the device.
         """
-        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self.all_modules))
+        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self._all_module_pks))
 
     @property
     def all_power_ports(self):
         """
         Return all Power Ports that are installed in the device or in modules that are installed in the device.
         """
-        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_power_outlets(self):
         """
         Return all Power Outlets that are installed in the device or in modules that are installed in the device.
         """
-        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_rear_ports(self):
         """
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
-        return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return RearPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def radio_profile_assignments(self):
