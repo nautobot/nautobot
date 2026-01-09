@@ -36,7 +36,7 @@ class BaseTable(django_tables2.Table):
         attrs = {
             "class": "table table-hover nb-table-headings",
         }
-        default = mark_safe('<span class="text-secondary">&mdash;</span>')
+        default = helpers.HTML_NONE
 
     def __init__(
         self,
@@ -580,7 +580,13 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</span>{% else %}&mdash;{% endif %}
+    {% if value %}
+        <span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">
+            {{ value }}
+        </span>
+    {% else %}
+        <span class="text-secondary">&mdash;</span>
+    {% endif %}
     """
 
     def __init__(self, *args, **kwargs):
@@ -816,7 +822,7 @@ class RelationshipColumn(django_tables2.Column):
         # Handle Symmetric Relationships
         # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
-            return "—"
+            return helpers.HTML_NONE
 
         v = value[0]
         peer = v.get_peer(record)
