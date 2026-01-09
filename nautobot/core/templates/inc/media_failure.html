@@ -9,71 +9,33 @@
         const failures = new Map();
 
         function handleFailure(element) {
-            // Get media `filename` by stripping down `href` or `src` element attribute of its `base` (static) path and query params.
-            const base = `${window.location.origin}{% static '' %}`;
-            const filename = (element.href || element.src || '').replace(base, '').replace(/\?.*$/, '');
+            const url = element.href || element.src || '';
 
-            if (filename) {
+            if (url) {
                 // Update `failures` with a proper entry corresponding to the current media failure and update media failure alert.
-                const elements = failures.get(filename) || new Set();
+                const elements = failures.get(url) || new Set();
                 elements.add(element);
-                failures.set(filename, elements);
+                failures.set(url, elements);
                 updateFailureAlert();
             }
         }
 
         function updateFailureAlert() {
+            const count = Array.from(failures.values()).reduce((count, elements) => count + elements.size, 0);
+
             const innerHTML = `
                 <div style="margin: auto; max-width: 800px;">
                     <h2 style="margin-top: 0; text-align: center;">Static Media Failure</h2>
-                    <p>The following static media file(s) failed to load:</p>
-                    <ul>
-                        ${Array.from(failures.entries())
-                            .map((entry) => {
-                                const filename = entry[0];
-                                const element = Array.from(entry[1])[0];
-                                const href = element.href || element.src;
-                                return `<li><a href="${href}" target="_blank"><code style="color: #d9534f;">${filename}</code></a></li>`;
-                            })
-                            .join('\n')}
-                    </ul>
-                    <p>Check the following:</p>
-                    <ul>
-                        <li style="margin-bottom: 12px;">
-                            <code>
-                                <strong>nautobot-server collectstatic</strong>
-                            </code>
-                            was run during the most recent upgrade. This installs the most recent iteration of each static file
-                            into the static root path.
-                        </li>
-                        <li style="margin-bottom: 12px;">
-                            The HTTP service (e.g. NGINX) is configured to serve files from the <code>STATIC_ROOT</code> path.
-                            Refer to
-                            <a href="https://docs.nautobot.com/projects/core/en/v{{ settings.VERSION }}/installation/" target="_blank">
-                                the installation documentation
-                            </a>
-                            for further guidance.
-                            <ul>
-                                {% if request.user.is_staff or request.user.is_superuser %}
-                                    <li>
-                                        <code>
-                                            STATIC_ROOT: <strong>{{ settings.STATIC_ROOT }}</strong>
-                                        </code>
-                                    </li>
-                                {% endif %}
-                                <li>
-                                    <code>
-                                        STATIC_URL: <strong>{{ settings.STATIC_URL }}</strong>
-                                    </code>
-                                </li>
-                            </ul>
-                        </li>
-                        <li style="margin-bottom: 12px;">
-                            The file(s) listed above exists in the static root directory and is readable by the HTTP process.
-                        </li>
-                    </ul>
-                    <p>
-                        <a href="">Click here</a> to reload {{ settings.BRANDING_TITLE }}.
+                    <p><strong>${count}</strong> static media file${count > 1 ? 's' : ''} failed to load.</p>
+                    <p style="margin-bottom: 0;">
+                        Check whether
+                        <code><strong>nautobot-server collectstatic</strong></code>
+                        was run during the most recent upgrade and that the HTTP service (e.g. NGINX) is configured to serve static files.
+                        Refer to
+                        <a href="https://docs.nautobot.com/projects/core/en/v{{ settings.VERSION }}/installation/http-server/#static-media-failure" target="_blank">
+                            the installation documentation
+                        </a>
+                        for further guidance.
                     </p>
                 </div>
             `;
