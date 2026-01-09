@@ -1098,6 +1098,7 @@ properties:
   KUBERNETES_JOB_MANIFEST:
     default: {}
     description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_MANIFEST"
     type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
@@ -1904,8 +1905,8 @@ properties:
           For an example of using `django-storages` with AWS S3 buckets, visit the
           [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
-      The configuration parameters for the specified storage backend are defined under the
-      [`STORAGE_CONFIG`](#storage_config) setting.
+      The configuration parameters for the specified storage backend are defined under the settings
+      [`STORAGE_CONFIG`](#storage_config) (deprecated) or [`STORAGES`](#storages) (recommended).
     see_also:
       "`STORAGES`": "#storages"
     type: "string"
@@ -1913,8 +1914,16 @@ properties:
     description: "(Deprecated) Dictionary of config parameters for the storage backend configured as STORAGE_BACKEND."
     details: |-
       !!! warning
-          This setting is deprecated and will be removed in Nautobot v3.1.
-          In its place, you should set [`STORAGES["default"]["OPTIONS"]`](#storages).
+          This setting is deprecated and will be removed in Nautobot v3.1. In its place, you should set
+          [`STORAGES["default"]["OPTIONS"]` and/or `STORAGES["staticfiles"]["OPTIONS"]`](#storages).
+
+          Note that `STORAGE_CONFIG` is implemented to provide a bit of configuration "magic" that
+          `STORAGES["..."]["OPTIONS"]` does not; specifically, when `STORAGE_BACKEND` is using any module from
+          `django-storages`, if `STATICFILES_STORAGE` is also using `django-storages`, the `STORAGE_CONFIG` will be
+          automatically applied to both file storage types. When using `STORAGES` instead of `STORAGE_CONFIG`, this is
+          not automatically the case, permitting the two types to be configured independently, but also potentially
+          requiring duplicate configuration under `STORAGES["default"]["OPTIONS"]` and
+          `STORAGES["staticfiles"]["OPTIONS"]` if both types are using the same backend.
 
       The specific parameters to be used here are specific to each backend.
 

@@ -635,7 +635,7 @@ class NautobotSpectacularAPIView(SpectacularAPIView):
         if not schema:
             generator = self.generator_class(urlconf=self.urlconf, api_version=version, patterns=self.patterns)
             schema = generator.get_schema(request=request, public=self.serve_public)
-            cache.set(cache_key, schema, 60 * 60 * 24 * 7)
+            cache.set(cache_key, schema, timeout=60 * 60 * 24 * 7)
 
         return Response(
             data=schema,

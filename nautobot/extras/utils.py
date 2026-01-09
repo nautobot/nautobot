@@ -139,7 +139,8 @@ def change_logged_models_queryset():
     if queryset is None:
         queryset = ChangeLoggedModelsQuery().as_queryset()
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+            cache.set(cache_key, queryset, timeout=None)
     return queryset
 
 
@@ -208,7 +209,8 @@ class FeatureQuery:
         if choices is None:
             choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
             with contextlib.suppress(redis.exceptions.ConnectionError):
-                cache.set(cache_key, choices)
+                # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+                cache.set(cache_key, choices, timeout=None)
         return choices
 
     def list_subclasses(self):
@@ -224,7 +226,8 @@ class FeatureQuery:
         if subclasses is None:
             subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
             with contextlib.suppress(redis.exceptions.ConnectionError):
-                cache.set(cache_key, subclasses)
+                # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+                cache.set(cache_key, subclasses, timeout=None)
         return subclasses
 
 
