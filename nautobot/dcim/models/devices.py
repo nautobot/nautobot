@@ -19,6 +19,8 @@ from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrde
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.cache import construct_cache_key
+
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
@@ -1012,16 +1014,15 @@ class Device(PrimaryModel, ConfigContextModel):
 
     @property
     def _all_module_pks(self):
-        # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
-        # This query looks for modules that are installed in a module_bay and attached to this device
-        # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
+        # Use Django's cache to reference module primary keys for a given device.
+        #   Avoids hitting the database with an expensive query multiple times on device details load
 
         def get_pks():
-            print('No hits in the cache, fetching keys')
-            qs = self.all_modules().values_list('pk', flat=True)
+            # No hits in the cache, fetch pks
+            qs = self.all_modules.values_list('pk', flat=True)
             return list(qs)
 
-        cache_key = f"nautobot.dcim.device.{self.pk}.module_bay_parent_pks"
+        cache_key = construct_cache_key(self, method_name='_all_module_pks')
         return cache.get_or_set(cache_key, get_pks, timeout=30)
 
     @property
