@@ -177,9 +177,14 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [#7252](https://github.com/nautobot/nautobot/issues/7252) - Added `NAUTOBOT_KUBERNETES_JOB_MANIFEST` environment variable to configure `KUBERNETES_JOB_MANIFEST` setting.
 
+### Changed in v2.4.25
+
+- [#8350](https://github.com/nautobot/nautobot/issues/8350) - Use graceful degradation in case of media failure. When a dependency fails to load, show an error alert instead of navigating to a separate page.
+
 ### Fixed in v2.4.25
 
 - [#8340](https://github.com/nautobot/nautobot/issues/8340) - Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
+- [#8362](https://github.com/nautobot/nautobot/issues/8362) - Fixed an IntegrityError when using kubernetes workers to run jobs.
 - [#8380](https://github.com/nautobot/nautobot/issues/8380) - Restored (still-deprecated) support for explicit configuration of `STATICFILES_STORAGE` and `DEFAULT_FILE_STORAGE` in `nautobot_config.py` that was inadvertently broken when deprecating these settings in the previous release.
 
 ### Documentation in v2.4.25
