@@ -3542,7 +3542,23 @@ class InterfaceBulkEditForm(
         queryset=VLAN.objects.all(),
         required=False,
     )
+    """"
     tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+    )
+    """
+    add_tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+    )
+    remove_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
@@ -3574,7 +3590,8 @@ class InterfaceBulkEditForm(
             "speed",
             "duplex",
             "untagged_vlan",
-            "tagged_vlans",
+            "add_tagged_vlans",
+            "remove_tagged_vlans",
             "vrf",
         ]
 
@@ -3601,9 +3618,11 @@ class InterfaceBulkEditForm(
                 # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
                 # to those available on the devices in that location and in the ancestors of the location.
                 self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", location.pk)
             else:
-                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
@@ -3622,12 +3641,12 @@ class InterfaceBulkEditForm(
         super().clean()
 
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["tagged_vlans"]:
+        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["add_tagged_vlans"]:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
-            self.cleaned_data["tagged_vlans"] = []
+            self.cleaned_data["remove_tagged_vlans"] = VLAN.objects.filter(pk__in=Interface.objects.filter(tagged_vlans__isnull=False).values_list("tagged_vlans", flat=True))
 
 
 #
