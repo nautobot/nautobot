@@ -22,7 +22,7 @@ classifiers = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     # Background task processing
-    "celery (>=5.6.0,<5.7)",
+    "celery (>=5.6.1,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
@@ -50,7 +50,7 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.1,<25.2)",
     # Health check endpoint
-    "django-health-check (>=3.20.2,<3.21)",
+    "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -79,7 +79,7 @@ dependencies = [
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "GitPython (>=3.1.45,<3.2)",
+    "GitPython (>=3.1.46,<3.2)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -222,7 +222,7 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.33"
+pymarkdownlnt = "~0.9.34"
 # Combination linter and code formatter
 ruff = "~0.14.10"
 # YAML linting
@@ -230,7 +230,7 @@ yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.0"
+coverage = "~7.13.1"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
