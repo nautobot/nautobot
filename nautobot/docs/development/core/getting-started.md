@@ -172,44 +172,53 @@ Example output:
 ```no-highlight
 Available tasks:
 
-  branch                 Switch to a different Git branch, creating it if requested.
-  build                  Build Nautobot docker image.
-  build-and-check-docs   Build docs for use within Nautobot.
+  branch                       Switch to a different Git branch, creating it if requested.
+  build                        Build Nautobot docker image.
+  build-and-check-docs         Build docs for use within Nautobot.
   build-dependencies
-  buildx                 Build Nautobot docker image using the experimental buildx docker functionality (multi-arch
-                         capability).
-  check-migrations       Check for missing migrations.
-  check-schema           Render the REST API schema and check for problems.
-  cli                    Launch a bash shell inside the running Nautobot (or other) Docker container.
-  createsuperuser        Create a new Nautobot superuser account (default: "admin"), will prompt for password.
-  debug                  Start Nautobot and its dependencies in debug mode.
-  destroy                Destroy all containers and volumes.
-  docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
-  dumpdata               Dump data from database to db_output file.
-  hadolint               Check Dockerfile for hadolint compliance and other style issues.
-  lint                   Run all linters.
-  loaddata               Load data from file.
-  logs                   View the logs of a docker compose service.
-  makemigrations         Perform makemigrations operation in Django.
-  markdownlint           Lint Markdown files.
-  migrate                Perform migrate operation in Django.
-  migration-test         Test database migration from a given dataset to latest Nautobot schema.
-  nbshell                Launch an interactive Nautobot shell.
-  open-docs-web          Navigate to the mkdocs interface in your web browser.
-  open-nautobot-web      Navigate to the Nautobot interface in your web browser.
-  open-selenium-vnc      Navigate to the selenium VNC browser view.
-  post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
-  pylint                 Perform static analysis of Nautobot code.
-  restart                Gracefully restart containers.
-  ruff                   Run ruff to perform code formatting and linting.
-  serve-docs             Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop).
-  showmigrations         Perform showmigrations operation in Django.
-  start                  Start Nautobot and its dependencies in detached mode.
-  stop                   Stop Nautobot and its dependencies.
-  tests                  Run Nautobot automated tests.
-  version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
-  vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
-  yamllint               Run yamllint to validate formatting applies to YAML standards.
+  buildx                       Build Nautobot docker image using the experimental buildx docker functionality (multi-arch capability).
+  check-migrations             Check for missing migrations.
+  check-schema                 Render the REST API schema and check for problems.
+  cli                          Launch a bash shell inside the running Nautobot (or other) Docker container.
+  compress-images              Check whether included images are well-optimized, and optionally compress them if desirable.
+  createsuperuser              Create a new Nautobot superuser account (default: "admin"), will prompt for password.
+  debug                        Start Nautobot and its dependencies in debug mode.
+  destroy                      Destroy all containers and volumes.
+  djhtml                       Indent Django template files.
+  djlint                       Lint and check Django template files formatting.
+  docker-push                  Tags and pushes docker images to the appropriate repos, intended for release use only.
+  dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
+  dumpdata                     Dump data from database to db_output file.
+  eslint                       Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag.
+  hadolint                     Check Dockerfile for hadolint compliance and other style issues.
+  lint                         Run all linters.
+  loaddata                     Load data from file.
+  logs                         View the logs of a docker compose service.
+  makemigrations               Perform makemigrations operation in Django.
+  markdownlint                 Lint Markdown files.
+  migrate                      Perform migrate operation in Django.
+  migration-test               Test database migration from a given dataset to latest Nautobot schema.
+  nbshell                      Launch an interactive Nautobot shell.
+  npm                          Execute any given npm command inside `project-static` directory.
+  open-docs-web                Navigate to the mkdocs interface in your web browser.
+  open-nautobot-web            Navigate to the Nautobot interface in your web browser.
+  open-selenium-vnc            Navigate to the selenium VNC browser view.
+  post-upgrade                 Performs Nautobot common post-upgrade operations using a single entrypoint.
+  prettier                     Run Prettier to perform JavaScript code formatting. By default only validate the formatting, optionally apply it with `--fix` flag.
+  pylint                       Perform static analysis of Nautobot code.
+  restart                      Gracefully restart containers.
+  ruff                         Run ruff to perform code formatting and linting.
+  serve-docs                   Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop).
+  showmigrations               Perform showmigrations operation in Django.
+  start                        Start Nautobot and its dependencies in detached mode.
+  stop                         Stop Nautobot and its dependencies.
+  tests                        Run Nautobot automated tests.
+  ui-build                     Build Nautobot UI from source.
+  ui-code-check                Check Nautobot UI source code style and formatting.
+  ui-code-format               Format Nautobot UI source code.
+  version                      Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
+  vscode                       Visual Studio Code specific environment helpers.
+  yamllint                     Run yamllint to validate formatting applies to YAML standards.
 ```
 
 #### Using Docker with Invoke
@@ -680,12 +689,6 @@ Integration tests are automated tests written and run to ensure that the Nautobo
 Running integrations tests requires the use of Docker at this time. They can be directly invoked using `nautobot-server test` just as unit tests can, however, a headless Firefox browser provided by Selenium is required. Because Selenium installation and setup is complicated, we have included a configuration for this to work out of the box using Docker.
 
 The Selenium container is running a standalone, headless Firefox "web driver" browser that can be remotely controlled by Nautobot for use in integration testing.
-
-Before running integration tests, the `selenium` container must be running. If you are using the Docker Compose workflow, it is automatically started for you. For the Virtual Environment workflow, you must start it manually.
-
-| Docker Compose Workflow | Virtual Environment Workflow      |
-| ----------------------- | --------------------------------- |
-| (automatic)             | `invoke start --service selenium` |
 
 Integration tests are run by passing `--tag integration` to the `invoke tests` command. All other optional parameters to this command can be used the same as with unit tests.
 

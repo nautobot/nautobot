@@ -4,72 +4,63 @@
 {% block title %}{{ obj.circuit.provider }} {{ obj.circuit }} - Side {{ form.term_side.value }}{% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Termination</strong></div>
-        <div class="panel-body">
-            <div class="form-group">
-                <label class="col-md-3 control-label">Provider</label>
-                <div class="col-md-9">
-                    <p class="form-control-static">{{ obj.circuit.provider }}</p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-3 control-label">Circuit</label>
-                <div class="col-md-9">
-                    <p class="form-control-static">{{ obj.circuit.cid }}</p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-3 control-label">Termination</label>
-                <div class="col-md-9">
-                    <p class="form-control-static">{{ form.term_side.value }}</p>
-                </div>
-            </div>
-                {% with location_tab_active=form.initial.location %}
+    <div class="card">
+        <div class="card-header"><strong>Termination</strong></div>
+        <div class="card-body">
+            {% include "inc/form_static_field.html" with label="Provider" value=obj.circuit.provider %}
+            {% include "inc/form_static_field.html" with label="Circuit" value=obj.circuit.cid %}
+            {% include "inc/form_static_field.html" with label="Termination" value=form.term_side.value %}
+            {% with location_tab_active=form.initial.location %}
                 {% with providernetwork_tab_active=form.initial.provider_network %}
-                {% with cloudnetwork_tab_active=form.initial.cloud_network %}
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation"{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} class="active"{% endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
-                        <li role="presentation"{% if providernetwork_tab_active %} class="active"{% endif %}><a href="#providernetwork" role="tab" data-toggle="tab">Provider Network</a></li>
-                        <li role="presentation"{% if cloudnetwork_tab_active %} class="active"{% endif %}><a href="#cloudnetwork" role="tab" data-toggle="tab">Cloud Network</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div class="tab-pane{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} active{% endif %}" id="location">
-                            {% render_field form.location %}
+                    {% with cloudnetwork_tab_active=form.initial.cloud_network %}
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} active{% endif %}" href="#location" role="tab" data-bs-toggle="tab">Location</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link{% if providernetwork_tab_active %} active{% endif %}" href="#providernetwork" role="tab" data-bs-toggle="tab">Provider Network</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link{% if cloudnetwork_tab_active %} active{% endif %}" href="#cloudnetwork" role="tab" data-bs-toggle="tab">Cloud Network</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane{% if location_tab_active or not providernetwork_tab_active and not cloudnetwork_tab_active %} active{% endif %}" id="location">
+                                {% render_field form.location %}
+                            </div>
+                            <div class="tab-pane{% if providernetwork_tab_active %} active{% endif %}" id="providernetwork">
+                                {% render_field form.provider_network %}
+                            </div>
+                            <div class="tab-pane{% if cloudnetwork_tab_active %} active{% endif %}" id="cloudnetwork">
+                                {% render_field form.cloud_network %}
+                            </div>
                         </div>
-                        <div class="tab-pane{% if providernetwork_tab_active %} active{% endif %}" id="providernetwork">
-                            {% render_field form.provider_network %}
-                        </div>
-                        <div class="tab-pane{% if cloudnetwork_tab_active %} active{% endif %}" id="cloudnetwork">
-                            {% render_field form.cloud_network %}
-                        </div>
-                    </div>
+                    {% endwith %}
                 {% endwith %}
-                {% endwith %}
-                {% endwith %}
+            {% endwith %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Termination Details</strong></div>
-        <div class="panel-body">
-            <div class="form-group">
-                <label class="col-md-3 control-label" for="id_port_speed">{{ form.port_speed.label }}</label>
+    <div class="card">
+        <div class="card-header"><strong>Termination Details</strong></div>
+        <div class="card-body">
+            <div class="mb-10 d-md-flex justify-content-center">
+                <label class="col-md-3 col-form-label" for="id_port_speed">{{ form.port_speed.label }}</label>
                 <div class="col-md-9">
                     <div class="input-group">
                         {{ form.port_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='port_speed' %}
                     </div>
-                    <span class="help-block">{{ form.port_speed.help_text }}</span>
+                    <span class="form-text">{{ form.port_speed.help_text }}</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label class="col-md-3 control-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
+            <div class="mb-10 d-md-flex justify-content-center">
+                <label class="col-md-3 col-form-label" for="id_upstream_speed">{{ form.upstream_speed.label }}</label>
                 <div class="col-md-9">
                     <div class="input-group">
                         {{ form.upstream_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='upstream_speed' %}
                     </div>
-                    <span class="help-block">{{ form.upstream_speed.help_text }}</span>
+                    <span class="form-text">{{ form.upstream_speed.help_text }}</span>
                 </div>
             </div>
             {% render_field form.xconnect_id %}
@@ -81,11 +72,11 @@
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $("a.set_speed").click(function(e) {
-        e.preventDefault();
-        $("#id_" + $(this).attr("target")).val($(this).attr("data"));
-    });
-</script>
+    {{ block.super }}
+    <script type="text/javascript">
+        $("a.set_speed").click(function(e) {
+            e.preventDefault();
+            $("#id_" + $(this).attr("target")).val($(this).attr("data"));
+        });
+    </script>
 {% endblock %}

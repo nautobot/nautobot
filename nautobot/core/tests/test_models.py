@@ -130,7 +130,7 @@ class NaturalKeyTestCase(BaseModelTest):
             self.FakeBaseModel._content_type_cached
             self.assertEqual(mock__content_type.call_count, 1)
 
-            time.sleep(2)  # Let the cache expire
+            time.sleep(3)  # Let the cache expire
 
             self.FakeBaseModel._content_type_cached
             self.assertEqual(mock__content_type.call_count, 2)

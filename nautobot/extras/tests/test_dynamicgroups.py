@@ -4,9 +4,13 @@ from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
+from django.test import tag
 from django.urls import reverse
 
-from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms.fields import (
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+)
 from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.filters import FilterTestCases
@@ -18,6 +22,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     FrontPort,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
@@ -33,6 +38,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import (
     CustomField,
+    CustomFieldChoice,
     DynamicGroup,
     DynamicGroupMembership,
     Relationship,
@@ -107,6 +113,24 @@ class DynamicGroupTestBase(TestCase):
             ),
         ]
 
+        cls.inventory_items = [
+            InventoryItem.objects.create(
+                name="device-location-1-item-1",
+                serial="location-1-item-1",
+                device=cls.devices[0],
+            ),
+            InventoryItem.objects.create(
+                name="device-location-1-item-2",
+                serial="location-1-item-2",
+                device=cls.devices[0],
+            ),
+            InventoryItem.objects.create(
+                name="device-location-2-item-1",
+                serial="location-2-item-1",
+                device=cls.devices[1],
+            ),
+        ]
+
         cls.groups = [
             DynamicGroup.objects.create(
                 name="Parent",
@@ -152,7 +176,13 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="MultiValueCharFilter",
                 description="A group with a multivaluechar filter",
-                filter={"name": ["device-1", "device-2", "device-3"]},
+                filter={"name": ["device-location-1", "device-location-2", "device-location-3"]},
+                content_type=cls.device_ct,
+            ),
+            DynamicGroup.objects.create(
+                name="SearchFilter",
+                description="A group with a search filter",
+                filter={"q": "location-1"},
                 content_type=cls.device_ct,
             ),
         ]
@@ -165,6 +195,8 @@ class DynamicGroupTestBase(TestCase):
         cls.third_child = cls.groups[3]
         cls.nested_child = cls.groups[4]
         cls.no_match_filter = cls.groups[5]
+        cls.multivaluechar_filter = cls.groups[6]
+        cls.search_filter = cls.groups[7]
         cls.invalid_filter = DynamicGroup.objects.create(
             name="Invalid Filter",
             description="A group with a filter that's invalid",
@@ -288,6 +320,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         self.assertIn(device1, group.members)
         self.assertNotIn(device2, group.members)
+
+        group = self.search_filter
+        self.assertIn(device1, group.members)
 
     def test_static_member_operations(self):
         sg = DynamicGroup.objects.create(
@@ -437,17 +472,24 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_count(self):
         """Test `DynamicGroup.count`."""
-        expected = {
-            self.parent.count: 2,
-            self.first_child.count: 1,
-            self.second_child.count: 1,
-            self.third_child.count: 2,
-            self.nested_child.count: 2,
-            self.no_match_filter.count: 0,
-            self.invalid_filter.count: 0,
-        }
-        for grp, cnt in expected.items():
-            self.assertEqual(grp, cnt)
+        expected = [
+            (self.parent, 1),
+            (self.first_child, 1),
+            (self.second_child, 1),
+            (self.third_child, 2),
+            (self.nested_child, 2),
+            (self.no_match_filter, 0),
+            (self.multivaluechar_filter, 3),
+            (self.search_filter, 1),
+            (self.invalid_filter, 0),
+        ]
+        for grp, cnt in expected:
+            with self.subTest(grp.name):
+                self.assertEqual(grp.count, cnt, list(grp.members.values_list("name", flat=True)))
+                self.assertEqual(grp.members.count(), cnt, list(grp.members.values_list("name", flat=True)))
+                # https://github.com/nautobot/nautobot/issues/7631
+                members = grp.update_cached_members()
+                self.assertEqual(members.count(), cnt, list(members.values_list("name", flat=True)))
 
     def test_model(self):
         """Test `DynamicGroup.model`."""
@@ -504,9 +546,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # See if a CharField is properly converted to a MultiValueCharField In DynamicGroupEditForm.
         self.assertIsInstance(fields["name"], MultiValueCharField)
         self.assertIsInstance(fields["name"].widget, MultiValueCharInput)
-        # See if a DynamicModelChoiceField is properly converted to a MultiMatchModelMultipleChoiceField
-        self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
-        self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
+        # See if a DynamicModelMultipleChoiceField (ManyToMany) remains as DynamicModelMultipleChoiceField
+        self.assertIsInstance(fields["clusters"], DynamicModelMultipleChoiceField)
+        self.assertIsInstance(fields["clusters"].widget, APISelectMultiple)
 
     def test_map_filter_fields_with_custom_filter_method(self):
         """
@@ -635,9 +677,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         group1 = self.first_child  # Filter has `location`
         self.assertEqual(group1.get_initial(), group1.filter)
         # Test if MultiValueCharField is properly pre-populated
-        group2 = self.groups[6]  # Filter has `name`
+        group2 = self.multivaluechar_filter  # Filter has `name`
         initial = group2.get_initial()
-        expected = {"name": ["device-1", "device-2", "device-3"]}
+        expected = {"name": ["device-location-1", "device-location-2", "device-location-3"]}
         self.assertEqual(initial, expected)
 
     def test_set_filter(self):
@@ -985,7 +1027,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
     def test_filter_custom_fields(self):
-        """Test that relationships can be used in filters."""
+        """Test that custom fields can be used in filters."""
 
         device = self.devices[0]
 
@@ -1016,6 +1058,41 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
+    def test_filter_custom_field_select(self):
+        """Test that select and multiselect type custom fields can be used in filters."""
+        device = self.devices[0]
+
+        cf1 = CustomField.objects.create(
+            label="Onboarding Status",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+        )
+        cf1.content_types.add(self.device_ct)
+        CustomFieldChoice.objects.create(custom_field=cf1, value="Onboarded", weight=100)
+        CustomFieldChoice.objects.create(custom_field=cf1, value="Yet To Be", weight=200)
+
+        cf2 = CustomField.objects.create(
+            label="Features",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+        )
+        cf2.content_types.add(self.device_ct)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="Telnet", weight=100)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="SSH", weight=200)
+        CustomFieldChoice.objects.create(custom_field=cf2, value="NETCONF", weight=300)
+
+        device._custom_field_data = {"onboarding_status": "Onboarded", "features": ["Telnet", "SSH"]}
+        device.validated_save()
+        device.refresh_from_db()
+
+        dg = DynamicGroup(
+            name="select_fields",
+            filter={"cf_onboarding_status": ["Onboarded"], "cf_features": ["Telnet"]},
+            content_type=self.device_ct,
+        )
+        dg.validated_save()
+
+        self.assertEqual(dg.count, 1)
+        self.assertIn(device, dg.members)
+
     def test_filter_search(self):
         """Test that search (`q` filter) can be used in filters."""
 
@@ -1040,6 +1117,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
+    @tag("example_app")
     def test_group_overloaded_filter_form_field(self):
         """FilterForm fields can overload how they pass in the values."""
 
@@ -1152,7 +1230,11 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+        self.assertQuerysetEqualAndNotEmpty(
+            qs,
+            [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
+            ordered=False,
+        )
 
     def test_dynamic_groups_cached(self):
         for group in self.groups:
@@ -1160,21 +1242,35 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups_cached
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+        self.assertQuerysetEqualAndNotEmpty(
+            qs,
+            [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
+            ordered=False,
+        )
 
     def test_dynamic_groups_list(self):
         for group in self.groups:
             group.update_cached_members()
         with self.assertNumQueries(1):
             groups = self.devices[0].dynamic_groups_list
-        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
+        self.assertEqual(
+            set(groups),
+            set(
+                [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter]
+            ),
+        )
 
     def test_dynamic_groups_list_cached(self):
         for group in self.groups:
             group.update_cached_members()
         with self.assertNumQueries(1):
             groups = self.devices[0].dynamic_groups_list_cached
-        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
+        self.assertEqual(
+            set(groups),
+            set(
+                [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter]
+            ),
+        )
 
 
 class DynamicGroupFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCase):

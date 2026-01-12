@@ -17,8 +17,9 @@ For a simple (insecure!) example, we could define a "constant-value" provider th
 ```python
 # secrets.py
 from django import forms
+
 from nautobot.apps.secrets import SecretsProvider
-from nautobot.utilities.forms import BootstrapMixin
+from nautobot.apps.forms import BootstrapMixin
 
 
 class ConstantValueSecretsProvider(SecretsProvider):

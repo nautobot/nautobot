@@ -1,7 +1,10 @@
-from django.core.exceptions import ValidationError
-from django_tables2 import RequestConfig
+from functools import partial
 
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from django.core.exceptions import ValidationError
+
+from nautobot.core.templatetags import helpers
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.wireless.api.serializers import (
     RadioProfileSerializer,
@@ -43,18 +46,30 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
     form_class = RadioProfileForm
     bulk_update_form_class = RadioProfileBulkEditForm
 
-    def get_extra_context(self, request, instance=None):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            # Supported Data Rates
-            supported_data_rates = instance.supported_data_rates.restrict(request.user, "view")
-            supported_data_rates_table = SupportedDataRateTable(supported_data_rates)
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(supported_data_rates_table)
-            context["supported_data_rates_table"] = supported_data_rates_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "tx_power_min": [helpers.dbm],
+                    "tx_power_max": [helpers.dbm],
+                    "rx_power_min": [helpers.dbm],
+                    "channel_width": [partial(helpers.label_list, suffix="MHz")],
+                    "allowed_channel_list": [helpers.label_list],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Supported Data Rates",
+                table_class=SupportedDataRateTable,
+                table_filter="radio_profiles",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class SupportedDataRateUIViewSet(NautobotUIViewSet):
@@ -65,6 +80,18 @@ class SupportedDataRateUIViewSet(NautobotUIViewSet):
     table_class = SupportedDataRateTable
     form_class = SupportedDataRateForm
     bulk_update_form_class = SupportedDataRateBulkEditForm
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                value_transforms={
+                    "rate": [helpers.humanize_speed],
+                },
+            ),
+        )
+    )
 
 
 class WirelessNetworkUIViewSet(NautobotUIViewSet):
@@ -76,28 +103,35 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
     form_class = WirelessNetworkForm
     bulk_update_form_class = WirelessNetworkBulkEditForm
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+                table_title="Controller Managed Device Groups",
+                table_filter="wireless_network",
+                related_field_name="wireless_networks",
+                exclude_columns=[
+                    "wireless_network",
+                    "ssid",
+                    "mode",
+                    "enabled",
+                    "authentication",
+                    "hidden",
+                    "secrets_group",
+                ],
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            # Controller Managed Device Groups
-            controller_managed_device_groups = instance.controller_managed_device_group_assignments.restrict(
-                request.user, "view"
-            )
-            controller_managed_device_groups_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
-                controller_managed_device_groups
-            )
-            controller_managed_device_groups_table.columns.hide("wireless_network")
-            controller_managed_device_groups_table.columns.hide("ssid")
-            controller_managed_device_groups_table.columns.hide("mode")
-            controller_managed_device_groups_table.columns.hide("enabled")
-            controller_managed_device_groups_table.columns.hide("authentication")
-            controller_managed_device_groups_table.columns.hide("hidden")
-            controller_managed_device_groups_table.columns.hide("secrets_group")
-            RequestConfig(
-                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(controller_managed_device_groups_table)
-            context["controller_managed_device_groups_table"] = controller_managed_device_groups_table
-
         if self.action in ["create", "update"]:
             context["controller_managed_device_groups"] = WirelessNetworkControllerManagedDeviceGroupFormSet(
                 instance=instance,

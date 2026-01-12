@@ -27,7 +27,6 @@ JOB_OVERRIDABLE_FIELDS = (
     "description",
     "dryrun_default",
     "hidden",
-    "approval_required",
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
@@ -51,6 +50,7 @@ CHANGELOG_MAX_OBJECT_REPR = 200
 # JobResult custom Celery kwargs
 JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_profile",
+    "nautobot_job_branch_name",
     "nautobot_job_job_model_id",
     "nautobot_job_scheduled_job_id",
     "nautobot_job_user_id",

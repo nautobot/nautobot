@@ -16,7 +16,7 @@ $('#cabletrace_modal').on('show.bs.modal', function (event) {
                       '<div class="col-md-4 text-center">' + segment[0].device.name + '<br />' + segment[0].name + '</div>' +
                       '<div class="col-md-4 text-center">Cable #' + segment[1].id + '</div>' +
                       '<div class="col-md-4 text-center">' + segment[2].device.name + '<br />' + segment[2].name + '</div>' +
-                    '</div><hr />'
+                    '</div><hr class="border-top" />'
                 );
             })
         }

@@ -1,12 +1,17 @@
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import format_html
-from django_tables2 import RequestConfig
+from django.utils.html import format_html, format_html_join
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
+from nautobot.core.templatetags import helpers
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -14,8 +19,8 @@ from nautobot.core.ui.object_detail import (
     ObjectsTablePanel,
 )
 from nautobot.core.ui.utils import render_component_template
-from nautobot.core.views import generic, mixins as view_mixins
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views import generic
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 
 from . import filters, forms, tables
@@ -24,16 +29,8 @@ from .choices import CircuitTerminationSideChoices
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
-class CircuitTypeUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class CircuitTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.CircuitTypeBulkEditForm
     filterset_class = filters.CircuitTypeFilterSet
     filterset_form_class = forms.CircuitTypeFilterForm
     form_class = forms.CircuitTypeForm
@@ -41,46 +38,110 @@ class CircuitTypeUIViewSet(
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
 
-    def get_extra_context(self, request, instance):
-        # Circuits
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(circuit_type=instance)
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.CircuitTable,
+                table_filter="circuit_type",
+                select_related_fields=["circuit_type", "tenant"],
+                prefetch_related_fields=["circuit_terminations__location"],
+                exclude_columns=["circuit_type"],
+            ),
+        ),
+    )
+
+
+class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
+    def get_extra_context(self, context):
+        return {"termination": context["object"], **super().get_extra_context(context)}
+
+    def render_key(self, key, value, context):
+        if key == "connected_endpoint":
+            return "IP Addressing"
+
+        if key == "port_speed":
+            return "Speed"
+
+        return super().render_key(key, value, context)
+
+    def render_value(self, key, value, context):
+        instance = get_obj_from_context(context, self.context_object_key)
+        location = getattr(instance, "location", None)
+
+        # Cable column is hidden if the location is unset
+        if not location and key == "cable":
+            return None
+
+        if location and key == "cable":
+            return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+        if key == "connected_endpoint":
+            ip_addresses = getattr(value, "ip_addresses", None)
+            if not ip_addresses or not ip_addresses.exists():
+                return helpers.HTML_NONE
+            return format_html_join(
+                ", ",
+                "{} ({})",
+                ((helpers.hyperlinked_object(ip), getattr(ip, "vrf", None) or "Global") for ip in ip_addresses.all()),
             )
 
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("circuit_type")
+        if key == "port_speed":
+            return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
 
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(circuits_table)
-            context["circuits_table"] = circuits_table
-        return context
+        return super().render_value(key, value, context)
 
 
-class CircuitTerminationUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class CircuitTerminationUIViewSet(NautobotUIViewSet):
     action_buttons = ("import", "export")
+    bulk_update_form_class = forms.CircuitTerminationBulkEditForm
     filterset_class = filters.CircuitTerminationFilterSet
     filterset_form_class = forms.CircuitTerminationFilterForm
     form_class = forms.CircuitTerminationForm
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
     table_class = tables.CircuitTerminationTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(instance=context_object_attr("circuit"), parent_key="provider"),
+                InstanceBreadcrumbItem(instance=context_object_attr("circuit")),
+            ]
+        }
+    )
+
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            CircuitTerminationObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "location",
+                    "provider_network",
+                    "cloud_network",
+                    "cable",
+                    "port_speed",
+                    "connected_endpoint",
+                    "xconnect_id",
+                    "pp_info",
+                    "description",
+                ],
+                hide_if_unset=[
+                    "location",
+                    "provider_network",
+                    "cloud_network",
+                    "port_speed",
+                ],
+            ),
+        )
+    )
 
     def get_object(self):
         obj = super().get_object()
@@ -131,6 +192,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
@@ -142,17 +211,12 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "provider_network",
                     "cloud_network",
                     "port_speed",
-                    "upstream_speed",
                     "ip_addresses",
                     "xconnect_id",
                     "pp_info",
                     "description",
                 ),
-                value_transforms={
-                    "port_speed": [humanize_speed, placeholder],
-                    "upstream_speed": [humanize_speed],
-                },
-                hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
+                hide_if_unset=("location", "provider_network", "cloud_network"),
                 ignore_nonexistent_fields=True,  # ip_addresses may be undefined
                 header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
                 **kwargs,
@@ -162,7 +226,11 @@ class CircuitUIViewSet(NautobotUIViewSet):
             return True
 
         def get_extra_context(self, context):
-            return {"termination": context[self.context_object_key], "side": self.side}
+            return {
+                "termination": context[self.context_object_key],
+                "side": self.side,
+                **super().get_extra_context(context),
+            }
 
         def get_data(self, context):
             """
@@ -195,8 +263,14 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     '<span title="{} ({})">{}</span>',
                     relationship.label,
                     relationship.key,
-                    bettertitle(relationship.get_label(side)),
+                    helpers.bettertitle(relationship.get_label(side)),
                 )
+            if key == "ip_addresses":
+                return "IP Addressing"
+
+            if key == "port_speed":
+                return "Speed"
+
             return super().render_key(key, value, context)
 
         def render_value(self, key, value, context):
@@ -209,6 +283,10 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 if not context["termination"].location:
                     return ""
                 return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
+
+            if key == "port_speed":
+                return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
+
             return super().render_value(key, value, context)
 
         def queryset_list_url_filter(self, key, value, context):
@@ -231,7 +309,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
                 exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
-                value_transforms={"commit_rate": [humanize_speed, placeholder]},
+                value_transforms={"commit_rate": [helpers.humanize_speed, helpers.placeholder]},
             ),
             CircuitTerminationPanel(
                 label="Termination - A Side",
@@ -299,29 +377,35 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
     queryset = ProviderNetwork.objects.all()
     serializer_class = serializers.ProviderNetworkSerializer
     table_class = tables.ProviderNetworkTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(
-                    Q(circuit_termination_a__provider_network=instance.pk)
-                    | Q(circuit_termination_z__provider_network=instance.pk)
-                )
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("circuit_termination_a")
-            circuits_table.columns.hide("circuit_termination_z")
-
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            RequestConfig(request, paginate).configure(circuits_table)
-
-            context["circuits_table"] = circuits_table
-        return context
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.CircuitTable,
+                table_filter=["circuit_termination_a__provider_network", "circuit_termination_z__provider_network"],
+                prefetch_related_fields=["circuit_terminations__location"],
+                select_related_fields=["circuit_type", "tenant"],
+                exclude_columns=["provider_network", "circuit_termination_a", "circuit_termination_z"],
+                related_field_name="provider_network",
+                add_button_route=None,
+            ),
+        )
+    )
 
 
 class CircuitSwapTerminations(generic.ObjectEditView):
@@ -351,7 +435,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },
@@ -396,7 +479,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
                 "circuit_termination_a": circuit.circuit_termination_a,
                 "circuit_termination_z": circuit.circuit_termination_z,
                 "form": form,
-                "panel_class": "default",
                 "button_class": "primary",
                 "return_url": circuit.get_absolute_url(),
             },

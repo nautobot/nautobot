@@ -9,8 +9,8 @@ Whether you are getting started for the first time, looking to build a local lab
 
 === "Bare metal / Virtual Machine"
 
-    You can [install Nautobot](install_system.md) onto a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine. 
-    
+    You can [install Nautobot](install_system.md) onto a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
+
     Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
     * Red Hat flavors of Linux including Fedora 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
@@ -27,16 +27,16 @@ Whether you are getting started for the first time, looking to build a local lab
     ### Bare metal / Virtual Machine Cons
 
     * Maintenance and high availability is more difficult than Docker or Cloud options
-    * Preparing server for production grade security and scaling requires additional effort 
+    * Preparing server for production grade security and scaling requires additional effort
 
 === "Docker Compose"
 
     Nautobot can be deployed via Docker using [Nautobot Docker images](../guides/docker.md) that are available either from:
 
     * [Docker Hub](https://hub.docker.com/r/networktocode/nautobot)
-    * [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) 
+    * [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot)
 
-    For local testing and lab work you can use the Nautobot [Docker Compose](https://github.com/nautobot/nautobot-docker-compose) project which leverages the container images above. 
+    For local testing and lab work you can use the Nautobot [Docker Compose](https://github.com/nautobot/nautobot-docker-compose) project which leverages the container images above.
 
     For more information about the Docker tags, Docker configurations, or using container images for your own development environment, see [Nautobot in Docker](../guides/docker.md).
 
@@ -47,15 +47,15 @@ Whether you are getting started for the first time, looking to build a local lab
 
     ### Docker Compose Cons
 
-    * Docker compose on its own is missing advanced features like automated rollbacks, self-healing applications, and load balancing 
-    * Limited scaling if on single host 
+    * Docker compose on its own is missing advanced features like automated rollbacks, self-healing applications, and load balancing
+    * Limited scaling if on single host
 
 === "Kubernetes Helm Charts"
 
-    You can [install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes documentation. 
+    You can [install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes documentation.
 
     If you are looking for an example of what that process looks like in a development environment using `minikube`, you can check out the three part blog series covering deploying Nautobot to Kubernetes:
-        
+
     * [Part 1](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-01/)
     * [Part 2](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-02/)
     * [Part 3](https://networktocode.com/blog/deploying-nautobot-to-kubernetes-03/)
@@ -101,7 +101,7 @@ The following minimum versions are required for Nautobot to operate:
 
 | Dependency | Role         | Minimum Version |
 | ---------- | ------------ | --------------- |
-| Python     | Application  | 3.9.2           |
+| Python     | Application  | 3.10            |
 | PostgreSQL | Database     | 12.0            |
 | MySQL      | Database     | 8.0             |
 | Redis      | Cache, Queue | 4.0             |
@@ -118,6 +118,12 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 
 --- 2.4.0 "Python 3.8 support removed"
     Python 3.8 support was removed.
+
+--- 2.4.20 "Python 3.9 support removed"
+    Python 3.9 support was removed.
+
++++ 3.0.0 "Python 3.13 support added"
+    Python 3.13 support was added.
 
 #### Database
 

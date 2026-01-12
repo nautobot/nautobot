@@ -244,8 +244,9 @@ class NaturalOrderingField(models.CharField):
     """
     A field which stores a naturalized representation of its target field, to be used for ordering its parent model.
 
-    :param target_field: Name of the field of the parent model to be naturalized
-    :param naturalize_function: The function used to generate a naturalized value (optional)
+    Args:
+        target_field (str): Name of the field of the parent model to be naturalized
+        naturalize_function (function): The function used to generate a naturalized value (optional)
     """
 
     description = "Stores a representation of its target field suitable for natural ordering"

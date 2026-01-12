@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template import engines
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
 import django_tables2 as tables
 import netaddr
@@ -13,6 +13,7 @@ import netaddr
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.data_validation.custom_validators import BaseValidator
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras import plugins
@@ -31,11 +32,8 @@ from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import ObjectPermission
 
-from example_app import config as example_config
-from example_app.datasources import refresh_git_text_files
-from example_app.models import ExampleModel
 
-
+@tag("example_app")
 class AppTest(TestCase):
     def test_config(self):
         self.assertIn(
@@ -45,6 +43,8 @@ class AppTest(TestCase):
 
     def test_models(self):
         # Test saving an instance
+        from example_app.models import ExampleModel
+
         instance = ExampleModel(name="Instance 1", number=100)
         instance.save()
         self.assertIsNotNone(instance.pk)
@@ -86,6 +86,13 @@ class AppTest(TestCase):
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
         )
 
+        # Assert data-validation engine added one and only one validator for a given model.
+        # https://github.com/nautobot/nautobot/pull/7180
+        data_validation_validators = [
+            v for v in registry["plugin_custom_validators"]["dcim.location"] if issubclass(v, BaseValidator)
+        ]
+        self.assertEqual(1, len(data_validation_validators))
+
     def test_jinja_filter_registration(self):
         """
         Check that App custom Jinja filters are registered correctly.
@@ -126,6 +133,8 @@ class AppTest(TestCase):
         """
         Check that App DatasourceContents are registered.
         """
+        from example_app.datasources import refresh_git_text_files
+
         registered_datasources = registry.get("datasource_contents", {}).get("extras.gitrepository", [])
 
         app_datasource = DatasourceContent(
@@ -150,6 +159,8 @@ class AppTest(TestCase):
         """
         Check that App middleware is registered.
         """
+        from example_app import config as example_config
+
         self.assertIn(
             "example_app.middleware.ExampleMiddleware",
             settings.MIDDLEWARE,
@@ -167,6 +178,8 @@ class AppTest(TestCase):
         """
         Check enforcement of minimum Nautobot version.
         """
+        from example_app import config as example_config
+
         with self.assertRaises(PluginImproperlyConfigured):
             example_config.validate({}, "0.8")
 
@@ -174,6 +187,8 @@ class AppTest(TestCase):
         """
         Check enforcement of maximum Nautobot version.
         """
+        from example_app import config as example_config
+
         with self.assertRaises(PluginImproperlyConfigured):
             example_config.validate({}, "10.0")
 
@@ -181,6 +196,7 @@ class AppTest(TestCase):
         """
         Validate enforcement of required settings.
         """
+        from example_app import config as example_config
 
         class ExampleConfigWithRequiredSettings(example_config):
             required_settings = ["foo"]
@@ -202,6 +218,7 @@ class AppTest(TestCase):
         """
         Validate population of default config settings.
         """
+        from example_app import config as example_config
 
         class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
@@ -231,6 +248,8 @@ class AppTest(TestCase):
         """
         Validate that App installed Django apps and dependencies are are registered.
         """
+        from example_app import config as example_config
+
         self.assertIn(
             "example_app.ExampleAppConfig",
             settings.INSTALLED_APPS,
@@ -275,11 +294,13 @@ class AppTest(TestCase):
         self.assertEqual(secret.get_value(obj=secret), secret.parameters["constant"])
 
 
+@tag("example_app")
 class AppGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
-    model = ExampleModel
-
     @classmethod
     def setUpTestData(cls):
+        from example_app.models import ExampleModel
+
+        cls.model = ExampleModel
         # Example objects to test.
         ExampleModel.objects.create(name="Example 1", number=1)
         ExampleModel.objects.create(name="Example 2", number=2)
@@ -303,6 +324,7 @@ class AppGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
+@tag("example_app")
 class AppListViewTest(TestCase):
     def test_list_plugins_anonymous(self):
         # Make the request as an unauthenticated user
@@ -374,6 +396,7 @@ class AppListViewTest(TestCase):
         )
 
 
+@tag("example_app")
 class PluginDetailViewTest(TestCase):
     def test_view_detail_anonymous(self):
         # Make the request as an unauthenticated user
@@ -393,8 +416,20 @@ class PluginDetailViewTest(TestCase):
         self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
+class MarketplaceViewTest(TestCase):
+    def test_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        # Redirects to the login page
+        self.assertHttpStatus(response, 302)
+
+    def test_view_authenticated(self):
+        response = self.client.get(reverse("apps:apps_marketplace"))
+        self.assertHttpStatus(response, 200)
+
+
+@tag("example_app")
 class AppAPITest(APIViewTestCases.APIViewTestCase):
-    model = ExampleModel
     bulk_update_data = {
         "number": 2600,
     }
@@ -416,6 +451,9 @@ class AppAPITest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        from example_app.models import ExampleModel
+
+        cls.model = ExampleModel
         # Example objects to test.
         ExampleModel.objects.create(name="Example 1", number=1)
         ExampleModel.objects.create(name="Example 2", number=2)
@@ -423,6 +461,8 @@ class AppAPITest(APIViewTestCases.APIViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_api_urls(self):
+        from example_app.models import ExampleModel
+
         # Test list URL resolution
         list_url = reverse("plugins-api:example_app-api:examplemodel-list")
         self.assertEqual(list_url, self._get_list_url())
@@ -489,6 +529,7 @@ class TestUserContextCustomValidator(CustomValidator):
         self.validation_error(f"TestUserContextCustomValidator: user is {self.context['user']}")
 
 
+@tag("example_app")
 class AppCustomValidationTest(TestCase):
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
@@ -551,13 +592,15 @@ class AppCustomValidationTest(TestCase):
             registry["plugin_custom_validators"]["dcim.locationtype"] = before
 
 
+@tag("example_app")
 class ExampleModelCustomActionViewTest(TestCase):
     """Test for custom action view `all_names` added to Example App"""
 
-    model = ExampleModel
-
     @classmethod
     def setUpTestData(cls):
+        from example_app.models import ExampleModel
+
+        cls.model = ExampleModel
         ExampleModel.objects.create(name="Example 1", number=100)
         ExampleModel.objects.create(name="Example 2", number=200)
         ExampleModel.objects.create(name="Example 3", number=300)
@@ -567,7 +610,10 @@ class ExampleModelCustomActionViewTest(TestCase):
     def test_custom_action_view_anonymous(self):
         self.client.logout()
         response = self.client.get(self.custom_view_url)
-        self.assertHttpStatus(response, 302)
+        self.assertHttpStatus(response, 200)
+        # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
+        response_body = response.content.decode(response.charset)
+        self.assertIn("/login/?next=", response_body, msg=response_body)
 
     def test_custom_action_view_without_permission(self):
         with disable_warnings("django.request"):
@@ -577,7 +623,7 @@ class ExampleModelCustomActionViewTest(TestCase):
             self.assertNotIn("/login/", response_body, msg=response_body)
 
     def test_custom_action_view_with_permission(self):
-        self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
         response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
@@ -593,7 +639,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
-            actions=["all_names"],
+            actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -610,6 +656,7 @@ class ExampleModelCustomActionViewTest(TestCase):
             self.assertNotIn(example_model.name, response_body, msg=response_body)
 
 
+@tag("example_app")
 class FilterExtensionTest(TestCase):
     """
     Tests for adding filter extensions
@@ -859,6 +906,7 @@ class LoadPluginTest(TestCase):
         load_plugin(app_name, settings)
 
 
+@tag("example_app", "example_app_with_view_override")
 class TestAppCoreViewOverrides(TestCase):
     """
     Validate that overridden core views work as expected.
@@ -885,15 +933,15 @@ class TestAppCoreViewOverrides(TestCase):
         self.assertEqual("Hello world! I'm an overridden view.", response.content.decode(response.charset))
 
         response = self.client.get(
-            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
+            f"{reverse('plugins:plugin_detail', kwargs={'plugin': 'example_app_with_view_override'})}"
         )
         self.assertIn(
-            "plugins:example_app:view_to_be_overridden <code>"
-            "example_app_with_view_override.views.ViewOverride</code>",
+            "plugins:example_app:view_to_be_overridden <code>example_app_with_view_override.views.ViewOverride</code>",
             extract_page_body(response.content.decode(response.charset)),
         )
 
 
+@tag("example_app")
 class PluginTemplateExtensionsTest(TestCase):
     """
     Test that registered TemplateExtensions inject content as expected
@@ -918,14 +966,14 @@ class PluginTemplateExtensionsTest(TestCase):
     def test_detail_view_left_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("App Injected Content - Left", response_body, msg=response_body)
+        self.assertIn("APP INJECTED CONTENT - LEFT", response_body, msg=response_body)
 
     def test_detail_view_right_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("App Injected Content - Right", response_body, msg=response_body)
+        self.assertIn("APP INJECTED CONTENT - RIGHT", response_body, msg=response_body)
 
     def test_detail_view_full_width_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("App Injected Content - Full Width", response_body, msg=response_body)
+        self.assertIn("APP INJECTED CONTENT - FULL WIDTH", response_body, msg=response_body)

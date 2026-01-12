@@ -7,11 +7,13 @@ Certain REST API fields can be expensive to look up or render, so Nautobot provi
 - `?include=config_context` - Device and Virtual Machine APIs only. Rendered [configuration context data](../../core-data-model/extras/configcontext.md) is not included by default, but can be added to these API responses by specifying this query parameter.
 - `?include=relationships` - Any object supporting [Relationships](../relationship.md). Relationship data is not included by default, but can be added by specifying this query parameter.
 - `?include=computed_fields` - Any object supporting [Computed Fields](../computedfield.md). Computed field values are not included by default, but can be added by specifying this query parameter.
-- `?exclude_m2m=true` - Any object with many-to-many relations to another type of object. These related objects are included by default, but can be excluded (in many cases improving the REST API performance) by specifying this query parameter.
+- `?exclude_m2m=false` - Any object with many-to-many relations to another type of object. These related objects are excluded by default, but can be included (at the cost of performance) by specifying this query parameter.
 
 +/- 2.0.0 "Changed config contexts to excluded by default, added `include=config_context` support"
 
 +++ 2.4.0 "Added `exclude_m2m` support"
+
++/- 3.0.0 "Changed the default behavior of `exclude_m2m` to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default"
 
 ## Filtering Objects
 

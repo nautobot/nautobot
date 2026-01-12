@@ -18,7 +18,7 @@ CIRCUIT_TERMINATION_PARENT = """
 {% if value.provider_network %}
 {{ value.provider_network|hyperlinked_object }}
 {% elif value.location %}
-{{ value.location|hyperlinked_object }}
+{{ value.location|hyperlinked_object:"name" }}
 {% elif value.cloud_network %}
 {{ value.cloud_network|hyperlinked_object }}
 {% else %}
@@ -126,6 +126,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
         orderable=False,
         verbose_name="Side Z",
     )
+    actions = ButtonsColumn(Circuit)
 
     class Meta(BaseTable.Meta):
         model = Circuit
@@ -142,6 +143,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "commit_rate",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -153,6 +155,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "circuit_termination_a",
             "circuit_termination_z",
             "description",
+            "actions",
         )
 
 

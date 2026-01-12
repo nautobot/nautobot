@@ -47,9 +47,13 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `max_version` | `None` | Maximum version of Nautobot with which the app is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
+| `provides_dynamic_jobs` | `False` | Set to `True` if the app's job code should be reloaded every time a job is run. This is an advanced feature to support dynamically created Python classes |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
-| `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
+| `searchable_models` | `[]` | A list of model names to include in the [global Nautobot search](models/global-search.md) |
 | `constance_config` | `{}` | [Django Constance](database-backend-config.md) configuration parameters for settings. |
+
++++ 2.4.11
+    Support for the `provides_dynamic_jobs` attribute was added.
 
 +++ 2.0.0
     Support for the `searchable_models` and `constance_config` attributes were added.

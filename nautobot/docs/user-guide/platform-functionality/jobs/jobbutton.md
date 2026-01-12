@@ -11,7 +11,7 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Name** - A unique name for the Job Button.
 * **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
 * **Text** - The text that will be displayed on the button.
-* **Job** - The [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers) that this button will run.
+* **Job** - The [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers) that this button will run.
 * **Enabled** - Whether this Job Button will appear in relevant UI. A Job Button may be disabled if, for example, the underlying Job Button Receiver is uninstalled or temporarily disabled.
 * **Weight** - The number used for determining the order the buttons will appear.
 * **Group** - The name of the dropdown group to add this button into (optional).
@@ -21,9 +21,11 @@ The buttons appear at the top right corner of an object's individual detail page
 +++ 2.2.6
     The `enabled` field was added to Job Buttons to allow them to be temporarily disabled.
 
-![Job Button Form](../../../media/models/jobbutton_form.png "Job Button Form")
+![Job Button Form](../../../media/models/ss_jobbutton_form_light.png#only-light "Job Button Form"){ .on-glb }
+![Job Button Form](../../../media/models/ss_jobbutton_form_dark.png#only-dark "Job Button Form"){ .on-glb }
+[//]: # "`https://demo.nautobot.com/extras/job-buttons/add/`"
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./index.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 ## Required Permissions
 
@@ -75,7 +77,9 @@ As a last example, you can hide the button for users that lack the proper permis
 
 The button will only appear if they have the permission to run jobs.
 
-![Job Buttons on Location object](../../../media/models/site_jobbuttons.png "Job Buttons on Location object")
+![Job Buttons on Location object](../../../media/models/ss_site_jobbuttons_light.png#only-light "Job Buttons on Location object"){ .on-glb }
+![Job Buttons on Location object](../../../media/models/ss_site_jobbuttons_dark.png#only-dark "Job Buttons on Location object"){ .on-glb }
+[//]: # "`https://demo.nautobot.com/dcim/locations/ab8fe61a-eaca-4e5f-a06c-137299fc11f6/`"
 
 !!! note
     To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.

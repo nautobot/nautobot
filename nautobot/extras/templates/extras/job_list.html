@@ -3,12 +3,22 @@
 
 {% block extra_styles %}
     <style>
-        tr a.job_run .btn {
-            margin: -4px 10px 0 0;
+        tr a.job_run {
+            display: inline-flex;
+            gap: 0.625rem; /* 10px */
         }
 
-        tr.disabled {
-            color: #7d7f7c;
+        tr a.job_run .btn {
+            align-self: flex-start;
+            margin-block: -0.09375rem; /* -1.5px */
+        }
+
+        tr :last-child {
+            margin-bottom: 0;
+        }
+
+        tr.disabled td {
+            color: var(--bs-secondary-color);
         }
 
         tr.disabled a.job_run {
@@ -17,67 +27,37 @@
         }
 
         tr.disabled a.job_run .btn {
-            cursor: not-allowed;
+            cursor: inherit;
+        }
+
+        tr.disabled p {
+            color: inherit;
         }
     </style>
 {% endblock %}
 
 {% block buttons %}
-    <div class="btn-group">
-        <a class="btn btn-default set-job_list-display" data-display="tiles" href="" title="Tiles">
-            <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
+    <div class="btn-group" role="group">
+        <a href="{% django_querystring display='list' %}"
+           class="btn btn-primary{% if display == 'list' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-view-sequential" aria-hidden="true"></span> List
         </a>
-        <a class="btn btn-default set-job_list-display" data-display="list" href="" title="List">
-            <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
+        {# djlint:off B123 #}
+        <a href="{% django_querystring display='tiles' %}"
+           class="btn btn-primary{% if display == 'tiles' %} bg-primary nb-text-body-bg{% endif %}">
+            <span class="mdi mdi-view-grid" aria-hidden="true"></span> Tiles
         </a>
+        {# djlint:on B123 #}
     </div>
 
-    <button type="button" class="btn btn-default accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
-{% endblock %}
-
-{% block table_config_button %}
-    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"{% if display == "tiles" %} disabled="disabled"{% endif %}><i class="mdi mdi-cog"></i> Configure</button>
-{% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script>
-        $("button.button-toggle").click(function() {
-            $(this).children("i").toggleClass("mdi-chevron-right mdi-chevron-down");
-        });
-        // Toggle v -. >
-        $("#accordion .accordion-toggle").click(function() {
-            $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-        });
-        // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-        $('.accordion-toggle-all').on('click', function () {
-
-           if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-                $('.collapse').collapse('show');
-                $(this).data("lastState", 0);
-
-                $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-
-                $(this).text("Collapse All");
-           }
-           else {
-                $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
-                .collapse('hide')
-                .removeData('bs.collapse')
-                .collapse({parent: '#accordion', toggle: false});
-
-                $(this).data("lastState", 1);
-                $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-
-                $(this).text("Expand All");
-            }
-        });
-
-        // Set display anchor links without losing other potentially active query params such as applied filters.
-        [...document.querySelectorAll('.set-job_list-display')].forEach(button => {
-            const queryParams = new URLSearchParams(window.location.search);
-            queryParams.set('display', button.dataset.display);
-            button.setAttribute('href', `?${queryParams.toString()}`);
-        });
-     </script>
+    <button
+        aria-expanded="true"
+        class="btn btn-secondary"
+        data-nb-toggle="collapse-all"
+        data-nb-target="#job_accordion .collapse"
+        type="button"
+        {% if display == "tiles" %}disabled{% endif %}
+    >
+        Collapse All Groups
+    </button>
 {% endblock %}

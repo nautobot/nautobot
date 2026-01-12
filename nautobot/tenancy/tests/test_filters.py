@@ -8,7 +8,6 @@ from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Pla
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.tenancy.filters import TenantFilterSet, TenantGroupFilterSet
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.users.factory import UserFactory
 from nautobot.virtualization.factory import (
     ClusterFactory,
     ClusterGroupFactory,
@@ -89,7 +88,6 @@ class TenantTestCase(FilterTestCases.FilterTestCase):
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
         factory.random.reseed_random("Nautobot")
-        UserFactory.create_batch(10)
         RackFactory.create_batch(10)
         RackReservationFactory.create_batch(10)
         ClusterTypeFactory.create_batch(10)

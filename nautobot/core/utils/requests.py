@@ -156,7 +156,7 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
     does not inherently preserve multiple values as lists.
 
     Args:
-        querydict (QueryDict): The QueryDict to be normalized.
+        querydict (QueryDict): The QueryDict or dictionary as produced by `convert_querydict_to_dict` to be normalized.
         form_class (forms.Form, optional): A form class to identify fields that should be treated as
             lists (e.g., `MultipleChoiceField` or `ModelMultipleChoiceField`).
         filterset (django_filters.FilterSet, optional): A FilterSet instance to identify filters that
@@ -171,7 +171,13 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
     result = {}
 
     if querydict:
-        for key, value_list in querydict.lists():
+        # check if true QueryDict or standard dict in format of querydict, e.g. from `convert_querydict_to_dict`
+        if hasattr(querydict, "lists"):
+            items = querydict.lists()
+        else:
+            items = querydict.items()
+
+        for key, value_list in items:
             if len(value_list) > 1:
                 # More than one value in the querydict for this key, so keep it as a list
                 # TODO: we could check here and de-listify value_list if the form_class field is a single-value one?
@@ -198,3 +204,22 @@ def add_nautobot_version_query_param_to_url(url):
     params["version"] = settings.VERSION
     updated_query = urlencode(params, doseq=True)
     return parsed_url._replace(query=updated_query).geturl()
+
+
+def convert_querydict_to_dict(request_querydict):
+    """
+    Convert QueryDict to standard json serializable dictionary.
+
+    This is useful when you want to serialize a QueryDict to JSON format such as
+    when sending to a Job form or sending it over an API. This is not the same as
+    `normalize_querydict` which preserves single values as singletons and multi-values
+    as lists. This function preserves all values as lists.
+
+    Args:
+        request_querydict (QueryDict): QueryDict to convert.
+
+    Examples:
+        >>> convert_querydict_to_dict(QueryDict('foo=1&bar=2&bar=3&baz='))
+        >>> {'foo': ['1'], 'bar': ['2', '3'], 'baz': ['']}
+    """
+    return {key: value for key, value in request_querydict.lists()}  # pylint: disable=unnecessary-comprehension

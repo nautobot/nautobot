@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
+LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
+
+
 def generate_restricted_queryset():
     """
     Generate a function to return a restricted queryset compatible with the internal permissions system.
@@ -24,7 +27,7 @@ def generate_restricted_queryset():
     fail gracefully in that case.
     """
 
-    def get_queryset(queryset, info):
+    def get_queryset(cls, queryset, info):
         if not hasattr(queryset, "restrict"):
             logger.debug(f"Queryset {queryset} is not restrictable")
             return queryset
@@ -64,15 +67,20 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     filterset_class = schema_type._meta.filterset_class
 
+    @gql_optimizer.resolver_hints(model_field=field_name)
     def resolve_filter(self, info, **kwargs):
+        field = getattr(self, field_name)
+
         if not filterset_class or not kwargs:
-            return getattr(self, field_name).all()
+            return field.all()
 
-        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
         if "_type" in kwargs:
-            kwargs["type"] = kwargs.pop("_type")
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
-        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+        resolved_obj = filterset_class(kwargs, field.all())
 
         # Check result filter for errors.
         if not resolved_obj.errors:
@@ -86,7 +94,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             errors[key] = resolved_obj.errors[key]
 
         # Raising this exception will send the error message in the response of the GraphQL request
-        raise GraphQLError(errors)
+        raise GraphQLError(str(errors))
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
@@ -248,6 +256,9 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
+    if schema_type in LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE:
+        return LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type]
+
     search_params = {
         "limit": graphene.Int(),
         "offset": graphene.Int(),
@@ -258,6 +269,8 @@ def generate_list_search_parameters(schema_type):
                 schema_type._meta.filterset_class,
             )
         )
+
+    LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type] = search_params
 
     return search_params
 
@@ -305,6 +318,13 @@ def generate_list_resolver(schema_type, resolver_name):
 
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
+
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
+
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
 
@@ -318,7 +338,7 @@ def generate_list_resolver(schema_type, resolver_name):
                     errors[key] = resolved_obj.errors[key]
 
                 # Raising this exception will send the error message in the response of the GraphQL request
-                raise GraphQLError(errors)
+                raise GraphQLError(str(errors))
             qs = resolved_obj.qs.all()
 
         else:
@@ -354,6 +374,7 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
+    # TODO: refactor to use DjangoListField instead of graphene.List (https://github.com/nautobot/nautobot/issues/4690)
     attrs[list_name] = graphene.List(schema_type, **search_params)
 
     # Define Resolvers for both single item and list

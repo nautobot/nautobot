@@ -35,6 +35,7 @@ from nautobot.core.forms.fields import (
 )
 from nautobot.core.forms.forms import (
     AddressFieldMixin,
+    ApprovalForm,
     BootstrapMixin,
     BulkEditForm,
     BulkRenameForm,
@@ -46,7 +47,7 @@ from nautobot.core.forms.forms import (
     ReturnURLForm,
     TableConfigForm,
 )
-from nautobot.core.forms.search import SearchForm
+from nautobot.core.forms.search import search_model_choices
 from nautobot.core.forms.utils import (
     add_blank_choice,
     add_field_to_filter_form_class,
@@ -68,6 +69,7 @@ from nautobot.core.forms.widgets import (
     DatePicker,
     DateTimePicker,
     MultiValueCharInput,
+    NumberWithSelect,
     SelectWithDisabled,
     SelectWithPK,
     SlugWidget,
@@ -87,6 +89,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "AddressFieldMixin",
+    "ApprovalForm",
     "AutoPopulateWidget",
     "AutoPositionField",
     "AutoPositionPatternField",
@@ -124,10 +127,10 @@ __all__ = (
     "MultiValueCharInput",
     "MultipleContentTypeField",
     "NullableDateField",
+    "NumberWithSelect",
     "NumericArrayField",
     "PrefixFieldMixin",
     "ReturnURLForm",
-    "SearchForm",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugField",
@@ -146,4 +149,5 @@ __all__ = (
     "parse_alphanumeric_range",
     "parse_numeric_range",
     "restrict_form_fields",
+    "search_model_choices",
 )

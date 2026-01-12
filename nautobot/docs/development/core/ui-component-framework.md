@@ -19,7 +19,8 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
+- ![UI Framework Example](../../media/development/core/ui-component-framework/ss_ui-framework-example_light.png#only-light){ .on-glb }
+![UI Framework Example](../../media/development/core/ui-component-framework/ss_ui-framework-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -65,6 +66,20 @@ Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `Obj
 - `Panel`s in the "main" tab or any extra tabs
 - Extra `Button`s to display at the top of the page (beyond the default "actions" dropdown)
 
+### ExtraDetailViewActionButton
+
+Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `ObjectView`) that implements the UI Framework does so by defining an `extra_detail_view_action_buttons` attribute. This attribute should be a list of `ExtraDetailViewActionButton` instances, which provide a clean, declarative way to add extra action buttons to your detail views.
+The `ExtraDetailViewActionButton` class automatically handles URL generation, permission checking, and HTML rendering for you, reducing boilerplate code while maintaining consistency across your application.
+
+Extra detail view action buttons are rendered as part of the consolidated action button system, which is implemented by the consolidate_detail_view_action_buttons template tag.
+
+This tag is responsible for assembling all action buttons shown on an object detail view, including:
+
+- Built-in actions (Edit, Clone, Delete)
+- Model-defined ExtraDetailViewActionButton instances
+
+Only buttons that pass their respective permission checks are rendered.
+
 ### Tabs
 
 A `Tab` is one of the major building blocks of your UI. The user can toggle between tabs, each of which displays distinct page content, typically consisting of one or more `Panel`s. Multiple tabs can be rendered in a single HTML response (for example, the "main" and "advanced" tabs are both part of the same page; toggling between them is a client-side action only and does not require Nautobot to reload or re-render the page), while to optimize performance, certain other tabs may correspond to distinct `View`s that are retrieved and rendered on request. The UI Framework supports both patterns.
@@ -76,7 +91,8 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
+- ![Basic Panel Layout](../../media/development/core/ui-component-framework/ss_basic-panel-layout_light.png#only-light){ .on-glb }
+![Basic Panel Layout](../../media/development/core/ui-component-framework/ss_basic-panel-layout_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -106,9 +122,109 @@ object_detail_content = ObjectDetailContent(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
+- ![Buttons Example](../../media/development/core/ui-component-framework/ss_buttons-example_light.png#only-light){ .on-glb }
+![Buttons Example](../../media/development/core/ui-component-framework/ss_buttons-example_dark.png#only-dark){ .on-glb }
 
 </div>
+
+### Page headings and document titles
+
+The Titles component provides a flexible system for generating page titles and headings based on the current view action and context.
+
+```python
+from nautobot.apps.ui import Titles
+
+# Create a document title instance
+titles = Titles(titles={"list": "{{obj_type_plural}}"})
+
+# Render title for a list view
+context = Context({
+    'view_action': 'list',
+    'obj_type_plural': 'devices',
+    'view_titles': titles,
+})
+
+title = titles.render(context)  # Returns: "Devices"
+```
+
+In HTML there is available `render_title` helper that use the `Title` instance from `context['view_titles']` and properly renders the page heading and document title.
+
+```html
+{% block content %}
+    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
+{% endblock %}
+```
+
+## Breadcrumbs Component
+
+The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
+
+There are 3 main breadcrumb items classes:
+- `ViewNameBreadcrumbItem` - Handles breadcrumbs that are generated from Django view names using URL reversing.
+- `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
+- `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
+- `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
+- `ParentInstanceBreadcrumbItem` - Useful to create link to the object instance, but filtered by some "parent", eg.: Devices list filtered by location.
+- `AncestorsInstanceBreadcrumbItem` - Generates breadcrumbs items with whole ancestors path of given instance, eg.: for Locations will output all parent Locations.
+
+By default, breadcrumbs class will render only link to the `list_url` if view is `detail=True`.
+Label will be taken from model associated to this path or set to `title` (if in the context).
+
++/- 3.0.0 "Default breadcrumbs have changed"
+    In Nautobot 2.x, all breadcrumbs defaulted to including the `list_url` at the beginning, and "detail" breadcrumbs additionally appended the
+    object in question to the end of the breadcrumbs by default. This was decided to be redundant information and so the behavior was changed in
+    v3.0.0 to the current behavior. Any views or templates using custom breadcrumbs should also be updated accordingly.
+
+```python
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs()
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+
+```html
+<ol class="breadcrumb">
+    <li><a href="/dcim/devices">Devices</a></li>
+</ol>
+```
+
+```python
+from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
+
+# Use default breadcrumbs
+breadcrumbs = Breadcrumbs(items={"detail": [
+    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
+    ModelBreadcrumbItem(model_key="location"),
+]})
+
+# Render for a device detail view
+context = Context({
+    'view_action': 'retrieve',
+    'detail': True,  # Indicates this is a detail view
+    'object': device,
+    'location': device.location,
+})
+html = breadcrumbs.render(context)
+```
+
+It will generate:
+
+```html
+<ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/dcim/locations">Locations</a></li>
+</ol>
+```
 
 ## Panel Types
 
@@ -194,8 +310,10 @@ panels = ui.ObjectFieldsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
-- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example_2.png){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_light.png#only-light){ .on-glb }
+![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_dark.png#only-dark){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_2_light.png#only-light){ .on-glb }
+![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_2_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -281,9 +399,11 @@ GroupedKeyValueTablePanel(
 <!-- pyml disable-num-lines 7 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-1.png){ .on-glb }
+- ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-1_light.png#only-light){ .on-glb }
+![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-1_dark.png#only-dark){ .on-glb }
 
-- ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-2.png){ .on-glb }
+- ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-2_light.png#only-light){ .on-glb }
+![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-2_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -318,8 +438,10 @@ StatsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/stats-panel-example-code.png){ .on-glb }
-- ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
+- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/ss_stats-panel-example-code_light.png#only-light){ .on-glb }
+![StatsPanel Code Example](../../media/development/core/ui-component-framework/ss_stats-panel-example-code_dark.png#only-dark){ .on-glb }
+- ![StatsPanel Example](../../media/development/core/ui-component-framework/ss_stats-panel-example_light.png#only-light){ .on-glb }
+![StatsPanel Example](../../media/development/core/ui-component-framework/ss_stats-panel-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -332,7 +454,8 @@ StatsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards" style="width: 300px;" markdown>
 
-- ![Text Panels Family](../../media/development/core/ui-component-framework/text-panels-family.png){ .on-glb }
+- ![Text Panels Family](../../media/development/core/ui-component-framework/ss_text-panels-family_light.png#only-light){ .on-glb }
+![Text Panels Family](../../media/development/core/ui-component-framework/ss_text-panels-family_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -390,7 +513,8 @@ Note:
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
+- ![Table Panels Family](../../media/development/core/ui-component-framework/ss_table-panels-family_light.png#only-light){ .on-glb }
+![Table Panels Family](../../media/development/core/ui-component-framework/ss_table-panels-family_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -452,6 +576,8 @@ It integrates with `django_tables2` and provides extensive customization options
 | `add_permissions` | No | Model defaults | Required permissions for "add" button |
 | `enable_bulk_actions` | No | `False` | Enable bulk action checkboxes |
 | `related_field_name` | No | `table_filter` value | Field linking to base model |
+| `related_list_url_name` | No | `None` | URL override for related model list view |
+| `enable_related_link` | No | `True` | Enable link to related model list view |
 
 #### ObjectsTablePanel Examples
 
@@ -486,6 +612,51 @@ ObjectsTablePanel(
 )
 ```
 
+#### ObjectsTablePanel Advanced Options
+
+If the ObjectsTablePanel is a related object, it is expected that the related model has a list view and that the badge will link to that view with the appropriate filter applied. If the linked view and filter are not valid, a warning will be logged and the badge will be disabled.
+
+Ensure the ObjectsTablePanel has the proper `related_field_name` to apply the appropriate filter to the list view.
+
+```python
+# Example from the Prefix detail view showing the Parent Prefixes
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_title="Parent Prefixes",
+    related_field_name="ancestors",
+    ...,
+),
+```
+
+If the related model is using a custom through table, you can provide the `related_list_url_name` parameter to provide the proper list view URL.
+
+```python
+# Example from the VRF detail view showing the VRF to Device assignments
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_class=tables.VRFDeviceAssignmentTable,
+    table_title="Assigned Devices",
+    related_list_url_name="dcim:device_list",
+    related_field_name="vrfs",
+    ...,
+),
+```
+
+Lastly, if the related model is using a GenericForeignKey, or is a Many-to-Many relationship linked to multiple models, there isn't a single list view you can use for the link. In that case, you can disable the related link via `enable_related_link=False`.
+
+```python
+# Example from the Tag detail view showing the objects assigned to the Tag
+
+object_detail.ObjectsTablePanel(
+    ...,
+    table_title="Tagged Objects",
+    enable_related_link=False,
+    ...,
+),
+```
+
 ## Button Types
 
 ### Button
@@ -516,7 +687,8 @@ class SecretUIViewSet(...):
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
+- ![Button Example](../../media/development/core/ui-component-framework/ss_button-example_light.png#only-light){ .on-glb }
+![Button Example](../../media/development/core/ui-component-framework/ss_button-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -564,9 +736,178 @@ class DeviceView(generic.ObjectView):
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
+- ![DropdownButton Example](../../media/development/core/ui-component-framework/ss_dropdown-button-example_light.png#only-light){ .on-glb }
+![DropdownButton Example](../../media/development/core/ui-component-framework/ss_dropdown-button-example_dark.png#only-dark){ .on-glb }
 
 </div>
+
+## Breadcrumbs and titles overview
+
+High-level data flow diagram:
+
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Breadcrumbs and titles data flow](../../media/development/core/ui-component-framework/breadcrumbs-titles-data-flow.png){ .on-glb }
+
+</div>
+
+### BreadcrumbItem Configuration
+
+Breadcrumb items has three main type of items.
+
+- `ViewNameBreadcrumbItem`: Creates a breadcrumb from a Django view name (string or callable), with optional URL kwargs and query params. The label can be static or dynamic.
+- `ModelBreadcrumbItem`: Generates a breadcrumb based on a Django model class, instance, or dotted model string. Supports resolving list/detail URLs and model verbose names for the label.
+- `InstanceBreadcrumbItem`: Represents a breadcrumb for a specific object instance (fetched from context). The URL and label are resolved from the object’s absolute URL and display/name.
+
+All breadcrumb items accept a `should_render` callable to control visibility based on context, and are automatically filtered out if both their URL and label are empty.
+Labels can be rendered either by using simple str, passing object that has `__str__` method, passing callable that accepts context or by taking it from context via `label_key`.
+
+#### `ViewNameBreadcrumbItem` Class
+
+```python
+# Basic view name breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    label="All Devices",
+)
+# Will generate: ("/dcim/devices/", "All Devices")
+
+# Basic view name from context breadcrumb
+item = ViewNameBreadcrumbItem(
+    view_name_key="list_url",
+    label="All Devices",
+)
+# Will generate: ("/dcim/devices/", "All Devices"); assuming there is "dcim:device_list" in context["list_url"]
+
+# With reverse parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device",
+    reverse_kwargs={"pk": 123},
+    label="Device Details",
+)
+# Will generate: ("/dcim/devices/123", "Device Details")
+
+# With query parameters
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_list",
+    reverse_query_params={"status": "active"},
+    label="Active Devices",
+)
+# Will generate: ("/dcim/devices/?status=active", "Active Devices")
+
+# With dynamic parameters from context
+item = ViewNameBreadcrumbItem(
+    view_name="dcim:device_detail",
+    reverse_kwargs=lambda ctx: {"pk": ctx["object"].pk},
+    label=lambda ctx: f"Device: {ctx['object'].name}",
+)
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ViewNameBreadcrumbItem)
+
+#### `ModelBreadcrumbItem` Class
+
+```python
+# Basic model breadcrumb (uses plural verbose_name)
+item = ModelBreadcrumbItem(model=Device)
+# Will generate: ("/dcim/devices/", "Devices")
+
+# Singular form
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device")
+
+# Different URL action
+item = ModelBreadcrumbItem(
+    model=Device,
+    model_url_action="add",
+)
+# Will generate: ("/dcim/devices/add/", "Devices")
+
+item = ModelKeyBreadcrumbItem(
+    model_key="parent_model",
+    model_label_type="singular",
+)
+# Will generate: ("/dcim/devices/", "Device") - assuming that "parent model" is Device
+
+# Using dotted model path
+item = ModelBreadcrumbItem(model="dcim.device")
+# Will generate: ("/dcim/devices/", "Devices")
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ModelBreadcrumbItem)
+
+#### `InstanceBreadcrumbItem` Class
+
+```python
+# Basic usage - looks for instance in context["object"]
+item = InstanceBreadcrumbItem()
+# Uses default instance_key="object"
+
+# Custom context key
+item = InstanceBreadcrumbItem(instance_key="device")
+
+# Custom label
+item = InstanceBreadcrumbItem(
+    instance_key="object",
+    label="Current Item"
+)
+
+# Dynamic label from context
+item = InstanceBreadcrumbItem(
+    label=lambda ctx: f"Editing {ctx['object'].name}"
+)
+```
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.InstanceBreadcrumbItem)
+
+### Customizing Breadcrumbs
+
+By default `Breadcrumbs` class uses two actions: `list` and `detail`. However, you can specify your custom action,
+or just pass to the items one built-in action to override default only for the chosen view actions.
+
+If there is no `view_action` in the context it will use `list` by default.
+
+If there is no `detail` in the context it will assume `detail=False` by default.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Breadcrumbs)
+
+#### Example 1: Simple Override
+
+```python
+# Replace default breadcrumbs for create action
+custom_breadcrumbs = Breadcrumbs(
+    items={
+        'create': [
+            ViewNameBreadcrumbItem(view_name="home", label="Home"),
+            ModelBreadcrumbItem(model_key="model"),
+            ModelBreadcrumbItem(model_key="model", action="add", label="Add New")
+        ]
+    }
+)
+```
+
+#### Example 2: Complex Navigation
+
+```python
+# Multi-level hierarchy for nested objects
+nested_breadcrumbs = Breadcrumbs(
+    items={
+        'retrieve': [
+            ModelBreadcrumbItem(model="dcim.location", model_label_type="plural"),
+            InstanceBreadcrumbItem(
+                instance_key="object.location",
+                label=lambda ctx: f"Site: {ctx['object'].location.name}"
+            ),
+            ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
+            InstanceBreadcrumbItem(),
+        ]
+    }
+)
+```
 
 ## Complete Example
 

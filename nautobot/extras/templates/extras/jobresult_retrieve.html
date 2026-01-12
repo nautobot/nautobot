@@ -1,0 +1,130 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load custom_links %}
+{% load form_helpers %}
+{% load log_levels %}
+{% load plugins %}
+{% load static %}
+{% load buttons %}
+
+{% block buttons %}
+    {% if perms.extras.run_job %}
+        {% if result.job_model and result.task_kwargs %}
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}?kwargs_from_job_result={{ result.pk }}"
+               class="btn btn-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
+            </a>
+        {% elif result.job_model is not None %}
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}"
+               class="btn btn-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span> Run
+            </a>
+        {% endif %}
+    {% endif %}
+    <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ result.pk }}&format=csv" class="btn btn-success">
+        <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+    </a>
+    {{ block.super }}
+{% endblock buttons %}
+
+{% block title %}
+    Job Result:
+    {% if result.job_model is not None %}
+        {{ result.job_model }}
+    {% elif associated_record %}
+        {{ associated_record }}
+    {% elif job %}
+        {{ job }}
+    {% else %}
+        {{ result.name }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_nav_tabs %}
+    {% if result.data.output %}
+        <li role="presentation" class="nav-item">
+            <a href="#output" class="nav-link" role="tab" data-bs-toggle="tab">Output</a>
+        </li>
+    {% endif %}
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
+{% endblock content_full_width_page %}
+
+{% block advanced_content_left_page %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Job Keyword Arguments</strong>
+        </div>
+        <div class="card-body">
+            {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <strong>Job Positional Arguments</strong>
+        </div>
+        <div class="card-body">
+            {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <strong>Job Celery Keyword Arguments</strong>
+        </div>
+        <div class="card-body">
+            {% include 'extras/inc/json_data.html' with data=result.celery_kwargs format="json" %}
+        </div>
+    </div>
+{% endblock advanced_content_left_page %}
+{% block advanced_content_right_page %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Worker</strong>
+        </div>
+        <table class="table table-hover card-body attr-table">
+            <tbody>
+                <tr>
+                    <td>Worker Hostname</td>
+                    <td>{{ result.worker }}</td>
+                </tr>
+                <tr>
+                    <td>Queue Name</td>
+                    <td>{{ result.celery_kwargs.queue}}</td>
+                </tr>
+                <tr>
+                    <td>Task Name</td>
+                    <td>{{ result.task_name }}</td>
+                </tr>
+                <tr>
+                    <td>Meta</td>
+                    <td>{% include 'extras/inc/json_data.html' with data=result.meta format="json" %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <strong>Traceback</strong>
+        </div>
+        <div class="card-body">
+            {% include 'extras/inc/json_data.html' with data=result.traceback format="python" %}
+        </div>
+    </div>
+{% endblock advanced_content_right_page %}
+{% block extra_tab_content %}
+    {% if result.data.output %}
+        <div role="tabpanel" class="tab-pane" id="output">
+            <pre>{{ result.data.output }}</pre>
+        </div>
+    {% endif %}
+{% endblock extra_tab_content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+    {% include 'extras/inc/jobresult_js.html' with result=result %}
+    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
+    <script src="{% versioned_static 'js/log_level_filtering.js' %}"></script>
+{% endblock %}

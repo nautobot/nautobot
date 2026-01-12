@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        @font-face {
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 300;
+            src: url('{% static 'fonts/Montserrat-v30-Light.woff2' %}') format('woff2');
+        }
+        @font-face {
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{% static 'fonts/Montserrat-v30-Regular.woff2' %}') format('woff2');
+        }
+        @font-face {
+            font-display: swap;
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{% static 'fonts/Montserrat-v30-Bold.woff2' %}') format('woff2');
+        }
+        @font-face {
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 300;
+            src: url('{% static 'fonts/Roboto-v48-Light.woff2' %}') format('woff2');
+        }
+        @font-face {
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{% static 'fonts/Roboto-v48-Regular.woff2' %}') format('woff2');
+        }
+        @font-face {
+            font-display: swap;
+            font-family: 'Roboto';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{% static 'fonts/Roboto-v48-Bold.woff2' %}') format('woff2');
+        }
+
+        {# Redoc doesn't change outer page styles. #}
+        body { margin: 0; padding: 0; }
+
+        [data-bs-theme="dark"] .redoc-wrap,
+        [data-bs-theme="dark"] .redoc-wrap > :last-child,
+        [data-bs-theme="dark"] .redoc-wrap .api-content > [data-section-id] > [data-section-id] > :last-child,
+        [data-bs-theme="dark"] .redoc-wrap .menu-content .operation-type {
+            filter: hue-rotate(180deg) invert(1);
+        }
+
+        {# Revert default Nautobot `<code>` element styles in `<div class="redoc-json">` blocks. #}
+        div.redoc-json code { background: none; color: inherit; border-radius: 0; padding: 0; }
+    </style>
+{% endblock extra_styles %}
+
+{% block content %}
+    {% if settings %}
+        <div id="redoc-container"></div>
+    {% else %}
+        <redoc spec-url="{{ schema_url }}"></redoc>
+    {% endif %}
+{% endblock content %}
+
+{% block javascript %}
+    <script src="{{ redoc_standalone }}"></script>
+    {% if settings %}
+        <script>
+            const redocSettings = {{ settings|safe }};
+            Redoc.init("{{ schema_url }}", redocSettings, document.getElementById('redoc-container'))
+        </script>
+    {% endif %}
+{% endblock javascript %}

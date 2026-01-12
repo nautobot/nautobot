@@ -2,22 +2,22 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Circuit</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Circuit</strong></div>
+        <div class="card-body">
             {% render_field form.provider %}
             {% render_field form.cid %}
             {% render_field form.circuit_type %}
             {% render_field form.status %}
             {% render_field form.install_date %}
-            <div class="form-group">
-                <label class="col-md-3 control-label" for="id_commit_rate">{{ form.commit_rate.label }}</label>
+            <div class="mb-10 d-md-flex justify-content-center">
+                <label class="col-md-3 col-form-label" for="id_commit_rate">{{ form.commit_rate.label }}</label>
                 <div class="col-md-9">
                     <div class="input-group">
                         {{ form.commit_rate }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='commit_rate' %}
                     </div>
-                    <span class="help-block">{{ form.commit_rate.help_text }}</span>
+                    <span class="form-text">{{ form.commit_rate.help_text }}</span>
                 </div>
             </div>
             {% render_field form.description %}
@@ -25,20 +25,20 @@
     </div>
     {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Comments</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
             {% render_field form.comments %}
         </div>
     </div>
 {% endblock %}
 
 {% block javascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $("a.set_speed").click(function(e) {
-        e.preventDefault();
-        $("#id_" + $(this).attr("target")).val($(this).attr("data"));
-    });
-</script>
+    {{ block.super }}
+    <script type="text/javascript">
+        $("a.set_speed").click(function(e) {
+            e.preventDefault();
+            $("#id_" + $(this).attr("target")).val($(this).attr("data"));
+        });
+    </script>
 {% endblock %}

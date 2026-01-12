@@ -1,1 +1,0 @@
-Removed jQuery from documentation builds as it's not needed anymore for the ReadTheDocs version selection flyout menu.

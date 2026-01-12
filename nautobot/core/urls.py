@@ -1,14 +1,15 @@
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotFound
 from django.urls import include, path
-from django.views.generic import TemplateView
-from django.views.static import serve
+from django.views.generic import RedirectView, TemplateView
 
 from nautobot.core.views import (
     AboutView,
+    AppDocsView,
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
+    MediaView,
     NautobotMetricsView,
     NautobotMetricsViewAuth,
     RenderJinjaView,
@@ -37,27 +38,39 @@ urlpatterns = [
     # Apps
     path("circuits/", include("nautobot.circuits.urls")),
     path("cloud/", include("nautobot.cloud.urls")),
+    path("data-validation/", include("nautobot.data_validation.urls")),
     path("dcim/", include("nautobot.dcim.urls")),
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),
+    path("load-balancers/", include("nautobot.load_balancers.urls")),
     path("tenancy/", include("nautobot.tenancy.urls")),
     # TODO: deprecate this url and use users
     path("user/", include("nautobot.users.urls")),
     path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
+    path("vpn/", include("nautobot.vpn.urls")),
     path("wireless/", include("nautobot.wireless.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
     # Serving static media in Django (TODO: should be DEBUG mode only - "This view is NOT hardened for production use")
-    path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
+    path("media/<path:path>", MediaView.as_view(), name="media"),
     # Admin
     path("admin/", admin_site.urls),
     # Errors
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
     # Apps
     path("apps/", include((apps_patterns, "apps"))),
+    # Redirect /docs/<app_base_url>/ -> /docs/<app_base_url>/index.html
+    path(
+        "docs/<str:app_base_url>/",
+        RedirectView.as_view(pattern_name="docs_file", permanent=False),
+        kwargs={"path": "index.html"},
+        name="docs_index_redirect",
+    ),
+    # Apps docs - Serve docs file
+    path("docs/<str:app_base_url>/<path:path>", AppDocsView.as_view(), name="docs_file"),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO
@@ -91,15 +104,14 @@ urlpatterns = [
 
 
 if settings.DEBUG:
-    try:
-        import debug_toolbar
+    urlpatterns += [path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview")]
 
-        urlpatterns += [
-            path("__debug__/", include(debug_toolbar.urls)),
-            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
-        ]
-    except ImportError:
-        pass
+
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()
+
 
 if settings.METRICS_ENABLED:
     if settings.METRICS_AUTHENTICATED:

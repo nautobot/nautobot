@@ -12,6 +12,7 @@ from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.contacts import Contact, Team
@@ -24,15 +25,14 @@ class MetadataTypeManager(BaseManager.from_queryset(RestrictedQuerySet)):
     def get_for_model(self, model):
         """Return all MetadataTypes assigned to the given model."""
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        cache_key = construct_cache_key(self, method_name="get_for_model", model=concrete_model._meta.label_lower)
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         return queryset
-
-    get_for_model.cache_key_prefix = "nautobot.extras.metadatatype.get_for_model"
 
 
 @extras_features(
@@ -250,6 +250,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         # so that clean_fields() would not raise any errors
         self.clean()
         return super().validated_save(*args, **kwargs)
+
+    validated_save.alters_data = True
 
     def clean(self):
         """

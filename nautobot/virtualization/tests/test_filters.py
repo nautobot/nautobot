@@ -3,7 +3,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform, SoftwareVersion
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VRF, VRFDeviceAssignment
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.filters import (
     ClusterFilterSet,
@@ -238,6 +238,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         ("status", "status__id"),
         ("status", "status__name"),
         ("vcpus",),
+        ("vrfs", "vrfs__id"),
+        ("vrfs", "vrfs__rd"),
     )
 
     @classmethod
@@ -445,6 +447,13 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
+
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="1:1"),
+            VRF.objects.create(name="VRF 2", rd="1:2"),
+        )
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[0], vrf=vrfs[0])
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[1], vrf=vrfs[1])
 
     def test_filters_generic(self):
         # Assign more than 2 different software versions to VirtualMachine before we test generic filters

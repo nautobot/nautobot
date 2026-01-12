@@ -2,12 +2,12 @@
 {% load static %}
 
 <script type="text/javascript">
-{% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
-var job_is_pending = true;
-{% else %}
-var job_is_pending = false;
-{% endif %}
-var job_result_id = "{{ result.pk }}";
+    {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
+        var job_is_pending = true;
+    {% else %}
+        var job_is_pending = false;
+    {% endif %}
+    var job_result_id = "{{ result.pk }}";
 
 </script>
 <script src="{% versioned_static 'js/job_result.js' %}"

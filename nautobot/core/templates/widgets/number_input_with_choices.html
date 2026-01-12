@@ -1,0 +1,44 @@
+<div class="input-group">
+    {% include 'django/forms/widgets/number.html' %}
+    {% if widget.choices %}
+        <span class="input-group-btn">
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <span class="mdi mdi-chevron-down"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% for value, label in widget.choices %}
+                    <li><a href="#" data-name="{{ widget.name }}" data-value="{{ value }}" class="set_value dropdown-item">{{ label }}</a></li>
+                {% endfor %}
+            </ul>
+        </span>
+    {% endif %}
+</div>
+
+{% if widget.choices %}
+    <script type="text/javascript">
+        (function() {
+            if (window.__nbNumberWithSelectWidgetBound) return;
+            window.__nbNumberWithSelectWidgetBound = true;
+            function bindNumberWithSelectHandler() {
+                document.addEventListener("click", function(e) {
+                    if (!e.target) return;
+                    var link = e.target.closest && e.target.closest("a.set_value");
+                    if (!link) return;
+                    e.preventDefault();
+                    var container = link.closest(".input-group");
+                    var name = link.getAttribute("data-name");
+                    var value = link.getAttribute("data-value");
+                    var input = container && name ? container.querySelector('input[name="' + name + '"]') : null;
+                    if (input) {
+                        input.value = value;
+                    }
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindNumberWithSelectHandler);
+            } else {
+                bindNumberWithSelectHandler();
+            }
+        })();
+    </script>
+{% endif %}

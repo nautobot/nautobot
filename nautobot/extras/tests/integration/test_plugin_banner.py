@@ -1,6 +1,9 @@
+from django.test import tag
+
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
+@tag("example_app")
 class PluginBannerTestCase(SeleniumTestCase):
     """Integration test for rendering of plugin-injected banner content."""
 

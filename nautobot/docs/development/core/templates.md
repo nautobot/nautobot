@@ -87,7 +87,7 @@ The base template for object import is `generic/object_import.html`, with the fo
 
 ## Object Deletion
 
-The base template for object deletion is `generic/object_delete.html`, with the following blocks:
+The base template for object deletion is `generic/object_destroy.html`, with the following blocks:
 
 * `message`: is the confirmation message for deletion, which can be overridden.
     * `message_extra`: provides a way to add to the default message without
@@ -95,12 +95,12 @@ The base template for object deletion is `generic/object_delete.html`, with the 
 
 ## Bulk Edit
 
-The base template for bulk object change is `generic/object_bulk_edit.html`. It
+The base template for bulk object change is `generic/object_bulk_update.html`. It
 does not provide any blocks for customizing the user experience.
 
 ## Bulk Deletion
 
-The base template for bulk object deletion is `generic/object_bulk_delete.html`, with the following blocks:
+The base template for bulk object deletion is `generic/object_bulk_destroy.html`, with the following blocks:
 
 * `message_extra`: provides a way to add to the default message.
 

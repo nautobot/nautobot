@@ -533,10 +533,12 @@ class ModelViewSetMixinTest(testing.APITestCase):
         self.user.is_superuser = True
         self.user.save()
 
-        # Default behavior - m2m fields included
+        # With exclude_m2m query parameter set to False
         view = self.SimpleIPAddressViewSet()
         view.action_map = {"get": "list"}
-        request = APIRequestFactory().get(reverse("ipam-api:ipaddress-list"), headers=self.header)
+        request = APIRequestFactory().get(
+            reverse("ipam-api:ipaddress-list"), headers=self.header, data={"exclude_m2m": False}
+        )
         force_authenticate(request, user=self.user)
         request = view.initialize_request(request)
         view.setup(request)
@@ -561,7 +563,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
             list(instance.vm_interfaces.all())
             list(instance.tags.all())
 
-        # With exclude_m2m query parameter
+        # With exclude_m2m query parameter set to True
         view = self.SimpleIPAddressViewSet()
         view.action_map = {"get": "list"}
         request = APIRequestFactory().get(

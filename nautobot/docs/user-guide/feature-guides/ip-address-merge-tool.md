@@ -17,7 +17,9 @@ To use this tool:
 2. On the top right of the page, you will find a group of buttons representing different available actions and the first one should be `Find and Merge Duplicate IPs`.
 3. Click on that button to access the tool.
 
-![Merge Button](./images/ip-address-merge-tool/ip_merge_button.png)
+![Merge Button](./images/ip-address-merge-tool/ss_ip_merge_button_light.png#only-light){ .on-glb }
+![Merge Button](./images/ip-address-merge-tool/ss_ip_merge_button_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/`"
 
 ## How it works
 
@@ -32,20 +34,26 @@ To use this tool:
 
 Clicking on the `Find and Merge Duplicate IPs` button will automatically query your database for duplicate `IPAddress` objects and group them by their respective `host` values. The tool will present the duplicate `IPAddress` objects in order from lowest to highest `mask_length` values.
 
-![IP Address Merge View](./images/ip-address-merge-tool/merge_view.png)
+![IP Address Merge View](./images/ip-address-merge-tool/ss_merge_view_light.png#only-light){ .on-glb }
+![IP Address Merge View](./images/ip-address-merge-tool/ss_merge_view_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/merge/`"
 
 ### Merging all presented IP addresses
 
 When a set of potentially duplicate `IPAddress` objects are found, the tool will present them and all of their editable attributes as a table. Select the desired value for each attribute and click on the `Merge and Go to the Next Duplicate` button. Nautobot will combine all of the selected `IPAddress` objects into a new `IPAddress` with the attributes you selected.
 If more duplicate addresses are present, with a different `host` value, you will be presented with a new table showing the next set of duplicates, and can repeat this process as needed.
 
-![Merging All Duplicate IPs](./images/ip-address-merge-tool/merge_button.png)
+![Merging All Duplicate IPs](./images/ip-address-merge-tool/ss_merge_button_light.png#only-light){ .on-glb }
+![Merging All Duplicate IPs](./images/ip-address-merge-tool/ss_merge_button_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/merge/`"
 
 ### Merging a subset of presented IP addresses
 
 If you want to keep some of the `IPAddress` objects as distinct records but merge others, you can uncheck the check-boxes in the first column corresponding to the objects you do not wish to merge. From the remaining checked records, select the desired attributes and click on the `Merge and Go to the Next Duplicate` button. This operation will only combine the `IPAddress` objects that you have checked.
 
-![Merging Some Duplicate IPs](./images/ip-address-merge-tool/unselect_ips.png)
+![Merging Some Duplicate IPs](./images/ip-address-merge-tool/ss_unselect_ips_light.png#only-light){ .on-glb }
+![Merging Some Duplicate IPs](./images/ip-address-merge-tool/ss_unselect_ips_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/merge/`"
 
 !!! note
     Unchecking a given `IP Address` prevents its attribute values from being selected for the merge. Moreover, if there are not at least two boxes checked, there is no merging to perform, and so clicking on the `Merge and Go to the Next Duplicate` button will proceed to the next set of duplicate IP addresses without making any changes to the current set.
@@ -54,10 +62,14 @@ If you want to keep some of the `IPAddress` objects as distinct records but merg
 
 If you decide that these `IPAddress` objects presented do not need to be merged, you can click on the `Skip and Go to the Next Duplicate` button to skip merging these `IPAddress` objects and go to the next set of duplicate `IPAddress` objects with a different `host` value.
 
-![Skip Merging Duplicate IPs](./images/ip-address-merge-tool/skip_button.png)
+![Skip Merging Duplicate IPs](./images/ip-address-merge-tool/ss_skip_button_light.png#only-light){ .on-glb }
+![Skip Merging Duplicate IPs](./images/ip-address-merge-tool/ss_skip_button_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/merge/`"
 
 ### No more Duplicate IP Addresses
 
 If you have gone through all duplicate `IPAddress` objects, you will be taken back to the list view of `IPAddress` objects with a message indicating that `No additional duplicate IPs found.`.
 
-![No More Duplicate IPs](./images/ip-address-merge-tool/no_more_dup_ips.png)
+![No More Duplicate IPs](./images/ip-address-merge-tool/ss_no_more_dup_ips_light.png#only-light){ .on-glb }
+![No More Duplicate IPs](./images/ip-address-merge-tool/ss_no_more_dup_ips_dark.png#only-dark){ .on-glb }
+[//]: # "`https://demo.nautobot.com/ipam/ip-addresses/`"

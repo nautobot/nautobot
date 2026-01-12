@@ -4,39 +4,45 @@
 {% block title %}Add {{ component_type }} to {{ parent }}{% endblock %}
 
 {% block content %}
-<form action="." method="post" class="form form-horizontal">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>New {{ component_type }}</strong>
-                </div>
-                <div class="panel-body">
-                    <div class="form-group">
-                        <label class="col-md-3 control-label required">Device Type</label>
-                        <div class="col-md-9">
-                            <p class="form-control-static">{{ parent }}</p>
+    <form action="." method="post" class="h-100 vstack">
+        {% csrf_token %}
+        <div class="row justify-content-center align-content-start flex-fill">
+            <div class="col-xl-8 col-lg-10">
+                {% if form.non_field_errors %}
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
+                            {{ form.non_field_errors }}
                         </div>
                     </div>
-                    {% render_form form %}
+                {% endif %}
+                <div class="card">
+                    <div class="card-header">
+                        <strong>New {{ component_type }}</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-10 d-flex justify-content-center">
+                            <label class="col-lg-3 col-form-label nb-required">Device Type</label>
+                            <div class="col-lg-9">
+                                <p class="form-control-plaintext">{{ parent }}</p>
+                            </div>
+                        </div>
+                        {% render_form form %}
+                    </div>
                 </div>
             </div>
-		    <div class="form-group">
-                <div class="col-md-9 col-md-offset-3">
-                    <button type="submit" name="_update" class="btn btn-primary">Save</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-                </div>
-		    </div>
         </div>
-    </div>
-</form>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_update" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Save
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
+        </div>
+    </form>
 {% endblock %}

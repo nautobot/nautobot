@@ -1,0 +1,2530 @@
+/* nautobot.scss */
+
+@use "sass:list";
+@use "sass:map";
+@use "sass:meta";
+@use "sass:string";
+
+/* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
+@import "bootstrap/scss/functions";
+
+@function replace-svg-color($svg, $original-color, $target-color) {
+  $index: string.index($svg, #{$original-color});
+  $length: string.length(#{$original-color});
+  @return #{string.slice($svg, 1, $index - 1)}#{$target-color}#{string.slice($svg, $index + $length, -1)};
+}
+
+/* 2. Include any default variable overrides here */
+@import "colors";
+
+/* Color system */
+$white: $white-0;
+$black: $black-0;
+
+$blue:   $blue-0;
+$red:    $red-0;
+$orange: $orange-0;
+$yellow: $orange-0;
+$green:  $green-0;
+$cyan:   $blue-0;
+
+$primary:   $blue-0;
+$secondary: $gray-3;
+$success:   $green-0;
+$info:      $blue-0;
+$warning:   $orange-0;
+$danger:    $red-0;
+$light:     $gray-3;
+$dark:      $gray-3;
+
+$primary-text-emphasis:   $blue-0;
+$secondary-text-emphasis: $gray-3;
+$success-text-emphasis:   $green-0;
+$info-text-emphasis:      $blue-0;
+$warning-text-emphasis:   $orange-0;
+$danger-text-emphasis:    $red-0;
+$light-text-emphasis:     $gray-3;
+$dark-text-emphasis:      $gray-3;
+
+$primary-bg-subtle:       $blue-1;
+$secondary-bg-subtle:     $gray-0;
+$success-bg-subtle:       $green-1;
+$info-bg-subtle:          $blue-1;
+$warning-bg-subtle:       $orange-1;
+$danger-bg-subtle:        $red-1;
+$light-bg-subtle:         $gray-0;
+$dark-bg-subtle:          $gray-0;
+
+$primary-border-subtle:   $blue-2;
+$secondary-border-subtle: $gray-05;
+$success-border-subtle:   $green-2;
+$info-border-subtle:      $blue-2;
+$warning-border-subtle:   $orange-2;
+$danger-border-subtle:    $red-2;
+$light-border-subtle:     $gray-05;
+$dark-border-subtle:      $gray-05;
+
+$primary-dark:   $blue-0-dark;
+$secondary-dark: $gray-3-dark;
+$success-dark:   $green-0-dark;
+$info-dark:      $blue-0-dark;
+$warning-dark:   $orange-0-dark;
+$danger-dark:    $red-0-dark;
+$light-dark:     $gray-3-dark;
+$dark-dark:      $gray-3-dark;
+
+$theme-colors-dark: (
+  "primary":   $primary-dark,
+  "secondary": $secondary-dark,
+  "success":   $success-dark,
+  "info":      $info-dark,
+  "warning":   $warning-dark,
+  "danger":    $danger-dark,
+  "light":     $light-dark,
+  "dark":      $dark-dark
+);
+
+$primary-text-emphasis-dark:   $blue-0-dark;
+$secondary-text-emphasis-dark: $gray-3-dark;
+$success-text-emphasis-dark:   $green-0-dark;
+$info-text-emphasis-dark:      $blue-0-dark;
+$warning-text-emphasis-dark:   $orange-0-dark;
+$danger-text-emphasis-dark:    $red-0-dark;
+$light-text-emphasis-dark:     $gray-3-dark;
+$dark-text-emphasis-dark:      $gray-3-dark;
+
+$primary-bg-subtle-dark:   $blue-1-dark;
+$secondary-bg-subtle-dark: $gray-0-dark;
+$success-bg-subtle-dark:   $green-1-dark;
+$info-bg-subtle-dark:      $blue-1-dark;
+$warning-bg-subtle-dark:   $orange-1-dark;
+$danger-bg-subtle-dark:    $red-1-dark;
+$light-bg-subtle-dark:     $gray-0-dark;
+$dark-bg-subtle-dark:      $gray-0-dark;
+
+$primary-border-subtle-dark:   $blue-2-dark;
+$secondary-border-subtle-dark: $gray-05-dark;
+$success-border-subtle-dark:   $green-2-dark;
+$info-border-subtle-dark:      $blue-2-dark;
+$warning-border-subtle-dark:   $orange-2-dark;
+$danger-border-subtle-dark:    $red-2-dark;
+$light-border-subtle-dark:     $gray-05-dark;
+$dark-border-subtle-dark:      $gray-05-dark;
+
+/* Options */
+$enable-shadows:          true;
+$enable-caret:            false;
+$enable-smooth-scroll:    false;
+$enable-negative-margins: true;
+
+$prefix: bs-;
+
+  /* Spacing */
+$spacer: 1rem;
+/*
+ * `$spacers` were supposed to use a popular notation adapted by Tailwind CSS,
+ * where keys include decimals, such as 0.5, 1.5, 2.5, etc. Ultimately, it was
+ * impossible to achieve due to SCSS shortcomings.
+ */
+$spacers: (
+  0:  0,
+  1:  $spacer * 0.0625,
+  2:  $spacer * 0.125,
+  4:  $spacer * 0.25,
+  5:  $spacer * 0.3125,
+  6:  $spacer * 0.375,
+  8:  $spacer * 0.5,
+  10: $spacer * 0.625,
+  12: $spacer * 0.75,
+  14: $spacer * 0.875,
+  16: $spacer * 1,
+  20: $spacer * 1.25,
+  24: $spacer * 1.5,
+);
+
+/* Body */
+$body-color: $black-0;
+$body-bg:    $white-0;
+
+$body-secondary-color: $gray-3;
+$body-secondary-bg:    $bg;
+
+$body-tertiary-color: $gray-2;
+$body-tertiary-bg:    $gray-0;
+
+$body-emphasis-color: $black-0;
+
+$body-color-dark:           $black-0-dark;
+$body-bg-dark:              $white-0-dark;
+$body-secondary-color-dark: $gray-3-dark;
+$body-secondary-bg-dark:    $bg-dark;
+$body-tertiary-color-dark:  $gray-2-dark;
+$body-tertiary-bg-dark:     $gray-0-dark;
+$body-emphasis-color-dark:  $black-0-dark;
+
+/* Links */
+$link-color:            $primary-text-emphasis;
+$link-decoration:       none;
+$link-hover-color:      $link-color;
+$link-hover-decoration: underline;
+
+$link-color-dark:       $primary-text-emphasis-dark;
+$link-hover-color-dark: $link-color-dark;
+
+/* Grid columns */
+$grid-gutter-width: map.get($spacers, 20);
+
+/* Container padding */
+$container-padding-x: $grid-gutter-width * 2;
+
+/* Components */
+/* Use `rem` instead of `px` to enable arithmetics with `$spacers`. */
+$border-width:             0.0625rem; /* 1px */
+$border-widths: (
+  1: $border-width,     /* 1px */
+  2: $border-width * 2, /* 2px */
+  3: $border-width * 3, /* 3px */
+  4: $border-width * 4, /* 4px */
+  5: $border-width * 5  /* 5px */
+);
+$border-color:             $gray-1;
+$border-color-translucent: $border-color;
+
+$border-color-dark:             $gray-1-dark;
+$border-color-translucent-dark: $border-color-dark;
+
+$border-radius:      0.25rem; /* 4px */;
+$border-radius-sm:   $border-radius;
+$border-radius-lg:   $border-radius;
+$border-radius-xl:   $border-radius;
+$border-radius-xxl:  $border-radius;
+$border-radius-pill: $border-radius;
+$border-radius-2xl:  $border-radius;
+
+$box-shadow:    0.3125rem 0.3125rem 0.625rem 0 rgba(0, 0, 0, 0.25);
+$box-shadow-sm: 0 0 0.625rem 0 rgba(0, 0, 0, 0.1);
+$box-shadow-lg: $box-shadow;
+
+$focus-ring-width:      0.25rem; /* 4px */
+$focus-ring-opacity:    1;
+$focus-ring-color:      rgba($primary-border-subtle, $focus-ring-opacity);
+$focus-ring-blur:       0;
+$focus-ring-box-shadow: 0 0 $focus-ring-blur $focus-ring-width var(--#{$prefix}focus-ring-color);
+
+$focus-ring-color-dark: rgba($primary-border-subtle-dark, $focus-ring-opacity);
+
+/* Typography */
+$font-family-sans-serif: "Ubuntu", sans-serif;
+$font-family-monospace:  "Ubuntu Mono", monospace;
+
+$font-size-root: 1rem;     /* Assumes the browser default, typically `16px` */
+$font-size-base: 0.875rem; /* 14px */
+$font-size-sm:   0.75rem;  /* 12px */
+$font-size-lg:   1.125rem; /* 18px */
+
+$line-height-base: 1.4375;
+$line-height-sm:   1;
+$line-height-lg:   1.67;
+
+$h1-font-size: 1.5rem;          /* 24px */
+$h2-font-size: 1.25rem;         /* 20px */
+$h3-font-size: $font-size-lg;   /* 18px */
+$h4-font-size: $font-size-base; /* 14px */
+$h5-font-size: $font-size-sm;   /* 12px */
+$h6-font-size: 0.625rem;        /* 10px */
+
+$headings-margin-bottom: map.get($spacers, 0);
+$headings-line-height:   $line-height-lg;
+
+$small-font-size: $font-size-sm;
+
+$hr-opacity: 1;
+
+/* Tables */
+$table-cell-padding-y:    map.get($spacers, 8);
+$table-cell-padding-x:    map.get($spacers, 10);
+$table-cell-padding-y-sm: map.get($spacers, 4);
+$table-cell-padding-x-sm: map.get($spacers, 4);
+
+$table-th-font-weight: 500;
+
+$table-striped-bg-factor: 1;
+$table-striped-bg:        var(--#{$prefix}tertiary-bg);
+
+$table-active-bg-factor: 1;
+$table-active-bg:        var(--#{$prefix}primary-bg-subtle);
+
+$table-hover-bg-factor: 1;
+$table-hover-bg:        var(--#{$prefix}primary-bg-subtle);
+
+$table-border-factor: 1;
+
+/* Buttons + Forms */
+$input-btn-focus-color: var(--#{$prefix}focus-ring-color);
+
+$input-btn-padding-y:   map.get($spacers, 6)  - $border-width;
+$input-btn-padding-x:   map.get($spacers, 12) - $border-width;
+
+$input-btn-padding-y-sm: map.get($spacers, 2);
+$input-btn-padding-x-sm: map.get($spacers, 8);
+
+$input-btn-padding-y-lg: $input-btn-padding-y;
+$input-btn-padding-x-lg: $input-btn-padding-x;
+$input-btn-font-size-lg: $font-size-base;
+
+/* Buttons */
+$btn-box-shadow:        0 0 0 0 transparent;
+$btn-disabled-opacity:  1;
+$btn-active-box-shadow: none;
+
+$btn-link-disabled-color:   $body-tertiary-color;
+$btn-link-focus-shadow-rgb: to-rgb($primary-border-subtle);
+
+$btn-link-disabled-color-dark:   $body-tertiary-color-dark;
+$btn-link-focus-shadow-rgb-dark: to-rgb($primary-border-subtle-dark);
+
+/* Forms */
+$input-bg:                    var(--#{$prefix}body-bg);
+$input-disabled-color:        var(--#{$prefix}tertiary-color);
+$input-disabled-bg:           var(--#{$prefix}tertiary-bg);
+$input-disabled-border-color: var(--#{$prefix}border-color);
+
+$input-box-shadow: 0 0 0 0 transparent;
+
+$input-focus-border-color: var(--#{$prefix}primary-text-emphasis);
+
+$form-check-input-width:      1.25rem;
+$form-check-input-min-height: 1.25rem;
+$form-check-padding-start:    0;
+$form-check-margin-bottom:    0;
+
+$form-check-input-bg:            $input-bg;
+$form-check-input-border-radius: var(--#{$prefix}border-radius);
+
+$form-check-input-checked-color:        var(--#{$prefix}primary-text-emphasis);
+$form-check-input-checked-bg-color:     $form-check-input-bg;
+$form-check-input-checked-border-color: $form-check-input-checked-color;
+$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='m6 10 3 3 6-6'/></svg>");
+$form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
+
+$form-check-input-indeterminate-color:        $form-check-input-checked-color;
+$form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
+$form-check-input-indeterminate-border-color: $form-check-input-checked-border-color;
+$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M6 10h8'/></svg>");
+
+$form-check-input-disabled-opacity:     1;
+$form-check-label-disabled-opacity:     $form-check-input-disabled-opacity;
+
+$form-check-inline-margin-end: map.get($spacers, 16);
+
+/* Navs */
+$nav-tabs-link-hover-border-color:  var(--#{$prefix}border-color);
+$nav-tabs-link-active-color:        var(--#{$prefix}body-color);
+$nav-tabs-link-active-border-color: var(--#{$prefix}border-color);
+
+/* Dropdowns */
+$dropdown-min-width:        15rem;
+$dropdown-padding-y:        map.get($spacers, 4) - $border-width;
+$dropdown-spacer:           $border-width;
+$dropdown-bg:               var(--#{$prefix}body-bg);
+$dropdown-border-color:     var(--#{$prefix}border-color);
+$dropdown-divider-margin-y: map.get($spacers, 4);
+$dropdown-box-shadow:       $box-shadow;
+
+$dropdown-link-hover-color: var(--#{$prefix}body-color);
+$dropdown-link-hover-bg:    var(--#{$prefix}primary-bg-subtle);
+
+$dropdown-link-active-color: var(--#{$prefix}primary-text-emphasis);
+$dropdown-link-active-bg:    $dropdown-bg;
+
+$dropdown-link-disabled-color: var(--#{$prefix}tertiary-color);
+
+$dropdown-item-padding-y: map.get($spacers, 4);
+$dropdown-item-padding-x: map.get($spacers, 12);
+
+$dropdown-header-color:     var(--#{$prefix}secondary-color);
+/* Using a workaround below to get all 4 individual padding values with shorthand property. */
+$dropdown-header-padding-x: map.get($spacers, 4) $dropdown-item-padding-x;
+$dropdown-header-padding-y: map.get($spacers, 8) $dropdown-item-padding-x;
+
+$dropdown-dark-color:               $body-emphasis-color-dark;
+$dropdown-dark-bg:                  $body-bg-dark;
+$dropdown-dark-border-color:        $border-color-dark;
+$dropdown-dark-divider-bg:          $dropdown-dark-border-color;
+$dropdown-dark-box-shadow:          $dropdown-box-shadow;
+$dropdown-dark-link-hover-color:    $body-color-dark;
+$dropdown-dark-link-hover-bg:       $primary-bg-subtle-dark;
+$dropdown-dark-link-active-color:   $primary-text-emphasis-dark;
+$dropdown-dark-link-active-bg:      $primary-bg-subtle-dark;
+$dropdown-dark-link-disabled-color: $body-tertiary-color-dark;
+$dropdown-dark-header-color:        $body-secondary-color-dark;
+
+/* Pagination */
+$pagination-padding-y:    $input-btn-padding-y;
+$pagination-padding-x:    $input-btn-padding-x;
+$pagination-padding-y-sm: $input-btn-padding-y-sm;
+$pagination-padding-x-sm: $input-btn-padding-x-sm;
+$pagination-padding-y-lg: $input-btn-padding-y-lg;
+$pagination-padding-x-lg: $input-btn-padding-x-lg;
+
+$pagination-focus-bg: var(--#{$prefix}primary-bg-subtle);
+
+$pagination-hover-bg: var(--#{$prefix}primary-bg-subtle);
+
+$pagination-active-color:        $white;
+$pagination-active-bg:           var(--#{$prefix}primary-text-emphasis);
+$pagination-active-border-color: var(--#{$prefix}primary-text-emphasis);
+
+/* Cards */
+$card-spacer-y:       map.get($spacers, 8);
+$card-spacer-x:       map.get($spacers, 10);
+$card-title-spacer-y: $card-spacer-y;
+$card-title-color:    var(--#{$prefix}secondary-color);
+$card-subtitle-color: var(--#{$prefix}tertiary-color);
+$card-border-color:   var(--#{$prefix}border-color);
+$card-cap-padding-y:  $card-spacer-y;
+$card-cap-padding-x:  $card-spacer-x;
+$card-cap-bg:         var(--#{$prefix}tertiary-bg);
+$card-cap-color:      $card-title-color;
+$card-bg:             var(--#{$prefix}body-bg);
+
+/* Badges */
+$badge-font-size:   $font-size-base;
+$badge-font-weight: 400;
+$badge-color:       $body-color;
+$badge-padding-y:   map.get($spacers, 2);
+$badge-padding-x:   map.get($spacers, 8);
+
+/* Modals */
+$modal-title-line-height: $line-height-base;
+
+/* List group */
+$list-group-item-padding-y: $table-cell-padding-y;
+$list-group-item-padding-x: $table-cell-padding-x;
+
+/* Breadcrumbs */
+$breadcrumb-item-padding-x: map.get($spacers, 4);
+$breadcrumb-margin-bottom:  0;
+
+/* Close */
+$btn-close-width:            1.5rem; /* 24px */
+$btn-close-padding-x:        0;
+$btn-close-color:            #000000; /* Set color with proper CSS `filter` below. */
+$btn-close-bg:               url("data:image/svg+xml,<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' clip-rule='evenodd' d='M5.46967 5.46967C5.76256 5.17678 6.23744 5.17678 6.53033 5.46967L12 10.9393L17.4697 5.46967C17.7626 5.17678 18.2374 5.17678 18.5303 5.46967C18.8232 5.76256 18.8232 6.23744 18.5303 6.53033L13.0607 12L18.5303 17.4697C18.8232 17.7626 18.8232 18.2374 18.5303 18.5303C18.2374 18.8232 17.7626 18.8232 17.4697 18.5303L12 13.0607L6.53033 18.5303C6.23744 18.8232 5.76256 18.8232 5.46967 18.5303C5.17678 18.2374 5.17678 17.7626 5.46967 17.4697L10.9393 12L5.46967 6.53033C5.17678 6.23744 5.17678 5.76256 5.46967 5.46967Z' fill='#{$btn-close-color}'/></svg>");
+$btn-close-opacity:          0.68;
+$btn-close-hover-opacity:    1;
+$btn-close-focus-opacity:    1;
+$btn-close-disabled-opacity: 0.31;
+$btn-close-filter:           invert(1%) sepia(10%) saturate(233%) hue-rotate(314deg) brightness(99%) contrast(81%); /* $black-0: #1a1a1a; */
+$btn-close-filter-dark:      invert(100%); /* $black-0-dark: #ffffff; */
+$btn-close-white-filter:     $btn-close-filter-dark;
+
+/* Code */
+$code-font-size: $font-size-base;
+
+$kbd-padding-y: map.get($spacers, 1);
+$kbd-padding-x: map.get($spacers, 4);
+$kbd-color:     var(--#{$prefix}secondary-color);
+$kbd-bg:        var(--#{$prefix}secondary-bg);
+
+/* 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets) */
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+
+/* 4. Include any default map overrides here */
+$theme-colors-rgb-dark: map-loop($theme-colors-dark, to-rgb, "$value");
+
+/* Breakpoints */
+$sidenav-width-for-breakpoints: 240px; // this is only for calculations below; sidenav has separate variable in rem in Layout section
+
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px + $sidenav-width-for-breakpoints,
+  md: 768px + $sidenav-width-for-breakpoints,
+  lg: 992px + $sidenav-width-for-breakpoints,
+  xl: 1200px + $sidenav-width-for-breakpoints,
+  xxl: 1400px + $sidenav-width-for-breakpoints
+);
+
+/* 5. Include remainder of required parts */
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+
+/*
+ * Modify original Bootstrap `color-mode` mixin to fall back to `prefers-color-scheme` media query when `data-bs-theme`
+ * attribute is not explicitly set on document root `<html>` element. This prevents white background flash during page
+ * load when application theme is set to `system` and system theme is `dark`.
+ */
+@mixin color-mode($mode: light, $root: false) {
+  @if $color-mode-type == "media-query" {
+    @if $root == true {
+      @media (prefers-color-scheme: $mode) {
+        :root {
+          @content;
+        }
+      }
+    } @else {
+      @media (prefers-color-scheme: $mode) {
+        @content;
+      }
+    }
+  } @else {
+    [data-bs-theme="#{$mode}"] {
+      @content;
+    }
+    @if $root == true {
+      @media (prefers-color-scheme: $mode) {
+        :root:not([data-bs-theme]) {
+          @content;
+        }
+      }
+    }
+  }
+}
+
+@import "bootstrap/scss/utilities";
+
+$utilities: map-merge(
+  $utilities,
+  (
+    "nb-color": (
+      class: nb-text,
+      property: color,
+      values: (
+        body-bg: var(--#{$prefix}body-bg),
+        transparent: transparent,
+      ),
+    ),
+    "nb-cursor": (
+      class: nb-cursor,
+      property: cursor,
+      values: unset,
+    ),
+    "nb-text": (
+      class: nb-text,
+      property: text-transform,
+      values: none,
+    ),
+    "nb-transition": (
+      class: nb-transition,
+      property: transition,
+      values: (
+        base: $transition-base,
+        fade: $transition-fade,
+        none: none,
+      ),
+    ),
+    "nb-w": (
+      class: nb-w,
+      property: width,
+      values: (
+        0: 0,
+      )
+    ),
+    "nb-z-index": (
+      class: nb-z,
+      property: z-index,
+      values: (
+        dropdown:           $zindex-dropdown,           /* 1000 */
+        sticky:             $zindex-sticky,             /* 1020 */
+        fixed:              $zindex-fixed,              /* 1030 */
+        offcanvas-backdrop: $zindex-offcanvas-backdrop, /* 1040 */
+        offcanvas:          $zindex-offcanvas,          /* 1045 */
+        modal-backdrop:     $zindex-modal-backdrop,     /* 1050 */
+        modal:              $zindex-modal,              /* 1055 */
+        popover:            $zindex-popover,            /* 1070 */
+        tooltip:            $zindex-tooltip,            /* 1080 */
+        toast:              $zindex-toast,              /* 1090 */
+      )
+    ),
+  )
+);
+
+/* 6. Optionally include any other parts as needed */
+/* TODO: review the below and trim it down as appropriate */
+@import "bootstrap/scss/root";
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/accordion";
+@import "bootstrap/scss/breadcrumb";
+@import "bootstrap/scss/pagination";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+@import "bootstrap/scss/progress";
+@import "bootstrap/scss/list-group";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/toasts";
+@import "bootstrap/scss/modal";
+@import "bootstrap/scss/tooltip";
+@import "bootstrap/scss/popover";
+/* @import "bootstrap/scss/carousel"; */
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/offcanvas";
+@import "bootstrap/scss/placeholders";
+
+@import "bootstrap/scss/helpers";
+
+/* 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss` */
+@import "bootstrap/scss/utilities/api";
+
+/* 8. Include select2 and select2-bootstrap5-theme here */
+@import "select2/src/scss/core";
+
+$s2bs5-padding-y:       $form-select-padding-y;
+$s2bs5-padding-x:       $form-select-padding-x;
+
+/* Variables below cannot reference CSS custom properties because of Select2 processing error. We overwrite it later. */
+$s2bs5-item-active-bg:  $body-bg;
+$s2bs5-item-hover-bg:   $primary-bg-subtle;
+$s2bs5-item-focus-bg:   $primary-bg-subtle;
+
+$s2bs5-clear-width:     0.75rem; /* 12px */
+$s2bs5-clear-height:    0.75rem; /* 12px */
+$s2bs5-clear-padding-x: $badge-padding-x;
+$s2bs5-clear-padding-y: $badge-padding-y;
+/* This is a workaround for select2-bootstrap5-theme issue: https://github.com/apalfrey/select2-bootstrap-5-theme/issues/75 */
+$s2bs5-clear-icon:      $btn-close-bg;
+$s2bs5-clear-bg:        transparent escape-svg($s2bs5-clear-icon) center / $s2bs5-clear-height auto no-repeat;
+$s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs5-clear-height auto no-repeat;
+
+@import "select2-bootstrap-5-theme/src/include-all";
+
+@mixin select2-clear-icon($size: $s2bs5-clear-height) {
+  &:hover {
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  /* Render background image within `::after` instead of base element to separate scope for `filter` color manipulation. */
+  &::after {
+    @include transition($transition-fade);
+    background: transparent escape-svg($s2bs5-clear-icon) center / $size auto no-repeat;
+    content: "";
+    filter: $btn-close-filter;
+    inset: map.get($spacers, 0);
+    opacity: $btn-close-opacity;
+    position: absolute;
+  }
+}
+
+@include color-mode(dark, true) {
+  .select2-container--bootstrap-5 {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      .select2-selection__clear {
+        &::after {
+          filter: $btn-close-filter-dark;
+        }
+      }
+    }
+
+    .select2-selection--multiple {
+      .select2-selection__rendered {
+        .select2-selection__choice {
+          .select2-selection__choice__remove {
+            &::after {
+              filter: $btn-close-filter-dark;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.select2-container--bootstrap-5 {
+  $select2-clear-width-lg: 1.25rem; /* 20px */
+
+  .select2-dropdown {
+    .select2-results__options {
+      .select2-results__option {
+        &.select2-results__option--highlighted {
+          color: $dropdown-link-hover-color;
+          background-color: $dropdown-link-hover-bg;
+        }
+
+        &.select2-results__option--selected,
+        &[aria-selected="true"]:not(.select2-results__option--highlighted) {
+          color: $dropdown-link-active-color;
+          background-color: $dropdown-link-active-bg;
+        }
+
+        /*
+         * The rule below merges styles of highlighted and selected states. It is an addition to the original Select2
+         * Bootstrap 5 theme, in which highlighted and selected states are mutually exclusive.
+         */
+        &.select2-results__option--highlighted.select2-results__option--selected,
+        &.select2-results__option--highlighted[aria-selected="true"] {
+          color: $dropdown-link-active-color;
+          background-color: $dropdown-link-hover-bg;
+        }
+      }
+    }
+  }
+
+  .select2-selection--single {
+    .select2-selection__rendered {
+      padding-inline-end: $select2-clear-width-lg + map.get($spacers, 6);
+    }
+  }
+
+  .select2-selection--multiple {
+    .select2-selection__rendered {
+      // Do not add additional `6px` to padding as above - multi-select badges already have it as their own margin.
+      padding-inline-end: $select2-clear-width-lg;
+    }
+  }
+
+  .select2-selection--single,
+  .select2-selection--multiple {
+    .select2-selection__clear {
+      @include select2-clear-icon($select2-clear-width-lg);
+      @include transition($btn-transition);
+      background: transparent;
+      border-radius: $border-radius;
+      color: transparent; /* Hide "&times;" ("×") character. */
+      padding: map.get($spacers, 10);
+      top: $s2bs5-padding-y;
+      transform: none;
+
+      &:hover {
+        background: var(--#{$prefix}border-color);
+      }
+    }
+  }
+
+  .select2-selection--multiple {
+    .select2-selection__rendered {
+      .select2-selection__choice {
+        border-color: var(--#{$prefix}tertiary-color); /* Supposed to be the standard border color but on a special request it was darkened to improve contrast and readability. */
+        line-height: $line-height-sm;
+        overflow-x: hidden;
+
+        .select2-selection__choice__remove {
+          @include select2-clear-icon;
+          @include transition($btn-transition);
+          background: transparent;
+          color: transparent; /* Hide "&times;" ("×") character. */
+          cursor: pointer;
+          height: auto;
+          margin-block: -#{$s2bs5-clear-padding-y};
+          margin-inline-end: -#{$s2bs5-clear-padding-x};
+          margin-inline-start: map.get($spacers, 0);
+          order: 1000; /* Place "X" at the end of the badge. */
+          position: relative;
+          width: auto;
+
+          &:hover {
+            background: var(--#{$prefix}border-color);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 9. Add additional custom code here */
+$nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M0.277304 13C0.181925 13 0.102443 12.9571 0.054754 12.8856C-0.0247279 12.7711 0.022961 12.6281 0.150132 12.5566L4.96673 9.99603L0.134236 7.4498C0.00706488 7.37828 -0.040624 7.23523 0.0388579 7.12079C0.11834 7.00636 0.277303 6.96344 0.404474 7.03497L6 9.99603L0.404474 12.9714C0.372681 13 0.324993 13 0.277304 13Z' fill='#FF8400'/><path d='M6.26141 13C6.16603 13 6.08655 12.9571 6.03886 12.8856C5.95938 12.7711 6.00706 12.6281 6.13424 12.5566L10.9508 9.99603L6.13424 7.4498C6.00706 7.37828 5.95938 7.23523 6.03886 7.12079C6.11834 7.00636 6.2773 6.96344 6.40447 7.03497L12 9.99603L6.40447 12.9714C6.35679 13 6.3091 13 6.26141 13Z' fill='#FF8400'/><path d='M12.2311 13C12.1516 13 12.0854 12.9571 12.0456 12.8856C11.9794 12.7711 12.0191 12.6281 12.1251 12.5566L16.1389 9.99603L12.1119 7.4498C12.0059 7.37828 11.9661 7.23523 12.0324 7.12079C12.0986 7.00636 12.2311 6.96344 12.3371 7.03497L17 9.99603L12.3371 12.9714C12.3106 13 12.2708 13 12.2311 13Z' fill='#FF8400'/></svg>";
+
+@if $enable-dark-mode {
+  @include color-mode(dark, true) {
+    /* Colors */
+    @each $color, $value in $theme-colors-dark {
+      --#{$prefix}#{$color}: #{$value};
+    }
+
+    @each $color, $value in $theme-colors-rgb-dark {
+      --#{$prefix}#{$color}-rgb: #{$value};
+    }
+
+    /* Focus styles */
+    --#{$prefix}focus-ring-color: #{$focus-ring-color-dark};
+
+    @include meta.load-css('flatpickr/dist/themes/dark.css');
+  }
+
+  @include color-mode(light, true) {
+    @include meta.load-css('flatpickr/dist/themes/light.css');
+  }
+}
+
+/* Links */
+a,
+button {
+  outline: none;
+  @include transition($btn-transition);
+
+  &:focus-visible {
+    @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}focus-ring-color));
+  }
+}
+
+/* Tables */
+.table {
+  margin-block-end: map.get($spacers, 0);
+
+  > thead:not(caption) > tr > th {
+    background-color: var(--#{$prefix}tertiary-bg);
+    color: var(--#{$prefix}tertiary-color);
+    position: relative;
+
+    &.nb-actionable,
+    &.orderable {
+      color: var(--#{$prefix}secondary-color);
+
+      a,
+      button {
+        &:empty {
+          display: none; /* Fix for focusable actions column header. */
+        }
+
+        &:not(:is(.disabled, :disabled, :empty)) {
+          color: inherit;
+          display: inline-block;
+          margin-block: -#{$table-cell-padding-y};
+          margin-inline: -#{$table-cell-padding-x};
+          padding-block: $table-cell-padding-y;
+          padding-inline: $table-cell-padding-x;
+          text-decoration: none;
+          width: calc(100% + #{$table-cell-padding-x} * 2);
+
+          &:focus-visible,
+          &:hover {
+            background-color: var(--#{$prefix}primary-bg-subtle);
+          }
+        }
+      }
+    }
+  }
+
+  .nb-actions {
+    .dropdown {
+      font-size: 0; /* Use `font-size: 0;` to remove any visible whitespace. */
+
+      .dropdown-toggle {
+        /*
+         * Make table actions dropdown toggle button occupy the entire cell (works for default table cell size):
+         *   1. Use negative margins to "cancel" table cell padding.
+         *   2. Overwrite default button padding with table cell padding. In addition to that, subtract  border width
+         *      from each side because paddings and borders add up, and idle button already has a (transparent) border.
+         */
+        margin-block: -#{$table-cell-padding-y};
+        margin-inline: -#{$table-cell-padding-x};
+        padding-block: $table-cell-padding-y - $border-width;
+        padding-inline: $table-cell-padding-x - $border-width;
+      }
+    }
+  }
+}
+
+.table-hover {
+  > tbody > tr {
+    /* By default Bootstrap 5 defines only `:hover` and we need to slightly extend it to improve end user experience. */
+    &:hover,
+    &:focus-within,
+    &:has( .dropdown-toggle.show) { /* Leading space inside `has` is intentional and stands for descendant nodes. */
+      > * {
+        --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
+        --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
+
+        &.nb-actions .dropdown-toggle {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  > tbody > tr > * {
+    transition: $btn-transition; /* Use `$btn-transition` but in fact it is just for `background-color`. */
+
+    &.nb-actions .dropdown-toggle {
+      @include transition($btn-transition, $transition-fade);
+      opacity: 0;
+    }
+  }
+}
+
+$table-variant-primary: (
+  "active": var(--#{$prefix}primary-border-subtle),
+  "bg":     var(--#{$prefix}primary-bg-subtle),
+  "border": var(--#{$prefix}primary-text-emphasis),
+  "text":   var(--#{$prefix}primary-text-emphasis),
+);
+$table-variant-secondary: (
+  "active": var(--#{$prefix}secondary-border-subtle),
+  "bg":     var(--#{$prefix}secondary-bg-subtle),
+  "border": var(--#{$prefix}border-color),
+  "text":   var(--#{$prefix}emphasis-color),
+);
+$table-variant-success: (
+  "active": var(--#{$prefix}success-border-subtle),
+  "bg":     var(--#{$prefix}success-bg-subtle),
+  "border": var(--#{$prefix}success-text-emphasis),
+  "text":   var(--#{$prefix}success-text-emphasis),
+);
+$table-variant-danger: (
+  "active": var(--#{$prefix}danger-border-subtle),
+  "bg":     var(--#{$prefix}danger-bg-subtle),
+  "border": var(--#{$prefix}danger-text-emphasis),
+  "text":   var(--#{$prefix}danger-text-emphasis),
+);
+$table-variant-warning: (
+  "active": var(--#{$prefix}warning-border-subtle),
+  "bg":     var(--#{$prefix}warning-bg-subtle),
+  "border": var(--#{$prefix}warning-text-emphasis),
+  "text":   var(--#{$prefix}warning-text-emphasis),
+);
+$table-variants: (
+  "primary":   $table-variant-primary,
+  "secondary": $table-variant-secondary,
+  "success":   $table-variant-success,
+  "danger":    $table-variant-danger,
+  "warning":   $table-variant-warning,
+  "info":      $table-variant-primary,
+  "light":     $table-variant-secondary,
+  "dark":      $table-variant-secondary,
+  "default":   $table-variant-secondary
+);
+@each $color, $variant-colors in $table-variants {
+  .table-#{$color} {
+    --#{$prefix}table-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}table-striped-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}table-striped-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-active-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-active-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}table-hover-bg: #{map.get($variant-colors, "active")};
+    --#{$prefix}table-hover-color: #{map.get($variant-colors, "text")};
+
+    color: var(--#{$prefix}table-color);
+    border-color: var(--#{$prefix}table-border-color);
+
+    @if $color == "primary" or $color == "info" {
+      a {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.nb-table-headings th {
+  background-color: var(--#{$prefix}tertiary-bg);
+  white-space: nowrap;
+}
+
+table.attr-table td:nth-child(1) {
+  width: 25%;
+}
+
+/* Buttons */
+.btn {
+  --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} var(--#{$prefix}primary-border-subtle);
+  --#{$prefix}btn-active-border-color: var(--#{$prefix}primary-text-emphasis);
+}
+
+$btn-variant-primary: (
+  "bg":     var(--#{$prefix}primary-bg-subtle),
+  "border": var(--#{$prefix}primary-text-emphasis),
+  "ring":   var(--#{$prefix}primary-border-subtle),
+  "text":   var(--#{$prefix}primary-text-emphasis),
+);
+$btn-variant-secondary: (
+  "bg":     var(--#{$prefix}secondary-bg-subtle),
+  "border": var(--#{$prefix}border-color),
+  "ring":   var(--#{$prefix}secondary-border-subtle),
+  "text":   var(--#{$prefix}emphasis-color),
+);
+$btn-variant-success: (
+  "bg":     var(--#{$prefix}success-bg-subtle),
+  "border": var(--#{$prefix}success-text-emphasis),
+  "ring":   var(--#{$prefix}success-border-subtle),
+  "text":   var(--#{$prefix}success-text-emphasis),
+);
+$btn-variant-danger: (
+  "bg":     var(--#{$prefix}danger-bg-subtle),
+  "border": var(--#{$prefix}danger-text-emphasis),
+  "ring":   var(--#{$prefix}danger-border-subtle),
+  "text":   var(--#{$prefix}danger-text-emphasis),
+);
+$btn-variant-warning: (
+  "bg":     var(--#{$prefix}warning-bg-subtle),
+  "border": var(--#{$prefix}warning-text-emphasis),
+  "ring":   var(--#{$prefix}warning-border-subtle),
+  "text":   var(--#{$prefix}warning-text-emphasis),
+);
+$btn-variants: (
+  "primary":   $btn-variant-primary,
+  "secondary": $btn-variant-secondary,
+  "success":   $btn-variant-success,
+  "danger":    $btn-variant-danger,
+  "warning":   $btn-variant-warning,
+  "info":      $btn-variant-primary,
+  "light":     $btn-variant-secondary,
+  "dark":      $btn-variant-secondary,
+  "default":   $btn-variant-secondary
+);
+
+@each $color, $variant-colors in $btn-variants  {
+  .btn-#{$color},
+  .btn-outline-#{$color} {
+    --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} #{map.get($variant-colors, "ring")};
+
+    /* Bootstrap utilizes `button-variant` mixin but apparently it does not support color modes. */
+    --#{$prefix}btn-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-bg: transparent;
+    --#{$prefix}btn-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-hover-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-hover-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}btn-hover-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-active-color: #{map.get($variant-colors, "text")};
+    --#{$prefix}btn-active-bg: #{map.get($variant-colors, "bg")};
+    --#{$prefix}btn-active-border-color: #{map.get($variant-colors, "border")};
+    --#{$prefix}btn-active-shadow: #{$btn-box-shadow};
+    --#{$prefix}btn-disabled-color: var(--#{$prefix}tertiary-color);
+    --#{$prefix}btn-disabled-bg: var(--#{$prefix}tertiary-bg);
+    --#{$prefix}btn-disabled-border-color: var(--#{$prefix}border-color);
+  }
+}
+
+.btn-link {
+  --#{$prefix}btn-hover-bg: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} var(--#{$prefix}focus-ring-color);
+
+  --#{$prefix}btn-hover-border-color: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-active-border-color: var(--#{$prefix}primary-bg-subtle);
+  --#{$prefix}btn-disabled-color: var(--#{$prefix}tertiary-color);
+  --#{$prefix}btn-disabled-bg: var(--#{$prefix}tertiary-bg);
+  --#{$prefix}btn-disabled-border-color: var(--#{$prefix}border-color);
+  --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
+}
+
+.btn-xs {
+  @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $btn-border-radius-sm);
+}
+
+.nb-btn-indicator {
+  background: var(--#{$prefix}warning-text-emphasis);
+  border-radius: 50%;
+  height: 0.5rem; /* 8px */
+  position: absolute;
+  right: map.get($spacers, 8);
+  top: map.get($spacers, 2);
+  width: 0.5rem; /* 8px */
+
+  /* Additional support for button indicator as an MDI icon, not a simple circle. */
+  .btn &:is(i, span).mdi { /* It is required to bump selector specificity here with `.btn` and `:is(i, span)`. */
+    background: transparent;
+    color: var(--#{$prefix}warning-text-emphasis);
+
+    &::before {
+      font-size: $font-size-base;
+      top: -#{map.get($spacers, 4)};
+      right: map.get($spacers, 2);
+    }
+  }
+}
+
+/* Forms */
+label {
+  &.col-form-label {
+    color: var(--#{$prefix}secondary-color);
+    padding-inline-end: map.get($spacers, 10);
+    text-align: end;
+  }
+
+  .form-text ul {
+    float: right;
+    text-align: start;
+  }
+
+  &.nb-required {
+    font-weight: $font-weight-medium;
+
+    &::before {
+      color: var(--#{$prefix}danger-text-emphasis);
+      content: "*";
+      float: right;
+      margin-inline-start: map.get($spacers, 4);
+    }
+  }
+}
+
+textarea {
+  font-family: $font-family-monospace;
+}
+
+.form-control {
+  &:hover:not(:disabled):not([readonly]) {
+    border-color: var(--#{$prefix}primary-text-emphasis);
+  }
+
+  /* Webkit browsers add "X" icon in `[type="search"]` input fields. It looks off and offers little configurability. */
+  &[type="search"]::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.form-check {
+  /* Bootstrap 5 uses floats as a workaround here. Nautobot makes it more manageable with `display: flex` instead. */
+  display: flex;
+
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  .form-check-input {
+    float: none;
+
+    ~ .form-check-label {
+      padding-inline-start: map.get($spacers, 10);
+    }
+  }
+}
+
+.form-check-reverse {
+  justify-content: flex-end;
+
+  .form-check-input {
+    order: 9999; /* In `reverse` configuration, make sure this element always goes to the right-hand side. */
+
+    ~ .form-check-label {
+      padding-inline-end: map.get($spacers, 10);
+    }
+  }
+}
+
+.form-check-input {
+  @include transition($btn-transition);
+  margin-top: 0; /* Reset Bootstrap 5 who-knows-why top margin. */
+
+  &:focus {
+    background-color: var(--#{$prefix}primary-bg-subtle);
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):has(+ .form-check-label:hover) {
+    background-color: var(--#{$prefix}primary-bg-subtle);
+    border-color: $form-check-input-focus-border;
+  }
+
+  &:disabled {
+    background-color: $input-disabled-bg;
+    color: $input-disabled-color;
+  }
+
+  &[disabled],
+  &:disabled {
+    ~ .form-check-label {
+      color: $input-disabled-color;
+    }
+  }
+}
+
+.nb-form-check-input-sm {
+  height: 1rem; /* 16px */
+  width: 1rem; /* 16px */
+}
+
+.form-text {
+  display: block;
+  font-weight: $font-weight-normal;
+}
+
+.nb-form-group {
+  &:not(:last-child) {
+    margin-block-end: map.get($spacers, 10);
+  }
+
+  label {
+    font-size: $font-size-sm;
+    margin-block-end: map.get($spacers, 4);
+    margin-inline-start: map.get($spacers, 12);
+  }
+}
+
+.nb-form-sticky-footer {
+  @include transition($transition-base);
+  align-items: center;
+  background-color: var(--#{$prefix}body-bg);
+  border-top: $border-width $border-style var(--#{$prefix}border-color);
+  bottom: -#{map.get($spacers, 1)}; /* Set bottom to `-1px` instead of `0`, this enables detection when element is pinned. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: map.get($spacers, 8);
+  justify-content: center;
+  margin-block-end: -#{map.get($spacers, 16)};
+  margin-inline: -#{map.get($spacers, 20)};
+  padding-block-end: map.get($spacers, 16);
+  padding-block-start: map.get($spacers, 16);
+  padding-inline: map.get($spacers, 20);
+  position: sticky;
+  right: 0;
+  transition: $transition-base;
+  z-index: $zindex-sticky;
+
+  &.nb-is-pinned {
+    @include box-shadow(0 -0.3125rem 0.625rem 0 rgba(0, 0, 0, 0.1));
+  }
+}
+
+/* Tabs */
+.nav-tabs {
+  --#{$prefix}nav-link-padding-x: #{map.get($spacers, 12) - $border-width};
+  --#{$prefix}nav-link-padding-y: #{map.get($spacers, 6) - $border-width};
+  --#{$prefix}nav-link-color: var(--#{$prefix}body-color);
+  --#{$prefix}nav-link-hover-color: var(--#{$prefix}body-color);
+  --#{$prefix}nav-link-disabled-color: var(--#{$prefix}tertiary-color);
+
+  background: inherit;
+  padding-inline: #{map.get($spacers, 20)};
+  position: relative;
+
+  .nav-item {
+    white-space: nowrap;
+
+    &:not(:first-child) {
+      margin-inline-start: #{map.get($spacers, 8)};
+    }
+  }
+
+  .nav-link {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: map.get($spacers, 6);
+
+    &:hover,
+    &:focus {
+      background-color: var(--#{$prefix}nav-tabs-link-active-bg);
+    }
+
+    &.active {
+      border-bottom-color: var(--#{$prefix}nav-tabs-link-active-bg);
+    }
+  }
+}
+
+/* Dropdowns */
+.dropdown-header {
+  @include font-size($font-size-base);
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+}
+
+.dropdown-item {
+  align-items: center;
+  display: flex;
+  gap: map.get($spacers, 8);
+}
+
+/* Cards */
+.card {
+  overflow: hidden; /* Fix border-radii for card content. */
+  margin-bottom: map.get($spacers, 16);  /* Default to mb-16 equivalent */
+
+  /* When card content is collapsed prevent card bottom border duplication by entirely removing `border-bottom` from card header. */
+  &:has(.collapse:not(.show)) .card-header {
+    border-bottom: none;
+  }
+
+  /* Fix borders in case when `table` is rendered inside a `card`, e.g. in list views, detail views, etc. */
+  .table {
+    @mixin remove-row-border-bottom() {
+      > * { /* Every cell. */
+        border-bottom: none;
+      }
+    }
+
+    &:last-child { /* If table is the last item in card. */
+      > :is(tbody, thead, tfoot):last-child { /* Bottommost table section group. */
+        > :last-child { /* Bottommost row. */
+          @include remove-row-border-bottom;
+        }
+      }
+
+      > tr:last-child { /* Bottommost row in case simplified table structure is used (i.e. without `thead`, `tbody`). */
+        @include remove-row-border-bottom;
+      }
+    }
+  }
+
+  .list-group {
+    /* Remove borders (except `border-bottom`) from list group items in cards, cards already have their own borders. */
+    .list-group-item {
+      border-block-start: none;
+      border-inline: none;
+    }
+
+    /* Remove `border-bottom` from the very last group list item because it duplicates card's own `border-bottom`. */
+    &:last-child .list-group-item:last-child {
+      border-block-end: none;
+    }
+  }
+}
+
+.card-body {
+  .nav-tabs {
+    margin-inline: $card-spacer-x * -1;
+  }
+
+  .tab-content {
+    > .tab-pane {
+      padding-block-start: $card-spacer-y;
+    }
+  }
+}
+
+.card-header {
+  position: relative;
+  text-transform: uppercase;
+
+  /*
+   * When a `card-header` element contains a `stretched-link` descendant, which is the default case for collapsible card
+   * headers, move all its interactive children, which are not `stretched-link` elements, to the front (using relative
+   * position with positive z-index), so they can be interacted with and not be covered by the `stretched-link` element.
+   */
+  &:has(.stretched-link) :is(a, button, input, label, select):not(.stretched-link) {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* Badges */
+.badge {
+  --#{$prefix}badge-color: var(--#{$prefix}body-color);
+
+  color: var(--#{$prefix}badge-color);
+
+  &.bg-danger,
+  &.bg-info,
+  &.bg-primary,
+  &.bg-secondary,
+  &.bg-success,
+  &.bg-warning,
+  &.text-bg-danger,
+  &.text-bg-info,
+  &.text-bg-primary,
+  &.text-bg-secondary,
+  &.text-bg-success,
+  &.text-bg-warning {
+    --#{$prefix}badge-color: var(--#{$prefix}body-bg);
+  }
+
+  a {
+    color: inherit;
+  }
+
+  button {
+    align-items: center;
+    background-color: transparent;
+    border: none;
+    border-end-end-radius: $border-radius;
+    border-start-end-radius: $border-radius;
+    color: var(--#{$prefix}secondary-color);
+    display: inline-flex;
+    height: 1.25rem; /* 20px */
+    justify-content: center;
+    margin-block: -#{map.get($spacers, 2) + $border-width};
+    margin-inline-end: -#{map.get($spacers, 8)};
+    padding: map.get($spacers, 6) map.get($spacers, 8);
+    width: 1.5rem; /* 24px */
+
+    &:hover {
+      background-color: var(--#{$prefix}border-color);
+    }
+
+    &:focus-visible {
+      @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}tertiary-color));
+      background-color: var(--#{$prefix}border-color);
+    }
+  }
+
+  &.nb-multi-badge {
+    $nb-multi-badge-button-height: 1.5rem /* 24px */;
+    $nb-multi-badge-button-width: 1.375rem /* 22px */;
+    $nb-multi-badge-padding-block-start: map.get($spacers, 5);
+
+    align-items: baseline;
+    background-color: var(--#{$prefix}secondary-border-subtle);
+    padding-block-start: $nb-multi-badge-padding-block-start;
+    text-align: left;
+    white-space: normal;
+
+    > button {
+      float: right;
+      height: $nb-multi-badge-button-height;
+      margin-block: -#{$nb-multi-badge-padding-block-start};
+      margin-inline-end: -#{$badge-padding-x};
+      margin-inline-start: map.get($spacers, 0);
+      padding-inline-start: map.get($spacers, 6);
+      width: $nb-multi-badge-button-width;
+    }
+
+    .nb-multi-badge-items {
+      display: flex;
+      gap: map.get($spacers, 4);
+      flex-wrap: wrap;
+      margin-block-start: map.get($spacers, 5);
+      margin-inline: -#{map.get($spacers, 6)};
+
+      .badge {
+        background-color: var(--#{$prefix}body-bg);
+        border: $border-width solid var(--#{$prefix}body-bg);
+        text-align: left;
+        white-space: normal;
+
+        button {
+          float: right;
+          margin-inline-end: -#{map.get($spacers, 8) + $border-width};
+        }
+      }
+    }
+  }
+}
+
+/* Modals */
+/* Fix select dropdowns in modals and improve modal UX by making the modal body scrollable (instead of the whole page). */
+.modal-body {
+  max-height: calc(100vh - 13.25rem); /* 100vh - 212px */
+  overflow-y: scroll;
+}
+
+.modal-footer {
+  justify-content: center;
+}
+
+.modal-title {
+  $modal-title-font-size: $h1-font-size;
+
+  font-size: $modal-title-font-size;
+
+  &::before {
+    background: center no-repeat #{escape-svg(url("data:image/svg+xml,#{$nautobot-chevron-svg}"))};
+    content: "";
+    display: inline-block;
+    height: $modal-title-font-size * $modal-title-line-height;
+    margin-inline-end: map.get($spacers, 8);
+    vertical-align: top;
+    width: 1.5rem; /* 24px */
+  }
+}
+
+/* Alerts */
+.alert:is(.alert-primary, .alert-info) a {
+  text-decoration: underline;
+}
+
+/* Progress bars */
+.progress {
+  td & {
+    min-width: 100px;
+  }
+}
+
+/* Breadcrumbs */
+.breadcrumb-item {
+  align-items: center;
+  color: var(--#{$prefix}secondary-color);
+  display: inline-flex;
+
+  + .breadcrumb-item {
+    &::before { /* The separator between breadcrumbs (by default, a forward-slash: "/") */
+      @include font-size($h6-font-size);
+    }
+  }
+
+  a {
+    color: inherit;
+
+    &:focus-visible,
+    &:hover {
+      color: var(--#{$prefix}primary-text-emphasis);
+    }
+  }
+}
+
+/* Code */
+:not(pre) > code:not(.hljs) { /* Select only `code` which are not immediate children of `pre`, that is _inline code_. */
+  @extend kbd;
+}
+
+pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
+  background: var(--#{$prefix}secondary-bg);
+  border-radius: $border-radius;
+  color: $kbd-color;
+  padding-block: map.get($spacers, 8);
+  padding-inline: map.get($spacers, 10);
+}
+
+/* Collapse */
+.nb-collapse-toggle {
+  @include transition($btn-transition);
+  border-color: transparent !important; /* Kill ridiculous Bootstrap 5 specificity with fire. */
+  color: var(--#{$prefix}secondary-color);
+  float: right;
+  font-size: 0; /* Use `font-size: 0;` to remove any visible whitespace. */
+  padding: map.get($spacers, 2);
+
+  > * { /* Select *any* child, which is expected to be a chevron icon, to be icon library agnostic. */
+    @include transition(transform .35s ease);
+    display: inline-block; /* `transform` does not work on standard `inline` elements, like `span`, hence `inline-block`. */
+  }
+
+  &:not([aria-expanded="true"]) > .mdi-chevron-down {
+    transform: rotate(-90deg); /* Rotate chevron icon when collapse is closed. */
+  }
+}
+
+/* Nautobot custom components */
+/* Various fixes for printing. */
+@media print {
+  * {
+    print-color-adjust: exact;
+  }
+
+  body {
+    padding-top: map.get($spacers, 0);
+  }
+
+  a[href]:after {
+    content: none !important;
+  }
+}
+
+/* Layout */
+$nb-drawer-closed-width: 0;
+$nb-drawer-open-width: 20rem; /* 320px */
+$sidenav-width-collapsed: 4rem; /* 64px */
+$sidenav-width-expanded: ($sidenav-width-for-breakpoints / 16px) * 1rem; /* 16px is default browser conversion rate */
+/* we're converting to rem to have better web accessibility support */
+
+* {
+  margin: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  /* Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline`. */
+  @include transition(padding-inline .35s ease);
+  display: grid;
+  grid-template-areas:
+    "sidenav header             drawer"
+    "sidenav main-content       drawer"
+    "sidenav banner-bottom-area drawer"
+    "sidenav footer             drawer";
+  grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
+  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
+  overflow-y: scroll;
+
+  #sidenav {
+    grid-area: sidenav;
+  }
+
+  #drawer {
+    grid-area: drawer;
+  }
+
+  #header {
+    grid-area: header;
+  }
+
+  #main-content {
+    grid-area: main-content;
+  }
+
+  #footer {
+    grid-area: footer;
+  }
+
+  &:has( #sidenav) {
+    padding-inline-start: $sidenav-width-expanded;
+  }
+
+  &:has( #sidenav.nb-sidenav-collapsed) {
+    padding-inline-start: $sidenav-width-collapsed;
+  }
+
+  &:has( #drawer .nb-drawer) {
+    padding-inline-end: $nb-drawer-closed-width;
+  }
+
+  &:has( #drawer .nb-drawer.nb-drawer-open) {
+    padding-inline-end: $nb-drawer-open-width;
+  }
+}
+
+/* Sidenav (a.k.a. navbar, nav menu, sidebar) */
+#sidenav {
+  $sidenav-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$nav-white-0}'/></svg>";
+  $sidenav-favorite-icon-svg: "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.4189 0.599609C11.8569 0.444608 12.3438 0.470222 12.7656 0.676758C13.1382 0.85937 13.3661 1.1983 13.5303 1.48926C13.7037 1.79665 13.8896 2.21226 14.1113 2.7041L16.4121 7.80957H20.7764C21.3853 7.80957 21.8928 7.80944 22.2793 7.84277C22.6369 7.87368 23.0791 7.9417 23.4111 8.22754C23.8327 8.59073 24.0486 9.13456 23.9902 9.68359C23.9441 10.116 23.6675 10.4639 23.4268 10.7266C23.1665 11.0102 22.7947 11.3503 22.3486 11.7588L18.7549 15.0479L20.415 19.7119C20.6345 20.3287 20.8155 20.837 20.9189 21.2324C21.0129 21.5918 21.1024 22.0532 20.9238 22.4707C20.7004 22.993 20.2266 23.3717 19.6621 23.4785C19.2108 23.5637 18.7714 23.3814 18.4346 23.2158C18.064 23.0337 17.5972 22.7531 17.0312 22.4131L12 19.3887L6.96875 22.4131C6.40288 22.7531 5.93606 23.0337 5.56543 23.2158C5.22855 23.3813 4.78918 23.5638 4.33789 23.4785C3.77339 23.3717 3.29963 22.993 3.07617 22.4707C2.89765 22.0532 2.9871 21.5918 3.08105 21.2324C3.18447 20.837 3.36558 20.3286 3.58496 19.7119L5.24414 15.0479L1.65137 11.7588C1.20524 11.3502 0.833466 11.0103 0.573242 10.7266C0.332409 10.4639 0.0559191 10.116 0.00976562 9.68359C-0.048592 9.13464 0.168374 8.59073 0.589844 8.22754L0.717773 8.13086C1.02957 7.92557 1.40768 7.86983 1.7207 7.84277C2.10716 7.80943 2.61462 7.80957 3.22363 7.80957H7.58789L9.88867 2.7041C10.1103 2.21236 10.2963 1.79663 10.4697 1.48926C10.6339 1.19837 10.862 0.859412 11.2344 0.676758L11.4189 0.599609ZM12.0918 1.97266C12.0325 1.94907 11.9664 1.94881 11.9072 1.97266C11.8903 1.99137 11.8406 2.05132 11.7588 2.19629C11.6253 2.43288 11.4699 2.77672 11.2363 3.29492L8.74121 8.83203C8.62278 9.09452 8.35775 9.26367 8.06641 9.26367H3.22363C2.58589 9.26367 2.15619 9.26459 1.84961 9.29102C1.65621 9.30775 1.57052 9.33069 1.54395 9.33887C1.4994 9.38481 1.47564 9.44621 1.47656 9.50977C1.4907 9.53411 1.53727 9.6094 1.66699 9.75098C1.87346 9.97601 2.18793 10.2644 2.65527 10.6924L6.60254 14.3066C6.81725 14.5033 6.89362 14.8073 6.79688 15.0801L4.97656 20.1943C4.74783 20.8372 4.59263 21.2751 4.50879 21.5957C4.45591 21.798 4.44774 21.8941 4.44629 21.9258C4.47718 21.982 4.52974 22.0236 4.5918 22.042C4.62177 22.0343 4.71557 22.0082 4.90723 21.9141C5.20782 21.7664 5.61016 21.5255 6.2002 21.1709L11.6162 17.916C11.8518 17.7744 12.1481 17.7744 12.3838 17.916L17.7998 21.1709C18.39 21.5256 18.7921 21.7664 19.0928 21.9141C19.2823 22.0072 19.3761 22.0339 19.4072 22.042C19.4695 22.0238 19.5216 21.982 19.5527 21.9258C19.5512 21.8941 19.5441 21.798 19.4912 21.5957C19.4073 21.2751 19.2522 20.8372 19.0234 20.1943L17.2031 15.0801C17.1064 14.8074 17.183 14.5034 17.3975 14.3066L21.3447 10.6924C21.8119 10.2645 22.1265 9.97601 22.333 9.75098C22.4617 9.61056 22.5079 9.53469 22.5225 9.50977C22.5233 9.44589 22.5 9.38489 22.4551 9.33887C22.4274 9.3304 22.3416 9.30754 22.1504 9.29102C21.8438 9.2646 21.414 9.26367 20.7764 9.26367H15.9336C15.6422 9.26359 15.3771 9.09454 15.2588 8.83203L12.7637 3.29492C12.53 2.7766 12.3747 2.43289 12.2412 2.19629C12.1584 2.04951 12.108 1.99058 12.0918 1.97266Z' fill='#{$nav-white-0}'/></svg>";
+  $sidenav-favorite-icon-svg-filled: "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.4189 0.599457C11.8569 0.444456 12.3438 0.470069 12.7656 0.676605C13.1383 0.859207 13.3671 1.19809 13.5312 1.48911C13.7046 1.79644 13.8897 2.21229 14.1113 2.70395L16.4121 7.80942H20.7773C21.386 7.80942 21.8929 7.80931 22.2793 7.84262C22.6369 7.87353 23.0791 7.94253 23.4111 8.22836C23.8325 8.59154 24.0496 9.13456 23.9912 9.68344C23.9451 10.1159 23.6676 10.4637 23.4268 10.7264C23.1665 11.0101 22.7947 11.3502 22.3486 11.7586L18.7559 15.0477L20.415 19.7118C20.6345 20.3285 20.8155 20.8368 20.9189 21.2323C21.0129 21.5917 21.1024 22.053 20.9238 22.4706C20.7003 22.9929 20.2267 23.3716 19.6621 23.4784C19.2108 23.5635 18.7714 23.3812 18.4346 23.2157C18.0641 23.0336 17.598 22.7529 17.0322 22.4129L12 19.3885L6.96875 22.4129C6.40284 22.753 5.93608 23.0336 5.56543 23.2157C5.22855 23.3811 4.78918 23.5636 4.33789 23.4784C3.77348 23.3715 3.29961 22.9928 3.07617 22.4706C2.89773 22.0531 2.98711 21.5916 3.08105 21.2323C3.18447 20.8368 3.36655 20.3284 3.58594 19.7118L5.24414 15.0477L1.65137 11.7586C1.20515 11.35 0.833472 11.0102 0.573242 10.7264C0.33238 10.4637 0.0558689 10.1159 0.00976562 9.68344C-0.0485905 9.1345 0.168395 8.59155 0.589844 8.22836L0.717773 8.13071C1.02957 7.92542 1.40768 7.86968 1.7207 7.84262C2.10718 7.80926 2.61454 7.80942 3.22363 7.80942H7.58789L9.88867 2.70395C10.1103 2.21223 10.2963 1.79647 10.4697 1.48911C10.6339 1.19814 10.8628 0.859214 11.2354 0.676605L11.4189 0.599457Z' fill='#{$nav-white-0}'/></svg>";
+  $sidenav-favorite-size: 1.25rem; /* 20px */
+  $sidenav-link-gap: map.get($spacers, 5);
+  $sidenav-link-segment-icon-height: 5.625rem; /* 90px */
+  $sidenav-link-segment-icon-width: 1.25rem; /* 20px */
+  $sidenav-link-segment-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $sidenav-link-segment-icon-svg-last: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $sidenav-link-width: $sidenav-width-expanded;
+
+  @mixin chevron($size, $color: $nav-white-0) {
+    @include transition($accordion-icon-transition, $transition-fade);
+    background: no-repeat center/#{$size} #{escape-svg(url("data:image/svg+xml,#{replace-svg-color($sidenav-chevron-svg, $nav-white-0, $color)}"))};
+    content: "";
+    display: block;
+    height: $size;
+    width: $size;
+  }
+
+  @mixin fade-in {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @mixin fade-out {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  @mixin filter-nav-orange-0 {
+    /*
+     * CSS workaround to change element color (including its `background-image`)
+     * from white to any given color, `$orange-0-dark` in this case. Though it
+     * evaluates to `#ff9938`, not the exact `#ff9933`, it is _good enough_.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     */
+    filter: invert(57%) sepia(100%) saturate(478%) hue-rotate(336deg) brightness(141%) contrast(101%);
+  }
+
+  @mixin filter-nav-gray-3 {
+    /*
+     * CSS workaround to change element color (including its `background-image`) from white to `$nav-gray-3`.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     */
+    filter: invert(69%) sepia(15%) saturate(1%) hue-rotate(311deg) brightness(223%) contrast(98%);
+  }
+
+  @include box-shadow(0.0625rem 0 0 0 $navy-2, $box-shadow);
+  @include transition($transition-collapse-width);
+  align-items: center;
+  background-color: $navy-0;
+  color: $nav-white-0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: $sidenav-width-expanded;
+  z-index: $zindex-fixed;
+
+  &.nb-sidenav-collapsed {
+    width: $sidenav-width-collapsed;
+
+    /* Transition between brand logo and icon when navbar expands/collapses. */
+    .nb-sidenav-brand {
+      &:first-of-type { /* Brand icon */
+        @include fade-in;
+      }
+
+      &:nth-of-type(2) { /* Brand logo */
+        @include fade-out;
+      }
+    }
+
+    .nb-sidenav-list-item {
+      > :last-child { /* Sidenav list item name and chevron icon wrapper */
+        @include fade-out;
+      }
+    }
+
+    .nb-sidenav-toggler::before { /* Sidenav toggler chevron icon */
+      transform: rotate(180deg);
+    }
+
+    #sidenav-branch-picker {
+      .select2-selection__rendered { /* Sidenav branch picker select branch name */
+        @include fade-out;
+      }
+
+      .select2-container--bootstrap-5 .select2-selection--single { /* Sidenav branch picker select chevron icon */
+        background-image: none;
+      }
+    }
+  }
+
+  /*
+   * `&, *` stands for the current element selector (`&`, i.e. `#sidenav`) and
+   * all its descendants (`*`), it interpolates to `#sidenav, #sidenav *`.
+   */
+  &, * {
+    scrollbar-width: none;
+  }
+
+  .nb-sidenav-brand {
+    @include transition($transition-base);
+    display: inline-block;
+    margin-block-start: map.get($spacers, 10);
+    padding: map.get($spacers, 10);
+
+    &:first-of-type { /* Brand icon */
+      @include fade-out;
+    }
+
+    &:nth-of-type(2) { /* Brand logo */
+      @include fade-in;
+    }
+
+    img {
+      height: 2rem; /* 32px */
+    }
+  }
+
+  .nb-sidenav-flyout {
+    @include box-shadow($box-shadow);
+    @include fade-out;
+    @include transition($transition-base);
+    background: $navy-1;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 100%;
+    left: 0;
+    padding-block: map.get($spacers, 20);
+    position: absolute;
+    top: 0;
+    width: max-content;
+    z-index: -1;
+    min-width: $sidenav-link-width;
+
+    /*
+     * FIXME(norbert-mieczkowski-codilime): remove this hack when browsers fix their bug: https://bugzilla.mozilla.org/show_bug.cgi?id=995020.
+     *   Bug has already been observed in Firefox and Safari, Chrome is confirmed to be _clean_.
+     *   Workaround based on: https://www.answeroverflow.com/m/1353731321620598945.
+     */
+    /* hack */
+    flex-direction: row;
+    padding-block: map.get($spacers, 0);
+    padding-inline: map.get($spacers, 20);
+    writing-mode: vertical-lr;
+
+    > * {
+      writing-mode: horizontal-tb;
+    }
+    /* endhack */
+  }
+
+  .nb-sidenav-link {
+    align-items: center;
+    color: inherit;
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding-block: map.get($spacers, 8);
+    padding-inline-start: map.get($spacers, 20) + $sidenav-link-segment-icon-width + $sidenav-link-gap;
+    position: relative;
+    text-decoration: none;
+    width: $sidenav-link-width;
+
+    &-active {
+      color: $orange-0-dark;
+    }
+
+    &::before { /* Segment icon */
+      background: no-repeat center/$sidenav-link-segment-icon-width $sidenav-link-segment-icon-height #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg}"))};
+      content: "";
+      display: block;
+      flex: none;
+      height: $sidenav-link-segment-icon-height;
+      left: map.get($spacers, 20);
+      position: absolute;
+      width: $sidenav-link-segment-icon-width;
+    }
+
+    &.flat {
+      padding-inline-start: map.get($spacers, 20);
+
+      &::before {
+        content: none;
+      }
+    }
+  }
+
+  li:last-child > .nb-sidenav-link::before { /* Last link segment icon */
+    background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-link-segment-icon-svg-last}"))};
+  }
+
+  .nb-sidenav-favorite {
+    @include fade-out;
+    @include transition($transition-base);
+    background: no-repeat #{map.get($spacers, 10)} center/$sidenav-favorite-size #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg}"))};
+    border: none;
+    flex: none;
+    padding: 0;
+    width: $sidenav-favorite-size + 2 * map.get($spacers, 10); /* 20px + 2 * 10px = 40px */
+
+    &:focus-visible,
+    &:hover {
+      background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg-filled}"))};
+    }
+
+    &.active {
+      @include fade-in;
+      @include filter-nav-orange-0;
+      background-image: #{escape-svg(url("data:image/svg+xml,#{$sidenav-favorite-icon-svg-filled}"))};
+    }
+  }
+
+  .nb-sidenav-link-wrapper {
+    display: flex;
+    width: $sidenav-link-width;
+
+    &.disabled {
+      color: $nav-gray-3;
+      pointer-events: none;
+    }
+
+    &:has(> :focus-visible), /* CSS has `:focus-within` pseudo-class available but it works similar to `:focus` rather than `:focus-visible` */
+    &:hover {
+      background-color: $navy-2;
+
+      > .nb-sidenav-favorite {
+        @include fade-in;
+      }
+    }
+  }
+
+  .nb-sidenav-link-group {
+    color: $nav-gray-3;
+    font-weight: $font-weight-medium;
+    padding-block: map.get($spacers, 8);
+    padding-inline: map.get($spacers, 20);
+    text-transform: uppercase;
+    width: $sidenav-link-width;
+  }
+
+  .nb-sidenav-list-divider {
+    border-top: $border-width solid transparent;
+    margin: #{map.get($spacers, 10)}  #{map.get($spacers, 20)};
+  }
+
+  .nb-sidenav-list-item {
+    @include transition($btn-transition);
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: inherit;
+    display: inline-flex;
+    font-weight: $font-weight-medium;
+    padding-block: map.get($spacers, 8);
+    padding-inline: #{map.get($spacers, 20)}  #{map.get($spacers, 10)};
+    text-decoration: none;
+    text-transform: uppercase;
+    width: 100%;
+
+    &[aria-expanded="true"] { /* When list item is expanded */
+      background-color: $navy-1;
+
+      &::after { /* Overlay */
+        @include fade-in;
+      }
+
+      & + .nb-sidenav-flyout {
+        @include fade-in;
+        left: 100%;
+      }
+    }
+
+    &:not(:disabled):focus-visible,
+    &:not(:disabled):hover {
+      background-color: $navy-1;
+    }
+
+    &::after { /* Overlay */
+      @include fade-out;
+      @include transition($transition-base);
+      background: rgba(0, 0, 0, 0.25);
+      content: "";
+      cursor: default;
+      display: block;
+      inset: 0 0 0 $sidenav-link-width;
+      position: fixed;
+      z-index: -1;
+    }
+
+    &:disabled { /* When list item is disabled */
+      color: $nav-gray-3;
+
+      > :first-child, /* Nav menu tab icon */
+      > :last-child::after { /* Chevron icon */
+        @include filter-nav-gray-3;
+      }
+    }
+
+    &:has(+ .nb-sidenav-flyout .nb-sidenav-link-active) { /* When list item contains an active link */
+      color: $orange-0-dark;
+
+      > :first-child, /* Nav menu tab icon */
+      > :last-child::after { /* Chevron icon */
+        @include filter-nav-orange-0;
+      }
+    }
+
+    > :first-child { /* Primary icon */
+      flex: none;
+      height: 1.5rem; /* 24px */
+      width: 1.5rem; /* 24px */
+    }
+
+    > :last-child { /* Name and chevron icon wrapper */
+      @include transition($transition-base);
+      @include fade-in;
+      align-items: center;
+      display: inline-flex;
+      flex: auto 1 0;
+      margin-inline-start: map.get($spacers, 10);
+    }
+
+    &:not(.nb-sidenav-list-item-flat) > :last-child::after { /* Chevron icon, not rendered when `nb-sidenav-list-item` has `nb-sidenav-list-item-flat` class. */
+      @include chevron(1.5rem); /* 24px */
+      margin-inline-start: auto;
+      transform: rotate(180deg);
+    }
+  }
+
+  .nb-sidenav-toggler {
+    @include fade-in;
+    @include transition($transition-base);
+    right: -0.8125rem; /* -13px */
+    top: 1.4375rem; /* 23px */
+
+    &::before { /* Chevron icon */
+      @include chevron(1rem, $navy-0); /* 16px */
+    }
+  }
+
+  &:has(> ul .nb-sidenav-list-item[aria-expanded="true"]) { /* When flyout is expanded */
+    .nb-sidenav-toggler {
+      @include fade-out;
+    }
+  }
+
+  #sidenav-branch-picker {
+    position: relative;
+    width: $sidenav-width-expanded;
+
+    > :first-child { /* Branch icon */
+      height: 1.5rem; /* 24px */
+      left: map.get($spacers, 20);
+      pointer-events: none;
+      position: absolute;
+      top: map.get($spacers, 4);
+      width: 1.5rem; /* 24px */
+      z-index: 2;
+    }
+
+    select,
+    .select2-selection {
+      background-color: $navy-1;
+      border-radius: 0;
+      color: inherit;
+      padding-inline-start: calc(map.get($spacers, 20) + 1.5rem + map.get($spacers, 10)); /* 20px + 24px + 10px = 54px */
+    }
+
+    select,
+    .select2-selection__rendered {
+      font-weight: $font-weight-medium;
+      color: inherit;
+      text-transform: uppercase;
+    }
+
+    .select2-selection__rendered {
+      @include fade-in;
+      @include transition($transition-base);
+    }
+
+    select,
+    .select2-container:not(.select2-container--focus):not(.select2-container--open) .select2-selection:not(:focus-visible):not(:hover) {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    select,
+    .select2-container--bootstrap-5 .select2-selection--single {
+      /*
+       * Change select chevron icon color from `#343a40` (`$gray-800`, default) to `#ffffff` (`$nav-white-0`) and right
+       * offset from `11px` (default) to `13px` to keep it consistent and aligned with with other sidenav chevrons.
+       */
+      background-image: escape-svg(replace-svg-color($s2bs5-indicator, $form-select-indicator-color, $nav-white-0));
+      background-position: right 0.8125rem center;
+    }
+  }
+}
+
+/* Drawer */
+$nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
+
+#drawer {
+  @include box-shadow(none);
+  @include transition($input-transition, $transition-collapse-width); /* Using `$input-transition` just for `box-shadow`. */
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: $nb-drawer-closed-width;
+  z-index: $zindex-fixed;
+
+  &:has(.nb-drawer-open) {
+    @include box-shadow($nb-drawer-open-box-shadow);
+    width: $nb-drawer-open-width;
+  }
+}
+
+.nb-drawer {
+  @include transition(visibility .35s ease);
+  background: var(--#{$prefix}body-bg);
+  display: flex;
+  flex-direction: column;
+  inset: 0 auto 0 0;
+  outline: none;
+  overflow: hidden auto;
+  position: absolute;
+  scrollbar-width: none;
+  visibility: hidden;
+  width: $nb-drawer-open-width;
+
+  &.nb-drawer-open {
+    visibility: visible;
+    z-index: 1;
+  }
+
+  .nb-drawer-header {
+    align-items: center;
+    display: flex;
+    gap: map.get($spacers, 8);
+    justify-content: space-between;
+    padding-block: map.get($spacers, 12);
+    padding-inline: map.get($spacers, 20);
+  }
+
+  .nb-drawer-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+}
+
+/* Header */
+#header {
+  background: var(--#{$prefix}secondary-bg);
+  position: relative;
+
+  .alert {
+    --bs-alert-border-radius: 0;
+    --bs-alert-padding-x: #{$grid-gutter-width};
+  }
+}
+
+/* Main content */
+#main-content {
+  box-shadow: $box-shadow-sm;
+  outline: none;
+  padding-block: map.get($spacers, 16);
+}
+
+/* Footer */
+#footer {
+  a {
+    color: inherit;
+    font-size: 0;
+
+    &:focus-visible,
+    &:hover {
+      color: var(--#{$prefix}primary-text-emphasis);
+    }
+  }
+}
+
+/* paginator.html */
+#per_page {
+  display: inline-block;
+  padding-inline-start: 0.4375rem; /* 7px */
+  padding-inline-end: 1.9375rem; /* 31px */
+  width: 4.5rem; /* 72px */
+}
+
+/* Draggable */
+.nb-draggable-container {
+  .nb-draggable {
+    &.nb-dragging {
+      opacity: 0.5;
+    }
+
+    .nb-draggable-handle {
+      cursor: move;
+    }
+  }
+}
+
+/* MDI icons */
+:is(i, span).mdi { /* `:is(i, span)` is required to overwrite the default `.mdi` class specificity. */
+  &::before {
+    font-size: $h2-font-size;
+    line-height: $line-height-sm;
+    position: relative;
+    top: map.get($spacers, 2);
+  }
+
+  .alert &::before {
+    margin-inline-end: map.get($spacers, 2);
+    position: relative;
+    top: map.get($spacers, 4);
+  }
+
+  .badge &::before {
+    font-size: $font-size-sm;
+    left: map.get($spacers, 0);
+    line-height: 1;
+    top: map.get($spacers, 0);
+  }
+
+  .btn & {
+    margin-block: -#{map.get($spacers, 2)};
+
+    &::before {
+      font-size: $h2-font-size;
+      line-height: 0.7; /* 20px * 0.7 = 14px */
+      position: relative;
+      top: map.get($spacers, 2);
+    }
+  }
+
+  .btn-sm &::before,
+  .btn-xs &::before {
+    font-size: $font-size-lg;
+    top: 0.1875rem; /* 3px */
+  }
+
+  .dropdown-menu & {
+    margin-inline-start: map.get($spacers, 2);
+  }
+
+  .input-group-addon &::before {
+    position: relative;
+    top: 0.1875rem; /* 3px */
+  }
+
+  .input-group-btn &::before {
+    font-size: $h2-font-size;
+  }
+
+  .list-group-item &::before {
+    left: -0.1875rem; /* -3px */
+    position: relative;
+    top: 0.1875rem;
+  }
+
+  .nav &::before {
+    left: -#{map.get($spacers, 2)};
+    position: relative;
+    top: map.get($spacers, 2);
+  }
+
+  .nb-btn-inline-hover &::before {
+    font-size: .9em;
+    top: map.get($spacers, 0);
+  }
+}
+
+/* Nautobot icons */
+.nb-letter-icon {
+  align-items: center;
+  border-color: currentcolor;
+  border-radius: 0.375rem; /* 6px - consistent with icons from nautobot-icons library. */
+  border-style: solid;
+  border-width: 0.09375rem; /* 1.5px - consistent with icons from nautobot-icons library. */
+  display: inline-flex;
+  justify-content: center;
+}
+
+/* Tiles */
+.nb-tiles {
+  $tile-width: 27rem; /* 432px */
+
+  display: grid;
+  grid-gap: map.get($spacers, 16);
+  grid-template-columns: repeat(auto-fill, minmax(min($tile-width, 100%), 1fr));
+
+  .nb-tile {
+    background: var(--#{$prefix}body-bg);;
+    border: $border-width solid var(--#{$prefix}border-color);
+    border-radius: $border-radius;
+    display: flex;
+    flex-direction: column;
+    padding-block: map.get($spacers, 12);
+    padding-inline: map.get($spacers, 16);
+
+    &.nb-clickable {
+      @include transition($btn-transition);
+      cursor: pointer;
+      outline: none;
+
+      &,
+      &:hover,
+      &:focus,
+      &:visited {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      &:active,
+      &:focus-visible,
+      &:hover {
+        @include box-shadow($box-shadow-sm);
+        border-color: var(--#{$prefix}primary-text-emphasis);
+      }
+
+      &:focus-visible {
+        @include box-shadow($box-shadow-sm, $focus-ring-box-shadow);
+      }
+    }
+
+    &.nb-disabled {
+      background: var(--#{$prefix}secondary-bg);
+      color: var(--#{$prefix}secondary-color);
+    }
+
+    h2 {
+      font-size: $font-size-root;
+      margin-block-end: map.get($spacers, 2);
+      margin-block-start: map.get($spacers, 10);
+      margin-inline: 0;
+    }
+
+    .nb-tile-header {
+      align-items: center;
+      display: flex;
+      gap: map.get($spacers, 10);
+
+      h3 {
+        color: var(--#{$prefix}secondary-color);
+        display: flex;
+        flex: 1;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-normal;
+        margin: map.get($spacers, 0);
+      }
+
+      img {
+        float: left;
+        margin-right: map.get($spacers, 16);
+      }
+    }
+
+    .nb-tile-description {
+      flex: 1;
+
+      p {
+        margin-bottom: map.get($spacers, 12);
+      }
+    }
+
+    .nb-tile-footer {
+      border-top: $border-width solid var(--#{$prefix}border-color);
+      column-gap: map.get($spacers, 10);
+      color: var(--#{$prefix}secondary-color);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding-top: map.get($spacers, 12);
+    }
+  }
+}
+
+/* Miscellaneous */
+.nb-btn-inline-hover {
+  @include transition($transition-fade);
+  font-size: $font-size-sm;
+  opacity: 0;
+  margin-inline-start: map.get($spacers, 4);
+  padding-block: map.get($spacers, 1);
+  padding-inline: map.get($spacers, 4);
+
+  &:focus-visible,
+  :has(> &):hover .nb-btn-inline-hover { /* Show `nb-btn-inline-hover` while hovering over its parent element. */
+    opacity: 1;
+  }
+}
+
+.nb-color-block {
+  border: $border-width solid var(--#{$prefix}border-color);
+  border-radius: $border-radius;
+  display: block;
+  width: 5rem; /* 80px */
+}
+
+.nb-right-side-panel {
+  max-width: 25rem; /* 400px */
+  min-width: 18.75rem; /* 300px */
+  padding-block-end: map.get($spacers, 0);
+}
+
+ul.nb-software-image-hierarchy {
+  list-style-type: "↳ ";
+  padding-block-start: 1.125rem; /* 18px */
+}
+
+ul.nb-tree-hierarchy {
+  list-style-type: none;
+  padding-inline-start: map.get($spacers, 0);
+
+  ul {
+    list-style-type: "↳ ";
+    padding-inline-start: 1.125rem; /* 18px */
+  }
+}
+
+/* Banners */
+.nb-banner-bottom {
+  grid-area: banner-bottom-area;
+}
+
+/* Reports */
+.nb-report-stats .badge {
+  min-width: 2.5rem; /* 40px */
+}
+
+/* Cable tracing */
+.nb-cable-trace {
+  margin-block: map.get($spacers, 16);
+  margin-inline: auto;
+  max-width: 37.5rem; /* 600px */
+  text-align: center;
+
+  .nb-active {
+    border: map.get($border-widths, 3) solid var(--#{$prefix}success-text-emphasis);
+  }
+
+  .nb-cable {
+    border-left-style: solid;
+    border-left-width: map.get($border-widths, 4);
+    margin-block: map.get($spacers, 12);
+    margin-inline-end: map.get($spacers, 0);
+    margin-inline-start: 50%;
+    padding: map.get($spacers, 24);
+    text-align: left;
+    width: 50%;
+  }
+
+  .nb-node {
+    background-color: var(--#{$prefix}secondary-bg);
+    border: $border-width solid var(--#{$prefix}border-color);
+    border-radius: $border-radius * 2;
+    padding-block: map.get($spacers, 24);
+    padding-inline: map.get($spacers, 16);
+    position: relative;
+    z-index: 1;
+  }
+
+  .nb-termination {
+    background-color: var(--#{$prefix}tertiary-bg);
+    border: $border-width solid var(--#{$prefix}border-color);
+    border-radius: $border-radius;
+    margin-block: -#{map.get($spacers, 16)};
+    margin-inline: auto;
+    padding: map.get($spacers, 12);
+    position: relative;
+    width: 60%;
+    z-index: 2;
+  }
+
+  .nb-trace-end {
+    margin-top: 3rem; /* 48px */
+    text-align: center;
+  }
+}
+
+/* AJAX loader */
+.nb-loading {
+  display: none;
+  position: fixed;
+  height: 2em;
+  inset: map.get($spacers, 0);
+  margin: auto;
+  overflow: visible;
+  z-index: $zindex-dropdown - 1;
+  width: 2em;
+
+  &::before {
+    background-color: rgba(0, 0, 0, 0.3);
+    content: "";
+    display: block;
+    height: 100%;
+    left: map.get($spacers, 0);
+    position: fixed;
+    top: map.get($spacers, 0);
+    width: 100%;
+  }
+}
+
+/* highlight.js */
+pre code.hljs {
+  background-color: var(--#{$prefix}secondary-bg);
+  border-radius: $border-radius;
+}
+
+/* Swagger docs */
+pre.version, pre.version-stamp {
+    background-color: inherit !important;
+}
+
+/* Rendered Markdown */
+.nb-rendered-markdown {
+  table {
+    width: 100%;
+  }
+
+  th {
+    border-bottom: map.get($border-widths, 2) solid var(--#{$prefix}border-color);
+    padding: map.get($spacers, 8);
+  }
+
+  td {
+    border-top: $border-width solid var(--#{$prefix}border-color);
+    padding: map.get($spacers, 8);
+  }
+
+  :last-child {
+    margin-bottom: map.get($spacers, 0);
+  }
+}
+
+/* Monaco Editor container */
+.nb-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 6.25rem; /* 100px */
+  position: relative; /* Required for Monaco's absolute positioning. */
+  overflow: hidden; /* Let Monaco handle scrolling. */
+}
+
+/* Admonition (docs) */
+.admonition {
+  margin-block-end: map.get($spacers, 10);
+  padding-block-end: map.get($spacers, 2);
+
+  p {
+    padding-block: 0;
+    padding-inline: map.get($spacers, 12);
+
+    &.admonition-title {
+      color: var(--#{$prefix}body-bg);
+      font-weight: $font-weight-medium;
+      padding-block: map.get($spacers, 4);
+      padding-inline: map.get($spacers, 12);
+
+      &::before {
+        content: "\f06a";
+        font-family: "FontAwesome";
+        margin-inline-end: map.get($spacers, 4);
+      }
+    }
+  }
+
+  pre {
+    margin-block-end: map.get($spacers, 10px);
+    margin-block-start: map.get($spacers, 0);
+    margin-inline: map.get($spacers, 12);
+  }
+
+  &.danger {
+    background-color: var(--#{$prefix}danger-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}danger-border-subtle);
+
+      &::before {
+        content: "\f071";
+      }
+    }
+  }
+
+  &.note {
+    background-color: var(--#{$prefix}info-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}info-border-subtle);
+
+      &::before {
+        content: "\f05a";
+      }
+    }
+  }
+  &.warning {
+    background-color: var(--#{$prefix}warning-bg-subtle);
+
+    .admonition-title {
+      background-color: var(--#{$prefix}warning-border-subtle);
+
+      &::before {
+        content: "\f06a";
+      }
+    }
+  }
+}
+
+.progress {
+  position: relative;
+
+  span {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1em;
+  }
+}
+
+.nb-lg-max-width {
+  max-width: 960px;
+}
+
+/* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
+.d-none {
+  display: none !important;
+}
+
+/* Dark mode workaround */
+@include color-mode(dark, true) {
+  .invert-in-dark-mode {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+/*
+ * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
+ *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
+ *   time to get rid of bootstrap-filestyle.
+ */
+.hidden {
+  @extend .d-none;
+}

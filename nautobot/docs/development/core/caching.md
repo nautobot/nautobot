@@ -17,11 +17,4 @@ When adding a signal that interacts with the cache, you may want to wrap the cac
 
 ## Cache keys
 
-* For database models with caches, cache keys should generally take the form `"nautobot.{model._meta.label_lower}.[{uuid}.]..."`. For example:
-    * `Location.objects.max_depth()` --> `nautobot.dcim.location.max_depth`
-    * `Location.display` (instance attribute) --> `nautobot.dcim.location.00000000-0000-0000-0000-000000000000.display`
-    * `ComputedField.objects.get_for_model(Location)` --> `nautobot.extras.computedfield.get_for_model.dcim.location`
-    * `CustomField.objects.get_for_model(Location, False)` --> `nautobot.extras.customfield.get_for_model.dcim.location.False`
-* For functions and methods that don't belong to a database model, cache keys should generally take the form `"{dotted.module.path.function}..."`. For example:
-    * `nautobot.core.releases.get_latest_release()` --> `nautobot.core.releases.get_latest_release`
-    * `nautobot.extras.utils.changed_logged_models_queryset()` --> `nautobot.extras.utils.change_logged_models_queryset`
+In general, cache keys used by Nautobot should be constructed via the `construct_cache_key()` method from `nautobot.core.utils.cache` (or `nautobot.apps.utils`, for App developers). This ensures a consistent structure for cache keys and helps to avoid unintended collisions. Refer to the [function documentation](../../code-reference/nautobot/apps/utils.md#nautobot.apps.utils.construct_cache_key) for examples.

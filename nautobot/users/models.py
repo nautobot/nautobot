@@ -14,6 +14,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
+from nautobot.core.utils.permissions import resolve_permission
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 __all__ = (
@@ -72,6 +73,38 @@ class User(BaseModel, AbstractUser):
     class Meta:
         db_table = "auth_user"
         ordering = ["username"]
+
+    def has_perm(self, perm, obj=None):
+        """
+        Override Django's default permission check to enforce read-only access
+        during Nautobot Version Control time-travel mode.
+
+        If the ``nautobot_version_control`` plugin is installed and time-travel
+        mode is active, all non-view permissions (e.g. add, change, delete) are
+        explicitly denied, regardless of the user's role or superuser status.
+
+        When the plugin is not installed or time-travel mode is inactive, this
+        method delegates entirely to Django's standard permission handling via
+        the parent implementation.
+
+        Args:
+            perm (str): Permission string in the form "app_label.codename".
+            obj (Optional[Model]): Optional object-level permission target.
+
+        Returns:
+            bool: False when time-travel mode is active and the requested
+                permission is not a view permission; otherwise, the boolean result
+                returned by Django's default permission resolution logic.
+        """
+        if "nautobot_version_control" in settings.PLUGINS:
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
+
+            if get_time_travel_datetime() is not None:
+                _app_label, action, _model_name = resolve_permission(perm)
+                if action != "view":
+                    return False
+
+        return super().has_perm(perm, obj)
 
     def get_config(self, path, default=None):
         """
@@ -139,6 +172,8 @@ class User(BaseModel, AbstractUser):
         if commit:
             self.save()
 
+    set_config.alters_data = True
+
     def clear_config(self, path, commit=False):
         """
         Delete a configuration parameter specified by its dotted path. The key and any child keys will be deleted.
@@ -165,6 +200,16 @@ class User(BaseModel, AbstractUser):
 
         if commit:
             self.save()
+
+    clear_config.alters_data = True
+
+    @property
+    def navbar_favorites(self):
+        return self.get_config("navbar_favorites", [])
+
+    @property
+    def navbar_favorites_link_list(self):
+        return [item.get("link") for item in self.navbar_favorites]
 
 
 #

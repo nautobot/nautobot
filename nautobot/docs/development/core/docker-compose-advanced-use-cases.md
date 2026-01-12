@@ -11,8 +11,8 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
-- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images); you shouldn't generally need to change these.
-- `ephemeral_ports`: Setting this value to `True` will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts.
+- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images-manually-if-needed); you shouldn't generally need to change these.
+- `ephemeral_ports`: Setting this value to `True` and not using any custom compose files will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts. If setting `compose_files`, this will have no effect so please ensure to manually add the `docker-compose.ephemeral-ports.yml` to your list.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
 
@@ -159,21 +159,15 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 +/- 2.1.2
 
-#### `PYTHON_VER` Environment Variable
-
-The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
-
-You can run `invoke` with the `vscode` target to generate this file and re-open the VSCode session under the workspace.
-
-```bash
-invoke vscode
-```
-
 ### Using Dev Containers
 
-To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace file `nautobot.code-workspace` which enables support for Run/Debug.
+To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers.
 
-To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
+### Debugging inside a Dev Container
+
+You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
+- **Python: Nautobot** - Targets the Django server process
+- **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
 !!! note
     You can run tests with `nautobot-server --config=nautobot/core/tests/nautobot_config.py test nautobot` while inside the Container.

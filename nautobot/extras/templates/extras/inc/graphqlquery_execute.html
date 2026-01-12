@@ -1,0 +1,71 @@
+{% load helpers %}
+
+<div class="card">
+    <div class="card-header">
+        <strong>Response</strong>
+        <button class="btn btn-primary btn-sm float-end" onclick="test_query()">Execute</button>
+    </div>
+    {% if object.variables %}
+        <table class="table table-hover card-body attr-table">
+            <tr>
+                <td>Variables:</td>
+                <td><textarea id="query_variables" class="form-control">{{ object.variables|render_json:False }}</textarea></td>
+            </tr>
+        </table>
+    {% endif %}
+    <div class="card-footer">
+        <pre id="query_output" class="p-5">
+
+        </pre>
+    </div>
+</div>
+
+<script>
+    function fillQueryOutput(data) {
+        const queryOutput = document.querySelector('#query_output');
+
+        [...queryOutput.childNodes].forEach(childNode => childNode.remove());
+
+        const code = document.createElement('code');
+        code.classList.add('language-json');
+        code.textContent = JSON.stringify(data, undefined, 2);
+
+        queryOutput.appendChild(code);
+
+        hljs.highlightElement(code);
+    }
+
+    function test_query() {
+        const variables = document.querySelector('#query_variables')?.value;
+
+        $.ajax({
+            url: "{% url 'graphql' %}",
+            method: "POST",
+            headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+            dataType: "json",
+            data: {
+                "query": `{{ object.query | escapejs }}`,
+                "variables": variables,
+            },
+            success: function(data) {
+                fillQueryOutput(data);
+            },
+            error: function(error) {
+                console.log(error);
+                fillQueryOutput(error.responseJSON);
+            }
+        });
+    };
+
+    window.addEventListener("load", () => {
+        textarea = document.querySelector("#query_variables");
+        textarea.addEventListener('input', autoResize, false);
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    }
+</script>

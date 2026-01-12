@@ -1,0 +1,9 @@
+{% spaceless %}
+    {% load helpers %}
+    {% if termination.port_speed and termination.upstream_speed %}
+        <span class="mdi mdi-arrow-down-bold" title="Downstream"></span>{{ termination.port_speed|humanize_speed }}&nbsp;
+        <span class="mdi mdi-arrow-up-bold" title="Upstream"></span>{{ termination.upstream_speed|humanize_speed }}
+    {% else %}
+        {{ termination.port_speed|humanize_speed|placeholder }}
+    {% endif %}
+{% endspaceless %}

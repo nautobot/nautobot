@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -120,6 +121,7 @@ class DeviceTypeTable(BaseTable):
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
+    actions = ButtonsColumn(DeviceType)
 
     class Meta(BaseTable.Meta):
         model = DeviceType
@@ -134,6 +136,7 @@ class DeviceTypeTable(BaseTable):
             "subdevice_role",
             "device_count",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -143,6 +146,7 @@ class DeviceTypeTable(BaseTable):
             "u_height",
             "is_full_depth",
             "device_count",
+            "actions",
         )
 
 
@@ -155,6 +159,7 @@ class ModuleTypeTable(BaseTable):
     pk = ToggleColumn()
     manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Module Type")
+    module_family = tables.Column(linkify=True, verbose_name="Family")
     module_count = LinkedCountColumn(
         viewname="dcim:module_list",
         url_params={"module_type": "pk"},
@@ -169,6 +174,7 @@ class ModuleTypeTable(BaseTable):
             "model",
             "manufacturer",
             "part_number",
+            "module_family",
             "module_count",
             "tags",
         )
@@ -177,6 +183,7 @@ class ModuleTypeTable(BaseTable):
             "model",
             "manufacturer",
             "part_number",
+            "module_family",
             "module_count",
         )
 
@@ -233,6 +240,7 @@ class PowerPortTemplateTable(ComponentTemplateTable):
             "type",
             "maximum_draw",
             "allocated_draw",
+            "power_factor",
             "description",
             "actions",
         )
@@ -263,6 +271,8 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
 
 class InterfaceTemplateTable(ComponentTemplateTable):
     mgmt_only = BooleanColumn(verbose_name="Management Only")
+    speed = tables.Column(verbose_name="Speed", accessor="speed", orderable=True)
+    duplex = tables.Column(verbose_name="Duplex", accessor="duplex", orderable=True)
     actions = ButtonsColumn(
         model=InterfaceTemplate,
         buttons=("edit", "delete"),
@@ -271,8 +281,12 @@ class InterfaceTemplateTable(ComponentTemplateTable):
 
     class Meta(BaseTable.Meta):
         model = InterfaceTemplate
-        fields = ("pk", "name", "label", "mgmt_only", "type", "description", "actions")
+        fields = ("pk", "name", "label", "mgmt_only", "type", "speed", "duplex", "description", "actions")
+        default_columns = ("pk", "name", "label", "mgmt_only", "type", "speed", "description", "actions")
         empty_text = "None"
+
+    def render_speed(self, record):
+        return humanize_speed(record.speed)
 
 
 class FrontPortTemplateTable(ComponentTemplateTable):
@@ -330,8 +344,39 @@ class ModuleBayTemplateTable(ComponentTemplateTable):
         buttons=("edit", "delete"),
         return_url_extra=r"%3Ftab=modulebays",
     )
+    module_family = tables.Column(verbose_name="Family", linkify=True)
+    requires_first_party_modules = BooleanColumn(verbose_name="Requires First-Party Modules")
 
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
-        fields = ("pk", "name", "position", "label", "description", "actions")
+        fields = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "label",
+            "requires_first_party_modules",
+            "description",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "label",
+            "requires_first_party_modules",
+            "description",
+            "actions",
+        )
+        field_order = (
+            "pk",
+            "name",
+            "position",
+            "module_family",
+            "label",
+            "requires_first_party_modules",
+            "description",
+            "actions",
+        )
         empty_text = "None"

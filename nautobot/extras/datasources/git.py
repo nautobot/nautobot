@@ -17,8 +17,8 @@ from git import InvalidGitRepositoryError, Repo
 import yaml
 
 from nautobot.core.utils.git import GitRepo
-from nautobot.core.utils.module_loading import import_modules_privately
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
+from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -274,6 +274,7 @@ def update_git_config_contexts(repository_record, job_result):
         for filter_type in (
             "locations",
             "device_types",
+            "device_families",
             "roles",
             "platforms",
             "cluster_groups",
@@ -408,6 +409,7 @@ def import_config_context(context_data, repository_record, job_result):
     for key, model_class in [
         ("locations", Location),
         ("device_types", DeviceType),
+        ("device_families", DeviceFamily),
         ("roles", Role),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
@@ -725,6 +727,14 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
         ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
             If False, exceptions will be re-raised after logging.
     """
+    # Enforced during GitRepository.clean() but just in case someone created a bad record without cleaning:
+    permitted, reason = check_name_safe_to_import_privately(repository_slug)
+    if not permitted:
+        logger.error("The repository_slug %r is invalid as it is %s", repository_slug, reason)
+        if ignore_import_errors:
+            return
+        raise ValueError(f"The repository_slug {repository_slug!r} is invalid as it is {reason}")
+
     # Unload any previous version of this module and its submodules if present
     for job_class_path in list(registry["jobs"]):
         if job_class_path.startswith(f"{repository_slug}."):
@@ -1050,6 +1060,19 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
+def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
+    """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
+    from nautobot.data_validation.custom_validators import get_data_compliance_classes_from_git_repo
+
+    if "data_validation.data_compliance_rule" in repository_record.provided_contents:
+        for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
+            job_result.log(
+                f"Found class {compliance_class.__name__!s}",
+                level_choice=LogLevelChoices.LOG_INFO,
+                grouping="data compliance rules",
+            )
+
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
@@ -1101,6 +1124,15 @@ register_datasource_contents(
                 icon="mdi-graphql",
                 weight=400,
                 callback=refresh_git_graphql_queries,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
+                name="data compliance rules",
+                content_identifier="data_validation.data_compliance_rule",
+                icon="mdi-file-document-outline",
+                callback=refresh_git_data_compliance_rules,
             ),
         ),
     ]

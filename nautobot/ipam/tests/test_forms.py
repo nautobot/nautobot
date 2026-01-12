@@ -1,8 +1,8 @@
 """Test IPAM forms."""
 
 from django.forms import Form
-from django.test import TestCase
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.forms import FormTestCases
 from nautobot.extras.models import Status
 from nautobot.ipam import forms, models

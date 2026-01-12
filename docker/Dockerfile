@@ -48,7 +48,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl git mime-support libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl git media-types libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
     apt-get autoremove -y
 
 # DL3013 - pin all Python package versions
@@ -79,7 +79,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev mariadb-client && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev mariadb-client unzip && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -107,10 +107,10 @@ FROM python:${PYTHON_VER}-slim AS poetry
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
 ARG POETRY_HOME=/opt/poetry
 ARG POETRY_INSTALLER_PARALLEL=true
-ARG POETRY_VERSION=1.8.2
+ARG POETRY_VERSION=2.1.4
 ARG POETRY_VIRTUALENVS_CREATE=false
 ADD https://install.python-poetry.org /tmp/install-poetry.py
-RUN python /tmp/install-poetry.py
+RUN python /tmp/install-poetry.py --version ${POETRY_VERSION}
 
 # Add poetry install location to the $PATH
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
@@ -172,6 +172,25 @@ FROM python-dev-dependencies AS dev
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-static/docs /source/nautobot/project-static/docs
+
+# Node is a platform-specific (ARM/x86) dependency and using fnm simplifies the process of
+# installing it. It also allows us to manage Node versions more easily with .node-version files
+
+ENV FNM_DIR="/usr/local/lib/fnm"
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell --install-dir /tmp/fnm && \
+    cp /tmp/fnm/fnm /usr/bin
+
+WORKDIR /source/nautobot/ui
+
+# Instead of using fnm shell integration, we manually set the PATH to include the fnm directory
+ENV PATH="${FNM_DIR}/aliases/default/bin:${PATH}"
+
+RUN fnm install && \
+    npm ci
+
+WORKDIR /source
 
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-ansi --extras all && \

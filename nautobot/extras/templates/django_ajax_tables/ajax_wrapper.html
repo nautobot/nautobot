@@ -38,6 +38,8 @@ Ref: https://github.com/nautobot/nautobot/issues/1289
 
                     _replace_links_{{ ajax_divname }}(url, div.getElementsByTagName('TH'));
                     _replace_links_{{ ajax_divname }}(url, div.getElementsByClassName('pagination'));
+                    /* Hook back up the JS for the "per_page" dropdown, if present for this table */
+                    initializeResultPerPageSelection(div);
                 }
             }
         };

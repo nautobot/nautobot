@@ -14,7 +14,8 @@ You can also use the Search Bar to find desired objects with either partial or c
 Clicking on any of these objects takes you to the main page for that object.
 This example shows the result of clicking on the **IP Address** object (4).
 
-![Address search v2](../images/getting-started-nautobot-ui/42-address-search-v2.png)
+![Address search v2](../images/getting-started-nautobot-ui/ss_42-address-search-v2_light.png#only-light){ .on-glb }
+![Address search v2](../images/getting-started-nautobot-ui/ss_42-address-search-v2_dark.png#only-dark){ .on-glb }
 
 ## Searching for a Device
 
@@ -31,4 +32,5 @@ Clicking on any of the links for the results takes you to the main page for that
 * Clicking on the `ANG01` Location takes you to the main page for the Location.
 * Clicking on the `ang01-edge-02` Device takes you to the main page for the Device
 
-![Device search results](../images/getting-started-nautobot-ui/41-device-search-results.png)
+![Device search results](../images/getting-started-nautobot-ui/ss_41-device-search-results_light.png#only-light){ .on-glb }
+![Device search results](../images/getting-started-nautobot-ui/ss_41-device-search-results_dark.png#only-dark){ .on-glb }

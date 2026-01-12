@@ -4,6 +4,8 @@ from netutils.utils import jinja2_convenience_function
 
 from nautobot.core.utils import data
 from nautobot.dcim import models as dcim_models
+from nautobot.extras import models as extras_models
+from nautobot.ipam import models as ipam_models
 
 
 class NautobotJinjaFilterTest(TestCase):
@@ -85,3 +87,60 @@ class NautobotJinjaFilterTest(TestCase):
             self.fail("SecurityError raised on safe Jinja template render")
         else:
             self.assertEqual(value, location.parent.name)
+
+    def test_render_blocks_various_unsafe_methods(self):
+        """Assert that Jinja template rendering correctly blocks various unsafe Nautobot APIs."""
+        device = dcim_models.Device.objects.first()
+        dynamic_group = extras_models.DynamicGroup.objects.first()
+        git_repository = extras_models.GitRepository.objects.create(
+            name="repo", slug="repo", remote_url="file:///", branch="main"
+        )
+        interface = dcim_models.Interface.objects.first()
+        interface_template = dcim_models.InterfaceTemplate.objects.first()
+        location = dcim_models.Location.objects.first()
+        module = dcim_models.Module.objects.first()
+        prefix = ipam_models.Prefix.objects.first()
+        secret = extras_models.Secret.objects.create(name="secret", provider="environment-variable")
+        vrf = ipam_models.VRF.objects.first()
+
+        context = {
+            "device": device,
+            "dynamic_group": dynamic_group,
+            "git_repository": git_repository,
+            "interface": interface,
+            "interface_template": interface_template,
+            "location": location,
+            "module": module,
+            "prefix": prefix,
+            "secret": secret,
+            "vrf": vrf,
+            "JobResult": extras_models.JobResult,
+            "ScheduledJob": extras_models.ScheduledJob,
+        }
+
+        for call in [
+            "device.create_components()",
+            "dynamic_group.add_members([])",
+            "dynamic_group.remove_members([])",
+            "git_repository.sync(None)",
+            "git_repository.clone_to_directory()",
+            "git_repository.cleanup_cloned_directory('/tmp/')",
+            "interface.render_name_template()",
+            "interface.add_ip_addresses([])",
+            "interface_template.instantiate(device)",
+            "interface_template.instantiate_model(interface_template, device)",
+            "location.validated_save()",
+            "module.create_components()",
+            "module.render_component_names()",
+            "prefix.reparent_ips()",
+            "prefix.reparent_subnets()",
+            "secret.get_value()",
+            "vrf.add_device(device)",
+            "vrf.add_prefix(prefix)",
+            "JobResult.enqueue_job(None, None)",
+            "JobResult.log('hello world')",
+            "ScheduledJob.create_schedule(None, None)",
+        ]:
+            with self.subTest(call=call):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code="{{ " + call + " }}", context=context)

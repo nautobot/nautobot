@@ -4,320 +4,384 @@
 {% load perms %}
 {% load plugins %}
 {% load static %}
+{% load ui_framework %}
 
-{% block header %}
-    <div class="row noprint">
-        <div class="{% if search_form %}col-sm-8 col-md-9 {% else %} col-md-12 {% endif %}">
-            <ol class="breadcrumb">
-            {% block breadcrumbs %}
-                {% if list_url %}
-                <li><a href="{% url list_url %}">{{ title }}</a></li>
-                {% endif %}
-                {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
-            {% endblock breadcrumbs %}
-            </ol>
-        </div>
-        {% if search_form %}
-        <div class="col-sm-4 col-md-3">
-            <form action="#" method="get" id="search-form">
-                <div class="input-group">
-                    {{ search_form.q }}
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="mdi mdi-magnify"></i>
-                        </button>
-                    </span>
-                </div>
-            </form>
-        </div>
+{% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
+
+{% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
+
+{% block breadcrumbs_wrapper %}
+    {% captureas default_breadcrumbs %}
+        {% if list_url %}
+            <li class="breadcrumb-item"><a href="{% url list_url %}">{{ title }}</a></li>
         {% endif %}
-    </div>
-{% endblock header %}
+    {% endcaptureas %}
 
+    {% captureas block_breadcrumbs %}
+        {% block breadcrumbs %}
+            {% if list_url %}
+                <li class="breadcrumb-item"><a href="{% url list_url %}">{{ title }}</a></li>
+            {% endif %}
+            {% block extra_breadcrumbs %}{% endblock extra_breadcrumbs %}
+        {% endblock breadcrumbs %}
+    {% endcaptureas %}
+
+    {% render_breadcrumbs default_breadcrumbs block_breadcrumbs %}
+{% endblock breadcrumbs_wrapper %}
 
 {% block content %}
-<div class="pull-right noprint">
-    {% block buttons %}{% endblock %}
-    {% plugin_buttons content_type.model_class 'list' %}
-    {% if table and request.user.is_authenticated and table_config_form %}
-        {% block table_config_button %}
-            {% table_config_button table table_name="ObjectTable" %}
-        {% endblock table_config_button %}
-    {% endif %}
-    {% if filter_form or dynamic_filter_form %}
-        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
-    {% endif %}
-    {% if model.is_saved_view_model %}
+    <div class="align-items-center d-flex gap-8 justify-content-end mb-16 d-print-none">
+        {% block buttons %}{% endblock %}
+        {% plugin_buttons content_type.model_class 'list' %}
+
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                {% for saved_view in saved_views %}
-                    <li>
-                        {% if saved_view == current_saved_view %}
-                            <a href="{% url list_url %}?clear_view=true">
-                                <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
-                                <strong>
-                                    {{saved_view.name}}
-                                </strong>
-                            </a>
-                        {% else %}
-                            <a href="{{ saved_view.get_absolute_url }}">
-                                <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
-                                {{saved_view.name}}
-                            </a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-                {% if saved_views %}
-                    <li role="separator" class="divider"></li>
+            {% if permissions.add and 'add' in action_buttons %}
+                {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
+                <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                    <span class="mdi mdi-chevron-down"></span>
+                </button>
+            {% elif permissions.add and 'import' in action_buttons %}
+                <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    Actions
+                    <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
+                </button>
+            {% elif 'export' in action_buttons %}
+                <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    Actions
+                    <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
+                </button>
+            {% endif %}
+            <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                {% if permissions.add and 'import' in action_buttons %}
+                    {% block import_list_element %}
+                        {% job_import_button content_type list_element=True%}
+                    {% endblock import_list_element %}
                 {% endif %}
-                {% if current_saved_view %}
-                    <li>
-                        <a href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                            <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
-                            <span>Update Current Saved View</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                            <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
-                            <span>Set As My Default</span>
-                        </a>
-                    </li>
+                {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
+                    <li class="dropdown-divider"></li>
                 {% endif %}
-                <li>
-                    <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
-                        <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
-                        <span>Save As New View</span>
-                    </a>
-                </li>
-                {% if current_saved_view %}
-                    <li>
-                        <a href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
-                            <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
-                            <span class="text-danger">Delete Current Saved View</span>
-                        </a>
-                    </li>
+                {% if 'export' in action_buttons %}
+                    {% block export_list_element %}
+                        {% export_button content_type list_element=True %}
+                    {% endblock export_list_element %}
                 {% endif %}
             </ul>
         </div>
-    {% endif %}
-    <div class="btn-group">
-        {% if permissions.add and 'add' in action_buttons %}
-            {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
-            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-                <span class="caret"></span>
-                <span class="sr-only">Toggle Dropdown</span>
-            </button>
-        {% elif permissions.add and 'import' in action_buttons %}
-            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-                Actions <span class="caret"></span>
-            </button>
-        {% elif 'export' in action_buttons %}
-            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-                Actions <span class="caret"></span>
-            </button>
+        {% comment %} TODO: 3.0 Remove legacy import_button and export button {% endcomment %}
+        {% if permissions.add and 'import' in action_buttons %}
+            {% block import_button %}
+            {% endblock import_button %}
         {% endif %}
-        <ul class="dropdown-menu pull-right" role="menu">
-            {% if permissions.add and 'import' in action_buttons %}
-                {% block import_list_element %}
-                    {% job_import_button content_type list_element=True%}
-                {% endblock import_list_element %}
-            {% endif %}
-            {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                <li class="divider"></li>
-            {% endif %}
-            {% if 'export' in action_buttons %}
-                {% block export_list_element %}
-                    {% export_button content_type list_element=True %}
-                {% endblock export_list_element %}
-            {% endif %}
-        </ul>
-    </div>
-    {% comment %} TODO: 3.0 Remove legacy import_button and export button {% endcomment %}
-    {% if permissions.add and 'import' in action_buttons %}
-        {% block import_button %}
-        {% endblock import_button %}
-    {% endif %}
-    {% if 'export' in action_buttons %}
-        {% block export_button %}
-        {% endblock export_button %}
-    {% endif %}
-</div>
-<h1>{% block title %}
-    {{ title }}
-        {% if current_saved_view %}
-            —
-            {% if new_changes_not_applied %}
-                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
-            {% else %}
-                {{ current_saved_view.name }}
-            {% endif %}
+        {% if 'export' in action_buttons %}
+            {% block export_button %}
+            {% endblock export_button %}
         {% endif %}
-    {% endblock %}
-</h1>
-{% block header_extra %}{% endblock %}
-{% if filter_params %}
-<div class="filters-applied">
-    <b>Filters:</b>
-    {% for field in filter_params %}
-    <span class="filter-container" dir="ltr">
-        <span
-                class="filter-selection">
-            <b>{{ field.display }}:</b>
-            <span
-                    class="remove-filter-param"
-                    title="Remove all items"
-                    data-field-type="parent"
-                    data-field-value="{{ field.name }}"
-            >×</span>
-            <ul class="filter-selection-rendered">
-                {% for value in field.values %}
-                <li
-                        class="filter-selection-choice"
-                        title="{{ value.name }}"
+        <div class="align-items-center d-flex gap-4">
+            {% if model.is_saved_view_model %}
+                <button
+                    type="button"
+                    class="btn position-relative text-secondary"
+                    data-nb-toggle="drawer"
+                    data-nb-target="#SavedViews_drawer"
+                    title="Saved Views"
+                    aria-expanded="false"
+                    aria-controls="SavedViews_drawer"
                 >
-                    <span
-                            class="filter-selection-choice-remove remove-filter-param"
-                            data-field-type="child"
-                            data-field-parent="{{ field.name }}"
-                            data-field-value="{{ value.name }}"
-                    >×</span>{{ value.display }}
-                </li>
-                {% endfor %}
-            </ul>
-        </span>
-    </span>
-    {% endfor %}
-</div>
-<hr>
-{% endif %}
-
-<div class="row">
-    {% block table %}
-    <div class="col-md-12">
-        {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
-        {% if permissions.change or permissions.delete %}
-            <form id="object_list_form" method="post" class="form form-horizontal">
-                {% csrf_token %}
-                <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
-                {% if table.paginator.num_pages > 1 %}
-                <div class="table-responsive">
-                    <div id="select_all_box" class="hidden panel panel-default noprint">
-                        <div class="panel-body">
-                            <div class="checkbox-inline">
-                                <label for="select_all">
-                                    <input type="checkbox" id="select_all" name="_all" />
-                                    Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
-                                </label>
-                            </div>
-                            <div class="pull-right">
-                                {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
-                                    <button type="button"
-                                            id="update_dynamic_groups_for_all"
-                                            data-toggle="modal"
-                                            data-target="#dynamic_group_assignment_modal"
-                                            data-objects="all"
-                                            class="btn btn-primary btn-sm"
-                                            disabled="disabled">
-                                        <span class="mdi mdi-group" aria-hidden="true"></span>
-                                        Update Group Assignment for All
-                                    </button>
-                                {% endif %}
-                                {% if bulk_edit_url and permissions.change %}
-                                    <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
-                                        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit All
-                                    </button>
-                                {% endif %}
-                                {% if bulk_delete_url and permissions.delete %}
-                                    <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-sm" disabled="disabled">
-                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete All
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                {% include table_template|default:'panel_table.html' %}
-
-                <div class="pull-left noprint">
-                    {% consolidate_bulk_action_buttons %}
-                    {% block bulk_buttons %}{% endblock %}
-
-                </div>
-            </form>
-        {% else %}
-            {% include table_template|default:'panel_table.html' %}
-        {% endif %}
-        {% endwith %}
-        {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
-        <div class="clearfix"></div>
+                    <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+                    <span class="visually-hidden">Saved Views</span>
+                    {% if current_saved_view %}
+                        <span
+                            aria-hidden="true"
+                            {% if current_saved_view == user_default_saved_view %}
+                                class="nb-btn-indicator mdi mdi-star"
+                                data-bs-toggle="tooltip"
+                                data-bs-title="Your default saved view"
+                            {% elif current_saved_view == global_saved_view %}
+                                class="nb-btn-indicator mdi mdi-earth"
+                                data-bs-toggle="tooltip"
+                                data-bs-title="Global default saved view"
+                            {% else %}
+                                class="nb-btn-indicator"
+                            {% endif %}
+                        ></span>
+                    {% endif %}
+                </button>
+            {% endif %}
+            {% if filter_form or dynamic_filter_form %}
+                <button
+                    type="button"
+                    class="btn position-relative text-secondary"
+                    data-nb-toggle="drawer"
+                    data-nb-target="#FilterForm_drawer"
+                    title="Add Filters"
+                    id="id__filterbtn"
+                    aria-controls="FilterForm_drawer"
+                    aria-expanded="false"
+                >
+                    <span class="mdi mdi-filter" aria-hidden="true"></span>
+                    <span class="visually-hidden">Add Filters</span>
+                    {% if filter_params %}
+                        <span aria-hidden="true" class="nb-btn-indicator"></span>
+                    {% endif %}
+                </button>
+            {% endif %}
+        </div>
     </div>
-    {% endblock %}
-</div>
-{% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
-{% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
-{% if model.is_saved_view_model %}
-    {% saved_view_modal request.GET.urlencode list_url model request %}
-{% endif %}
-{% dynamic_group_assignment_modal request=request content_type=content_type %}
+
+    {% block header_extra %}{% endblock %}
+
+    <div>
+        {% block table %}
+            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
+                {% if permissions.change or permissions.delete %}
+                    <form id="object_list_form" method="post" class="form form-horizontal">
+                        {% csrf_token %}
+                        <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
+                        {% if table.paginator.num_pages > 1 %}
+                            <div class="table-responsive">
+                                <div id="select_all_box" class="visually-hidden card d-print-none">
+                                    <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
+                                        <div class="form-check flex-grow-1 mb-0">
+                                            <input class="form-check-input" id="select_all" name="_all" type="checkbox">
+                                            <label class="form-check-label" for="select_all">
+                                                Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
+                                            </label>
+                                        </div>
+                                        <div class="hstack gap-8">
+                                            {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
+                                                <button type="button"
+                                                        id="update_dynamic_groups_for_all"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#dynamic_group_assignment_modal"
+                                                        data-objects="all"
+                                                        class="btn btn-primary btn-sm"
+                                                        disabled>
+                                                    <span class="mdi mdi-group me-4" aria-hidden="true"></span>Update Group Assignment for All
+                                                </button>
+                                            {% endif %}
+                                            {% if bulk_edit_url and permissions.change %}
+                                                <button type="submit"
+                                                        name="_edit"
+                                                        formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                                        class="btn btn-warning btn-sm"
+                                                        disabled>
+                                                    <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
+                                                </button>
+                                            {% endif %}
+                                            {% if bulk_delete_url and permissions.delete %}
+                                                <button type="submit"
+                                                        name="_delete"
+                                                        formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                                        class="btn btn-danger btn-sm"
+                                                        disabled>
+                                                    <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% include table_template|default:'panel_table.html' %}
+
+                        <div class="d-print-none mt-16 float-lg-start mt-lg-20" id="bulk-action-buttons">
+                            {% consolidate_bulk_action_buttons %}
+                            {% block bulk_buttons %}{% endblock %}
+                        </div>
+                    </form>
+                {% else %}
+                    {% include table_template|default:'panel_table.html' %}
+                {% endif %}
+            {% endwith %}
+            {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+            <div class="clearfix"></div>
+        {% endblock %}
+    </div>
+    {% if model.is_saved_view_model %}
+        {% saved_view_modal request.GET.urlencode list_url model request %}
+    {% endif %}
+    {% dynamic_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 
+{% block drawer %}
+    {% filter_form_drawer filter_form dynamic_filter_form model_plural_name=title filter_params=filter_params %}
+    {% if table %}
+        {% table_config_form table %}
+    {% endif %}
+    <section class="nb-drawer" tabindex="-1" id="SavedViews_drawer">
+        <div class="nb-drawer-header">
+            <h1>Saved Views</h1>
+            <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
+        </div>
+        <div class="nb-drawer-body pb-20 px-20">
+            <div class="align-items-start vstack flex-grow-0 gap-10">
+                {% if saved_views|length > 0 %}
+                    <div class="dropdown w-100">
+                        <button
+                            class="btn btn-secondary dropdown-toggle align-items-center d-inline-flex justify-content-between w-100"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            {% if current_saved_view %}
+                                {{current_saved_view.name}}
+                            {% else %}
+                                <i>No saved view</i>
+                            {% endif %}
+                            <span class="mdi mdi-chevron-down"></span>
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu w-100">
+                            <li>
+                                {% if not current_saved_view %}
+                                    <button class="dropdown-item text-primary" type="button">
+                                        <span class="mdi mdi-check" aria-hidden="true"></span>
+                                        <i>No saved view</i>
+                                    </button>
+                                {% else %}
+                                    <a class="dropdown-item" href="{% url list_url %}?clear_view=true">
+                                        <span class="mdi mdi-card-remove-outline" aria-hidden="true"></span>
+                                        <i>No saved view</i>
+                                    </a>
+                                {% endif %}
+                            </li>
+                            {% for saved_view in saved_views %}
+                                <li>
+                                    {% if saved_view == current_saved_view %}
+                                        <button class="dropdown-item text-primary" type="button">
+                                            <span class="mdi mdi-check" aria-hidden="true"></span>
+                                            {{saved_view.name}}
+                                            {% if saved_view == user_default_saved_view %}
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% elif saved_view == global_saved_view %}
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% elif saved_view.is_shared %}
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% endif %}
+                                        </button>
+                                    {% else %}
+                                        <a class="dropdown-item" href="{{ saved_view.get_absolute_url }}">
+                                            <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span>
+                                            {{saved_view.name}}
+                                            {% if saved_view == user_default_saved_view %}
+                                                <span class="mdi mdi-star ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Your default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% elif saved_view == global_saved_view %}
+                                                <span class="mdi mdi-earth ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Global default" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% elif saved_view.is_shared %}
+                                                <span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>
+                                            {% endif %}
+                                        </a>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+            {% if saved_views %}
+                <hr class="border-top my-20" />
+            {% endif %}
+            <div class="align-items-start vstack gap-10">
+                Actions:
+                {% if current_saved_view %}
+                    {% if current_saved_view.owner == user %}
+                        <a class="btn btn-secondary" href="{% url 'extras:savedview_update_config' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                            <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
+                        </a>
+                    {% else %}
+                        <span data-bs-toggle="tooltip" data-bs-title="You cannot update another user's saved view.">
+                            <button class="btn btn-secondary" disabled type="button">
+                                <span class="mdi mdi-content-save-outline me-4" aria-hidden="true"></span>Update Current
+                            </button>
+                        </span>
+                    {% endif %}
+                    <a class="btn btn-secondary" href="{% url 'extras:savedview_set_default' pk=current_saved_view.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <span class="mdi mdi-star me-4" aria-hidden="true"></span>Set As My Default
+                    </a>
+                {% endif %}
+                <a class="btn btn-secondary" href="" data-bs-toggle="modal" data-bs-target="#saved_view_modal">
+                    <span class="mdi mdi-content-save-plus-outline me-4" aria-hidden="true"></span>Save As New
+                </a>
+                {% if current_saved_view %}
+                    {% if current_saved_view.owner == user %}
+                        <a class="btn btn-danger" href="{% url 'extras:savedview_delete' pk=current_saved_view.pk %}?return_url={{ request.path }}">
+                            <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
+                        </a>
+                    {% else %}
+                        <span data-bs-toggle="tooltip" data-bs-title="You cannot delete another user's saved view.">
+                            <button class="btn btn-danger" disabled type="button">
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete Current
+                            </button>
+                        </span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </section>
+{% endblock drawer %}
+
 {% block javascript %}
-<script src="{% static 'js/tableconfig.js' %}"></script>
-<script src="{% static 'jquery/jquery.formset.js' %}"></script>
-<script>
-    var clipboard = new ClipboardJS('.btn');
+    <script src="{% static 'js/tableconfig.js' %}"></script>
+    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script>
+        var clipboard = new ClipboardJS('.btn');
 
-    clipboard.on('success', function (e) {});
+        clipboard.on('success', function (e) {});
 
-    clipboard.on('error', function (e) {});
+        clipboard.on('error', function (e) {});
 
-    $('.formset_row-dynamic-filterform').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Filter',
-        addCssClass: 'btn btn-primary add-row',
-        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
-        prefix: 'form',
-        formCssClass: 'dynamic-filterform',
-        added: jsify_form,
-        removed: (row) => { row.remove(); }
-    });
-
-    // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
-    $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
-        const button = $(event.relatedTarget);
-        const selected_or_all = button.data("objects");
-        const pks_target = document.getElementById("dynamic_group_assignment_pks");
-        pks_target.replaceChildren();
-        if (selected_or_all == "all") {
-            document.getElementById("dynamic_group_assignment_all").value = true;
-        } else {
-            document.getElementById("dynamic_group_assignment_all").value = "";
-            const formData = new FormData(document.getElementById("object_list_form"));
-            for (let pk of formData.getAll("pk")) {
-                let input = document.createElement("input");
-                input.setAttribute("type", "hidden");
-                input.setAttribute("name", "pk");
-                input.setAttribute("value", pk);
-                pks_target.append(input);
+        // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
+        $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
+            const button = $(event.relatedTarget);
+            const selected_or_all = button.data("objects");
+            const pks_target = document.getElementById("dynamic_group_assignment_pks");
+            pks_target.replaceChildren();
+            if (selected_or_all == "all") {
+                document.getElementById("dynamic_group_assignment_all").value = true;
+            } else {
+                document.getElementById("dynamic_group_assignment_all").value = "";
+                const formData = new FormData(document.getElementById("object_list_form"));
+                for (let pk of formData.getAll("pk")) {
+                    let input = document.createElement("input");
+                    input.setAttribute("type", "hidden");
+                    input.setAttribute("name", "pk");
+                    input.setAttribute("value", pk);
+                    pks_target.append(input);
+                }
             }
-        }
-    });
+        });
 
-    document.getElementById("dynamic_group_assignment_cancel").addEventListener("click", (e) => {
+        document.getElementById("dynamic_group_assignment_cancel").addEventListener("click", (e) => {
         // Clear form data on cancel, but not on "close" "x" button
-        $("#dynamic_group_assignment_modal").modal("hide");
-        document.getElementById("dynamic_group_assignment_all").value = "";
-        document.getElementById("dynamic_group_assignment_pks").replaceChildren();
-        document.getElementById("id_create_and_assign_to_new_group_name").value = "";
-        $("#id_add_to_groups").val(null).trigger("change");
-        $("#id_remove_from_groups").val(null).trigger("change");
-    });
+            $("#dynamic_group_assignment_modal").modal("hide");
+            document.getElementById("dynamic_group_assignment_all").value = "";
+            document.getElementById("dynamic_group_assignment_pks").replaceChildren();
+            document.getElementById("id_create_and_assign_to_new_group_name").value = "";
+            $("#id_add_to_groups").val(null).trigger("change");
+            $("#id_remove_from_groups").val(null).trigger("change");
+        });
 
+        // Keep "Saved Views" drawer open when saved views are swapped, updated, set as default, created, deleted, etc.
+        (() => {
+            document.addEventListener('DOMContentLoaded', () => {
+                document.addEventListener('click', (event) => {
+                    const anchor = event.target.closest('a');
+                    const savedViewsDrawer = document.querySelector('#SavedViews_drawer');
 
-</script>
+                    if (anchor?.getAttribute('href') && savedViewsDrawer?.contains(anchor)) {
+                        window.nb.history.saveState()
+                    }
+                });
+
+                document.addEventListener('submit', (event) => {
+                    const savedViewModal = document.querySelector('#saved_view_modal');
+
+                    if (savedViewModal?.contains(event.target)) {
+                        window.nb.history.saveState()
+                    }
+                });
+            });
+        })();
+    </script>
 {% endblock %}

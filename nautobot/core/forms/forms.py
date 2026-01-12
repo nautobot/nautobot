@@ -5,12 +5,13 @@ import re
 
 from django import forms
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
+from nautobot.core.forms.fields import CommentField
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
@@ -87,6 +88,10 @@ class BootstrapMixin(forms.BaseForm):
                 css_classes = field.widget.attrs.get("class", "")
                 if "form-control" not in css_classes:
                     field.widget.attrs["class"] = " ".join([css_classes, "form-control"]).strip()
+            if isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
+                css_classes = field.widget.attrs.get("class", "")
+                if "form-check" not in css_classes:
+                    field.widget.attrs["class"] = " ".join([css_classes, "form-check-input"]).strip()
             if field.required and not isinstance(field.widget, forms.FileInput):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
@@ -106,6 +111,15 @@ class ConfirmationForm(BootstrapMixin, ReturnURLForm):
     A generic confirmation form. The form is not valid unless the confirm field is checked.
     """
 
+    confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
+
+
+class ApprovalForm(BootstrapMixin, ReturnURLForm):
+    """
+    A generic comment form. The form is not valid unless the confirm field is checked.
+    """
+
+    comments = CommentField(label="Comments", required=False)
     confirm = forms.BooleanField(required=True, widget=forms.HiddenInput(), initial=True)
 
 
@@ -138,12 +152,15 @@ class BulkEditForm(forms.Form):
         # Handle M2M Save
         for key in self.cleaned_data.keys():
             if key.startswith(("add_", "remove_")):
-                field_name = key.lstrip("add_")
+                if key.startswith("add_"):
+                    field_name = key.lstrip("add_")
+                else:
+                    field_name = key.lstrip("remove_")
                 if field_name in m2m_field_names:
                     continue
                 with contextlib.suppress(FieldDoesNotExist):
                     field = obj._meta.get_field(field_name)
-                    is_m2m_field = isinstance(field, (ManyToManyField, TagsField))
+                    is_m2m_field = isinstance(field, (ManyToManyField, ManyToManyRel, TagsField))
                     if is_m2m_field:
                         m2m_field_names.append(field_name)
 
@@ -270,7 +287,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     columns = forms.MultipleChoiceField(
         choices=[],
         required=False,
-        widget=forms.SelectMultiple(attrs={"size": 10}),
+        widget=forms.SelectMultiple(attrs={"size": 20}),
         help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
     )
 
@@ -360,7 +377,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
 
     def _get_lookup_field_choices(self):
         """Get choices for lookup_fields i.e filterset parameters without a lookup expr"""
-        from nautobot.extras.filters.mixins import RelationshipFilter  # Avoid circular import
+        from nautobot.extras.filter_mixins import RelationshipFilter  # Avoid circular import
 
         filterset_without_lookup = (
             (
@@ -378,14 +395,12 @@ def dynamic_formset_factory(filterset, data=None, **kwargs):
     filter_form.filterset = filterset
 
     params = {
-        "can_delete_extra": True,
-        "can_delete": True,
-        "extra": 3,
+        "can_delete_extra": False,
+        "can_delete": False,
+        "extra": 1,
     }
     kwargs.update(params)
     form = formset_factory(form=filter_form, **kwargs)
-    if data:
-        form = form(data=data)
 
     return form
 
