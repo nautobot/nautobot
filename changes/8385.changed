@@ -1,1 +1,0 @@
-Marked `Job`, `JobLogEntry`, `JobQueue`, `JobQueueAssignment`, `JobResult`, and `ScheduledJob` models as non-version-controlled as it is not appropriate to branch the data they contain.
