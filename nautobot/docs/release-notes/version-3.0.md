@@ -210,7 +210,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
-## v3.0.4 (2026-01-09)
+## v3.0.4 (2026-01-12)
 
 ### Security in v3.0.4
 
@@ -220,6 +220,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 ### Added in v3.0.4
 
 - [#8387](https://github.com/nautobot/nautobot/issues/8387) - Added permissions lockout in time-travel mode.
+- [#8401](https://github.com/nautobot/nautobot/issues/8401) - Added `Service` to the list of models registered with Nautobot's search backend.
 
 ### Changed in v3.0.4
 
@@ -245,6 +246,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 ### Documentation in v3.0.4
 
 - [#8361](https://github.com/nautobot/nautobot/issues/8361) - Updated step `Sync Changes into next` in `nautobot/docs/development/core/release-checklist.md`.
+- [#8366](https://github.com/nautobot/nautobot/issues/8366) - Updated VLAN and VLAN groups documentation to include 3.0 screenshots.
 - [#8368](https://github.com/nautobot/nautobot/issues/8368) - Updated tenants documentation to include 3.0 screenshots.
 - [#8380](https://github.com/nautobot/nautobot/issues/8380) - Updated documentation for the deprecated `STORAGE_BACKEND` and `STORAGE_CONFIG` settings to clarify their migration path.
 
