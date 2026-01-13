@@ -266,8 +266,8 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"prefix_exact": "192.0.2.1/29"}
         with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs
-            self.assertTrue(str(exc.exception).startswith("Invalid prefix_exact value"))
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
 
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
@@ -849,8 +849,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
         params = {"prefix_exact": [str(ipv4_parent), str(ipv6_parent)]}
         with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs
-            self.assertTrue(str(exc.exception).startswith("Invalid prefix_exact value"))
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
 
     def test_filter_address(self):
         """Check IPv4 and IPv6, with and without a mask"""
