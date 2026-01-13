@@ -668,7 +668,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
-def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
+def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
     """
@@ -678,17 +678,6 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     pod_token = settings.KUBERNETES_TOKEN_PATH
 
-    configuration = kubernetes.client.Configuration()
-    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-    configuration.ssl_ca_cert = pod_ssl_ca_cert
-    with open(pod_token, "r") as token_file:
-        token = token_file.read().strip()
-    # configure API Key authorization: BearerToken
-    configuration.api_key_prefix["authorization"] = "Bearer"
-    configuration.api_key["authorization"] = token
-    with kubernetes.client.ApiClient(configuration) as api_client:
-        api_instance = kubernetes.client.BatchV1Api(api_client)
-
     job_result.task_kwargs = job_kwargs
     job_result.save()
     pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
@@ -697,10 +686,23 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
         "runjob_with_job_result",
         f"{job_result.pk}",
     ]
-    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
-    api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
-    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
+
+    def create_kubernetes_job():
+        """Create and read the Kubernetes job after the transaction commits."""
+        configuration = kubernetes.client.Configuration()
+        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+        configuration.ssl_ca_cert = pod_ssl_ca_cert
+        with open(pod_token, "r", encoding="utf-8") as token_file:
+            token = token_file.read().strip()
+        # configure API Key authorization: BearerToken
+        configuration.api_key_prefix["authorization"] = "Bearer"
+        configuration.api_key["authorization"] = token
+        with kubernetes.client.ApiClient(configuration) as api_client:
+            api_instance = kubernetes.client.BatchV1Api(api_client)
+            job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+            api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+
+    transaction.on_commit(create_kubernetes_job)
     return job_result
 
 
