@@ -1255,10 +1255,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="+",
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         help_text="User that requested the schedule",
     )
     # todoindex:
