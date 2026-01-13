@@ -16,7 +16,7 @@ QuerySets are tightly coupled to the model's fields and relationships, and are r
 
 There is often confusion between QuerySets and FilterSets, as both are used to retrieve and manipulate data in Django, but they serve different purposes and operate at different layers.
 
-A **FilterSet** is a concept provided by the [django-filter](https://django-filter.readthedocs.io/) library, which is used extensively in Nautobot. FilterSets define a set of filters that can be used, typically based on user input (such as query parameters in an API request), to filter a given model's records.
+A **FilterSet** is a concept provided by the [Django-filter](https://django-filter.readthedocs.io/) library, which is used extensively in Nautobot. FilterSets define a set of filters that can be used, typically based on user input (such as query parameters in an API request), to filter a given model's records.
 
 FilterSets are not a replacement for QuerySets; rather, they operate on top of QuerySets, at the *user interaction* layer (i.e. the UI, REST API, and GraphQL interfaces) of Nautobot. When any of these interfaces receives filter parameters, those parameters pass through the corresponding FilterSet and are programmatically translated to one or more QuerySet queries.
 
@@ -26,6 +26,7 @@ FilterSets allow for Nautobot to both *extend* and *restrict* the kinds of datab
     One concept to consider is that QuerySet's have `.filter()` and `.exclude()` methods, while a FilterSet will have a `__ic` and `__nic` param to allow you in a single API call articulate what would take multiple methods in a QuerySet.
 
 Example:
+
 ```python
 class DeviceFilterSet(
     NautobotFilterSet,
@@ -48,7 +49,6 @@ In Nautobot, FilterSets are used to expose flexible and powerful filtering capab
 
 To provide concrete examples, note that these QuerySet and FilterSet calls result in the same final QuerySet.
 
-
 ```python
 >>> Device.objects.filter(device_type__manufacturer__name='Cisco')
 >>> DeviceFilterSet({'manufacturer': 'Cisco'}, queryset=Device.objects.all()).qs
@@ -61,13 +61,13 @@ You can see how the `device_type__manufacturer__name` became simply `manufacture
 >>> DeviceFilterSet({'name__ic': 'ams01'}, queryset=Device.objects.all()).qs
 ```
 
-You can see how the `icontains` becomes `ic`, as there is dynamically applied filters applied to each FilterSet. 
+You can see how the `icontains` becomes `ic`, as there is dynamically applied filters applied to each FilterSet.
 
 So while often the QuerySet and FilterSet attributes will be the same, there is no guarantee, so you must refer to the appropriate documentation when working with either a QuerySet or a FilterSet.
 
 ## RestrictedQuerySet
 
-Nautobot provides the ability to include attribute based access control (ABAC) via the method of `RestrictedQuerySet`. That is to say that any model in Nautobot that intends to have permissions applied, should should have the `Model.objects` object manager inherit from Nautobot. 
+Nautobot provides the ability to include attribute based access control (ABAC) via the method of `RestrictedQuerySet`. That is to say that any model in Nautobot that intends to have permissions applied, should should have the `Model.objects` object manager inherit from Nautobot.
 
 ## IPAM Custom Lookups
 
