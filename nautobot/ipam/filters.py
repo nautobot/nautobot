@@ -574,6 +574,7 @@ class IPAddressFilterSet(
                     )
                 continue
 
+            # Defensive programming in case there is logic missed above
             raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
         return self.search_by_prefix(queryset, name, prefixes)
 
