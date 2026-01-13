@@ -29,7 +29,9 @@ The following example will show:
 ### Creating the VLANs
 
 1. Click on **IPAM** in the left sidebar menu
-2. Look for the **VLANS** option and click on the **+** to go to the `Add a new VLAN` form
+2. Under the **VLANS** section, select **VLANS**.
+    * From this page, you can view existing VLANs.
+    * Click the `+ Add VLAN` button.
 3. Populate `ID` with `200`
 4. Populate `Name` with `vlan 200`
 5. Select `Status` as `Active`
@@ -38,7 +40,8 @@ The following example will show:
 !!! note
     The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
 
-![Create VLANs 1](../images/getting-started-nautobot-ui/22-create-vlans.png)
+![Create VLANs 1](../images/getting-started-nautobot-ui/22-create-vlans-light.png#only-light){ .on-glb }
+![Create VLANs 1](../images/getting-started-nautobot-ui/22-create-vlans-dark.png#only-dark){ .on-glb }
 
 Now we'll create two instances of VLANs, each with **ID** = `100` and **Name** = `vlan 100` and an `Active` **Status**.
 The differentiator will be that one instance will be assigned to the `Vancouver 1` Site and the other to the `Ottawa 1` Site.
@@ -59,28 +62,33 @@ On the `Add a new VLAN` form:
 4. Select `BRE01` from the `Location` selector drop-down
 5. Click on the `Create` button when complete with the second instance
 
-![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
+![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2-light.png#only-light){ .on-glb }
+![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2-dark.png#only-dark){ .on-glb }
 
 Once you've created the three VLANs and then hit the `Create` button, you will be taken to the **VLANs** main page. On that page,
 you'll see the three VLANs and the Location assignment for each one. Each `vlan 100` instance will have a Location assignment, while
 `vlan 200` will not:
 
-![VLAN main page](../images/getting-started-nautobot-ui/24-vlan-main-page.png)
+![VLAN main page](../images/getting-started-nautobot-ui/24-vlan-main-page-light.png#only-light){ .on-glb }
+![VLAN main page](../images/getting-started-nautobot-ui/24-vlan-main-page-dark.png#only-dark){ .on-glb }
 
 ### Assigning VLANs to an Interface
 
 To assign a VLAN to an Interface:
 
-1. Select **Devices** to go to the Devices main page
-2. Click on the name of the Device you wish to add a VLAN to (`ang01-edge-01`) in this example
-3. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
-4. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
-    * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
-    * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
+1. Click on the **Devices** in the left sidebar menu
+2. Under the **Devices** section, select **Devices** to view existing devices.
+3. Click on the Devices you wish to add a VLAN to (`ang01-edge-01`) in this example
+4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
+    * On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
+        * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
+        * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 
-![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
+![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface-light.png#only-light){ .on-glb }
+![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface-dark.png#only-dark){ .on-glb }
 
 !!! note
     The `vlan 100` instance that is assigned to the `BRE01` Location does not show up as an option for the `ANG01` Location
 
-![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
+![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2-light.png#only-light){ .on-glb }
+![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2-dark.png#only-dark){ .on-glb }

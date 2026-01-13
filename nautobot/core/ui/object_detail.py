@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Callable
 from urllib.parse import urlencode
 import uuid
 
@@ -278,7 +279,6 @@ class Button(Component):
         """Render this button to HTML, possibly including any associated JavaScript."""
         if not self.should_render(context):
             return ""
-
         button = render_component_template(self.template_path, context, **self.get_extra_context(context))
         if self.javascript_template_path:
             button += format_html(
@@ -341,6 +341,60 @@ class FormButton(Button):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
+        }
+
+
+class ExtraDetailViewActionButton(Button):
+    def __init__(
+        self,
+        action: str,
+        permission_check: Callable,
+        link_name: str,
+        label: str | None = None,
+        template_path="components/button/extradetailviewactionbutton.html",
+        **kwargs,
+    ):
+        """Represents an extra action button for detail views.
+
+        Args:
+            action: The action name (used for URL routing and button ID)
+            permission_check: callable to check if button should render
+            label: Optional custom label (if None, uses "Action ObjectName")
+            link_name (str): View name to link to action, for example "extras:approvalworkflow_cancel".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered.
+            template_path (str): Dropdown-specific template file.
+        """
+        self.action = action
+        self.permission_check = permission_check
+        if not callable(permission_check):
+            raise TypeError(f"permission_check must be callable, got {type(permission_check).__name__}")
+        super().__init__(template_path=template_path, label=label, link_name=link_name, **kwargs)
+
+    def should_render(self, context: Context) -> bool:
+        """Check if button should be rendered based on permissions."""
+        obj = get_obj_from_context(context, self.context_object_key)
+        return bool(self.get_link(context) and self.permission_check(context["user"], obj))
+
+    def render_label(self, context: Context) -> str:
+        """Generate button label."""
+        if self.label:
+            return self.label
+        return f"{bettertitle(self.action)} {bettertitle(context['verbose_name'])}"
+
+    def render(self, context: Context):
+        """Render the dropdown item button HTML."""
+        if not self.should_render(context):
+            return ""
+
+        button = render_component_template(self.template_path, context, **self.get_extra_context(context))
+        return button
+
+    def get_extra_context(self, context: Context):
+        """Add the label of ExtraDetailViewActionButton to the other Button context."""
+        return {
+            **super().get_extra_context(context),
+            "label": self.render_label(context),
         }
 
 
@@ -614,7 +668,7 @@ class Panel(Component):
             )
 
     def _get_body_id(self, context: Context):
-        """Retreive the `body_id` attribute to the rendered components, used for the collapsible panel feature."""
+        """Retrieve the `body_id` attribute to the rendered components, used for the collapsible panel feature."""
         if self.body_id:
             return self.body_id
         if self.label:
@@ -1737,10 +1791,12 @@ class StatsPanel(Panel):
     ):
         """
         Instantiate a `StatsPanel`.
-        filter_name (str) is a valid query filter append to the anchor tag for each stat button.
-        e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
-        related_models is a list of model classes and/or tuples of (model_class, query_string).
-        e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
+
+        Args:
+            filter_name (str): a valid query filter append to the anchor tag for each stat button. e.g. the `tenant`
+                query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
+            related_models (str): a list of model classes and/or tuples of (model_class, query_string).
+                e.g. `[Device, Prefix, (Circuit, "circuit_terminations__location__in")]`
         """
 
         self.filter_name = filter_name
@@ -1764,9 +1820,7 @@ class StatsPanel(Panel):
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
-            self.filter_pks = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            self.filter_pks = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
         else:
             self.filter_pks = [instance.pk]
 
@@ -1799,6 +1853,40 @@ class StatsPanel(Panel):
                 self.body_content_template_path, context, stats=stats, filter_name=self.filter_name
             )
         return ""
+
+
+class AsyncStatsPanel(Panel):
+    def __init__(
+        self,
+        *,
+        api_url_name,
+        body_content_template_path="components/panel/async_stats_panel_body.html",
+        **kwargs,
+    ):
+        """
+        Instantiate an `AsyncStatsPanel`.
+
+        This *appears* like a regular `StatsPanel`, but (to improve UI performance and UX in cases where the stats
+        tabulation may be time-consuming) makes a separate AJAX call to the given `api_url_name` to retrieve the stats,
+        and populates the panel client-side with the response.
+
+        Args:
+            api_url_name (str): The API URL to call, e.g. `"dcim-api:location_stats"`. This API is expected to return,
+                at minimum, a list of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
+                Refer to `StatsSerializer` and `LocationViewSet.stats` for an example implementation.
+        """
+        self.api_url_name = api_url_name
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    def should_render(self, context: Context):
+        """Always render this panel."""
+        return True
+
+    def get_extra_context(self, context: Context):
+        return {
+            "api_url": reverse(self.api_url_name, kwargs={"pk": get_obj_from_context(context).pk}),
+            "body_id": self.body_id,
+        }
 
 
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
@@ -1849,6 +1937,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
 
     def render_value(self, key, value, context: Context):
         """Render a given custom field value appropriately depending on what type of custom field it is."""
+        # TODO: this logic could be unified with CustomFieldColumn.render()?
         cf = key
         if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             return render_boolean(value)

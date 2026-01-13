@@ -11,7 +11,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import humanize_speed
+from nautobot.core.templatetags.helpers import HTML_NONE, humanize_speed
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
@@ -206,7 +206,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vc_priority = tables.Column(verbose_name="VC Priority")
     device_redundancy_group = tables.Column(linkify=True)
     device_redundancy_group_priority = tables.TemplateColumn(
-        template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
+        template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}<span class="text-secondary">—</span>{% endif %}"""
     )
     controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
@@ -265,7 +265,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
@@ -402,7 +402,7 @@ class ModularDeviceComponentTable(DeviceComponentTable):
         super().__init__(*args, **kwargs)
 
     def render_module(self, record, value, **kwargs):
-        if value and value == self.parent_module:
+        if value == self.parent_module or not value:
             return self.default
         return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
@@ -1262,6 +1262,7 @@ class DeviceRedundancyGroupTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "description",
             "status",
             "failover_strategy",
             "controller_count",
@@ -1506,7 +1507,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
@@ -1570,7 +1571,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
