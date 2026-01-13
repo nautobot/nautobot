@@ -3385,6 +3385,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         label="Management only",
         help_text="This interface is used only for out-of-band management",
     )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Description")
     ip_addresses = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
@@ -4541,6 +4542,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
+        to_field_name="name",
         required=False,
         label="Device",
         query_params={

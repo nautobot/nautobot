@@ -22,7 +22,7 @@ classifiers = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     # Background task processing
-    "celery (>=5.6.0,<5.7)",
+    "celery (>=5.6.1,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
@@ -50,7 +50,7 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.1,<25.2)",
     # Health check endpoint
-    "django-health-check (>=3.20.0,<3.21)",
+    "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -79,7 +79,7 @@ dependencies = [
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "GitPython (>=3.1.45,<3.2)",
+    "GitPython (>=3.1.46,<3.2)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -127,7 +127,7 @@ all = [
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.7,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.8.1,<4.9)",
+    "social-auth-core[saml] (>=4.8.3,<4.9)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.2.0,<5.3)" ]
@@ -140,7 +140,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.8.1,<4.9)" ]
+sso = [ "social-auth-core[saml] (>=4.8.3,<4.9)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -158,7 +158,7 @@ packages = [
 ]
 include = [
     # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
-    "nautobot/project-static/docs/**/*",
+    {path = "nautobot/project-static/docs/**/*", format = ["sdist", "wheel"]},
 ]
 exclude = [
     # Source code of the documentation doesn't need to be included since we package the rendered docs
@@ -200,7 +200,7 @@ mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
-mkdocs-material = "~9.7.0"
+mkdocs-material = "~9.7.1"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -220,15 +220,15 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.33"
+pymarkdownlnt = "~0.9.34"
 # Combination linter and code formatter
-ruff = "~0.14.8"
+ruff = "~0.14.10"
 # YAML linting
 yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.0"
+coverage = "~7.13.1"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid

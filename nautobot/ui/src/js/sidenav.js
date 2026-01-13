@@ -1,3 +1,4 @@
+import flatpickr from 'flatpickr';
 import { getCookie, removeCookie, setCookie } from './cookie.js';
 
 const SIDENAV_COLLAPSED_KEY = 'sidenav_collapsed';
@@ -50,7 +51,7 @@ export const initializeSidenav = () => {
     toggler.addEventListener('click', toggleSidenav);
   }
 
-  [...document.querySelectorAll('.nb-sidenav-list-item:not(.nb-flat)')].forEach((sidenavListItem) => {
+  [...document.querySelectorAll('.nb-sidenav-list-item:not(.nb-sidenav-list-item-flat)')].forEach((sidenavListItem) => {
     sidenavListItem.addEventListener('click', () => {
       const controls = sidenavListItem.getAttribute('aria-controls');
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
@@ -78,10 +79,45 @@ export const initializeSidenav = () => {
     });
   });
 
+  const sidenavBranchPickerReturnUrl = document.querySelector('#sidenav-branch-picker-return-url');
+  if (sidenavBranchPickerReturnUrl) {
+    // Remove any existing version-control query params from the return URL as they would override the form action
+    const return_url = new URL(sidenavBranchPickerReturnUrl.value);
+    return_url.searchParams.delete('branch');
+    return_url.searchParams.delete('version_control_time_travel_date');
+    sidenavBranchPickerReturnUrl.value = return_url.toString();
+  }
+
   const sidenavBranchPickerSelect = $('#sidenav-branch-picker-select');
   sidenavBranchPickerSelect.on('change', (event) => event.currentTarget.form.submit());
   sidenavBranchPickerSelect.on('select2:open', () => {
     document.querySelector('.select2-dropdown').setAttribute('data-bs-theme', 'dark');
     document.querySelector('.select2-dropdown .select2-search__field').setAttribute('placeholder', 'Find a branch...');
   });
+
+  const sidenavTimeTravelReturnUrl = document.querySelector('#sidenav-timetravel-return-url');
+  if (sidenavTimeTravelReturnUrl) {
+    // Remove any existing version-control query params from the return URL as they would override the form action
+    const return_url = new URL(sidenavTimeTravelReturnUrl.value);
+    return_url.searchParams.delete('branch');
+    return_url.searchParams.delete('version_control_time_travel_date');
+    sidenavTimeTravelReturnUrl.value = return_url.toString();
+  }
+
+  const sidenavTimeTravelPickerInput = document.querySelector('#sidenav-timetravel-picker');
+  if (sidenavTimeTravelPickerInput) {
+    flatpickr(sidenavTimeTravelPickerInput, {
+      allowInput: true,
+      maxDate: 'today',
+      onChange: (_selectedDates, dateStr, instance) => {
+        instance.input.blur();
+        document.querySelector('#timetravel-cancel').classList.toggle('d-none', !dateStr);
+        instance.input.form.submit();
+      },
+      onReady: (_selectedDates, dateStr) => {
+        document.querySelector('#timetravel-cancel').classList.toggle('d-none', !dateStr);
+      },
+      wrap: true,
+    });
+  }
 };

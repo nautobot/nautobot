@@ -210,6 +210,115 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.4 (2026-01-12)
+
+### Security in v3.0.4
+
+- [#8383](https://github.com/nautobot/nautobot/issues/8383) - Updated dependency `pynacl` to `1.6.2` to mitigate CVE-2025-69277. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8395](https://github.com/nautobot/nautobot/issues/8395) - Updated dependency `urllib3` to `2.6.3` to mitigate CVE-2026-21441. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.0.4
+
+- [#8387](https://github.com/nautobot/nautobot/issues/8387) - Added permissions lockout in time-travel mode.
+- [#8401](https://github.com/nautobot/nautobot/issues/8401) - Added `Service` to the list of models registered with Nautobot's search backend.
+
+### Changed in v3.0.4
+
+- [#8385](https://github.com/nautobot/nautobot/issues/8385) - Marked `Job`, `JobLogEntry`, `JobQueue`, `JobQueueAssignment`, `JobResult`, and `ScheduledJob` models as non-version-controlled as it is not appropriate to branch the data they contain.
+
+### Fixed in v3.0.4
+
+- [#8356](https://github.com/nautobot/nautobot/issues/8356) - Added description column to Device Redundancy Group table.
+- [#8362](https://github.com/nautobot/nautobot/issues/8362) - Fixed an IntegrityError when using kubernetes workers to run jobs.
+- [#8364](https://github.com/nautobot/nautobot/issues/8364) - Fixed Cable basic filter form to filter by device name instead of device UUID.
+- [#8365](https://github.com/nautobot/nautobot/issues/8365) - Fixed inconsistent empty state for Tenant column and Device redundancy group policy.
+- [#8365](https://github.com/nautobot/nautobot/issues/8365) - Fixed Platform network driver select to match UI.
+- [#8372](https://github.com/nautobot/nautobot/issues/8372) - Fixed the import/export dropdown behavior in CustomField, ComputedField, GraphQL and DynamicGroup table views.
+- [#8380](https://github.com/nautobot/nautobot/issues/8380) - Restored (still-deprecated) support for explicit configuration of `STATICFILES_STORAGE` and `DEFAULT_FILE_STORAGE` in `nautobot_config.py` that was inadvertently broken when deprecating these settings in the previous release.
+- [#8385](https://github.com/nautobot/nautobot/issues/8385) - Added logic to handle the case of change logging for changes to a non-version-controlled model while a non-default branch is checked out via the Version Control app.
+
+### Dependencies in v3.0.4
+
+- [#8370](https://github.com/nautobot/nautobot/issues/8370) - Updated dependency `celery` to `~5.6.1`.
+- [#8370](https://github.com/nautobot/nautobot/issues/8370) - Updated dependency `django-health-check` to `~3.20.8`.
+- [#8370](https://github.com/nautobot/nautobot/issues/8370) - Updated dependency `GitPython` to `~3.1.46`.
+
+### Documentation in v3.0.4
+
+- [#8361](https://github.com/nautobot/nautobot/issues/8361) - Updated step `Sync Changes into next` in `nautobot/docs/development/core/release-checklist.md`.
+- [#8366](https://github.com/nautobot/nautobot/issues/8366) - Updated VLAN and VLAN groups documentation to include 3.0 screenshots.
+- [#8368](https://github.com/nautobot/nautobot/issues/8368) - Updated tenants documentation to include 3.0 screenshots.
+- [#8380](https://github.com/nautobot/nautobot/issues/8380) - Updated documentation for the deprecated `STORAGE_BACKEND` and `STORAGE_CONFIG` settings to clarify their migration path.
+
+### Housekeeping in v3.0.4
+
+- [#8369](https://github.com/nautobot/nautobot/issues/8369) - Updated development npm dependency `prettier` to `^3.7.4`.
+- [#8369](https://github.com/nautobot/nautobot/issues/8369) - Updated development npm dependency `sass` to `^1.97.1`.
+- [#8369](https://github.com/nautobot/nautobot/issues/8369) - Updated development npm dependency `webpack` to `^5.104.1`.
+- [#8370](https://github.com/nautobot/nautobot/issues/8370) - Updated development dependency `pymarkdownlnt` to `~0.9.34`.
+- [#8370](https://github.com/nautobot/nautobot/issues/8370) - Updated development dependency `coverage` to `~7.13.1`.
+
+## v3.0.3 (2025-12-22)
+
+### Added in v3.0.3
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Added support for defining Job input/output file storage via Django's `STORAGES` setting. This deprecates the separate settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which will be removed entirely in Nautobot v3.1.
+- [#7252](https://github.com/nautobot/nautobot/issues/7252) - Added `NAUTOBOT_KUBERNETES_JOB_MANIFEST` environment variable to configure `KUBERNETES_JOB_MANIFEST` setting.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `TreeModel.cacheable_descendants_pks` method to be usable for improved performance.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `nautobot.apps.api.StatsSerializer` and `nautobot.apps.ui.AsyncStatsPanel` to allow for defining a StatsPanel that renders asynchronously.
+- [#8298](https://github.com/nautobot/nautobot/issues/8298) - Added side panels to IP Address detail view for Load Balancer Pool Members and Virtual Servers.
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Added option to close Approval Workflow directly.
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Added support for ExtraDetailViewActionButton to define additional object detail view action buttons, integrated into the consolidated action button system.
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Added new field `last_updated` to `ApprovalWorkflowStageResponse` to improve ordering.
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Added new property `is_canceled` and `is_active` to `ApprovalWorkflow` model.
+- [#8335](https://github.com/nautobot/nautobot/issues/8335) - Added UI widget for time-travel under Version Control.
+
+### Changed in v3.0.3
+
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Improved `consolidate_detail_view_action_buttons` template tag to support model-defined ExtraDetailViewActionButton instances.
+
+### Deprecated in v3.0.3
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Deprecated support for the settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which are replaced with Django's unified `STORAGES` setting. Support for these variables will be removed entirely in Nautobot v3.1.
+
+### Fixed in v3.0.3
+
+- [#7326](https://github.com/nautobot/nautobot/issues/7326) - Fixed handling of `DecimalFields` (such as `Location.latitude` and `Location.longitude`) with `MinMaxValidationRule`.
+- [#7326](https://github.com/nautobot/nautobot/issues/7326) - Fixed rendering of Location latitude/longitude in detail view when either one is exactly zero.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Improved performance of Location detail view by adding caching of a repeated expensive database query and asynchronous loading of related-object statistics.
+- [#8274](https://github.com/nautobot/nautobot/issues/8274) - Fixed unintended omission of the rendered documentation from `.whl` packages.
+- [#8291](https://github.com/nautobot/nautobot/issues/8291) - Removed a redundant error condition in Interface form validation when setting interface mode to tagged-all.
+- [#8306](https://github.com/nautobot/nautobot/issues/8306) - Fixed missing description field on interface creation form.
+- [#8330](https://github.com/nautobot/nautobot/issues/8330) - Fixed action buttons in IPAddress table incorrectly linking to actions for Prefixes.
+- [#8343](https://github.com/nautobot/nautobot/issues/8343) - Fixed issue where Bulk Edit and Bulk Destroy jobs submitted for approval in the Approval Workflow displayed `{scheduled_job.name}` instead of the actual job name in the success message.
+- [#8340](https://github.com/nautobot/nautobot/issues/8340) - Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
+- [#8352](https://github.com/nautobot/nautobot/issues/8352) - Fixed inability to use filters in any "Basic" filter forms that had dependencies on other filter fields (for example, the "Rack" filter on the Device filter form has a dependency on the "Rack Group" and "Location" filters).
+
+### Dependencies in v3.0.3
+
+- [#8347](https://github.com/nautobot/nautobot/issues/8347) - Updated dependency `django-health-check` to `~3.20.2`.
+- [#8347](https://github.com/nautobot/nautobot/issues/8347) - Updated dependency `social-auth-core` to `~4.8.3`.
+
+### Documentation in v3.0.3
+
+- [#8270](https://github.com/nautobot/nautobot/issues/8270) - Updated the `Getting Started` feature guide to include version 3.0 screenshots.
+- [#8310](https://github.com/nautobot/nautobot/issues/8310) - Added documentation about using `custom_view_base_action` and `custom_view_additional_permissions` to control permission requirements for custom NautobotUIViewSet actions.
+- [#8326](https://github.com/nautobot/nautobot/issues/8326) - Updated Approval Workflow documentation.
+- [#8329](https://github.com/nautobot/nautobot/issues/8329) - Updated IPAM documentation to include 3.0 screenshots.
+- [#8347](https://github.com/nautobot/nautobot/issues/8347) - Updated documentation dependency `mkdocs-material` to `~9.7.1`.
+
+### Housekeeping in v3.0.3
+
+- [#8261](https://github.com/nautobot/nautobot/issues/8261) - Updated development npm dependency `@eslint/js` to `^9.39.2`.
+- [#8261](https://github.com/nautobot/nautobot/issues/8261) - Updated development npm dependency `autoprefixer` to `^10.4.23`.
+- [#8261](https://github.com/nautobot/nautobot/issues/8261) - Updated development npm dependency `eslint` to `^9.39.2`.
+- [#8282](https://github.com/nautobot/nautobot/issues/8282) - Updated approval-workflows documentation to include 3.0 screenshots.
+- [#8305](https://github.com/nautobot/nautobot/issues/8305) - Updated ECharts documentation to include 3.0 screenshots.
+- [#8314](https://github.com/nautobot/nautobot/issues/8314) - Updated search-bar documentation to include 3.0 screenshots.
+- [#8334](https://github.com/nautobot/nautobot/issues/8334) - Updated Platform documentation to include 3.0 screenshots.
+- [#8347](https://github.com/nautobot/nautobot/issues/8347) - Updated development dependency `ruff` to `~0.14.10`.
+- [#8348](https://github.com/nautobot/nautobot/issues/8348) - Upstream testing now uses branch name from input instead of hard-coded matrix.
+
 ## v3.0.2 (2025-12-08)
 
 ### Security in v3.0.2

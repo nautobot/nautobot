@@ -71,10 +71,12 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_type=content_type)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         if not get_queryset:
             listing = list(queryset)
-            cache.set(list_cache_key, listing)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
             return listing
         return queryset
 
@@ -89,7 +91,8 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache_key = construct_cache_key(
                 self, method_name="get_for_model", branch_aware=True, model=label, listing=True
             )
-            cache.set(cache_key, listings[label])
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, listings[label], timeout=None)
 
     def bulk_create(self, objs, *args, **kwargs):
         """Validate templates before saving."""
@@ -468,10 +471,12 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             queryset = self.get_queryset().filter(content_types=content_type)
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         if not get_queryset:
             listing = list(queryset)
-            cache.set(list_cache_key, listing)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
             return listing
         return queryset
 
@@ -484,7 +489,8 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         keys = cache.get(cache_key)
         if keys is None:
             keys = list(self.get_for_model(model).values_list("key", flat=True))
-            cache.set(cache_key, keys)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, keys, timeout=None)
         return keys
 
     def populate_list_caches(self):
@@ -501,6 +507,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 key_listings[label].append(cf.key)
         for ct in ContentType.objects.all():
             label = f"{ct.app_label}.{ct.model}"
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             cache.set(
                 construct_cache_key(
                     self,
@@ -511,6 +518,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                     listing=True,
                 ),
                 cf_listings[label][True],
+                timeout=None,
             )
             cache.set(
                 construct_cache_key(
@@ -522,10 +530,12 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                     listing=False,
                 ),
                 cf_listings[label][False],
+                timeout=None,
             )
             cache.set(
                 construct_cache_key(self, method_name="keys_for_model", branch_aware=True, model=label),
                 key_listings[label],
+                timeout=None,
             )
 
 
@@ -622,6 +632,13 @@ class CustomField(
         'It will appear in the "Advanced" tab instead.',
     )
 
+    scope_filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        editable=False,
+        default=dict,
+        help_text="A JSON-encoded dictionary of filter parameters defining possible objects that can use this custom field.",
+    )
+
     objects = CustomFieldManager()
 
     clone_fields = [
@@ -659,7 +676,8 @@ class CustomField(
         choices = cache.get(cache_key)
         if choices is None:
             choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
-            cache.set(cache_key, choices)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_choices_cache
+            cache.set(cache_key, choices, timeout=None)
         return choices
 
     def save(self, *args, **kwargs):

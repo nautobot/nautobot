@@ -3,7 +3,9 @@ Utilities and primitives for the `nautobot-server` CLI command.
 """
 
 import argparse
+from copy import deepcopy
 import importlib.util
+import logging
 import os
 import sys
 
@@ -33,42 +35,45 @@ USAGE = """%(prog)s --help
        %(prog)s [-c CONFIG_PATH] SUBCOMMAND ..."""
 
 
-def _preprocess_settings(settings, config_path):
+logger = logging.getLogger(__name__)
+
+
+def _preprocess_settings(settings_module, config_path):
     """
     After loading nautobot_config.py and nautobot.core.settings, but before starting Django, modify the settings module.
 
-    - Set settings.SETTINGS_PATH for ease of reference
+    - Set settings_module.SETTINGS_PATH for ease of reference
     - Handle `EXTRA_*` settings
     - Create Nautobot storage directories if they don't already exist
     - Change database backends to django-prometheus if appropriate
     - Set up 'job_logs' database mirror
-    - Load plugins based on settings.PLUGINS (potentially affecting INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
-    - Load event brokers based on settings.EVENT_BROKERS
+    - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
+    - Load event brokers based on settings_module.EVENT_BROKERS
     """
-    settings.SETTINGS_PATH = config_path
+    settings_module.SETTINGS_PATH = config_path
 
     # Any setting that starts with EXTRA_ and matches a setting that is a list or tuple
     # will automatically append the values to the current setting.
     # "It might make sense to make this less magical"
     extras = {}
-    for setting in dir(settings):
+    for setting in dir(settings_module):
         if setting == setting.upper() and setting.startswith("EXTRA_"):
             base_setting = setting[6:]
-            if isinstance(getattr(settings, base_setting), (list, tuple)):
-                extras[base_setting] = getattr(settings, setting)
+            if isinstance(getattr(settings_module, base_setting), (list, tuple)):
+                extras[base_setting] = getattr(settings_module, setting)
     for base_setting, extra_values in extras.items():
-        base_value = getattr(settings, base_setting)
-        setattr(settings, base_setting, base_value + type(base_value)(extra_values))
+        base_value = getattr(settings_module, base_setting)
+        setattr(settings_module, base_setting, base_value + type(base_value)(extra_values))
 
     #
     # Storage directories
     #
-    os.makedirs(settings.GIT_ROOT, exist_ok=True)
-    os.makedirs(settings.JOBS_ROOT, exist_ok=True)
-    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-    os.makedirs(os.path.join(settings.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
-    os.makedirs(os.path.join(settings.MEDIA_ROOT, "image-attachments"), exist_ok=True)
-    os.makedirs(settings.STATIC_ROOT, exist_ok=True)
+    os.makedirs(settings_module.GIT_ROOT, exist_ok=True)
+    os.makedirs(settings_module.JOBS_ROOT, exist_ok=True)
+    os.makedirs(settings_module.MEDIA_ROOT, exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "image-attachments"), exist_ok=True)
+    os.makedirs(settings_module.STATIC_ROOT, exist_ok=True)
 
     #
     # Databases
@@ -76,18 +81,21 @@ def _preprocess_settings(settings, config_path):
 
     # If metrics are enabled and postgres is the backend, set the driver to the
     # one provided by django-prometheus.
-    if settings.METRICS_ENABLED:
-        if "postgres" in settings.DATABASES["default"]["ENGINE"]:
-            settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
-        elif "mysql" in settings.DATABASES["default"]["ENGINE"]:
-            settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.mysql"
+    if settings_module.METRICS_ENABLED:
+        # Avoid modifying nautobot.core.settings.DATABASES by accident!
+        settings_module.DATABASES = deepcopy(settings_module.DATABASES)
+
+        if "postgres" in settings_module.DATABASES["default"]["ENGINE"]:
+            settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
+        elif "mysql" in settings_module.DATABASES["default"]["ENGINE"]:
+            settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.mysql"
 
     # Create secondary db connection for job logging. This still writes to the default db, but because it's a separate
     # connection, it allows allows us to "escape" from transaction.atomic() and ensure that job log entries are saved
     # to the database even when the rest of the job transaction is rolled back.
-    settings.DATABASES["job_logs"] = settings.DATABASES["default"].copy()
+    settings_module.DATABASES["job_logs"] = deepcopy(settings_module.DATABASES["default"])
     # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
-    settings.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
+    settings_module.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
 
     #
     # Plugins
@@ -95,13 +103,13 @@ def _preprocess_settings(settings, config_path):
 
     # Process the plugins and manipulate the specified config settings that are
     # passed in.
-    load_plugins(settings)
+    load_plugins(settings_module)
 
     #
     # Event Broker
     #
 
-    load_event_brokers(settings.EVENT_BROKERS)
+    load_event_brokers(settings_module.EVENT_BROKERS)
 
 
 def load_settings(config_path):
@@ -112,10 +120,10 @@ def load_settings(config_path):
             "Please provide a valid --config-path path, or use 'nautobot-server init' to create a new configuration."
         )
     spec = importlib.util.spec_from_file_location("nautobot_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["nautobot_config"] = module
-    spec.loader.exec_module(module)
-    _preprocess_settings(module, config_path)
+    settings_module = importlib.util.module_from_spec(spec)
+    sys.modules["nautobot_config"] = settings_module
+    spec.loader.exec_module(settings_module)
+    _preprocess_settings(settings_module, config_path)
 
 
 class _VerboseHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
