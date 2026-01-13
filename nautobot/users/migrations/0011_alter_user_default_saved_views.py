@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0133_rename_taggeditem_content_type_object_id_extras_tagg_content_717743_idx_and_more"),
+        ("extras", "0135_rename_taggeditem_content_type_object_id_extras_tagg_content_717743_idx_and_more"),
         ("users", "0010_user_default_saved_views"),
     ]
 

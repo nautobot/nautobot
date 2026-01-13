@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0132_approval_workflow_seed_data"),
+        ("extras", "0134_customfield_scope_filter"),
     ]
 
     operations = [
