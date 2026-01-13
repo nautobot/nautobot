@@ -1,20 +1,20 @@
 <div class="btn-group btn-group-sm float-end" style="position: relative; z-index: 5; pointer-events: auto;" role="group" aria-label="Difference navigation">
     {% if prev_change %}
-        <a class="btn btn-outline-secondary" href="{{ prev_change.get_absolute_url }}" style="position: relative; z-index: 5;">
-            <span class="mdi mdi-chevron-left me-2" aria-hidden="true"></span>PREVIOUS
+        <a href="{% url 'extras:objectchange' pk=prev_change.pk %}" class="btn btn-secondary">
+            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
         </a>
     {% else %}
-        <a aria-disabled="true" class="btn btn-outline-secondary disabled" style="position: relative; z-index: 5;">
-            <span class="mdi mdi-chevron-left me-2" aria-hidden="true"></span>PREVIOUS
+        <a aria-disabled="true" class="btn btn-secondary disabled">
+            <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
         </a>
     {% endif %}
     {% if next_change %}
-        <a class="btn btn-outline-secondary" href="{{ next_change.get_absolute_url }}" style="position: relative; z-index: 5;">
-            NEXT<span class="mdi mdi-chevron-right ms-2" aria-hidden="true"></span>
+        <a href="{% url 'extras:objectchange' pk=next_change.pk %}" class="btn btn-secondary">
+            Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
         </a>
     {% else %}
-        <a aria-disabled="true" class="btn btn-outline-secondary disabled" style="position: relative; z-index: 5;">
-            NEXT<span class="mdi mdi-chevron-right ms-2" aria-hidden="true"></span>
+        <a aria-disabled="true" class="btn btn-secondary disabled">
+            Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
         </a>
     {% endif %}
 </div>
