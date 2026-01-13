@@ -714,20 +714,6 @@ properties:
     see_also:
       "Django documentation for `DATABASES`": "https://docs.djangoproject.com/en/stable/ref/settings/#databases"
     type: "object"
-  DATE_FORMAT:
-    default: "N j, Y"
-    description: "Custom format for dates. The default results in strings like \"January 22, 2024\"."
-    environment_variable: "NAUTOBOT_DATE_FORMAT"
-    see_also:
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    type: "string"
-  DATETIME_FORMAT:
-    default: "N j, Y g:i a"
-    description: "Custom format for date-times. The default results in strings like \"January 22, 2024 1:22 p.m.\"."
-    environment_variable: "NAUTOBOT_DATETIME_FORMAT"
-    see_also:
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    type: "string"
   DEBUG:
     default: false
     description: >-
@@ -1766,20 +1752,6 @@ properties:
       If you set this value, you must also enable file-based sessions as explained under
       [`SESSION_ENGINE`](#session_engine).
     environment_variable: "NAUTOBOT_SESSION_FILE_PATH"
-  SHORT_DATE_FORMAT:
-    default: "Y-m-d"
-    description: "Custom short format for dates. The default results in strings like \"2024-01-22\"."
-    environment_variable: "NAUTOBOT_SHORT_DATE_FORMAT"
-    see_also:
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    type: "string"
-  SHORT_DATETIME_FORMAT:
-    default: "Y-m-d H:i"
-    description: "Custom short format for date-times. The default results in strings like \"2024-01-22 13:23\"."
-    environment_variable: "NAUTOBOT_SHORT_DATETIME_FORMAT"
-    see_also:
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    type: "string"
   SOCIAL_AUTH_BACKEND_PREFIX:
     default: "social_core.backends"
     description: "Configuration of a custom external authentication backend with python-social-auth."
@@ -1959,13 +1931,6 @@ properties:
     version_added: "1.5.0"
     see_also:
       "`TEST_FACTORY_SEED`": "#test_factory_seed"
-  TIME_FORMAT:
-    default: "g:i a"
-    description: "Custom format for times. The default results in strings like \"1:23 p.m.\"."
-    environment_variable: "NAUTOBOT_TIME_FORMAT"
-    see_also:
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    type: "string"
   TIME_ZONE:
     default: "UTC"
     description: >-

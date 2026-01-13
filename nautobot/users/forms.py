@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
@@ -72,6 +73,7 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
+    language = forms.ChoiceField(required=False, choices=settings.LANGUAGES)
     timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
 
 
