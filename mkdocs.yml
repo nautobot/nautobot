@@ -610,7 +610,7 @@ nav:
               - Global Search: "development/apps/api/models/global-search.md"
               - GraphQL: "development/apps/api/models/graphql.md"
               - Django Admin: "development/apps/api/models/django-admin.md"
-              - Queryset: "development/apps/api/models/queryset.md"
+              - QuerySet: "development/apps/api/models/queryset.md"
           - Views:
               - "development/apps/api/views/index.md"
               - NautobotUIViewSet: "development/apps/api/views/nautobotuiviewset.md"
