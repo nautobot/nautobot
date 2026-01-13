@@ -15,6 +15,9 @@ At a high-level overview, consider the following impacting changes:
 
 Legend: 🟢 Low impact 🟠 Medium impact
 
+!!! tip
+    It is recommended to upgrade your production instance from Nautobot 2.4 to 3.x in separate steps. Attempting to combine both upgrades can complicate troubleshooting and make it harder to identify the source of any issues. If you are running Nautobot 1.x or a version earlier than 2.4, upgrade to the latest 2.4.x first before proceeding to 3.x.
+
 ## Filter Fields
 
 To make Nautobot's UI, REST API, and GraphQL filters more self-consistent and standardized, the default filter type for foreign-key and one-to-one model
