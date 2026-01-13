@@ -157,6 +157,6 @@ IPAM Custom Filters are related to the lookups defined in [Queryset Docs](../../
     For example:
 
     - `prefix=10.32.0.34/28` **matches** `10.32.0.32/28`
-    - `prefix_exact=10.32.0.34/28` **returns no results**
+    - `prefix_exact=10.32.0.34/28` **returns an error**
 
     This is useful when consumers need strict, unambiguous matching and want to avoid implicit normalization by the filtering layer.

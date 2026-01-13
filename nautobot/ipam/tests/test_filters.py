@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases, TestCase
@@ -241,6 +242,32 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         filterset = self.filterset(params, self.queryset)
         ancestors = [ancestor.id for ancestor in prefixes[2].ancestors()]
         self.assertQuerysetEqualAndNotEmpty(filterset.qs, self.queryset.filter(id__in=ancestors))
+
+    def test_prefix(self):
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        params = {"prefix": "192.0.2.0/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"prefix": "192.0.2.1/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_prefix_exact(self):
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        params = {"prefix_exact": "192.0.2.0/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"prefix_exact": "192.0.2.1/29"}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs
+            self.assertTrue(str(exc.exception).startswith("Invalid prefix_exact value"))
 
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
@@ -806,6 +833,24 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
         )
+
+    def test_prefix_exact(self):
+        ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
+        ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
+
+        params = {"prefix_exact": [str(ipv4_parent), str(ipv6_parent)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
+        )
+
+        # Get the first usable IP address in the subnet (not the network address)
+        ipv4_parent = self.queryset.filter(ip_version=4).first().address
+        ipv6_parent = self.queryset.filter(ip_version=6).first().address
+
+        params = {"prefix_exact": [str(ipv4_parent), str(ipv6_parent)]}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs
+            self.assertTrue(str(exc.exception).startswith("Invalid prefix_exact value"))
 
     def test_filter_address(self):
         """Check IPv4 and IPv6, with and without a mask"""

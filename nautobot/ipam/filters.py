@@ -339,11 +339,11 @@ class PrefixFilterSet(
         """
         prefixes = self._strip_values(value)
 
-        for raw in prefixes:
+        for prefix in prefixes:
             try:
-                ipaddress.ip_network(raw, strict=True)
+                ipaddress.ip_network(prefix, strict=True)
             except ValueError:
-                return queryset.none()
+                raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
         return self.filter_prefix(queryset, name, value)
 
     def search_within(self, queryset, name, value):
@@ -566,16 +566,15 @@ class IPAddressFilterSet(
                 raise ValidationError(f"Invalid prefix_exact value (missing mask): {prefix}")
 
             with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-                ip_network = netaddr.IPNetwork(str(prefix))
-                # ipn.network is the canonical network address for that CIDR
+                ip_network = netaddr.IPNetwork(str(prefix)).cidr
+                # cidr will always a proper network subnet; compare against original input
                 if str(ip_network) != str(prefix):
                     raise ValidationError(
-                        f"Invalid prefix_exact value (not a canonical network): {prefix} "
-                        f"(did you mean {ip_network}?)"
+                        f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}, did you mean {ip_network}?"
                     )
                 continue
 
-            raise ValidationError(f"Invalid prefix_exact value: {prefix}")
+            raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
         return self.search_by_prefix(queryset, name, prefixes)
 
     def filter_address(self, queryset, name, value):
