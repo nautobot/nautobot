@@ -1,0 +1,1 @@
+Deleting a user removes its Scheduled Jobs, preventing them from silently failing.
