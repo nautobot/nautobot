@@ -2841,12 +2841,11 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     "user_name",
                     "action",
                     "changed_object_type",
-                    "display_changed_object",
+                    "changed_object",
                     "request_id",
                     "change_context",
                     "change_context_detail",
                 ),
-                key_transforms={"display_changed_object": "Object"},
             ),
             object_detail.ObjectTextPanel(
                 label="Object Data",
@@ -2861,15 +2860,17 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 weight=100,
                 render_placeholder=False,
                 body_content_template_path="extras/inc/objectchange_diff_panel.html",
+                header_extra_content_template_path="extras/inc/objectchange_diff_header.html",
             ),
             object_detail.ObjectsTablePanel(
-                label="Related Changes",
+                table_title="Related Changes",
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="related_changes_table",
                 add_button_route=None,
                 include_paginator=True,
                 max_display_count=50,
+                enable_related_link=False,
             ),
         )
     )

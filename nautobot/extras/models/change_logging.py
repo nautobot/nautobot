@@ -198,22 +198,6 @@ class ObjectChange(BaseModel):
             return related_changes.restrict(user, permission)
         return related_changes
 
-    @property
-    def display_changed_object(self):
-        """
-        Return the changed object if it can be safely linked, otherwise fall back to the stored representation.
-        """
-        obj = self.changed_object
-        if obj is None:
-            return self.object_repr
-        try:
-            url = obj.get_absolute_url()
-        except Exception:
-            return self.object_repr
-        if url:
-            return obj
-        return self.object_repr
-
     def get_snapshots(self, pre_object_data=None, pre_object_data_v2=None):
         """
         Return a dictionary with the changed object's serialized data before and after this change
