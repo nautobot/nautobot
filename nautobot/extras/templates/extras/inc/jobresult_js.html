@@ -10,5 +10,4 @@
     var job_result_id = "{{ result.pk }}";
 
 </script>
-<script src="{% versioned_static 'js/job_result.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=js/job_result.js'"></script>
+<script src="{% versioned_static 'js/job_result.js' %}" onerror="nb.media.handleFailure(this)"></script>

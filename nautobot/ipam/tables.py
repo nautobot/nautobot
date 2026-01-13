@@ -40,7 +40,11 @@ AVAILABLE_LABEL = mark_safe('<span class="badge bg-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
-{% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
+{% if record.present_in_database %}
+    {% utilization_graph record.get_utilization %}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
 """
 
 
@@ -73,7 +77,7 @@ PREFIX_ROLE_LINK = """
 {% if record.role %}
     <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
@@ -157,7 +161,7 @@ VRF_TARGETS = """
 {% for rt in value.all %}
     <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endfor %}
 """
 
@@ -179,7 +183,7 @@ VLAN_PREFIXES = """
 {% for prefix in record.prefixes.all %}
     <a href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endfor %}
 """
 
