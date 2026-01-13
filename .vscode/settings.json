@@ -1,7 +1,6 @@
 {
     "python.testing.unittestArgs": [
         "--config=nautobot/core/tests/nautobot_config.py",
-        "--cache-test-fixtures",
         "--keepdb",
         "--noinput"
     ],
