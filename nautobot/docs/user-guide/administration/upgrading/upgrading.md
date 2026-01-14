@@ -84,6 +84,8 @@ Nautobot v1.1.0 and later can optionally support the following:
 --- 3.1.0
     - Support for versions of MySQL older than 8.0.11 was removed.
 
+Refer to [Upgrading PostgreSQL](postgresql.md) if you need to migrate from an older version of PostgreSQL.
+
 !!! tip
     If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](../migration/migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
 

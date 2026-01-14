@@ -6,13 +6,9 @@ This document describes all new features and changes in Nautobot 3.1.
 
 ### Administrators
 
-TODO
-
 #### Migrate from legacy PostgreSQL versions as needed
 
-Nautobot 3.1, as a consequence of the [Django 5.2 dependency upgrade](#django-52), drops support for PostgreSQL versions 12.x and 13.x and now requires a minimum of PostgreSQL 14.0. If you have an existing Nautobot deployment on these no-longer-supported versions of PostgreSQL, you will need to upgrade and migrate your database.
-
-TODO: migration docs/references
+Nautobot 3.1, as a consequence of the [Django 5.2 dependency upgrade](#django-52), drops support for PostgreSQL versions 12.x and 13.x and now requires a minimum of PostgreSQL 14.0. If you have an existing Nautobot deployment on these no-longer-supported versions of PostgreSQL, you will need to [upgrade](../user-guide/administration/upgrading/postgresql.md) and migrate your database.
 
 #### Migrate Configuration to `STORAGES` as needed
 
@@ -33,7 +29,7 @@ Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django m
 
 #### Dropped Support for PostgreSQL Versions Less Than 14.0
 
-As a consequence of the [dependency update to Django 5.2](#django-52), support for PostgreSQL versions before 14.0 has been removed from Nautobot.
+As a consequence of the [dependency update to Django 5.2](#django-52), support for PostgreSQL versions before 14.0 has been removed from Nautobot. Refer to [Upgrading PostgreSQL](../user-guide/administration/upgrading/postgresql.md) if you need to upgrade from a no-longer-supported PostgreSQL version to 14.0 or later.
 
 #### Dropped Support for MySQL Versions Less Than 8.0.11
 

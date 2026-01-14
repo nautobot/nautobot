@@ -2,7 +2,7 @@
 
 ## [3.1 - April 2026](version-3.1.md)
 
-TODO
+- Django 5.2 Dependency Upgrade
 
 ## [3.0 - November 2025](version-3.0.md)
 

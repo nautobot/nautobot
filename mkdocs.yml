@@ -362,6 +362,7 @@ nav:
                       - "user-guide/administration/upgrading/from-v1/ipam/after-you-upgrade.md"
                       - "user-guide/administration/upgrading/from-v1/ipam/for-developers.md"
               - Upgrading Nautobot from v2.X to v3.0: "user-guide/administration/upgrading/from-v2/index.md"
+              - Upgrading PostgreSQL: "user-guide/administration/upgrading/postgresql.md"
           - Migration:
               - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
               - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
