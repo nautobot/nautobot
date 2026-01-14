@@ -73,8 +73,12 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
-    language = forms.ChoiceField(required=False, choices=settings.LANGUAGES)
-    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
+    language = forms.ChoiceField(
+        required=False,
+        help_text="Set your preferred language. This mostly affects date/time formatting at present.",
+        choices=settings.LANGUAGES,
+    )
+    timezone = TimeZoneFormField(required=False, help_text="Set your preferred timezone.", widget=StaticSelect2)
 
 
 class NavbarFavoritesAddForm(forms.Form):
