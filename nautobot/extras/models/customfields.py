@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
+from django.db.models import Model
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
@@ -306,6 +307,8 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
+            if not field.show_custom_field(instance=self):
+                continue
             data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
         record = dict(sorted(record.items()))
@@ -975,6 +978,33 @@ class CustomField(
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
+
+    def show_custom_field(self, instance: Model) -> bool:
+        """
+        This method is responsible for checking if custom field should be visible on instance DetailView,
+        according to the filters set in `self.scope_filter`.
+
+        Show field if:
+        - there is no `scope_filter` set
+        - `scope_filter` field match value from `instance` field
+
+        Hide field if:
+        - `scope_filter` field not exists on `instance`
+        - `scope_filter` field not match value from `instance` field
+        """
+        if not self.scope_filter:
+            return True
+
+        for key, value in self.scope_filter.items():
+            try:
+                field = getattr(instance, key)
+            except AttributeError:
+                return False
+
+            if field != value:
+                return False
+
+        return True
 
 
 @extras_features(
