@@ -31,11 +31,7 @@ dependencies = [
     "Django (>=5.2.9,<5.3)",
     # Adds AJAX capabilities to django-tables2
     "django-ajax-tables (>=1.1.1,<1.2)",
-    # Base functionality for task scheduling with Celery
-    # TODO: upgrade to v2.8.x is required for Django 5.2 support but currently has numerous reported issues, including:
-    # https://github.com/celery/django-celery-beat/issues/894
-    # https://github.com/celery/django-celery-beat/issues/922
-    # https://github.com/celery/django-celery-beat/issues/927
+    # Database backend for task scheduling with Celery Beat
     "django-celery-beat (>=2.8.1,<2.9)",
     # Provides a database backend & models for Celery task results
     "django-celery-results (>=2.6.0,<2.7)",
