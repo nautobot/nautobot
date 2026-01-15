@@ -5,7 +5,7 @@ Just like Nautobot itself, PostgreSQL has a release and maintenance cycle, and o
 Upgrading between minor/patch versions of PostgreSQL is generally seamless, but new _major_ versions of PostgreSQL generally will not run against a database built by an older major version; instead, you will need to migrate the data to a new database. The rest of this document provides some basic guidance on how to proceed in such a case.
 
 !!! tip
-    In general we recommend that you upgrade PostgreSQL as a _separate_ step from upgrading Nautobot in order to reduce the complexity of the upgrade and allow easier troubleshooting and recovery should anything go wrong in the process.
+    In general we recommend that you upgrade PostgreSQL as a _separate_ step and change window from upgrading Nautobot in order to reduce the complexity of the upgrade and allow easier troubleshooting and recovery should anything go wrong in the process.
 
 !!! warning
     The specific steps to follow to perform an upgrade of PostgreSQL will vary depending on your deployment pattern; the below guides are intended as examples and do not claim to be comprehensive. Always make sure you have a valid [backup](database-backup.md) before attempting to upgrade!
