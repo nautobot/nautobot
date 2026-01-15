@@ -285,8 +285,7 @@ A group syncing function is provided and but needs to be configured. See [Group 
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
 
 !!! important
-    Please note there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more
-information please utilize these additional resources.
+    Please note there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more information please utilize these additional resources.
 
 1. In the [Google API Console](https://console.developers.google.com/) create a new project or select an existing one.
 2. Select *OAuth consent screen* from the menu on the left side of the page
@@ -321,14 +320,14 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
 ```
 
-### SAML
+#### Google - SAML
 
 This guide will walk you through configuring Nautobot to authenticate using SAML with Google as the identity provider.
 
 !!! important
     Please note that there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/saml.html) and [Google](https://support.google.com/a/answer/6087519?hl=en). For more information please utilize these additional resources.
 
-#### Prerequisites
+##### Prerequisites
 
 !!! warning
     SAML will not work without end-to-end encryption. These requirements are not flexible.
@@ -340,7 +339,7 @@ Before you begin you will need the following:
 * The name and email address for a technical point of contact. For this example we will use `Bob Jones, bob@example.com`.
 * The name and email address for a support point of contact. For this example we will use `Alice Jenkins, alice@example.com.`
 
-#### Setup SAML in Google
+##### Setup SAML in Google
 
 1. Visit the [Web and mobile apps](https://admin.google.com/ac/apps/unified) console in the Google Admin dashboard.
 2. Follow Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
@@ -360,7 +359,7 @@ Before you begin you will need the following:
     * *Last name* --> `last_name`
 9. Click *Finish*
 
-#### Configure Nautobot
+##### Configure Nautobot
 
 There is a lot to configure to inform Nautobot how to integrate with SAML, so please provide the following configuration very carefully. All of these values must be correct in your `nautobot_config.py`.
 
@@ -437,13 +436,13 @@ SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ```
 
-#### Enable SAML in Google
+##### Enable SAML in Google
 
 Now that you've configured both Google and Nautobot for SAML, you still need to enable SAML for your users in your Google domain.
 
 On Google's official site to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), scroll down to **Turn on your SAML app** and follow the remaining instructions to enable and verify SAML in Google.
 
-#### Login with SAML
+##### Login with SAML
 
 Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `google`. This will be used to login and will be referenced in the query parameter using `idp=google`. For example `/login/saml/?idp=google`.
 
@@ -455,7 +454,7 @@ Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settin
 
 ---
 
-#### SAML Metadata
+##### SAML Metadata
 
 If you need to collect SAML metadata from your Nautobot host to provide to the IDP, you can add a simple view to gather and display metadata.
 
