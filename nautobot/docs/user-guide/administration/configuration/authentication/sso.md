@@ -157,7 +157,7 @@ The `/default` authentication server can be used for testing, however, it should
 
 #### Okta - SAML
 
-See [SAML Prerequisites](#saml) for common setup.
+See [Google SAML Prerequisites](#google-saml) for common setup.
 
 Setup SAML in Okta
 
