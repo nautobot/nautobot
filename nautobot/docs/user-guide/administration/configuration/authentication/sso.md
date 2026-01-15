@@ -280,7 +280,9 @@ In order to use this returned scope a custom function needs to be written and ad
 
 A group syncing function is provided and but needs to be configured. See [Group Syncing](#group-syncing).
 
-### Google - OAuth2
+### Google
+
+#### Google - OAuth2
 
 The following instructions guide you through the process of configuring Google for OAuth2 authentication.
 
