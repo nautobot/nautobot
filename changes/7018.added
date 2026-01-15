@@ -1,0 +1,1 @@
+Added support for per-user configuration of preferred language/locale through the User Preferences UI. Currently this configuration applies primarily to date/time display in the UI.

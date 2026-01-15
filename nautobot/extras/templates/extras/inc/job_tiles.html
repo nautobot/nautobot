@@ -70,7 +70,7 @@
                 <div class="flex-fill">
                     Last run:
                     {% if row.record.latest_result %}
-                        <a href="{{ row.record.latest_result.get_absolute_url }}">{{ row.record.latest_result.date_created|date:settings.DATETIME_FORMAT }} by {{ row.record.latest_result.user }}</a>
+                        <a href="{{ row.record.latest_result.get_absolute_url }}">{{ row.record.latest_result.date_created|date:"DATETIME_FORMAT" }} by {{ row.record.latest_result.user }}</a>
                     {% else %}
                         <span class="text-secondary">Never</span>
                     {% endif %}

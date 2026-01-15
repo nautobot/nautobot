@@ -453,7 +453,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
         with self.subTest("with existing comments"):
@@ -486,7 +486,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is not empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments">new comment</textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments">new comment</textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
     def test_cancel_workflow_post(self):

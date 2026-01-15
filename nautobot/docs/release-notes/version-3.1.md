@@ -41,11 +41,17 @@ As a consequence of the [dependency update to Django 5.2](#django-52), support f
 
 #### Unified Storage Backend Configuration
 
-As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
+As a consequence of the [dependency update to Django 5.2](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
+
+#### Dropped Support for Custom Date/Time Format Settings
+
+As a consequence of the [dependency update to Django 5.2](#django-52), support for globally customizing date/time display in the UI via the settings variables `DATETIME_FORMAT` and `SHORT_DATETIME_FORMAT` (as well as the less-commonly-used `DATE_FORMAT`, `SHORT_DATE_FORMAT`, `TIME_FORMAT` settings) has been removed from Nautobot.
 
 ### Added
 
-TODO
+#### Per-User Language Preferences
+
+Users can now specify their preferred language/locale through the User Preferences UI. Currently this configuration applies primarily to date/time display in the UI.
 
 ### Changed
 
