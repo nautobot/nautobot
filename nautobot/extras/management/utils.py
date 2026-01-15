@@ -12,7 +12,12 @@ def validate_job_and_job_data(command, user, job_class_path, data=None):
     job_data = {}
     try:
         if data:
-            job_data = json.loads(data)
+            if isinstance(data, str):
+                job_data = json.loads(data)
+            elif isinstance(data, dict):
+                job_data = data
+            else:
+                raise CommandError(f"Invalid job data: {data}")
     except json.decoder.JSONDecodeError as error:
         raise CommandError(f"Invalid JSON data:\n{error!s}") from error
 
