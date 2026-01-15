@@ -69,9 +69,10 @@ Nautobot v3.0.0 and later requires the following:
 | PostgreSQL | 12.0¹           |
 | Redis      | 4.0             |
 
-¹ PostgreSQL versions 12.x and 13.x have reached end-of-life, and support for these versions will be dropped in Nautobot 3.1.
+¹ PostgreSQL versions 12.x and 13.x have reached end-of-life, and support for these versions will be dropped in Nautobot 3.1. As such, it is our recommendation that you upgrade to PostgreSQL 14+ while still on Nautobot 2.4 or Nautobot 3.0 as a separate action / maintenance window to minimize the number of simultaneous changes.
 
-Refer to [Upgrading PostgreSQL](postgresql.md) if you need to migrate from an older major version of PostgreSQL to a newer one.
+!!! warning
+    PostgreSQL major version upgrades typically require manual steps to update or migrate the database structure. Refer to [Upgrading PostgreSQL](postgresql.md) for more guidance on how migrate to a newer major version of PostgreSQL.
 
 As with all dependencies, we would recommend that you follow usual industry best practices, and periodically update to the latest applicable patch version of each of these dependencies in order to receive applicable security fixes and other bug fixes.
 
