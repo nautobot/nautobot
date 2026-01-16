@@ -1,6 +1,7 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.core.management.color import no_style
-from django.db import connection
+from django.db import IntegrityError, connection
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.dcim.models import (
@@ -90,7 +91,13 @@ class Command(BaseCommand):
             self.stdout.write(f"Retracing {origins_count} cabled {model._meta.verbose_name_plural}...")
             i = 0
             for i, obj in enumerate(origins, start=1):
-                create_cablepath(obj)
+                try:
+                    create_cablepath(obj)
+                except IntegrityError as e:
+                    content_type = ContentType.objects.get_for_model(obj)
+                    broken_cablepath = CablePath.objects.get(origin_type=content_type, origin_id=obj.pk)
+                    broken_cablepath.delete()
+                    create_cablepath(obj)
                 if not i % 100:
                     self.draw_progress_bar(i * 100 / origins_count)
             self.draw_progress_bar(100)
