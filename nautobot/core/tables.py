@@ -9,7 +9,7 @@ from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
-from django.utils.html import escape, format_html, format_html_join
+from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
@@ -36,6 +36,7 @@ class BaseTable(django_tables2.Table):
         attrs = {
             "class": "table table-hover nb-table-headings",
         }
+        default = helpers.HTML_NONE
 
     def __init__(
         self,
@@ -579,7 +580,13 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</span>{% else %}&mdash;{% endif %}
+    {% if value %}
+        <span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">
+            {{ value }}
+        </span>
+    {% else %}
+        <span class="text-secondary">&mdash;</span>
+    {% endif %}
     """
 
     def __init__(self, *args, **kwargs):
@@ -757,29 +764,33 @@ class CustomFieldColumn(django_tables2.Column):
     Display custom fields in the appropriate format.
     """
 
-    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
-    empty_values = (None, "", [])
-
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
         kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.key}")
         kwargs["verbose_name"] = customfield.label
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+            # Add [] to empty_values so when there is no choice populated i.e. [], "—" is returned automatically.
+            kwargs.setdefault("empty_values", (None, "", []))
 
         super().__init__(*args, **kwargs)
 
     def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
-            template = helpers.render_boolean(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            template = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
-            template = format_html('<span class="badge bg-secondary">{}</span>', value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
-            template = format_html('<a href="{}">{}</a>', value, value)
-        else:
-            template = escape(value)
+        # TODO: this logic could be unified with _ObjectCustomFieldsPanel.render_value
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN and value is not None:
+            value = helpers.render_boolean(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON and value is not None:
+            value = helpers.render_json(value, pretty_print=True)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN and value is not None:
+            value = helpers.render_markdown(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT and value:
+            value = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT and value is not None:
+            value = format_html('<span class="badge bg-secondary">{}</span>', value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL and value:
+            value = format_html('<a href="{}">{}</a>', value, value)
+        # else (TEXT, INTEGER, DATE) or None value -- no need to do special rendering
 
-        return template
+        return value
 
 
 class RelationshipColumn(django_tables2.Column):
@@ -811,7 +822,7 @@ class RelationshipColumn(django_tables2.Column):
         # Handle Symmetric Relationships
         # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
-            return "—"
+            return helpers.HTML_NONE
 
         v = value[0]
         peer = v.get_peer(record)
