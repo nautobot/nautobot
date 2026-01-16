@@ -93,7 +93,7 @@ class Command(BaseCommand):
             for i, obj in enumerate(origins, start=1):
                 try:
                     create_cablepath(obj)
-                except IntegrityError as e:
+                except IntegrityError:
                     content_type = ContentType.objects.get_for_model(obj)
                     broken_cablepath = CablePath.objects.get(origin_type=content_type, origin_id=obj.pk)
                     broken_cablepath.delete()
