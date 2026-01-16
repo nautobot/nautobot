@@ -39,6 +39,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
+from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -986,23 +987,24 @@ class CustomField(
 
         Show field if:
         - there is no `scope_filter` set
-        - `scope_filter` field match value from `instance` field
+        - `scope_filter` fields match all values from `instance` field,
+        checked by running queryset with PK and filterset based on `scope_filter`
 
-        Hide field if:
-        - `scope_filter` field not exists on `instance`
-        - `scope_filter` field not match value from `instance` field
+        Hide field if queryset with applied PK and `scope_filter` field won't be found.
         """
         if not self.scope_filter:
             return True
 
-        for key, value in self.scope_filter.items():
-            try:
-                field = getattr(instance, key)
-            except AttributeError:
-                return False
+        model_class = self.content_types.all()[0].model_class()
+        filterset_class = get_filterset_for_model(model_class)
+        filterset = filterset_class(
+            data=self.scope_filter,
+            queryset=model_class.objects.filter(pk=instance.pk),
+        )
 
-            if field != value:
-                return False
+        if not filterset.qs:
+            # Queryset with applied scope_filter is empty, so hide this field
+            return False
 
         return True
 

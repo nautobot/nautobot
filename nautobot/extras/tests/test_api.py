@@ -1519,7 +1519,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data, dict)
         # cf1 should be always visible in response
-        self.assertIn("cf1", response.data['custom_fields'])
+        self.assertIn("cf1", response.data["custom_fields"])
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
