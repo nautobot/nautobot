@@ -351,6 +351,7 @@ nav:
               - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
           - Upgrading:
               - Database Backup: "user-guide/administration/upgrading/database-backup.md"
+              - Upgrading PostgreSQL: "user-guide/administration/upgrading/postgresql.md"
               - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
               - Upgrading Nautobot from v1.X to v2.0:
                   - "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
