@@ -36,6 +36,7 @@ class VirtualServerFilterTestCase(
         ("certificate_profiles",),
     )
     tenancy_related_name = "virtual_servers"
+    exclude_q_filter_predicates = ["vip__host"]
 
 
 class LoadBalancerPoolFilterTestCase(
