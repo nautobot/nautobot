@@ -137,26 +137,26 @@ Certain other fields, namely foreign key relationships support the lookup expres
 
 +++ 2.1.0 "Added `__isnull` lookup expression"
 
-### Network and Host Fields
+### IPAM Custom Filters
 
-There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lookups/) built for the `VarbinaryIPField` field types. While the `VarbinaryIPField` is applied to fields for `network`, `host`, and `broadcast`, the below filters only apply to `network` and `host`. The design makes an assumption that there is in fact a `broadcast` (of type `VarbinaryIPField`) and `prefix_length` (of type `Integer`) within the same model. This assumption is used to understand the relevant scope of the network in question and is important to note when extending the Nautobot core or App data model.
+IPAM Custom Filters are related to the lookups defined in [Queryset Docs](../../../development/apps/api/models/queryset.md#ipam-custom-lookups). These lookups are mapped to the filters on Prefix's with minor modifications such as accounting for bad networks or stripping whitespace.
 
-- `**` `exact` - An exact match of an IP or network address, e.g. `host__exact="10.0.0.1"`
-- `**` `iexact` - An exact match of an IP or network address, e.g. `host__iexact="10.0.0.1"`
-- `**` `startswith` - Determine if IP or network starts with the value provided, e.g. `host__startswith="10.0.0."`
-- `**` `istartswith` - Determine if IP or network starts with the value provided, e.g. `host__istartswith="10.0.0."`
-- `**` `endswith` - Determine if IP or network ends with the value provided, e.g. `host__endswith="0.1"`
-- `**` `iendswith` - Determine if IP or network ends with the value provided, e.g. `host__iendswith="0.1"`
-- `**` `regex` - Determine if IP or network matches the pattern provided, e.g. `host__regex=r"10\.(.*)\.1`
-- `**` `iregex` - Determine if IP or network matches the pattern provided, e.g. `host__iregex=r"10\.(.*)\.1`
-- `net_contained` - Given a network, determine which networks are contained within the provided e.g. `network__net_contained="192.0.0.0/8"` would include 192.168.0.0/24 in the result
-- `net_contained_or_equal` - Given a network, determine which networks are contained or is within the provided e.g. `network__net_contained_or_equal="192.0.0.0/8"` would include 192.168.0.0/24 and 192.0.0.0/8 in the result
-- `net_contains` - Given a network, determine which networks contain the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 in the result
-- `net_contains_or_equals` - Given a network, determine which networks contain or is the provided network e.g. `network__net_contains="192.168.0.0/16"` would include 192.0.0.0/8 and 192.168.0.0/16 in the result
-- `net_equals` - Given a network, determine which which networks are an exact match. e.g. `network__net_equals="192.168.0.0/16"` would include only 192.168.0.0/16 in the result
-- `net_host` - Determine which networks are parent of the provided IP, e.g. `host__net_host="10.0.0.1"` would include 10.0.0.1/32 and 10.0.0.0/24 in the result
-- `net_host_contained` - Given a network, select IPs whose host address (regardless of its subnet mask) falls within that network , e.g. `host__net_host_contained="10.0.0.0/24"` would include hosts 10.0.0.1/8 and 10.0.0.254/32 in the result
-- `net_in` - Given a list of networks, select addresses (regardless of their subnet masks) within those networks, e.g. `host__net_in=["10.0.0.0/24", "2001:db8::/64"]` would include hosts 10.0.0.1/16 and 2001:db8::1/65 in the result
-- `family` - Given an IP address family of 4 or 6, provide hosts or networks that are that IP version type, e.g. `host__family=6` would include 2001:db8::1 in the result
+| Filter Name             | Lookup                           |
+| ----------------------- | -------------------------------- |
+| `address` (IP)          | `net_in`                         |
+| `prefix`                | `net_equals()`                   |
+| `prefix_exact`          | `net_equals()`                   |
+| `within`                | `net_contained()`                |
+| `within_include`        | `net_contained_or_equal()`       |
+| `contains` (CIDR input) | `net_contains_or_equals()`       |
+| `contains` (host input) | Custom logic for host input      |
 
-> Note: The fields denoted with `**` are only supported in the MySQL dialect (and not Postgresql) at the current time.
+!!! tip
+    The `prefix` matches does not consider where host bits are set, matching how `netaddr`, `ipaddress`, and many popular subnet calculators do. If you want to consider the host bits, you should use `prefix_exact`.
+
+    For example:
+
+    - `prefix=10.32.0.34/28` **matches** `10.32.0.32/28`
+    - `prefix_exact=10.32.0.34/28` **returns an error**
+
+    This is useful when consumers need strict, unambiguous matching and want to avoid implicit normalization by the filtering layer.

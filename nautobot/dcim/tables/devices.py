@@ -11,7 +11,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import humanize_speed
+from nautobot.core.templatetags.helpers import HTML_NONE, humanize_speed
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
@@ -263,7 +263,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
@@ -1510,7 +1510,7 @@ class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
@@ -1574,7 +1574,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     def render_capabilities(self, value):
         """Render capabilities."""
         if not value:
-            return format_html("&mdash;")
+            return HTML_NONE
         return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
 
 
