@@ -705,7 +705,10 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         action = self.action
 
         try:
-            template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
+            if action == "create" and self.request.GET.get("embedded") == "true":
+                template_name = f"generic/object_embedded_create.html"
+            else:
+                template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
             select_template([template_name])
         except TemplateDoesNotExist:
             try:

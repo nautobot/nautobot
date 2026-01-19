@@ -1,0 +1,44 @@
+{% load form_helpers %}
+{% load helpers %}
+
+<div class="modal-header">
+    <h4 class="modal-title">Add a new {{ obj_type }}</h4>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form hx-post="{% url obj|viewname:'add' %}">
+        {% csrf_token %}
+        {% for field in form.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        {% if obj %}
+            {% with obj|get_docs_url as docs_url %}
+                {% if docs_url %}
+                    <h3 class="hstack justify-content-end mb-10">
+                        <a href="{{ docs_url }}" target="_blank" class="btn btn-link btn-sm" title="Help">
+                            <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                        </a>
+                    </h3>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+        <div class="card">
+            <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+            <div class="card-body">
+                {% render_form form %}
+            </div>
+        </div>
+        {% include 'inc/extras_features_edit_form_fields.html' %}
+        <div class="gap-8 hstack justify-content-center border-top mx-n16 pt-16">
+            <button class="btn btn-primary" name="_create" type="submit">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Create
+            </button>
+            <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </button>
+        </div>
+    </form>
+</div>
+{{ form.media }}

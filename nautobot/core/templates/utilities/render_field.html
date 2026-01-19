@@ -1,3 +1,4 @@
+{% load helpers %}
 {% load form_helpers %}
 
 <div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}">
@@ -34,17 +35,60 @@
         <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
             {{ field.label }}
         </label>
-        <div class="col-md-9">
-            {{ field }}
-            {% if bulk_nullable %}
-                <div class="form-check mt-6">
-                    <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
-                    <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
-                </div>
-            {% endif %}
-            {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
-            {% endif %}
+        {% with embedded_create=field.field.embedded_create %}
+            {% with embedded_search=field.field.embedded_search %}
+                <div class="col-md-9{% if not is_embedded and embedded_create or not is_embedded and embedded_search %} align-items-start d-flex gap-8 flex-wrap{% endif %}">
+                    {% if not is_embedded and embedded_create or not is_embedded and embedded_search %}
+                        <div class="flex-grow-1 flex-shrink-1">{{ field }}</div>
+                        {% if embedded_create %}
+                            {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
+                                <span class="flex-grow-0 flex-shrink-0" data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                                    <button
+                                        class="btn btn-secondary flex-grow-0 flex-shrink-0"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#embedded_action_modal"
+                                        hx-get="{% url field.field.queryset.model|viewname:'add' %}"
+                                        hx-target="#embedded_action_modal .modal-content"
+                                        hx-vals="{&quot;embedded&quot;: true}"
+                                        type="button"
+                                    >
+                                        <span class="mdi mdi-database-plus-outline"></span>
+                                        <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                                    </button>
+                                </span>
+                            {% endwith %}
+                        {% endif %}
+                        {% if embedded_search %}
+                            {% with verbose_name_plural=field.field.queryset.model|meta:"verbose_name_plural" %}
+                                <span class="flex-grow-0 flex-shrink-0" data-bs-title="Search {{ verbose_name_plural }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                                    <button
+                                        class="btn btn-secondary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#embedded_action_modal"
+                                        hx-get="/example"
+                                        hx-target="#embedded_action_modal .modal-content"
+                                        type="button"
+                                    >
+                                        <span class="mdi mdi-database-search-outline"></span>
+                                        <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
+                                    </button>
+                                </span>
+                            {% endwith %}
+                        {% endif %}
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
+                    {% if bulk_nullable %}
+                        <div class="form-check mt-6 w-100">
+                            <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
+                            <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
+                        </div>
+                    {% endif %}
+                    {% if field.help_text %}
+                        <span class="form-text w-100">{{ field.help_text|safe }}</span>
+                    {% endif %}
+            {% endwith %}
+        {% endwith %}
     {% endif %}
     {% if field.errors %}
         <ul class="mb-0 mt-4">

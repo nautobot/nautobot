@@ -490,6 +490,8 @@ class DynamicModelChoiceMixin:
         disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
             choice
         depth (int): Nested serialization depth when making API requests (default: `0` or a flat representation)
+        embedded_create (Optional[boolean]): Indicates "Embedded Create" availability for this field
+        embedded_search (Optional[boolean]): Indicates "Embedded Search" availability for this field
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -504,6 +506,8 @@ class DynamicModelChoiceMixin:
         null_option=None,
         disabled_indicator=None,
         depth=0,
+        embedded_create=None,
+        embedded_search=None,
         *args,
         **kwargs,
     ):
@@ -515,6 +519,8 @@ class DynamicModelChoiceMixin:
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
         self.depth = depth
+        self.embedded_create = embedded_create
+        self.embedded_search = embedded_search
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()

@@ -39,6 +39,7 @@ __all__ = (  # noqa:RUF022
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
     "DynamicGroupModelFormMixin",
+    "EmbeddedActionsFormMixin",
     "NoteModelBulkEditFormMixin",
     "NoteModelFormMixin",
     "RelationshipModelBulkEditFormMixin",
@@ -192,6 +193,16 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
             for dynamic_group in current_groups.difference(self.cleaned_data.get("dynamic_groups")):
                 dynamic_group.remove_members([obj])
         return obj
+
+
+class EmbeddedActionsFormMixin(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for name, field in self.fields.items():
+            if isinstance(field, DynamicModelChoiceField) or isinstance(field, DynamicModelMultipleChoiceField):
+                field.embedded_create = name in self.Meta.embedded_create if hasattr(self.Meta, "embedded_create") else True
+                field.embedded_search = name in self.Meta.embedded_search if hasattr(self.Meta, "embedded_search") else True
 
 
 class NoteFormBase(forms.Form):

@@ -3,14 +3,16 @@ from django import template
 register = template.Library()
 
 
-@register.inclusion_tag("utilities/render_field.html")
-def render_field(field, bulk_nullable=False):
+@register.inclusion_tag("utilities/render_field.html", takes_context=True)
+def render_field(context, field, bulk_nullable=False):
     """
     Render a single form field from template
     """
     return {
         "field": field,
         "bulk_nullable": bulk_nullable,
+        "is_embedded": context.request.GET.get("embedded") == "true",
+        "context": context,
     }
 
 
