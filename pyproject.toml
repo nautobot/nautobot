@@ -1,16 +1,15 @@
-[tool.poetry]
+[project]
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.0.6b1"
+version = "3.1.0a1"
 description = "Source of truth and network automation platform."
-authors = ["Network to Code <opensource@networktocode.com>"]
-license = "Apache-2.0"
-homepage = "https://nautobot.com"
-repository = "https://github.com/nautobot/nautobot"
-documentation = "https://docs.nautobot.com"
+authors = [
+    {name = "Network to Code", email = "<opensource@networktocode.com>"}
+]
+license = {text = "Apache-2.0"}
 readme = "README.md"
-keywords = ["Nautobot"]
+keywords = ["Nautobot"]  # TODO augment this!
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
@@ -20,6 +19,142 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    # Background task processing
+    "celery (>=5.6.1,<5.7)",
+    # Cryptographic recipes and primitives.
+    # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
+    # Added as an explicit dependency to protect against various CVEs in older versions.
+    "cryptography (>=46.0.3,<46.1)",
+    # Fundamental web framework for Nautobot
+    "Django (>=4.2.27,<4.3)",
+    # Adds AJAX capabilities to django-tables2
+    "django-ajax-tables (>=1.1.1,<1.2)",
+    # Base functionality for task scheduling with Celery
+    # Not yet upgrading to v2.8.x due to numerous reported issues, including:
+    # https://github.com/celery/django-celery-beat/issues/894
+    # https://github.com/celery/django-celery-beat/issues/922
+    # https://github.com/celery/django-celery-beat/issues/927
+    "django-celery-beat (>=2.7.0,<2.8)",
+    # Provides a database backend & models for Celery task results
+    "django-celery-results (>=2.6.0,<2.7)",
+    # Management of app configuration via the Django admin UI
+    "django-constance (>=4.3.4,<4.4)",
+    # Permit cross-domain API requests
+    "django-cors-headers (>=4.9.0,<4.10)",
+    # Store files in the database for background tasks
+    "django-db-file-storage (>=0.5.6.1,<0.6)",
+    # AutoSlugField and shell_plus
+    "django-extensions (>=4.1,<4.2)",
+    # Advanced query filters
+    "django-filter (>=25.1,<25.2)",
+    # Health check endpoint
+    "django-health-check (>=3.20.8,<3.21)",
+    # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
+    "django-jinja (>=2.11.0,<2.12)",
+    # Prometheus metrics for Django
+    "django-prometheus (>=2.4.1,<2.5)",
+    # Redis cache for Django used for distributed locking
+    "django-redis (>=6.0.0,<6.1)",
+    # Django silk for request profiling
+    "django-silk (>=5.4.3,<5.5)",
+    # Structured logging for Django
+    "django-structlog[celery] (>=10.0.0,<10.1)",
+    # Advanced HTML tables
+    "django-tables2 (>=2.8.0,<2.9)",
+    # Tags
+    "django-taggit (>=6.1.0,<6.2)",
+    # Represent time zones in Django
+    "django-timezone-field (>=7.2.1,<7.3)",
+    # Tree database structures based on Common Table Expressions
+    "django-tree-queries (>=0.23.0,<0.24)",
+    # Run production webservers such as uWSGI/gunicorn as a Django management command.
+    "django-webserver (>=1.2.0,<1.3)",
+    # REST API framework
+    "djangorestframework (>=3.16.1,<3.17)",
+    # OpenAPI 3.0 schema generation for the REST API
+    # Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
+    "drf-spectacular[sidecar] (>=0.28.0,<0.29)",
+    # Emoji terminal output for Python.
+    "emoji (>=2.15.0,<2.16)",
+    # Git integrations for Python
+    "GitPython (>=3.1.46,<3.2)",
+    # GraphQL support
+    "graphene-django (>=3.2.3,<3.3)",
+    # Graphene Optimizer
+    "graphene-django-optimizer (>=0.10.0,<0.11)",
+    # Template rendering engine
+    "Jinja2 (>=3.1.6,<3.2)",
+    # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
+    "jsonschema (>=4.7.0,<5)",
+    # Library to access Kubernetes API used to develop K8s integration
+    "kubernetes (>=33.1.0,<34)",
+    # Rendering of markdown files to HTML
+    "Markdown (>=3.8.2,<3.9)",
+    # IP prefix and address handling
+    "netaddr (>=1.3.0,<1.4)",
+    # Library of network related utilities including network driver mappings and Jinja Filters
+    # Note: netutils is limited in scope, dependencies, and observes semver, as such
+    #       we permit a looser (^) version constraint here.
+    "netutils (>=1.14.0,<2)",
+    # HTML sanitization
+    "nh3 (>=0.3.2,<0.4)",
+    # Handling of version numbers
+    "packaging (>=23.1)",
+    # Image processing library
+    "Pillow (>=12.0.0,<12.1)",
+    # Custom prometheus metrics
+    "prometheus-client (>=0.23.1,<0.24)",
+    # PostgreSQL database adapter
+    # NOTE: psycopg3 is available now and nominally replaces psycopg2
+    "psycopg2-binary (>=2.9.11,<2.10)",
+    # A Python slugify application that handles unicode.
+    "python-slugify (>=8.0.4,<8.1)",
+    # The uWSGI WSGI HTTP server as a Python module
+    "pyuwsgi (>=2.0.30,<2.1)",
+    # YAML parsing and rendering
+    "PyYAML (>=6.0.3,<6.1)",
+    # Social authentication/registration with support for many auth providers
+    # NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
+    #       that addresses a security vulnerability in social-auth-app-django 5.4.3
+    "social-auth-app-django (>=5.4.3,<5.5)",
+    # Rendering of SVG images (for rack elevations, etc.)
+    "svgwrite (>=1.4.3,<1.5)",
+]
+
+[project.optional-dependencies]
+all = [
+    "django-auth-ldap (>=5.2.0,<5.3)",
+    "django-storages (>=1.14.6,<1.15)",
+    "mysqlclient (>=2.2.7,<2.3)",
+    "napalm (>=4.1.0,<6.0.0)",
+    "social-auth-core[saml] (>=4.8.3,<4.9)",
+]
+# LDAP Support
+ldap = [ "django-auth-ldap (>=5.2.0,<5.3)" ]
+# MySQL database adapter
+mysql = [ "mysqlclient (>=2.2.7,<2.3)" ]
+# NAPALM automation library
+napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
+# External Storage support (i.e. S3)
+remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
+# Social authentication core
+# Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
+# The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
+sso = [ "social-auth-core[saml] (>=4.8.3,<4.9)" ]
+
+[project.scripts]
+nautobot-server = "nautobot.core.cli:main"
+nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
+nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
+
+[project.urls]
+Homepage = "https://nautobot.com"
+Repository = "https://github.com/nautobot/nautobot"
+Documentation = "https://docs.nautobot.com"
+
+[tool.poetry]
 packages = [
     {include = "nautobot"}
 ]
@@ -31,133 +166,6 @@ exclude = [
     # Source code of the documentation doesn't need to be included since we package the rendered docs
     "nautobot/docs/**/*",
 ]
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-# Background task processing
-celery = "~5.6.1"
-# Cryptographic recipes and primitives.
-# Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
-# Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.3"
-# Fundamental web framework for Nautobot
-Django = "~4.2.27"
-# Adds AJAX capabilities to django-tables2
-django-ajax-tables = "~1.1.1"
-# LDAP Support
-django-auth-ldap = {version = "~5.2.0", optional = true}
-# Base functionality for task scheduling with Celery
-# Not yet upgrading to v2.8.x due to numerous reported issues, including:
-# https://github.com/celery/django-celery-beat/issues/894
-# https://github.com/celery/django-celery-beat/issues/922
-# https://github.com/celery/django-celery-beat/issues/927
-django-celery-beat = "~2.7.0"
-# Provides a database backend & models for Celery task results
-django-celery-results = "~2.6.0"
-# Management of app configuration via the Django admin UI
-django-constance = "~4.3.4"
-# Permit cross-domain API requests
-django-cors-headers = "~4.9.0"
-# Store files in the database for background tasks
-django-db-file-storage = "~0.5.6.1"
-# AutoSlugField and shell_plus
-django-extensions = "~4.1"
-# Advanced query filters
-django-filter = "~25.1"
-# Health check endpoint
-django-health-check = "~3.20.8"
-# Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "~2.11.0"
-# Prometheus metrics for Django
-django-prometheus = "~2.4.1"
-# Redis cache for Django used for distributed locking
-django-redis = "~6.0.0"
-# Django silk for request profiling
-django-silk = "~5.4.3"
-# External Storage support (i.e. S3)
-django-storages = {version = "~1.14.6", optional = true}
-# Structured logging for Django
-django-structlog = {version = "~10.0.0", extras = ["celery"]}
-# Advanced HTML tables
-django-tables2 = "~2.8.0"
-# Tags
-django-taggit = "~6.1.0"
-# Represent time zones in Django
-django-timezone-field = "~7.2.1"
-# Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.23.0"
-# Run production webservers such as uWSGI/gunicorn as a Django management command.
-django-webserver = "~1.2.0"
-# REST API framework
-djangorestframework = "~3.16.1"
-# OpenAPI 3.0 schema generation for the REST API
-# Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
-drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
-# Emoji terminal output for Python.
-emoji = "~2.15.0"
-# Git integrations for Python
-GitPython = "~3.1.46"
-# GraphQL support
-graphene-django = "~3.2.3"
-# Graphene Optimizer
-graphene-django-optimizer = "~0.10.0"
-# Template rendering engine
-Jinja2 = "~3.1.6"
-# Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.7.0"
-# Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^33.1.0"
-# Rendering of markdown files to HTML
-Markdown = "~3.8.2"
-# MySQL database adapter
-mysqlclient = {version = "~2.2.7", optional = true}
-# NAPALM automation library
-napalm = {version = ">=4.1.0,<6.0.0", optional = true}
-# IP prefix and address handling
-netaddr = "~1.3.0"
-# Library of network related utilities including network driver mappings and Jinja Filters
-# Note: netutils is limited in scope, dependencies, and observes semver, as such
-#       we permit a looser (^) version constraint here.
-netutils = "^1.14.0"
-# HTML sanitization
-nh3 = "~0.3.2"
-# Handling of version numbers
-packaging = ">=23.1"
-# Image processing library
-Pillow = "~12.0.0"
-# Custom prometheus metrics
-prometheus-client = "~0.23.1"
-# PostgreSQL database adapter
-# NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.11"
-# A Python slugify application that handles unicode.
-python-slugify = "~8.0.4"
-# The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.30"
-# YAML parsing and rendering
-PyYAML = "~6.0.3"
-# Social authentication core
-# Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
-# The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-social-auth-core = {version = "~4.8.3", optional = true, extras = ["saml"]}
-# Social authentication/registration with support for many auth providers
-# NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
-#       that addresses a security vulnerability in social-auth-app-django 5.4.3
-social-auth-app-django = "~5.4.3"
-# Rendering of SVG images (for rack elevations, etc.)
-svgwrite = "~1.4.3"
-
-[tool.poetry.extras]
-all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
-ldap = ["django-auth-ldap"]
-mysql = ["mysqlclient"]
-napalm = ["napalm"]
-# This is not currently possible, there is a feature request with Poetry https://github.com/python-poetry/poetry/issues/3913
-# openid = ["social-auth-core[openidconnect]"]
-remote_storage = ["django-storages"]
-# This is not currently possible, there is a feature request with Poetry https://github.com/python-poetry/poetry/issues/3913
-# saml = ["social-auth-core[saml]"]
-sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
@@ -239,12 +247,9 @@ tblib = "~3.2.2"
 time-machine = "~2.19.0"
 
 [tool.poetry.scripts]
-nautobot-server = "nautobot.core.cli:main"
-nautobot-migrate-bootstrap-v3-to-v5 = "nautobot.core.cli.bootstrap_v3_to_v5:main"
-nautobot-migrate-deprecated-templates = "nautobot.core.cli.migrate_deprecated_templates:main"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
@@ -419,7 +424,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-3.0.md"
+filename = "nautobot/docs/release-notes/version-3.1.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

@@ -632,6 +632,13 @@ class CustomField(
         'It will appear in the "Advanced" tab instead.',
     )
 
+    scope_filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        editable=False,
+        default=dict,
+        help_text="A JSON-encoded dictionary of filter parameters defining possible objects that can use this custom field.",
+    )
+
     objects = CustomFieldManager()
 
     clone_fields = [

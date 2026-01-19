@@ -1472,6 +1472,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
             "name",
             "label",
             "type",
+            "port_type",
             "mgmt_only",
             "speed",
             "duplex",
@@ -1481,6 +1482,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
             "type": StaticSelect2(),
             "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
             "duplex": StaticSelect2(),
+            "port_type": StaticSelect2(),
         }
         labels = {
             "speed": "Speed (Kbps)",
@@ -1489,6 +1491,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
 
 class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(InterfaceTypeChoices), widget=StaticSelect2())
+    port_type = forms.ChoiceField(choices=add_blank_choice(PortTypeChoices), required=False, widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1503,6 +1506,7 @@ class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
+        "port_type",
         "mgmt_only",
         "speed",
         "duplex",
@@ -1518,6 +1522,11 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
+    port_type = forms.ChoiceField(
+        choices=add_blank_choice(PortTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1528,7 +1537,7 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
     description = forms.CharField(required=False)
 
     class Meta:
-        nullable_fields = ["label", "speed", "duplex", "description"]
+        nullable_fields = ["label", "port_type", "speed", "duplex", "description"]
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1998,6 +2007,7 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "port_type",
             "mgmt_only",
             "speed",
             "duplex",
@@ -3173,6 +3183,7 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
+    port_type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
     speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -3253,6 +3264,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "role",
             "label",
             "type",
+            "port_type",
             "enabled",
             "parent_interface",
             "bridge",
@@ -3277,6 +3289,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "mode": StaticSelect2(),
             "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
             "duplex": StaticSelect2(),
+            "port_type": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
@@ -3304,6 +3317,11 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
     model = Interface
     type = forms.ChoiceField(
         choices=add_blank_choice(InterfaceTypeChoices),
+        widget=StaticSelect2(),
+    )
+    port_type = forms.ChoiceField(
+        choices=add_blank_choice(PortTypeChoices),
+        required=False,
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3406,6 +3424,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "status",
         "role",
         "type",
+        "port_type",
         "speed",
         "duplex",
         "enabled",
@@ -3427,7 +3446,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
 
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "port_type", "tags"]),
     DeviceBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
@@ -3452,6 +3471,7 @@ class InterfaceBulkCreateForm(
         "status",
         "role",
         "type",
+        "port_type",
         "enabled",
         "mtu",
         "vrf",
@@ -3465,7 +3485,7 @@ class InterfaceBulkCreateForm(
 
 
 class ModuleInterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "port_type", "tags"]),
     ModuleBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
@@ -3490,6 +3510,7 @@ class ModuleInterfaceBulkCreateForm(
         "status",
         "role",
         "type",
+        "port_type",
         "enabled",
         "mtu",
         "vrf",
@@ -3508,6 +3529,7 @@ class InterfaceBulkEditForm(
         [
             "label",
             "type",
+            "port_type",
             "parent_interface",
             "bridge",
             "lag",
@@ -3583,6 +3605,7 @@ class InterfaceBulkEditForm(
             "untagged_vlan",
             "tagged_vlans",
             "vrf",
+            "port_type",
         ]
 
     def __init__(self, *args, **kwargs):

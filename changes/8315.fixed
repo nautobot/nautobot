@@ -1,0 +1,1 @@
+Fixed bug in Interface template causing emdash to not be used for Port Type if no value was set.
