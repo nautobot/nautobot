@@ -127,7 +127,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
 
 
 class PowerFeedUtilizationTable(StatusTableMixin, BaseTable):
-    name = tables.LinkColumn(verbose_name="Feed")
+    name = tables.Column(verbose_name="Feed", linkify=True)
     power_panel = tables.Column(linkify=True)
     type = ChoiceFieldColumn()
     utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization")
