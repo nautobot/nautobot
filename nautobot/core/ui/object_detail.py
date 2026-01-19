@@ -1145,9 +1145,7 @@ class ObjectsTablePanel(Panel):
                 query_params = {related_field_name: obj.pk}
                 if isinstance(self.list_url_extra_params, dict):
                     query_params.update(self.list_url_extra_params)
-                    body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
-                else:
-                    body_content_table_list_url = None
+                body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
 
         return {
             "body_content_table": body_content_table,
