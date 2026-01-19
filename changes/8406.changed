@@ -1,1 +1,0 @@
-Use graceful degradation in case of media failure. When a dependency fails to load, show an error alert instead of navigating to a separate page.

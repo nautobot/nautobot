@@ -210,6 +210,31 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.5 (2026-01-16)
+
+### Added in v3.0.5
+
+- [#8375](https://github.com/nautobot/nautobot/issues/8375) - Added `prefix_exact` filter and updated REST API filter documentation.
+
+### Changed in v3.0.5
+
+- [#8406](https://github.com/nautobot/nautobot/issues/8406) - Use graceful degradation in case of media failure. When a dependency fails to load, show an error alert instead of navigating to a separate page.
+
+### Fixed in v3.0.5
+
+- [#8396](https://github.com/nautobot/nautobot/issues/8396) - Improved rendering of custom-field values in list views, including adding support for rendering of JSON and Markdown custom fields.
+- [#8396](https://github.com/nautobot/nautobot/issues/8396) - Improved rendering of null/empty values in various list view tables.
+
+### Documentation in v3.0.5
+
+- [#8374](https://github.com/nautobot/nautobot/issues/8374) - Added a note to the documentation recommending upgrading to latest 2.4.x before upgrading to 3.x.
+- [#8420](https://github.com/nautobot/nautobot/issues/8420) - Added documentation providing a basic overview of how to upgrade and migrate to a new major version of PostgreSQL.
+- [#8420](https://github.com/nautobot/nautobot/issues/8420) - Added a note to document that support for PostgreSQL versions 12.x and 13.x will be dropped in Nautobot 3.1, and a recommendation to update before upgrading Nautobot.
+
+### Housekeeping in v3.0.5
+
+- [#8412](https://github.com/nautobot/nautobot/issues/8412) - Synced release notes from ltm-2.4 to develop branch.
+
 ## v3.0.4 (2026-01-12)
 
 ### Security in v3.0.4
