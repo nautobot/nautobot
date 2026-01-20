@@ -902,7 +902,7 @@ class RackUIViewSet(NautobotUIViewSet):
                 table_title="Images",
                 section=SectionChoices.LEFT_HALF,
                 table_class=ImageAttachmentTable,
-                table_attribute="image_attachments",
+                table_attribute="images",
                 related_field_name="rack",
                 weight=400,
                 include_columns=["actions"],

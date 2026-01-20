@@ -253,14 +253,6 @@ class Rack(PrimaryModel):
         return self.name
 
     @property
-    def image_attachments(self):
-        """
-        Get image attachments for this Location instance.
-        """
-        # Use the images GenericRelation to fetch related image attachments
-        return self.images.all()
-
-    @property
     def space_utilization(self):
         return self.get_utilization()
 

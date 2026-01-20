@@ -343,12 +343,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     @property
     def utilization(self):
-        power_port = getattr(self, "connected_endpoint", None)
+        power_port = self.connected_endpoint
         if not isinstance(power_port, PowerPort):
             return None
         utilization = power_port.get_power_draw()
-        if not utilization or "allocated" not in utilization:
-            return None
         allocated = utilization["allocated"]
         available = self.available_power or 0
         return UtilizationData(numerator=allocated, denominator=available)
