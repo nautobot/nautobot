@@ -1,3 +1,0 @@
-Added `invoke compress-images` task to auto-compress images in documentation and others.
-Added `compress-images` job to `ci_pullrequest` workflow.
-Run `invoke compress-images` against current images.

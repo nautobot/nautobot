@@ -29,14 +29,12 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
-from nautobot.circuits.models import Circuit
 from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import bettertitle, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     AncestorsInstanceBreadcrumbItem,
@@ -80,7 +78,7 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.ipam.models import IPAddress, Prefix, VLAN
+from nautobot.ipam.models import IPAddress
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -291,7 +289,7 @@ class LocationGeographicalInfoFieldsPanel(object_detail.ObjectFieldsPanel):
         data = super().get_data(context)
         obj = get_obj_from_context(context, self.context_object_key)
 
-        if obj and obj.latitude and obj.longitude:
+        if obj and obj.latitude is not None and obj.longitude is not None:
             data["GPS Coordinates"] = f"{obj.latitude}, {obj.longitude}"
         else:
             data["GPS Coordinates"] = None
@@ -456,19 +454,11 @@ class LocationUIViewSet(NautobotUIViewSet):
                 },
                 footer_content_template_path="dcim/footer_convert_to_contact_or_team_record.html",
             ),
-            object_detail.StatsPanel(
+            object_detail.AsyncStatsPanel(
                 weight=100,
                 label="Stats",
                 section=SectionChoices.RIGHT_HALF,
-                filter_name="location",
-                related_models=[
-                    Rack,
-                    Device,
-                    Prefix,
-                    VLAN,
-                    (Circuit, "circuit_terminations__location__in"),
-                    (VirtualMachine, "cluster__location__in"),
-                ],
+                api_url_name="dcim-api:location-stats",
             ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
@@ -505,9 +495,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             # This query can get really expensive when there are big location trees in the DB. By casting it to a list we
             # ensure it is only performed once rather than as a subquery for each of the different count stats.
-            related_locations = list(
-                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
-            )
+            related_locations = instance.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
 
             rack_groups = (
                 RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
@@ -570,14 +558,14 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
         migrate_action = request.POST.get("action")
         try:
             with transaction.atomic():
-                if not has_perms(request.user, ["extras.add_contactassociation"]):
+                if not helpers.has_perms(request.user, ["extras.add_contactassociation"]):
                     raise PermissionDenied(
                         "ObjectPermission extras.add_contactassociation is needed to perform this action"
                     )
                 contact = None
                 team = None
                 if migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
-                    if not has_perms(request.user, ["extras.add_contact"]):
+                    if not helpers.has_perms(request.user, ["extras.add_contact"]):
                         raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
                     contact = Contact(
                         name=request.POST.get("name"),
@@ -588,7 +576,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     # Trigger permission check
                     Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
                 elif migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
-                    if not has_perms(request.user, ["extras.add_team"]):
+                    if not helpers.has_perms(request.user, ["extras.add_team"]):
                         raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
                     team = Team(
                         name=request.POST.get("name"),
@@ -710,7 +698,7 @@ class RackGroupUIViewSet(NautobotUIViewSet):
             racks = (
                 Rack.objects.restrict(request.user, "view")
                 # Note this filter - we want the table to include racks assigned to child rack groups as well
-                .filter(rack_group__in=instance.descendants(include_self=True))
+                .filter(rack_group__in=instance.cacheable_descendants_pks(include_self=True))
                 .select_related("role", "location", "tenant")
             )
 
@@ -964,12 +952,12 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
             image = getattr(obj, key, None)
             if image:
                 return format_html(
-                    '<a href="{}" target="_blank"><img src="{}" alt="{}" class="img-responsive"></a>',
+                    '<a href="{}" target="_blank"><img src="{}" alt="{}" class="img-responsive mw-100"></a>',
                     image.url,
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-secondary">&mdash;</span>')
+            return helpers.HTML_NONE
 
         return super().render_value(key, value, context)
 
@@ -2320,7 +2308,7 @@ class DeviceComponentPageMixin:
                     view_name=device_breadcrumb_url,
                     should_render=lambda c: c["object"].device is not None,
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
-                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
+                    label=lambda c: helpers.bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
             )
 
@@ -2330,7 +2318,7 @@ class DeviceComponentPageMixin:
                     view_name=module_breadcrumb_url,
                     should_render=lambda c: c["object"].device is None,
                     reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
-                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
+                    label=lambda c: helpers.bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
             )
 
