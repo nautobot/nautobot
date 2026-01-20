@@ -855,7 +855,7 @@ class Device(PrimaryModel, ConfigContextModel):
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
         # Validate any pending cluster assignment that was deferred during creation
         # Don't validate `self.clusters` here as that's a M2M and is updated out-of-step with `self.save()`
-        if self.location is not None and hasattr(self, "_deferred_cluster"):
+        if hasattr(self, "location") and self.location is not None and hasattr(self, "_deferred_cluster"):
             cluster = self._deferred_cluster
             if cluster.location is not None and cluster.location not in self.location.ancestors(include_self=True):
                 raise ValidationError(
