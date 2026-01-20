@@ -302,6 +302,20 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
             model = dcim_models.Location
             fields = []
 
+    class MultiFieldLocationFilterSet(filters.BaseFilterSet):
+        """Test filterset with multiple field names for NaturalKeyOrPKMultipleChoiceFilter."""
+        # Simulate a filter that searches across multiple related fields
+        power_panels_multi = filters.NaturalKeyOrPKMultipleChoiceFilter(
+            field_names=["power_panels", "racks"],  # Multiple fields
+            queryset=dcim_models.PowerPanel.objects.all(),
+            to_field_name="name",
+            label="Power Panels or Racks (name or ID)",
+        )
+
+        class Meta:
+            model = dcim_models.Location
+            fields = []
+
     queryset = dcim_models.Location.objects.all()
     filterset = LocationFilterSet
 
@@ -458,6 +472,89 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
             fs.filters["power_panels"].get_filter_predicate(name),
             {"power_panels__name": name},
         )
+
+    def test_multiple_field_names(self):
+        """
+        Test that NaturalKeyOrPKMultipleChoiceFilter works with multiple field_names.
+        """
+        # Create test racks for multi-field testing
+        rack1 = dcim_models.Rack.objects.create(
+            location=self.locations[0], name="test-rack1", status=self.status
+        )
+        rack2 = dcim_models.Rack.objects.create(
+            location=self.locations[1], name="test-rack2", status=self.status
+        )
+
+        with self.subTest("Multiple field instantiation"):
+            # Test that field_names parameter works
+            filter_instance = filters.NaturalKeyOrPKMultipleChoiceFilter(
+                field_names=["power_panels", "racks"],
+                queryset=dcim_models.PowerPanel.objects.all(),
+                to_field_name="name",
+            )
+            self.assertEqual(filter_instance.field_names, ["power_panels", "racks"])
+
+        with self.subTest("Backward compatibility"):
+            # Test that single field_name still works
+            filter_instance = filters.NaturalKeyOrPKMultipleChoiceFilter(
+                field_name="power_panels",
+                queryset=dcim_models.PowerPanel.objects.all(),
+                to_field_name="name",
+            )
+            self.assertEqual(filter_instance.field_names, ["power_panels"])
+
+        with self.subTest("Multiple field name filtering - single value"):
+            # Test filtering by power panel name across both fields
+            kwargs = {"power_panels_multi": ["test-power-panel1"]}
+            fs = self.MultiFieldLocationFilterSet(kwargs, self.queryset)
+            # Should find location 0 (which has test-power-panel1)
+            self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
+
+        with self.subTest("Multiple field name filtering - rack name"):
+            # Test filtering by rack name across both fields
+            kwargs = {"power_panels_multi": ["test-rack1"]}
+            fs = self.MultiFieldLocationFilterSet(kwargs, self.queryset)
+            # Should find location 0 (which has test-rack1)
+            self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0]])
+
+        with self.subTest("Multiple field name filtering - multiple values"):
+            # Test filtering with multiple values across different field types
+            kwargs = {"power_panels_multi": ["test-power-panel1", "test-rack2"]}
+            fs = self.MultiFieldLocationFilterSet(kwargs, self.queryset)
+            # Should find both locations (location 0 has power panel, location 1 has rack)
+            self.assertQuerysetEqualAndNotEmpty(fs.qs, [self.locations[0], self.locations[1]])
+
+        with self.subTest("Multiple field get_filter_predicate - name"):
+            # Test that get_filter_predicate returns Q object for multiple fields
+            filter_instance = self.MultiFieldLocationFilterSet().filters["power_panels_multi"]
+            predicate = filter_instance.get_filter_predicate("test-value")
+            # Should be a Q object representing OR across both fields
+            self.assertIsInstance(predicate, models.Q)
+            # The Q object should contain both field lookups
+            expected_keys = ["power_panels__name", "racks__name"]
+            q_dict = dict(predicate.children)
+            self.assertTrue(any(key in q_dict for key in expected_keys))
+
+        with self.subTest("Multiple field get_filter_predicate - UUID"):
+            # Test that get_filter_predicate returns Q object for UUID values
+            filter_instance = self.MultiFieldLocationFilterSet().filters["power_panels_multi"]
+            uuid_value = str(self.power_panel1.pk)
+            predicate = filter_instance.get_filter_predicate(uuid_value)
+            # Should be a Q object representing OR across both fields
+            self.assertIsInstance(predicate, models.Q)
+            expected_keys = ["power_panels", "racks"]
+            q_dict = dict(predicate.children)
+            self.assertTrue(any(key in q_dict for key in expected_keys))
+
+        with self.subTest("Multiple field null filtering"):
+            # Test null value filtering with multiple fields
+            filter_instance = self.MultiFieldLocationFilterSet().filters["power_panels_multi"]
+            predicate = filter_instance.get_filter_predicate(None)
+            # Should be a Q object with null checks for both fields
+            self.assertIsInstance(predicate, models.Q)
+            q_dict = dict(predicate.children)
+            expected_keys = ["power_panels__isnull", "racks__isnull"]
+            self.assertTrue(any(key in q_dict for key in expected_keys))
 
 
 @isolate_apps("nautobot.core.tests")

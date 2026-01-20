@@ -70,6 +70,9 @@ The intended audience for the `validated_save()` convenience method is Job autho
 
 During execution, should model validation fail, `validated_save()` will raise `django.core.exceptions.ValidationError` in the normal Django fashion.
 
+!!! important
+    When working directly with the ORM (such as in Jobs, management commands, or scripts), remember that Nautobot's change logging and webhook features require an HTTP request context to function properly. Use the `web_request_context` context manager to ensure change logs and webhooks are triggered when creating, updating, or deleting objects via the ORM. See the [Change Logging documentation](../../user-guide/platform-functionality/change-logging.md#change-logging-and-webhooks-with-orm-operations) for details.
+
 ### Field Naming in Data Models
 
 Model field names **must** always follow the following conventions:
