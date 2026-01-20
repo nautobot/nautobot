@@ -1,0 +1,1 @@
+Fix missing `tagged_items` in JSON response when creating Tag object with API `/api/extras/tags/` endpoint.
