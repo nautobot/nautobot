@@ -2632,6 +2632,8 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 pass
 
     def clean(self):
+        super().clean()
+
         cleaned_data = self.cleaned_data
         if cleaned_data["parent_module_bay_device"] and cleaned_data["parent_module_bay_module"]:
             raise forms.ValidationError("Multiple parent module bays selected.")
