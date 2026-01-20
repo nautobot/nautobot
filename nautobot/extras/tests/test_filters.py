@@ -11,7 +11,7 @@ from django.utils.timezone import now
 
 from nautobot.core.jobs import BulkDeleteObjects
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.filters import DeviceFilterSet
+from nautobot.dcim.filters import DeviceFilterSet, Q
 from nautobot.dcim.models import (
     Device,
     DeviceFamily,
@@ -1753,6 +1753,20 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
+
+    def test_changed_object_change_context(self):
+        params = {"change_context": "job"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(change_context="job"),
+        )
+
+    def test_changed_object_change_context_detail(self):
+        params = {"change_context_detail__nic": "Lorem ipsum dolor sit amet"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(~Q(change_context_detail__icontains="Lorem ipsum dolor sit amet")),
         )
 
 
