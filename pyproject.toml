@@ -28,11 +28,12 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=46.0.3,<46.1)",
     # Fundamental web framework for Nautobot
-    "Django (>=5.2.9,<5.3)",
+    "django (>=5.2.10,<5.3)",
     # Adds AJAX capabilities to django-tables2
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
-    "django-celery-beat (>=2.8.1,<2.9)",
+    # Pinned to an exact version because we override a number of non-public APIs that could change in a patch release.
+    "django-celery-beat (==2.8.1)",
     # Provides a database backend & models for Celery task results
     "django-celery-results (>=2.6.0,<2.7)",
     # Management of app configuration via the Django admin UI
