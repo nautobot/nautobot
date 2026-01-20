@@ -1,3 +1,4 @@
+{% load helpers %}
 {% if diff_added or diff_removed %}
     <div
         class="nb-editor-container"
@@ -7,7 +8,7 @@
         data-modified="{{ diff_added|default:'{}' }}"
     ></div>
     <noscript>
-        <pre class="mb-0"><code>{{ diff_removed }}</code></pre>
-        <pre class="mb-0"><code>{{ diff_added }}</code></pre>
+        <pre class="mb-0">{{ diff_removed|render_json }}</pre>
+        <pre class="mb-0">{{ diff_added|render_json }}</pre>
     </noscript>
 {% endif %}
