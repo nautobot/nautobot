@@ -112,7 +112,6 @@ If you need help configuring Nautobot security settings, applying security updat
 This balanced approach lets us respond quickly to critical security issues while maintaining the stability and predictability that production environments require. We're committed to transparency about what we can control, what we monitor, and where you may need to take additional steps to meet your organization's specific security requirements.
 
 ---
-Nautobot's development team is strongly committed to responsible reporting and disclosure of security-related issues, as outlined below and in the  published to GitHub.
 
 ## More Information on Security Tools Used
 
