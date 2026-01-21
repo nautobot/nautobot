@@ -161,6 +161,19 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry.model.save()
         return resp
 
+    def enabled_models_qs(self):
+        """
+        Replace the django-celery-beat 2.8.x implementation with a simpler (less optimal) one for now.
+
+        This should hopefully avoid issues like:
+
+        - https://github.com/celery/django-celery-beat/issues/894
+        - https://github.com/celery/django-celery-beat/issues/922
+        - https://github.com/celery/django-celery-beat/issues/927
+        - https://github.com/celery/django-celery-beat/issues/956
+        """
+        return self.Model.objects.enabled()
+
     def tick(self, *args, **kwargs):
         """
         Run a tick - one iteration of the scheduler.
