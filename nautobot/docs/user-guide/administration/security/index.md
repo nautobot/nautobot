@@ -95,7 +95,7 @@ Our official Docker images are built on the `python-slim` base image maintained 
 * We do not rebuild container images of older versions of Nautobot with newer dependencies
 
 We understand that some organizations have specific requirements around container security, such as needing rootless containers, distro-less images, or other specialized configurations. While we provide a stable, well-maintained baseline that works for most deployments, we recognize it may not fit every security posture. If your environment requires these specialized configurations, you can use our Dockerfile as a reference implementation showing exactly how to install Nautobot, configure its dependencies, and start its services in your custom implementation.
-Development and pre-release containers (nautobot-dev, etc.) are not formal releases. They follow similar build processes as production containers, but performance regressions and configuration changes are expected and not prioritized for remediation.
+Development and pre-release containers (`nautobot-dev`, etc.) are not formal releases. They follow similar build processes as production containers, but performance regressions and configuration changes are expected and not prioritized for remediation.
 
 ## Reporting Security Vulnerabilities
 
