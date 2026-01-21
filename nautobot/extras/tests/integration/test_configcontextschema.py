@@ -28,19 +28,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         And the user is redirected to the detail page for the new object
         """
         # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
-
-        # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/add/")
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 1")
         self.browser.fill("description", "Description")
         self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
@@ -56,19 +50,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         And the form is populated with the user's previous input
         """
         # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
-
-        # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/add/")
 
         # Fill out form
         self.browser.fill("name", "Integration Schema 2")
         self.browser.fill("description", "Description")
         self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
-        self.browser.find_by_text("Create").click()
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Verify validation error raised to user within form
         self.assertTrue(self.browser.is_text_present("'not a valid type' is not valid under any of the given schemas"))
@@ -159,7 +147,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             "data_schema",
             '{"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}, "c": {"type": "integer"}}, "additionalProperties": false}',
         )
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Navigate to ConfigContextSchema Validation tab
         self.browser.links.find_by_text("Validation").click()
@@ -181,7 +169,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # breakpoint()
         # Update the property "a" to be a string
         self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
-        self.browser.find_by_text("Update").click()
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Assert Validation states
         self.assertEqual(
