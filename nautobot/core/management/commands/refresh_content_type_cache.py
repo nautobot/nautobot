@@ -25,7 +25,7 @@ class Command(BaseCommand):
                     cache.set(
                         content_type.model_class()._content_type_cache_key,
                         content_type,
-                        settings.CONTENT_TYPE_CACHE_TIMEOUT,
+                        timeout=settings.CONTENT_TYPE_CACHE_TIMEOUT,
                     )
 
             except AttributeError:

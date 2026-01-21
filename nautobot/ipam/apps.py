@@ -9,6 +9,7 @@ class IPAMConfig(NautobotConfig):
         "ipaddress",
         "namespace",
         "prefix",
+        "service",
         "vlan",
         "vrf",
     ]

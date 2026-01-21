@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import sys
 from unittest import mock, TestCase
@@ -224,6 +225,11 @@ class SettingsJSONSchemaTestCase(TestCase):
                     )
                 continue
             with self.subTest(f"Checking for settings schema property {key} in nautobot.core.settings"):
+                if "default" not in self.settings_schema["properties"][key]:
+                    # Should be undefined by default
+                    self.assertNotIn(key, keys)
+                    continue
+                # Else, make sure it's defined and has the correct value
                 try:
                     self.assertIn(key, keys)
                 except AssertionError as err:
@@ -256,6 +262,9 @@ class SettingsJSONSchemaTestCase(TestCase):
         # ALLOWED_HOSTS is a special case (space separated instead of commas)
         if setting_name == "ALLOWED_HOSTS":
             return os.environ[env_var].split(" ")
+        elif setting_name == "KUBERNETES_JOB_MANIFEST":
+            # NAUTOBOT_KUBERNETES_JOB_MANIFEST is expected to be a json string
+            return json.loads(os.environ[env_var])
         elif setting_name == "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE":
             return datetime.date.fromisoformat(os.environ[env_var])
         elif setting_type == "array":
@@ -279,6 +288,11 @@ class SettingsJSONSchemaTestCase(TestCase):
         # ALLOWED_HOSTS is a special case (space separated instead of commas)
         if setting_name == "ALLOWED_HOSTS":
             os.environ[env_var] = " ".join(self._get_fake_env_value("string") for _ in range(3))
+        elif setting_name == "KUBERNETES_JOB_MANIFEST":
+            # NAUTOBOT_KUBERNETES_JOB_MANIFEST is expected to be a json string
+            os.environ[env_var] = (
+                '{"apiVersion": "batch/v1", "kind": "Job", "metadata": {"name": "nautobot-job"}, "spec": {}}'
+            )
         elif setting_name == "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE":
             os.environ[env_var] = self._get_fake_env_value("date")
         elif setting_type == "array":

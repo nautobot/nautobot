@@ -70,7 +70,7 @@ Please refer to the [plugin development documentation](../development/apps/index
 
 #### IPAM custom lookups for filtering ([#982](https://github.com/nautobot/nautobot/issues/982))
 
-Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../user-guide/platform-functionality/rest-api//filtering.md#network-and-host-fields) for more specifics and examples.
+Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../user-guide/platform-functionality/rest-api/filtering.md#ipam-custom-filters) for more specifics and examples.
 
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
