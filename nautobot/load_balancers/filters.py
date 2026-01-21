@@ -23,7 +23,7 @@ class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # 
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "vip__host": "icontains",
+            # "vip__host": "icontains", Consider enabling this with generated fields
             "port": {"lookup_expr": "exact", "preprocessor": int},
             "device__name": "icontains",
             "load_balancer_pool__name": "icontains",

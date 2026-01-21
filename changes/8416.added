@@ -1,1 +1,1 @@
-Added the `q` filter for the `VirtualServer` model.
+Enhanced the `q` filter for the `VirtualServer` model to include searching by port, device name, and load balancer pool name.
