@@ -348,6 +348,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
+        htmx_request = self.request.headers.get("HX-Request", False)
         if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
@@ -356,13 +357,14 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
             table = self.table(  # pylint: disable=not-callable  # we confirmed that self.table is not None
-                self.queryset,
+                self.queryset if htmx_request else self.queryset.none(),
                 table_changes_pending=table_changes_pending,
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
                 configurable=True,
             )
+            table.deferred_rendering = not htmx_request  # flag for use in template rendering
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -418,6 +420,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model).render(context)
 
+        if htmx_request:
+            return render(request, "components/htmx/list_view_table.html", context)
         return render(request, self.template_name, context)
 
     def alter_queryset(self, request):

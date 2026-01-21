@@ -1,0 +1,1 @@
+Changed object list views to render in two passes with HTMX, improving initial load times.

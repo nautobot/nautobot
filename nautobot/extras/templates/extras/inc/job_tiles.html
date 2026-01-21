@@ -1,4 +1,5 @@
 {% load helpers %}
+{% load static %}
 
 {% block extra_styles %}
     <style>
@@ -84,7 +85,13 @@
         </article>
     {% empty %}
         {% if table.empty_text %}
-            <div class="text-center text-secondary">&mdash; {{ table.empty_text }} &mdash;</div>
+            <div class="text-center text-secondary">
+                {% if table.deferred_rendering|default:False %}
+                    <img class="htmx-indicator" src="{% static 'img/ajax-loader.gif' %}" alt="Loading...">
+                {% else %}
+                    &mdash; {{ table.empty_text }} &mdash;
+                {% endif %}
+            </div>
         {% endif %}
     {% endfor %}
 </div>

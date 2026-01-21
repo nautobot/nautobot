@@ -704,6 +704,10 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         app_label = model_opts.app_label
         action = self.action
 
+        if self.request.headers.get("HX-Request", False):
+            if action == "list":
+                return "components/htmx/list_view_table.html"
+
         try:
             template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
             select_template([template_name])

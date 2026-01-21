@@ -95,14 +95,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     self.saved_view is not None and self.saved_view.config.get("sort_order")
                 ):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+                htmx_request = request.headers.get("HX-Request", False)
                 table = table_class(
-                    queryset,
+                    queryset if htmx_request else queryset.none(),
                     table_changes_pending=table_changes_pending,
                     saved_view=self.saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
                 )
+                table.deferred_rendering = not htmx_request  # flag for use in template rendering
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
