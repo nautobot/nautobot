@@ -18,6 +18,7 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
@@ -1011,6 +1012,19 @@ class Device(PrimaryModel, ConfigContextModel):
         return module_bays_exists
 
     @property
+    def _all_module_pks(self):
+        # Use Django's cache to reference module primary keys for a given device.
+        #   Avoids hitting the database with an expensive query multiple times on device details load
+
+        def get_pks():
+            # No hits in the cache, fetch pks
+            qs = self.all_modules.values_list('pk', flat=True)
+            return list(qs)
+
+        cache_key = construct_cache_key(self, method_name='_all_module_pks')
+        return cache.get_or_set(cache_key, get_pks, timeout=30)
+
+    @property
     def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
@@ -1035,56 +1049,56 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Console Ports that are installed in the device or in modules that are installed in the device.
         """
         # TODO: These could probably be optimized to reduce the number of joins
-        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_console_server_ports(self):
         """
         Return all Console Server Ports that are installed in the device or in modules that are installed in the device.
         """
-        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_front_ports(self):
         """
         Return all Front Ports that are installed in the device or in modules that are installed in the device.
         """
-        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_interfaces(self):
         """
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
-        return Interface.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return Interface.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_module_bays(self):
         """
         Return all Module Bays that are installed in the device or in modules that are installed in the device.
         """
-        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self.all_modules))
+        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self._all_module_pks))
 
     @property
     def all_power_ports(self):
         """
         Return all Power Ports that are installed in the device or in modules that are installed in the device.
         """
-        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_power_outlets(self):
         """
         Return all Power Outlets that are installed in the device or in modules that are installed in the device.
         """
-        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def all_rear_ports(self):
         """
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
-        return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return RearPort.objects.filter(Q(device=self) | Q(module__in=self._all_module_pks))
 
     @property
     def radio_profile_assignments(self):
