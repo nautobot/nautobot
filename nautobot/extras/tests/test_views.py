@@ -2524,6 +2524,9 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
+    def test_custom_actions(self):
+        """GitRepository custom actions redirect instead of returning 403/404."""
+
     # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
 
 
