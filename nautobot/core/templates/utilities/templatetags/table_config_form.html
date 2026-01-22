@@ -69,8 +69,8 @@
                                 ...values,
                                 [field.getAttribute('name')]:
                                     field.tagName.toLowerCase() === 'select' && field.getAttribute('multiple') !== null
-                                        ? [...field.selectedOptions].map((option) => option.value)
-                                        : field.value,
+                                    ? [...field.selectedOptions].map((option) => option.value)
+                                    : field.value,
                             }),
                             {},
                         );
