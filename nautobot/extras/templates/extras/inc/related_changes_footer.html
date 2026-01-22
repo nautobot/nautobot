@@ -1,0 +1,10 @@
+{% load ui_framework %}
+
+<div class="float-end">
+    <a
+        href="{% url 'extras:objectchange_list' %}?request_id={{ obj.request_id }}&id_ne={{ obj.pk }}"
+        class="btn btn-primary"
+    >
+        See all {{ related_changes_count }} {{ body_content_table_verbose_name_plural }}
+    </a>
+</div>
