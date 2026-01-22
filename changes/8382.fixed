@@ -1,4 +1,1 @@
-The nautobot.dcim.models.Device.all_modules property was previously used to look up related modules for multiple attributes (console ports, interfaces, power ports, module bays, etc.).
-The underlying queryset can take 1–3 seconds to resolve parent modules, and this query was executed repeatedly when loading the Device Details page.
-
-This PR addresses the issue by caching the all_modules primary keys in a temporary property, which related port types and module bays can reference. This eliminates redundant all_modules queries during Device Details page rendering.
+Improved performance when rendering the Device detail page by caching and reusing the set of associated Module PKs to reduce repeated expensive queries.
