@@ -20,7 +20,6 @@ from nautobot.core.models.generics import BaseModel, OrganizationalModel, Primar
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
-
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
