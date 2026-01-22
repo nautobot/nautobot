@@ -19,11 +19,13 @@
   },
   "packageRules": [
     {
-      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
-      "groupName": "Dependency Patch Updates for Develop",
+      "matchManagers": [
+        "poetry"
+      ],
       "matchBaseBranches": [
         "develop"
       ],
+      "groupName": "Python Dependency Patch Updates for Develop",
       "schedule": [
         "before 3am on Friday"
       ],
@@ -35,11 +37,43 @@
       }
     },
     {
-      "description": "Schedule next updates.",
-      "groupName": "Dependency Updates for Next",
+      "matchManagers": [
+        "poetry"
+      ],
       "matchBaseBranches": [
         "next"
       ],
+      "groupName": "Python Dependency Updates for Next",
+      "schedule": [
+        "before 2am on Tuesday"
+      ]
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchBaseBranches": [
+        "develop"
+      ],
+      "groupName": "NPM Dependency Patch Updates for Develop",
+      "schedule": [
+        "before 3am on Friday"
+      ],
+      "major": {
+        "enabled": false
+      },
+      "minor": {
+        "enabled": false
+      }
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchBaseBranches": [
+        "next"
+      ],
+      "groupName": "NPM Dependency Updates for Next",
       "schedule": [
         "before 2am on Tuesday"
       ]

@@ -35,7 +35,7 @@ class TenantColumn(tables.TemplateColumn):
     {% elif record.vrf.tenant %}
         <a href="{{ record.vrf.tenant.get_absolute_url }}" title="{{ record.vrf.tenant.description }}">{{ record.vrf.tenant }}</a>*
     {% else %}
-        &mdash;
+        <span class="text-secondary">&mdash;</span>
     {% endif %}
     """
 
@@ -77,8 +77,9 @@ class TenantTable(BaseTable):
     name = tables.Column(linkify=True)
     tenant_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
+    actions = ButtonsColumn(Tenant)
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "tenant_group", "description", "tags")
-        default_columns = ("pk", "name", "tenant_group", "description")
+        fields = ("pk", "name", "tenant_group", "description", "tags", "actions")
+        default_columns = ("pk", "name", "tenant_group", "description", "actions")

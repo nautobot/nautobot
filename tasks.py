@@ -83,7 +83,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            "python_ver": "3.12",
+            "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -603,13 +603,20 @@ def logs(context, service="", follow=False, tail=0):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context, quiet=False):
+@task(
+    help={
+        "quiet": "Suppress verbose output on launch",
+        "print_sql": "Enable printing of all executed SQL statements",
+    }
+)
+def nbshell(context, quiet=False, print_sql=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     if quiet:
         command += " --quiet"
+    if print_sql:
+        command += " --print-sql"
 
     run_command(context, command)
 
@@ -712,6 +719,35 @@ def loaddata(context, filepath="db_output.json"):
     """Load data from file."""
     command = f"nautobot-server loaddata {filepath}"
     run_command(context, command)
+
+
+@task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
+def npm(context, command):
+    """Execute any given npm command inside `ui` directory."""
+    run_command(context, f"npm --prefix nautobot/ui {command}")
+
+
+@task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
+def ui_build(context, watch=False):
+    """Build Nautobot UI from source."""
+    command = "run build"
+    if watch:
+        command += ":watch"
+    npm(context, command)
+
+
+@task
+def ui_code_check(context):
+    """Check Nautobot UI source code style and formatting."""
+    command = "run code:check"
+    npm(context, command)
+
+
+@task
+def ui_code_format(context):
+    """Format Nautobot UI source code."""
+    command = "run code:format"
+    npm(context, command)
 
 
 @task()
@@ -850,9 +886,62 @@ def yamllint(context):
 def serve_docs(context):
     """Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
-        run_command(context, "mkdocs serve")
+        run_command(context, "mkdocs serve --livereload")
     else:
         start(context, service="mkdocs")
+
+
+@task(iterable=["path"])
+def compress_images(context, path=None, fix=False):
+    """Check whether included images are well-optimized, and optionally compress them if desirable."""
+    try:
+        from PIL import Image
+    except ImportError:
+        raise Exit("Pillow (PIL) must be installed, perhaps you need to use 'poetry run invoke'?")
+
+    if not path:
+        path = ["nautobot", "examples"]
+
+    unoptimized = 0
+    for root_dir in path:
+        for root, dirnames, filenames in os.walk(root_dir):
+            if "node_modules" in dirnames:
+                dirnames.remove("node_modules")
+            if "dist" in dirnames:
+                dirnames.remove("dist")
+            for filename in [f for f in filenames if f.endswith(".png")]:
+                filepath = os.path.join(root, filename)
+                img = Image.open(filepath)
+                if img.format != "PNG":
+                    print(f"{filepath} isn't actually a PNG file??")
+                    unoptimized += 1
+                elif img.mode == "RGBA":  # 24-bit color with alpha channel
+                    # Does it actually *use* the alpha channel for transparency?
+                    extrema = img.getextrema()
+                    # Is the minimum [0] alpha [3] value for any pixel in the image less than full opacity (255)?
+                    if extrema[3][0] == 255:
+                        # no actual transparency, we can strip the alpha channel and convert it to indexed mode
+                        if fix:
+                            # Note that converting directly from RGBA to P mode will always use a "web-safe" palette,
+                            # rather than an appropriately adaptive palette. Hence why we do it in two steps.
+                            img = img.convert(mode="RGB")
+                            img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                            img.save(filepath, optimize=True)
+                            print(f"Optimized {filepath}")
+                        else:
+                            print(f"{filepath} has an unnecessary alpha channel.")
+                            unoptimized += 1
+                elif img.mode == "RGB":
+                    if fix:
+                        img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                        img.save(filepath, optimize=True)
+                        print(f"Optimized {filepath}")
+                    else:
+                        print(f"{filepath} is not indexed color mode.")
+                        unoptimized += 1
+
+    if unoptimized > 0:
+        raise Exit(f"Found {unoptimized} image files that are not optimized", code=1)
 
 
 @task
@@ -873,10 +962,28 @@ def markdownlint(context, fix=False):
     run_command(context, command)
 
 
+@task(help={"fix": "Automatically apply linting recommendations. May not be able to fix all linting issues."})
+def eslint(context, fix=False):
+    """Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag."""
+    command = "run eslint"
+    if fix:
+        command += ":fix"
+    npm(context, command)
+
+
+@task(help={"fix": "Automatically apply recommended formatting."})
+def prettier(context, fix=False):
+    """Run Prettier to perform JavaScript code formatting. By default only validate the formatting, optionally apply it with `--fix` flag."""
+    command = "run prettier"
+    if fix:
+        command += ":fix"
+    npm(context, command)
+
+
 @task
 def djhtml(context, fix=False):
     """Indent Django template files."""
-    command = "djhtml nautobot/*/templates --tabwidth 4"
+    command = "djhtml nautobot/*/templates examples/*/*/templates --tabwidth 4"
     if not fix:
         command += " --check"
     run_command(context, f'bash -c "{command}"')  # needed for glob expansion
@@ -885,7 +992,7 @@ def djhtml(context, fix=False):
 @task
 def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
     """Lint and check Django template files formatting."""
-    command = "djlint . --lint"
+    command = "djlint nautobot examples --lint"
     run_command(context, command)
 
 
@@ -910,9 +1017,11 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        if current_major != 2:
+        if current_major > 3:
             raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
+        api_versions = ["2.1", "2.2", "2.3", "2.4"] + [
+            f"{current_major}.{minor}" for minor in range(0, current_minor + 1)
+        ]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
@@ -924,6 +1033,7 @@ def check_schema(context, api_version=None):
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -944,6 +1054,7 @@ def tests(
     append_coverage=False,
     buffer=True,
     cache_test_fixtures=True,
+    config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
     exclude_tag=None,
     failfast=False,
@@ -966,6 +1077,10 @@ def tests(
         # Integration tests require selenium to be up and running!
         start(context, service="selenium")
 
+    if tag and "migration_test" in tag:
+        # Migration tests hit the database pretty hard, so running them in parallel tends to not work out
+        parallel = False
+
     if coverage and not append_coverage:
         run_command(context, "coverage erase")
 
@@ -978,7 +1093,7 @@ def tests(
         command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     else:
         command = f"nautobot-server test {label}"
-    command += " --config=nautobot/core/tests/nautobot_config.py"
+    command += f" --config={config_file}"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
         command += " --cache-test-fixtures"
@@ -1063,6 +1178,8 @@ def lint(context):
     yamllint(context)
     ruff(context)
     pylint(context)
+    eslint(context)
+    prettier(context)
     djhtml(context)
     djlint(context)
     check_migrations(context)

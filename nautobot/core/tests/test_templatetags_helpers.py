@@ -1,13 +1,15 @@
+from unittest import mock
+
 from constance.test import override_config
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.templatetags.static import static
-from django.test import override_settings, TestCase
+from django.test import override_settings, tag
 
 from nautobot.core.templatetags import helpers
+from nautobot.core.testing import TestCase
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
-
-from example_app.models import AnotherExampleModel, ExampleModel
 
 
 class NautobotTemplatetagsHelperTest(TestCase):
@@ -46,21 +48,24 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(
             helpers.hyperlinked_email("admin@example.com"), '<a href="mailto:admin@example.com">admin@example.com</a>'
         )
-        self.assertEqual(helpers.hyperlinked_email(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_email(None), helpers.HTML_NONE)
 
     def test_hyperlinked_phone_number(self):
         self.assertEqual(helpers.hyperlinked_phone_number("555-1234"), '<a href="tel:555-1234">555-1234</a>')
-        self.assertEqual(helpers.hyperlinked_phone_number(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_phone_number(None), helpers.HTML_NONE)
 
     def test_placeholder(self):
-        self.assertEqual(helpers.placeholder(None), '<span class="text-muted">&mdash;</span>')
-        self.assertEqual(helpers.placeholder([]), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.placeholder(None), helpers.HTML_NONE)
+        self.assertEqual(helpers.placeholder([]), helpers.HTML_NONE)
         self.assertEqual(helpers.placeholder("something"), "something")
 
     def test_pre_tag(self):
-        self.assertEqual(helpers.pre_tag(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag(None), helpers.HTML_NONE)
         self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
         self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
+        self.assertEqual(helpers.pre_tag("", format_empty_value=False), helpers.HTML_NONE)
+        self.assertEqual(helpers.pre_tag([], format_empty_value=False), helpers.HTML_NONE)
+        self.assertEqual(helpers.pre_tag("something", format_empty_value=False), "<pre>something</pre>")
 
     def test_add_html_id(self):
         # Case where what we have isn't actually a HTML element but just a bare string
@@ -132,6 +137,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         )
         self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}, False))
 
+    @tag("example_app")
     def test_meta(self):
         location = models.Location.objects.first()
 
@@ -139,30 +145,41 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.meta(models.Location, "app_label"), "dcim")
         self.assertEqual(helpers.meta(location, "not_present"), "")
 
+        from example_app.models import ExampleModel
+
         self.assertEqual(helpers.meta(ExampleModel, "app_label"), "example_app")
 
+    @tag("example_app")
     def test_viewname(self):
         location = models.Location.objects.first()
 
         self.assertEqual(helpers.viewname(location, "edit"), "dcim:location_edit")
         self.assertEqual(helpers.viewname(models.Location, "test"), "dcim:location_test")
 
+        from example_app.models import ExampleModel
+
         self.assertEqual(helpers.viewname(ExampleModel, "edit"), "plugins:example_app:examplemodel_edit")
 
+    @tag("example_app")
     def test_validated_viewname(self):
         location = models.Location.objects.first()
 
         self.assertEqual(helpers.validated_viewname(location, "list"), "dcim:location_list")
         self.assertIsNone(helpers.validated_viewname(models.Location, "notvalid"))
 
+        from example_app.models import ExampleModel
+
         self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_app:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
 
+    @tag("example_app")
     def test_validated_api_viewname(self):
         location = models.Location.objects.first()
 
         self.assertEqual(helpers.validated_api_viewname(location, "list"), "dcim-api:location-list")
         self.assertIsNone(helpers.validated_api_viewname(models.Location, "notvalid"))
+
+        from example_app.models import ExampleModel
 
         self.assertEqual(
             helpers.validated_api_viewname(ExampleModel, "list"), "plugins-api:example_app-api:examplemodel-list"
@@ -180,7 +197,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_humanize_speed(self):
         self.assertEqual(helpers.humanize_speed(1544), "1.544 Mbps")
         self.assertEqual(helpers.humanize_speed(100000), "100 Mbps")
+        self.assertEqual(helpers.humanize_speed(2500000), "2.5 Gbps")
         self.assertEqual(helpers.humanize_speed(10000000), "10 Gbps")
+        self.assertEqual(helpers.humanize_speed(100000000), "100 Gbps")
+        self.assertEqual(helpers.humanize_speed(1000000000), "1 Tbps")
+        self.assertEqual(helpers.humanize_speed(1600000000), "1.6 Tbps")
+        self.assertEqual(helpers.humanize_speed(10000000000), "10 Tbps")
+        self.assertEqual(helpers.humanize_speed(100000000000), "100 Tbps")
 
     def test_tzoffset(self):
         self.assertTrue(callable(helpers.tzoffset))
@@ -200,16 +223,6 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_percentage(self):
         self.assertEqual(helpers.percentage(2, 10), 20)
         self.assertEqual(helpers.percentage(10, 3), 333)
-
-    def test_get_docs_url(self):
-        self.assertTrue(callable(helpers.get_docs_url))
-        location = models.Location.objects.first()
-        self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
-        example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(helpers.get_docs_url(example_model), static("example_app/docs/models/examplemodel.html"))
-        # AnotherExampleModel does not have documentation.
-        another_model = AnotherExampleModel.objects.create(name="test", number=1)
-        self.assertIsNone(helpers.get_docs_url(another_model))
 
     def test_has_perms(self):
         self.assertTrue(callable(helpers.has_perms))
@@ -239,6 +252,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.get_item(data, "first"), "1st")
         self.assertEqual(helpers.get_item(data, "second"), "2nd")
 
+        self.assertEqual(helpers.get_item({}, "first"), None)
+        self.assertEqual(helpers.get_item("", "first"), None)
+
     def test_render_boolean(self):
         for value in [True, "arbitrary string", 1]:
             self.assertEqual(
@@ -250,7 +266,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 helpers.render_boolean(value),
                 '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>',
             )
-        self.assertEqual(helpers.render_boolean(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.render_boolean(None), helpers.HTML_NONE)
 
     def test_hyperlinked_object_with_color(self):
         vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
@@ -260,11 +276,12 @@ class NautobotTemplatetagsHelperTest(TestCase):
         display = helpers.hyperlinked_object(role)
         self.assertEqual(
             helpers.hyperlinked_object_with_color(obj=role),
-            f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
+            f'<span class="badge" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
-        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), helpers.HTML_NONE)
 
+    @tag("example_app")
     @override_settings(BANNER_TOP="¡Hola, mundo!")
     @override_config(example_app__SAMPLE_VARIABLE="Testing")
     def test_settings_or_config(self):
@@ -338,3 +355,38 @@ class NautobotTemplatetagsHelperTest(TestCase):
             "-85 dBm",
         )
         self.assertEqual(helpers.dbm(None), helpers.placeholder(None))
+
+
+@tag("test")
+class NautobotStaticDocsTestCase(StaticLiveServerTestCase):
+    @tag("example_app")
+    def test_get_docs_url(self):
+        self.assertTrue(callable(helpers.get_docs_url))
+        location_type = models.LocationType.objects.create(name="Some Location Type")
+        self.assertEqual(
+            helpers.get_docs_url(location_type), static("docs/user-guide/core-data-model/dcim/locationtype.html")
+        )
+
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        self.assertEqual(helpers.get_docs_url(example_model), "/docs/example-app/models/examplemodel.html")
+        # AnotherExampleModel does not have documentation.
+        another_model = AnotherExampleModel.objects.create(name="test", number=1)
+        self.assertIsNone(helpers.get_docs_url(another_model))
+
+    @tag("example_app")
+    @mock.patch("nautobot.core.templatetags.helpers.find", return_value=False)
+    @mock.patch("nautobot.core.templatetags.helpers.resources.files", side_effect=ModuleNotFoundError)
+    def test_get_docs_url_module_not_found_and_no_static_file(self, mock_files, mock_find):
+        # Force `resources.files()` to raise ModuleNotFoundError to simulate a plugin
+        # that is listed in settings.PLUGINS but doesn't actually exist on disk.
+        # This ensures the `except ModuleNotFoundError` branch is covered.
+        from example_app.models import ExampleModel
+
+        example_model = ExampleModel.objects.create(name="test", number=1)
+        result = helpers.get_docs_url(example_model)
+        self.assertIsNone(result)
+
+        mock_files.assert_called_once()
+        mock_find.assert_called_once()

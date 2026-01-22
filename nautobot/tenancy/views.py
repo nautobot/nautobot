@@ -12,7 +12,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
 from nautobot.extras.models import DynamicGroup
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VRF
 from nautobot.tenancy.api import serializers
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
@@ -42,8 +42,9 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             ObjectsTablePanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
-                context_table_key="tenant_table",
                 exclude_columns=["tenant_group"],
+                context_table_key="tenant_table",
+                related_field_name="tenant_group",
             ),
         )
     )
@@ -56,10 +57,10 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
             # Because we are filtering on its tenant_group as well as the tenant group's descendants
             # i.e. `instance.descendants(include_self=True)`
             tenants = Tenant.objects.restrict(request.user, "view").filter(
-                tenant_group__in=instance.descendants(include_self=True)
+                tenant_group__in=instance.cacheable_descendants_pks(include_self=True)
             )
 
-            tenant_table = tables.TenantTable(tenants)
+            tenant_table = tables.TenantTable(tenants, configurable=True)
             tenant_table.columns.hide("tenant_group")
 
             paginate = {
@@ -104,6 +105,7 @@ class TenantUIViewSet(NautobotUIViewSet):
                     IPAddress,
                     # TODO: Should we include child locations of the filtered locations in the location_count below?
                     Location,
+                    Namespace,
                     Prefix,
                     Rack,
                     RackReservation,

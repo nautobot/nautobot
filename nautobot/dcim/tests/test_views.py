@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
-from django.test.client import RequestFactory
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI
@@ -31,6 +30,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
@@ -109,7 +109,6 @@ from nautobot.dcim.models import (
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     InterfaceConnectionsListView,
-    LocationUIViewSet,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -211,7 +210,7 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    # One query for the natural slug, one for `LocationViewSet.get_extra_context`
+    # One query for the max_tree_depth to calculate the natural slug, one for the RackGroup filtering.
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
@@ -441,28 +440,12 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
 
-    def test_get_extra_context(self):
-        view_set = LocationUIViewSet()
-        child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
-        parent_location = child_1.parent
-        child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
-        status = Status.objects.get_for_model(Prefix).first()
-        prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
-        prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
-        prefix_1.locations.set([child_1, child_2])
-        prefix_2.locations.set([child_1, child_2])
-        request = RequestFactory().get(parent_location.get_absolute_url())
-        request.user = self.user
-        self.add_permissions("dcim.view_location")
-        self.add_permissions("ipam.view_prefix")
-        context = view_set.get_extra_context(request=request, instance=parent_location)
-        self.assertEqual(context["stats"]["prefix_count"], 2)
-
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+    # One for max_depth lookup, one for retrieving descendants in order to find all related Racks
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -486,6 +469,11 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTest
             "description": "Updated description",
             "location": location.pk,
         }
+
+    def setUp(self):
+        super().setUp()
+        # Ensure that the related-racks table is renderable in the detail view.
+        self.add_permissions("dcim.view_rack")
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -751,7 +739,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
                 32%
             </div>
@@ -761,7 +749,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
                 65%
             </div>
@@ -771,7 +759,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <td><div title="Used: 3789&#13;Count: 7680" class="progress text-center">
-            <div class="progress-bar progress-bar-success"
+            <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
                 49%
             </div>
@@ -878,11 +866,11 @@ class DeviceTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -895,11 +883,11 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -1228,7 +1216,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 
@@ -1293,11 +1281,11 @@ class ModuleTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
+            f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -1310,11 +1298,11 @@ class ModuleTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
         self.assertInHTML(
-            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
             content,
         )
 
@@ -1826,6 +1814,68 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "description": "new test description",
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_base_t_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "Eth-View-1",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": 1_000_000,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_create": True,
+        }
+        response = self.client.post(url, data)
+
+        # Successful create redirects (JobResult or object list)
+        self.assertIn(response.status_code, (302, 303))
+        interface_template = InterfaceTemplate.objects.get(name="Eth-View-1")
+        self.assertEqual(interface_template.speed, 1_000_000)
+        self.assertEqual(interface_template.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_sfp_with_duplex_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "SFP-View-1",
+            "type": InterfaceTypeChoices.TYPE_1GE_SFP,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_create": True,
+        }
+        response = self.client.post(url, data)
+        # Form error returns 200 with field error displayed
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("Duplex is only applicable to copper twisted-pair interfaces.", content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_devicetype")
+        url = reverse("dcim:interfacetemplate_add")
+        dt = DeviceType.objects.first()
+        data = {
+            "device_type": dt.pk,
+            "name_pattern": "Et[1-2]",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": 1_000_000,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            "_apply": True,
+        }
+        response = self.client.post(url, data)
+        self.assertIn(response.status_code, (302, 303))
+        objs = InterfaceTemplate.objects.filter(name__in=["Et1", "Et2"]).order_by("name")
+        self.assertEqual(objs.count(), 2)
+        for obj in objs:
+            self.assertEqual(obj.speed, 1_000_000)
+            self.assertEqual(obj.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
 
 class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = FrontPortTemplate
@@ -2185,7 +2235,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Device)])
 
-        devices = (
+        cls.devices = (
             Device.objects.create(
                 name="Device 1",
                 location=locations[0],
@@ -2250,15 +2300,39 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface A1", status=intf_status, role=intf_role),
-            Interface.objects.create(device=devices[0], name="Interface A2", status=intf_status),
-            Interface.objects.create(device=devices[0], name="Interface A3", status=intf_status, role=intf_role),
+            Interface.objects.create(device=cls.devices[0], name="Interface A1", status=intf_status, role=intf_role),
+            Interface.objects.create(device=cls.devices[0], name="Interface A2", status=intf_status),
+            Interface.objects.create(device=cls.devices[0], name="Interface A3", status=intf_status, role=intf_role),
         )
 
-        for device, ipaddress in zip(devices, ipaddresses):
+        for device, ipaddress in zip(cls.devices, ipaddresses):
             RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
             ).validated_save()
+
+        powerports = (
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 1"),
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 2"),
+            PowerPort.objects.create(device=cls.devices[0], name="Power Port 3"),
+        )
+        PowerOutlet.objects.create(device=cls.devices[0], name="Power Outlet A")
+
+        powerpanel = PowerPanel.objects.create(location=locations[0], name="Power Panel 1")
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
+        powerfeed = PowerFeed.objects.create(
+            power_panel=powerpanel,
+            name="Power Feed 1",
+            status=pf_status,
+            available_power=1000,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+        )
+
+        status_connected = Status.objects.get(name="Connected")
+
+        Cable.objects.create(termination_a=powerports[0], termination_b=powerfeed, status=status_connected)
+
+        poweroutlet = PowerOutlet.objects.create(device=cls.devices[1], name="Power Outlet 1")
+        Cable.objects.create(termination_a=powerports[1], termination_b=poweroutlet, status=status_connected)
 
         cls.form_data = {
             "device_type": devicetypes[1].pk,
@@ -2275,7 +2349,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[1].pk,
             "primary_ip4": None,
             "primary_ip6": None,
-            "cluster": None,
+            "clusters": [cluster.pk],
             "secrets_group": secrets_groups[1].pk,
             "virtual_chassis": None,
             "vc_position": None,
@@ -2298,7 +2372,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[2].pk,
             "location": locations[1].pk,
             "rack": racks[1].pk,
-            "cluster": cluster.pk,
+            "add_clusters": [cluster.pk],
             "comments": "An older device",
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
@@ -2319,7 +2393,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         add_vdc_url = reverse("dcim:virtualdevicecontext_add")
         return_url = device.get_absolute_url()
         expected_add_vdc_button_html = f"""
-        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-xs">
+        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-sm">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add virtual device context
         </a>
         """
@@ -2407,11 +2481,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_powerports(self):
-        device = Device.objects.first()
-
-        PowerPort.objects.create(device=device, name="Power Port 1")
-        PowerPort.objects.create(device=device, name="Power Port 2")
-        PowerPort.objects.create(device=device, name="Power Port 3")
+        device = self.devices[0]
 
         url = reverse("dcim:device_powerports", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -2481,7 +2551,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
@@ -2592,6 +2662,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device.controller_managed_device_group.validated_save()
 
         url = reverse("dcim:device_wireless", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_vpnendpoints(self):
+        self.add_permissions("vpn.view_vpntunnelendpoint")
+        device = Device.objects.first()
+
+        url = reverse("dcim:device_vpnendpoints", kwargs={"pk": device.pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
@@ -2867,7 +2946,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
 
         with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
-            # Assert Assign Exsisting IPAddress
+            # Assert Assign Existing IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
             self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
@@ -4075,8 +4154,8 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         poweroutlets = (
-            PowerOutlet.objects.create(device=device_2, name="Power Outlet 1", power_port=powerports[0]),
-            PowerOutlet.objects.create(device=device_2, name="Power Outlet 2", power_port=powerports[1]),
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 1"),
+            PowerOutlet.objects.create(device=device_2, name="Power Outlet 2"),
         )
 
         powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
@@ -4300,7 +4379,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
         Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertBodyContains(response, 'Interfaces <span class="badge">6</span>')
+        self.assertBodyContains(response, 'Interfaces <span class="badge bg-primary">6</span>')
         self.assertBodyContains(response, "device 1 interface 1")
         self.assertBodyContains(response, "device 1 interface 2")
         self.assertBodyContains(response, "device 2 interface 1")
@@ -4551,7 +4630,8 @@ class PathTraceViewTestCase(ModelViewTestCase):
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
-        self.assertBodyContains(response, "<h1>Cable Trace for Rear Port Rear Port 1</h1>", html=True)
+        self.assertBodyContains(response, "Rear Port 1")
+        self.assertBodyContains(response, "eth0")
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4780,7 +4860,7 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Controller
     filterset = ControllerFilterSet
     custom_action_required_permissions = {
-        "dcim:controller_wirelessnetworks": [
+        "dcim:controller_wireless_networks": [
             "dcim.view_controller",
             "wireless.view_controllermanageddevicegroupwirelessnetworkassignment",
         ],

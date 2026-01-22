@@ -13,7 +13,9 @@ from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedBreakerPoleChoices,
@@ -35,6 +37,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -1176,6 +1179,7 @@ class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins
 
 class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
+    choices_fields = ["duplex", "type"]
     modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
@@ -1198,6 +1202,62 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
                 "type": "1000base-t",
             },
         ]
+
+    def test_create_base_t_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Eth1",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        obj = InterfaceTemplate.objects.get(pk=response.data["id"])  # type: ignore[index]
+        self.assertEqual(obj.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(obj.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    def test_create_sfp_with_duplex_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "SFP1",
+            "type": InterfaceTypeChoices.TYPE_1GE_SFP,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("duplex", response.data)
+
+    def test_create_lag_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Port-Channel1",
+            "type": InterfaceTypeChoices.TYPE_LAG,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
+
+    def test_create_virtual_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "V0",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
 
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
@@ -1470,6 +1530,9 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
+    validation_excluded_fields = [
+        "software_image_files",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1490,6 +1553,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1516,7 +1580,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         for software_image_file in software_image_files:
             software_image_file.device_types.add(device_type)
 
-        Device.objects.create(
+        device1 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1528,7 +1592,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"A": 1},
             software_version=software_version,
         )
-        Device.objects.create(
+        device1.clusters.add(clusters[1])
+        device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1540,7 +1605,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"B": 2},
             software_version=software_version,
         )
-        Device.objects.create(
+        device2.clusters.add(clusters[1])
+        device3 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1551,6 +1617,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             secrets_group=secrets_groups[0],
             local_config_context_data={"C": 3},
         )
+        device3.clusters.add(clusters[1])
 
         cls.create_data = [
             {
@@ -1561,7 +1628,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 4",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
@@ -1574,7 +1640,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 5",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk],
@@ -1587,7 +1652,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
@@ -2165,7 +2229,10 @@ class PowerOutletTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMix
 class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
-    choices_fields = ["mode", "type"]
+    choices_fields = ["duplex", "mode", "type"]
+    validation_excluded_fields = [
+        "tagged_vlans",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2206,14 +2273,14 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             Interface.objects.create(
                 device=cls.devices[0],
                 name="Test Interface 1",
-                type="1000base-t",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
                 name="Test Interface 2",
-                type="1000base-t",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=non_default_status,
             ),
             Interface.objects.create(
@@ -2264,7 +2331,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 8",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2275,7 +2342,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 9",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2287,12 +2354,34 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 10",
-                "type": "virtual",
+                "type": InterfaceTypeChoices.TYPE_VIRTUAL,
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 11",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "speed": InterfaceSpeedChoices.SPEED_1G,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 12",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 13",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "speed": InterfaceSpeedChoices.SPEED_1G,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
             },
         ]
 
@@ -2501,6 +2590,105 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_speed_duplex_invalid_by_type(self):
+        """Test that API rejects speed/duplex for disallowed interface types."""
+        self.add_permissions("dcim.add_interface", "dcim.view_interface", "dcim.view_device", "extras.view_status")
+
+        # LAG disallows speed/duplex
+        for field, value in (("speed", InterfaceSpeedChoices.SPEED_1G), ("duplex", InterfaceDuplexChoices.DUPLEX_FULL)):
+            with self.subTest(if_type=InterfaceTypeChoices.TYPE_LAG, field=field):
+                payload = {
+                    "device": self.devices[0].pk,
+                    "name": f"if-lag-{field}",
+                    "type": InterfaceTypeChoices.TYPE_LAG,
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    field: value,
+                }
+                response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+
+        # Virtual/wireless disallow speed/duplex
+        for if_type in (InterfaceTypeChoices.TYPE_VIRTUAL, InterfaceTypeChoices.TYPE_80211AC):
+            for field, value in (
+                ("speed", InterfaceSpeedChoices.SPEED_1G),
+                ("duplex", InterfaceDuplexChoices.DUPLEX_FULL),
+            ):
+                with self.subTest(if_type=if_type, field=field):
+                    payload = {
+                        "device": self.devices[0].pk,
+                        "name": f"if-{if_type}-{field}",
+                        "type": if_type,
+                        "status": Status.objects.get_for_model(Interface).first().pk,
+                        field: value,
+                    }
+                    response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+                    self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                    self.assertIn(field, response.data)
+
+        # Optical disallows duplex
+        with self.subTest(if_type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, field="duplex"):
+            payload = {
+                "device": self.devices[0].pk,
+                "name": "if-opt-duplex",
+                "type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                "status": Status.objects.get_for_model(Interface).first().pk,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            }
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("duplex", response.data)
+
+    def test_update_type_to_optical_fails_when_duplex_set(self):
+        """Test that changing a copper interface with duplex set to an optical type fails."""
+        self.add_permissions("dcim.change_interface")
+        interface = self.interfaces[0]  # 1000base-t
+
+        # Ensure duplex is set on copper via API
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"duplex": InterfaceDuplexChoices.DUPLEX_FULL},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["duplex"]["value"], InterfaceDuplexChoices.DUPLEX_FULL)
+
+        # Attempt to change type to optical while duplex remains set
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("duplex", response.data)
+
+    def test_update_type_to_optical_succeeds_when_unsetting_duplex(self):
+        """Test that changing type with duplex set to optical while unsetting duplex in the same request succeeds."""
+        self.add_permissions("dcim.change_interface")
+        interface = self.interfaces[1]  # 1000base-t
+
+        # Ensure duplex is set on copper first
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"duplex": InterfaceDuplexChoices.DUPLEX_FULL},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["duplex"]["value"], InterfaceDuplexChoices.DUPLEX_FULL)
+
+        # Change to optical and unset duplex in same call
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, "duplex": ""},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsNone(response.data["duplex"])
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):
@@ -3586,6 +3774,7 @@ class DeviceTypeToSoftwareImageFileTestCase(
 
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
+    choices_fields = ("capabilities",)
 
     def get_deletable_object(self):
         # This method is used in `test_recreate_object_csv`,
@@ -3645,6 +3834,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+    choices_fields = ("capabilities",)
 
     def get_deletable_object(self):
         # This method is used in `test_recreate_object_csv`,
@@ -3879,3 +4069,73 @@ class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
         ModuleFamily.objects.create(name="Module Family 1", description="First family")
         ModuleFamily.objects.create(name="Module Family 2", description="Second family")
         ModuleFamily.objects.create(name="Module Family 3", description="Third family")
+
+
+class DeviceClusterAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type API")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster API 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 3", cluster_type=cluster_type),
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[0],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[1],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[1],
+            cluster=clusters[0],
+        )
+        cls.create_data = [
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[1].pk,
+            },
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[2].pk,
+            },
+            {
+                "device": devices[2].pk,
+                "cluster": clusters[0].pk,
+            },
+        ]

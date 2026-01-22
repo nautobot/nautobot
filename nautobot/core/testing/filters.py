@@ -21,7 +21,6 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
@@ -66,8 +65,8 @@ class FilterTestCases:
 
             if len(test_values) < 2:
                 raise ValueError(
-                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name} "
-                    f"(found {len(test_values)} option(s): {test_values}) but need at least 2 of them"
+                    f"Cannot find enough valid test data for {queryset.model._meta.object_name} field {field_name}. "
+                    "At least 3 unique values are required to test multivalue filters."
                 )
             return test_values
 
@@ -215,7 +214,9 @@ class FilterTestCases:
                 with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
-                    filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
+                    filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable
+                    self.assertIn(filter_name, list(filterset.filters.keys()))
+                    filterset_result = filterset.qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
@@ -237,8 +238,8 @@ class FilterTestCases:
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.filters`
             except for the ones with custom filter logic defined in its `method` attribute.
 
-            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
-            that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
+            This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=...)` and
+            that `filter=False` matches `self.queryset.exclude(field__isnull=...)`.
             """
             self.assertIsNotNone(self.filterset)
             for filter_name, filter_object in self.filterset().filters.items():  # pylint: disable=not-callable
@@ -425,30 +426,13 @@ class FilterTestCases:
                         # This field is not part of the Filterset.
                         continue
                     self.assertIsInstance(
-                        filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter, ContentTypeChoiceFilter)
+                        filter_field,
+                        (
+                            ContentTypeFilter,
+                            ContentTypeMultipleChoiceFilter,
+                            ContentTypeChoiceFilter,
+                        ),
                     )
-
-    # Test cases should just explicitly include `name` as a generic_filter_tests entry
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameOnlyFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
-
-    # Test cases should just explicitly include `name` and `slug` as generic_filter_tests entries
-    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
-    class NameSlugFilterTestCase(FilterTestCase):
-        """Add simple tests for filtering by name and by slug."""
-
-        def test_filters_generic(self):
-            if not any(test[0] == "slug" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["slug"], *self.generic_filter_tests)
-            if not any(test[0] == "name" for test in self.generic_filter_tests):
-                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
-            super().test_filters_generic()
 
     class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""

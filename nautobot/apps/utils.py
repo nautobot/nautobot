@@ -1,6 +1,7 @@
 """Nautobot utility functions."""
 
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.color import foreground_color, hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import (
@@ -15,7 +16,12 @@ from nautobot.core.utils.data import (
     to_meters,
     validate_jinja2,
 )
-from nautobot.core.utils.deprecation import class_deprecated, class_deprecated_in_favor_of
+from nautobot.core.utils.deprecation import (
+    class_deprecated,
+    class_deprecated_in_favor_of,
+    method_deprecated,
+    method_deprecated_in_favor_of,
+)
 from nautobot.core.utils.filtering import (
     build_lookup_label,
     get_all_lookup_expr_for_field,
@@ -26,33 +32,47 @@ from nautobot.core.utils.filtering import (
 from nautobot.core.utils.git import BranchDoesNotExist, convert_git_diff_log_to_list, GitRepo, swap_status_initials
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import (
+    get_breadcrumbs_for_model,
     get_changes_for_model,
+    get_created_and_last_updated_usernames_for_model,
+    get_detail_view_components_context_for_model,
+    get_extra_detail_view_action_buttons_for_model,
     get_filterset_for_model,
     get_form_for_model,
+    get_model_for_view_name,
     get_model_from_name,
+    get_object_detail_content_for_model,
     get_related_class_for_model,
     get_related_field_for_models,
     get_route_for_model,
+    get_table_class_string_from_view_name,
     get_table_for_model,
     get_url_for_url_pattern,
     get_url_patterns,
     get_view_for_model,
+    get_view_titles_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
 from nautobot.core.utils.permissions import (
     get_permission_for_model,
     permission_is_exempt,
+    qs_filter_from_constraints,
     resolve_permission,
     resolve_permission_ct,
 )
+from nautobot.core.utils.querysets import (
+    maybe_prefetch_related,
+    maybe_select_related,
+)
 from nautobot.core.utils.requests import (
+    add_nautobot_version_query_param_to_url,
+    convert_querydict_to_dict,
     convert_querydict_to_factory_formset_acceptable_querydict,
     ensure_content_type_and_field_name_in_query_params,
     get_filterable_params_from_filter_params,
     is_single_choice_field,
     normalize_querydict,
 )
-from nautobot.extras.plugins.validators import custom_validator_clean, wrap_model_clean_methods
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     check_if_key_is_graphql_safe,
@@ -81,13 +101,15 @@ __all__ = (
     "GitRepo",
     "RoleModelsQuery",
     "TaggableClassesQuery",
+    "add_nautobot_version_query_param_to_url",
     "build_lookup_label",
     "check_if_key_is_graphql_safe",
     "class_deprecated",
     "class_deprecated_in_favor_of",
+    "construct_cache_key",
     "convert_git_diff_log_to_list",
+    "convert_querydict_to_dict",
     "convert_querydict_to_factory_formset_acceptable_querydict",
-    "custom_validator_clean",
     "deepmerge",
     "ensure_content_type_and_field_name_in_query_params",
     "fixup_null_statuses",
@@ -97,8 +119,12 @@ __all__ = (
     "generate_signature",
     "get_all_lookup_expr_for_field",
     "get_base_template",
+    "get_breadcrumbs_for_model",
     "get_celery_queues",
     "get_changes_for_model",
+    "get_created_and_last_updated_usernames_for_model",
+    "get_detail_view_components_context_for_model",
+    "get_extra_detail_view_action_buttons_for_model",
     "get_filter_field_label",
     "get_filterable_params_from_filter_params",
     "get_filterset_field",
@@ -106,16 +132,20 @@ __all__ = (
     "get_filterset_parameter_form_field",
     "get_form_for_model",
     "get_latest_release",
+    "get_model_for_view_name",
     "get_model_from_name",
+    "get_object_detail_content_for_model",
     "get_permission_for_model",
     "get_related_class_for_model",
     "get_related_field_for_models",
     "get_route_for_model",
     "get_settings_or_config",
+    "get_table_class_string_from_view_name",
     "get_table_for_model",
     "get_url_for_url_pattern",
     "get_url_patterns",
     "get_view_for_model",
+    "get_view_titles_for_model",
     "get_worker_count",
     "hex_to_rgb",
     "image_upload",
@@ -123,12 +153,17 @@ __all__ = (
     "is_url",
     "is_uuid",
     "lighten_color",
+    "maybe_prefetch_related",
+    "maybe_select_related",
     "merge_dicts_without_collision",
+    "method_deprecated",
+    "method_deprecated_in_favor_of",
     "migrate_content_type_references_to_new_model",
     "migrate_role_data",
     "normalize_querydict",
     "permission_is_exempt",
     "populate_model_features_registry",
+    "qs_filter_from_constraints",
     "refresh_job_model_from_job_class",
     "remove_prefix_from_cf_key",
     "render_jinja2",
@@ -141,5 +176,4 @@ __all__ = (
     "task_queues_as_choices",
     "to_meters",
     "validate_jinja2",
-    "wrap_model_clean_methods",
 )

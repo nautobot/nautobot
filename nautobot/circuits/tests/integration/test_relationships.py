@@ -16,9 +16,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
+        self.login_as_superuser()
+
         location_type, _ = LocationType.objects.get_or_create(name="Campus")
         location_ct = ContentType.objects.get_for_model(Location)
         circuit_termination_ct = ContentType.objects.get_for_model(CircuitTermination)
@@ -108,10 +107,6 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination_id=uuid.uuid4(),
         )
 
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
-
     # TODO: this really doesn't need to be an integration test, it could *easily* be done as a pure unit test
     def test_termination_relationships_are_visible(self):
         """
@@ -119,11 +114,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         """
         self.browser.visit(self.live_server_url)
 
-        # Click Circuits dropdown button
-        self.browser.links.find_by_partial_text("Circuits").click()
-
-        # Click Circuits link
-        self.browser.links.find_by_partial_text("Circuits")[1].click()
+        # Navigate to Circuits list
+        self.click_navbar_entry("Circuits", "Circuits")
 
         # Click on the circuit link (circuit created in setUp)
         self.browser.links.find_by_partial_text("123456789").click()
