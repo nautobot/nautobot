@@ -1762,6 +1762,8 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin, BulkRenameModelMixin):
                 "parent_name": self.get_selected_objects_parents_name(selected_objects),
             }
         )
+
+
 class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     """
     UI Mixin for a DataCompliance to show up for a given object.
