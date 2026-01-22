@@ -2,66 +2,56 @@
 {% load helpers %}
 {% load perms %}
 
-{% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
-    {% if permissions.change or permissions.delete %}
-        <form id="object_list_form" method="post" class="form form-horizontal">
-            {% csrf_token %}
-            <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
-            {% if table.paginator.num_pages > 1 %}
-                <div class="table-responsive">
-                    <div id="select_all_box" class="visually-hidden card d-print-none">
-                        <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
-                            <div class="form-check flex-grow-1 mb-0">
-                                <input class="form-check-input" id="select_all" name="_all" type="checkbox">
-                                <label class="form-check-label" for="select_all">
-                                    Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
-                                </label>
-                            </div>
-                            <div class="hstack gap-8">
-                                {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
-                                    <button type="button"
-                                            id="update_dynamic_groups_for_all"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#dynamic_group_assignment_modal"
-                                            data-objects="all"
-                                            class="btn btn-primary btn-sm"
-                                            disabled>
-                                        <span class="mdi mdi-group me-4" aria-hidden="true"></span>Update Group Assignment for All
-                                    </button>
-                                {% endif %}
-                                {% if bulk_edit_url and permissions.change %}
-                                    <button type="submit"
-                                            name="_edit"
-                                            formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
-                                            class="btn btn-warning btn-sm"
-                                            disabled>
-                                        <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
-                                    </button>
-                                {% endif %}
-                                {% if bulk_delete_url and permissions.delete %}
-                                    <button type="submit"
-                                            name="_delete"
-                                            formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
-                                            class="btn btn-danger btn-sm"
-                                            disabled>
-                                        <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </div>
+{% if permissions.change or permissions.delete %}
+    {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
+        {% if table.paginator.num_pages > 1 %}
+            <div id="select_all_box" class="visually-hidden card d-print-none">
+                <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
+                    <div class="form-check flex-grow-1 mb-0">
+                        <input class="form-check-input" id="select_all" name="_all" type="checkbox">
+                        <label class="form-check-label" for="select_all">
+                            Select <strong>all {{ table.rows|length }} {{ table.data.verbose_name_plural }}</strong> matching query
+                        </label>
+                    </div>
+                    <div class="hstack gap-8">
+                        {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
+                            <button type="button"
+                                    id="update_dynamic_groups_for_all"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#dynamic_group_assignment_modal"
+                                    data-objects="all"
+                                    class="btn btn-primary btn-sm"
+                                    disabled>
+                                <span class="mdi mdi-group me-4" aria-hidden="true"></span>Update Group Assignment for All
+                            </button>
+                        {% endif %}
+                        {% if bulk_edit_url and permissions.change %}
+                            <button type="submit"
+                                    name="_edit"
+                                    formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                    class="btn btn-warning btn-sm"
+                                    disabled>
+                                <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit All
+                            </button>
+                        {% endif %}
+                        {% if bulk_delete_url and permissions.delete %}
+                            <button type="submit"
+                                    name="_delete"
+                                    formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                    class="btn btn-danger btn-sm"
+                                    disabled>
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete All
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
-            {% endif %}
-            {% include table_template|default:'panel_table.html' %}
-
-            <div class="d-print-none mt-16 float-lg-start mt-lg-20" id="bulk-action-buttons">
-                {% consolidate_bulk_action_buttons %}
-                {% block bulk_buttons %}{% endblock %}
             </div>
-        </form>
-    {% else %}
-        {% include table_template|default:'panel_table.html' %}
-    {% endif %}
-{% endwith %}
-{% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
-<div class="clearfix"></div>
+        {% else %}
+            <span id="select_all_box"></span>
+        {% endif %}
+    {% endwith %}
+{% endif %}
+
+{% include table_template|default:'panel_table.html' with table_id="object_table" %}
+
+{% include 'inc/paginator.html' with paginator=table.paginator page=table.page htmx_enabled=True table_id="object_table" %}
