@@ -18,8 +18,8 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.config import get_settings_or_config
 
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
