@@ -642,7 +642,13 @@ def get_item(d, key):
     Example:
         >>> get_item(data, key)
         "value"
+        >>> get_item({}, "hello")
+        None
+        >>> get_item("hello", "some_key")
+        None
     """
+    if not isinstance(d, dict):
+        return None
     return d.get(key)
 
 
