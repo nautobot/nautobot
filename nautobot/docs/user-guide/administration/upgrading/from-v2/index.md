@@ -15,9 +15,46 @@ At a high-level overview, consider the following impacting changes:
 
 Legend: 🟢 Low impact 🟠 Medium impact
 
+!!! tip
+    It is recommended to upgrade your production instance from Nautobot 2.4 to 3.x in separate steps. Attempting to combine both upgrades can complicate troubleshooting and make it harder to identify the source of any issues. If you are running Nautobot 1.x or a version earlier than 2.4, upgrade to the latest 2.4.x first before proceeding to 3.x.
+
 ## Filter Fields
 
-TODO: Follow up
+To make Nautobot's UI, REST API, and GraphQL filters more self-consistent and standardized, the default filter type for foreign-key and one-to-one model
+fields has been changed from a single-value filter (`ModelChoiceFilter`) to a multi-value filter (`ModelMultipleChoiceFilter`).
+This change affects a small number of filters in Nautobot core, as most such fields were already explicitly covered by a `ModelMultipleChoiceFilter` or
+one of its derivatives, but the following implicit filters are known to have been affected by this change (in addition to any App model filters on one-to-one
+and foreign-key fields that also were not explicitly defined otherwise):
+
+- Front Port Templates `rear_port_template` filter
+- Power Outlets `power_port` filter
+- Module Bays `parent_module` filter
+- Job Log Entries `job_result` filter
+- Job Results `user` filter
+- IP Address to Interface `ip_address` filter
+
+For Dynamic Groups and Saved Views using the above filters, the group `filter` will need to be updated to replace the single string value with a list of strings, for example changing:
+
+```no-highlight
+{"rear_port_template": "74aac78c-fabb-468c-a036-26c46c56f27a"}
+```
+
+to
+
+```no-highlight
+{"rear_port_template": ["74aac78c-fabb-468c-a036-26c46c56f27a"]}
+```
+
+You can identify impacted records by running the `nautobot-server validate_models extras.dynamicgroup extras.savedview` management command, or the new `Validate Model Data` system Job; in the above case, the invalid group filter would be reported as below:
+
+```no-highlight
+# nautobot-server validate_models extras.dynamicgroup extras.savedview
+Validating 1 models.
+extras.DynamicGroup
+~~~~~ Model: `extras.DynamicGroup` Instance: `Front Port Template Legacy` Error: `{'rear_port_template': ['Enter a list of values.']}`. ~~~~~
+```
+
+More on this topic you can find in the [Release Notes of 3.0](../../../../release-notes/version-3.0.md#filter-standardization-improvements-1889).
 
 ## Default to Exclude M2M
 

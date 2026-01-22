@@ -6,6 +6,8 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = TenantGroup
     sort_on_field = "name"
+    # Getting descendants of the group in order to render their associated Tenants table
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
     @classmethod
     def setUpTestData(cls):
@@ -17,6 +19,11 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTe
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+    def setUp(self):
+        super().setUp()
+        # Ensure that the related Tenants table is renderable in the detail view.
+        self.add_permissions("tenancy.view_tenant")
 
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):

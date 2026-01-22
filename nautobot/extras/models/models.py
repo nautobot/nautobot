@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.core.files.storage import get_storage_class
+from django.core.files.storage import storages
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -25,6 +25,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
     WebhookHttpMethodChoices,
@@ -614,7 +615,7 @@ def database_storage():
 
 
 def _job_storage():
-    return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+    return storages.create_storage(storages.backends["nautobotjobfiles"])
 
 
 def _upload_to(instance, filename):
@@ -624,7 +625,7 @@ def _upload_to(instance, filename):
     Because django-db-file-storage has specific requirements for this path to configure the FileAttachment model,
     this needs to inspect which storage backend is in use in order to make the right determination.
     """
-    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+    if isinstance(_job_storage(), DatabaseFileStorage):
         # must be a string of the form
         # "<app_label>.<ModelName>/<data field name>/<filename field name>/<mimetype field name>/filename"
         return f"extras.FileAttachment/bytes/filename/mimetype/{filename}"
@@ -638,7 +639,7 @@ class FileProxy(BaseModel):
     The `file` field can be used like a file handle.
 
     The file contents are stored and retrieved from `FileAttachment` objects,
-    if `settings.JOB_FILE_IO_STORAGE` is set to use DatabaseFileStorage,
+    if `settings.STORAGES["nautobotjobfiles"]["BACKEND"]` is set to use DatabaseFileStorage,
     otherwise they're written to whatever other file storage backend is in use.
 
     When using DatabaseFileStorage, the associated `FileAttachment` is removed when `delete()` is called.
@@ -670,7 +671,7 @@ class FileProxy(BaseModel):
     natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        if isinstance(_job_storage(), DatabaseFileStorage):
             delete_file_if_needed(self, "file")
         else:
             # TODO check whether there's an existing file with a different filename and delete it if so?
@@ -678,10 +679,10 @@ class FileProxy(BaseModel):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) != DatabaseFileStorage:
+        if not isinstance(_job_storage(), DatabaseFileStorage):
             self.file.delete()
         super().delete(*args, **kwargs)
-        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        if isinstance(_job_storage(), DatabaseFileStorage):
             delete_file(self, "file")
 
 
@@ -917,6 +918,24 @@ class SavedView(BaseModel, ChangeLoggedModel):
             self.is_shared = True
 
         super().save(*args, **kwargs)
+
+    @property
+    def model(self):
+        """
+        Return the model class associated with this SavedView, based on the 'view' field.
+        """
+        return get_model_for_view_name(self.view)
+
+    def get_filtered_queryset(self, user):
+        """
+        Return a queryset for the associated model, filtered by this SavedView's filter_params.
+        """
+        model = self.model
+        if model is None:
+            return None
+        filter_params = self.config.get("filter_params", {})
+        filterset_class = get_filterset_for_model(model)
+        return filterset_class(filter_params, model.objects.restrict(user)).qs
 
 
 @extras_features("graphql")

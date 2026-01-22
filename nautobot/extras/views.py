@@ -35,6 +35,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
@@ -332,6 +333,59 @@ class ApprovalWorkflowUIViewSet(
             ),
         ],
     )
+    extra_detail_view_action_buttons = [
+        object_detail.ExtraDetailViewActionButton(
+            action="cancel",
+            icon="mdi mdi-cancel",
+            permission_check=can_cancel,
+            link_name="extras:approvalworkflow_cancel",
+            weight=100,
+        )
+    ]
+
+    @action(
+        detail=True,
+        url_path="cancel",
+        methods=["get", "post"],
+        custom_view_base_action="view",
+    )
+    def cancel(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not can_cancel(request.user, instance) and instance.is_active:
+            messages.error(
+                request,
+                "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
+            )
+            return redirect(self.get_return_url(request, instance))
+
+        if not instance.is_active:
+            messages.error(request, "Can not cancel finished approval workflow.")
+            return redirect(self.get_return_url(request, instance))
+
+        if request.method == "GET":
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance.active_stage, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
+
+            template_name = "extras/approval_workflow/cancel.html"
+            return render(
+                request,
+                template_name,
+                {
+                    "obj": instance,
+                    "object_under_review": instance.object_under_review,
+                    "form": form,
+                    "return_url": self.get_return_url(request, instance),
+                },
+            )
+
+        instance.cancel(user=request.user, comments=request.data.get("comments"))
+        instance.refresh_from_db()
+        messages.success(request, f"You canceled {instance}.")
+        return redirect(self.get_return_url(request, instance))
 
 
 class ApprovalWorkflowStageUIViewSet(
@@ -420,27 +474,37 @@ class ApprovalWorkflowStageUIViewSet(
         ],
     )
 
-    @action(detail=True, url_path="approve", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="approve",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def approve(self, request, *args, **kwargs):
         """
         Approve the approval workflow stage response.
         """
         instance = self.get_object()
 
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
+        if not (
+            request.user.is_superuser
+            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+        ):
+            messages.error(request, "You are not permitted to approve this workflow stage.")
+            return redirect(self.get_return_url(request, instance))
+
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can not approve canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(initial={"comments": obj.comments})
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
 
             object_under_review = instance.approval_workflow.object_under_review
             template_name = getattr(object_under_review, "get_approval_template", lambda: None)()
@@ -451,15 +515,19 @@ class ApprovalWorkflowStageUIViewSet(
                 request,
                 template_name,
                 {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
+                    "return_url": self.get_return_url(request, instance),
                     "card_class": "success",
                     "button_class": "success",
                 },
             )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.APPROVED
         approval_workflow_stage_response.save()
@@ -467,40 +535,53 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You approved {instance}.")
         return redirect(self.get_return_url(request))
 
-    @action(detail=True, url_path="deny", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="deny",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def deny(self, request, *args, **kwargs):
         """
         Deny the approval workflow stage response.
         """
         instance = self.get_object()
 
-        try:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.get(
-                approval_workflow_stage=instance,
-                user=request.user,
-            )
-        except ApprovalWorkflowStageResponse.DoesNotExist:
-            approval_workflow_stage_response = ApprovalWorkflowStageResponse.objects.create(
-                approval_workflow_stage=instance,
-                user=request.user,
-                state=ApprovalWorkflowStateChoices.PENDING,
-            )
+        if not (
+            request.user.is_superuser
+            or instance.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+        ):
+            messages.error(request, "You are not permitted to deny this workflow stage.")
+            return redirect(self.get_return_url(request, instance))
+
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can not deny canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
 
         if request.method == "GET":
-            obj = approval_workflow_stage_response
-            form = ApprovalForm(initial={"comments": obj.comments})
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=instance, user=request.user
+            ).first():
+                form = ApprovalForm(initial={"comments": existing_response.comments})
+            else:
+                form = ApprovalForm()
 
             return render(
                 request,
                 "extras/approval_workflow/deny.html",
                 {
-                    "obj": obj.approval_workflow_stage,
-                    "object_under_review": obj.approval_workflow_stage.approval_workflow.object_under_review,
+                    "obj": instance,
+                    "object_under_review": instance.approval_workflow.object_under_review,
                     "form": form,
                     "obj_type": ApprovalWorkflowStage._meta.verbose_name,
-                    "return_url": self.get_return_url(request, obj),
+                    "return_url": self.get_return_url(request, instance),
                 },
             )
+
+        approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
+            approval_workflow_stage=instance, user=request.user
+        )
         approval_workflow_stage_response.comments = request.data.get("comments")
         approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.DENIED
         approval_workflow_stage_response.save()
@@ -508,7 +589,13 @@ class ApprovalWorkflowStageUIViewSet(
         messages.success(request, f"You denied {instance}.")
         return redirect(self.get_return_url(request))
 
-    @action(detail=True, url_path="comment", methods=["get", "post"])
+    @action(
+        detail=True,
+        url_path="comment",
+        methods=["get", "post"],
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.view_approvalworkflowstage"],
+    )
     def comment(self, request, *args, **kwargs):
         """
         Comment the approval workflow stage response.
@@ -521,11 +608,15 @@ class ApprovalWorkflowStageUIViewSet(
             )
             return redirect(self.get_return_url(request, instance))
 
+        # We don't enforce approver-group/superuser check here, anyone can comment, not just an approver.
+        if instance.approval_workflow.is_canceled:
+            messages.error(request, "Can not comment canceled approval workflow.")
+            return redirect(self.get_return_url(request, instance))
+
         if request.method == "GET":
-            existing_response = ApprovalWorkflowStageResponse.objects.filter(
+            if existing_response := ApprovalWorkflowStageResponse.objects.filter(
                 approval_workflow_stage=instance, user=request.user
-            ).first()
-            if existing_response is not None:
+            ).first():
                 form = ApprovalForm(initial={"comments": existing_response.comments})
             else:
                 form = ApprovalForm()
@@ -547,9 +638,10 @@ class ApprovalWorkflowStageUIViewSet(
         approval_workflow_stage_response, _ = ApprovalWorkflowStageResponse.objects.get_or_create(
             approval_workflow_stage=instance, user=request.user
         )
-
         approval_workflow_stage_response.comments = request.data.get("comments")
-        approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
+        # we don't want to change a state if is approved, denied or canceled
+        if approval_workflow_stage_response.state == ApprovalWorkflowStateChoices.PENDING:
+            approval_workflow_stage_response.state = ApprovalWorkflowStateChoices.COMMENT
         approval_workflow_stage_response.save()
         instance.refresh_from_db()
         messages.success(request, f"You commented {instance}.")
@@ -700,6 +792,7 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 "object": obj,
                 "verbose_name": helpers.bettertitle(obj._meta.verbose_name),
                 "verbose_name_plural": obj._meta.verbose_name_plural,
+                "cancel_route": "extras:approvalworkflow_cancel",
                 "approval_workflow": approval_workflow,
                 "base_template": base_template,
                 "active_tab": "approval_workflow",
@@ -727,7 +820,6 @@ class ComputedFieldUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ComputedFieldSerializer
     table_class = tables.ComputedFieldTable
     queryset = ComputedField.objects.all()
-    action_buttons = ("add",)
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -1153,7 +1245,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     form_class = forms.CustomFieldForm
     table_class = tables.CustomFieldTable
     template_name = "extras/customfield_update.html"
-    action_buttons = ("add",)
 
     class CustomFieldObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
@@ -1299,7 +1390,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
-    action_buttons = ("add",)
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -1803,23 +1893,14 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 #
 
 
-class GraphQLQueryUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectDataComplianceViewMixin,
-    ObjectNotesViewMixin,
-):
+class GraphQLQueryUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.GraphQLQueryFilterForm
     queryset = GraphQLQuery.objects.all()
     form_class = forms.GraphQLQueryForm
     filterset_class = filters.GraphQLQueryFilterSet
     serializer_class = serializers.GraphQLQuerySerializer
     table_class = tables.GraphQLQueryTable
-    action_buttons = ("add",)
+    action_buttons = ("add", "export", "import")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

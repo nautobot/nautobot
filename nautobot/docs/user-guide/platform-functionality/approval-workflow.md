@@ -118,7 +118,8 @@ A concrete instance of a workflow triggered for a specific object under review.
 
 - Automatically changes to `Denied` if any stage is denied.
 - Automatically changes to `Approved` if all stages are approved.
-- Calls object’s `on_workflow_approved()` or `on_workflow_denied()` when final state is reached.
+- Automatically changes to `Canceled` if Approval was canceled directly.
+- Calls object’s `on_workflow_approved()`, `on_workflow_denied()` or `on_workflow_canceled()` when final state is reached.
 
 ### ApprovalWorkflowStage
 
@@ -148,9 +149,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Go to `Approvals > Workflow Definitions > Add Approval Workflow Definition`.
     <div class="grid cards example-images" markdown>
 
-    - ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/nav-approval-workflow-definition.png){ .on-glb }
-    - ![Approval Workflow Definition](../../media/development/approval-workflows/approval-workflow-definition.png){ .on-glb }
-    - ![Add Approval Workflow Definition](../../media/development/approval-workflows/add-approval-workflow-definition.png){ .on-glb }
+    - ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/ss_nav-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Definition](../../media/development/approval-workflows/ss_nav-approval-workflow-definition_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Definition](../../media/development/approval-workflows/ss_approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Approval Workflow Definition](../../media/development/approval-workflows/ss_approval-workflow-definition_dark.png#only-dark){ .on-glb }
+    - ![Add Approval Workflow Definition](../../media/development/approval-workflows/ss_add-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Add Approval Workflow Definition](../../media/development/approval-workflows/ss_add-approval-workflow-definition_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -172,9 +176,12 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Go to `Approvals > Approval Dashboard` or on the right `User dropdown menu > Approval Dashboard` and select the **My Approvals** tab.
     <div class="grid cards example-images" markdown>
 
-    - ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/nav-approval-dashboard1.png){ .on-glb }
-    - ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/nav-approval-dashboard2.png){ .on-glb }
-    - ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/approval-dashboard-approvals.png){ .on-glb }
+    - ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/ss_nav-approval-dashboard1_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Dashboard1](../../media/development/approval-workflows/ss_nav-approval-dashboard1_dark.png#only-dark){ .on-glb }
+    - ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/ss_nav-approval-dashboard2_light.png#only-light){ .on-glb }
+    ![Navigate to Approval Workflow Dashboard2](../../media/development/approval-workflows/ss_nav-approval-dashboard2_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/ss_approval-dashboard-approvals_light.png#only-light){ .on-glb }
+    ![Approval Workflow Dashboard Approvals](../../media/development/approval-workflows/ss_approval-dashboard-approvals_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -184,13 +191,15 @@ Workflows are automatically attached after creating, running, or updating an obj
     - **Current Stage** - Stage awaiting action.
     - **Actions Needed** - Remaining approvals required.
     - **State** - Current workflow state.
-3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/approve-icon.png) button.
-4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/deny-icon.png) button.
+3. To approve the stage, select the ![Approve button](../../media/development/approval-workflows/ss_approve-icon_light.png#only-light)![Approve button](../../media/development/approval-workflows/ss_approve-icon_dark.png#only-dark) button.
+4. To deny the stage, select the ![Deny button](../../media/development/approval-workflows/ss_deny-icon_light.png#only-light)![Deny button](../../media/development/approval-workflows/ss_deny-icon_dark.png#only-dark) button.
 5. After the decision action, a confirmation window appears where a comment can be added before confirming the action.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Workflow Approve](../../media/development/approval-workflows/approve-window.png){ .on-glb }
-    - ![Approval Workflow Deny](../../media/development/approval-workflows/deny-window.png){ .on-glb }
+    - ![Approval Workflow Approve](../../media/development/approval-workflows/ss_approve-window_light.png#only-light){ .on-glb }
+    ![Approval Workflow Approve](../../media/development/approval-workflows/ss_approve-window_dark.png#only-dark){ .on-glb }
+    - ![Approval Workflow Deny](../../media/development/approval-workflows/ss_deny-window_light.png#only-light){ .on-glb }
+    ![Approval Workflow Deny](../../media/development/approval-workflows/ss_deny-window_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -200,7 +209,8 @@ Workflows are automatically attached after creating, running, or updating an obj
 1. Open the **Approval Dashboard** and select the **My Requests** tab.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Dashboard Requests](../../media/development/approval-workflows/approval-dashboard-requests.png){ .on-glb }
+    - ![Approval Dashboard Requests](../../media/development/approval-workflows/ss_approval-dashboard-requests_light.png#only-light){ .on-glb }
+    ![Approval Dashboard Requests](../../media/development/approval-workflows/ss_approval-dashboard-requests_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -223,8 +233,10 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 3. Click the workflow (in My Approvals view) or details button (in My Requests view) for specific workflow.
     <div class="grid cards example-images" markdown>
 
-    - ![My Approvals Workflow](../../media/development/approval-workflows/my-approvals-workflow.png){ .on-glb }
-    - ![My Requests Workflow](../../media/development/approval-workflows/my-requests-workflow.png){ .on-glb }
+    - ![My Approvals Workflow](../../media/development/approval-workflows/ss_my-approvals-workflow_light.png#only-light){ .on-glb }
+    ![My Approvals Workflow](../../media/development/approval-workflows/ss_my-approvals-workflow_dark.png#only-dark){ .on-glb }
+    - ![My Requests Workflow](../../media/development/approval-workflows/ss_my-requests-workflow_light.png#only-light){ .on-glb }
+    ![My Requests Workflow](../../media/development/approval-workflows/ss_my-requests-workflow_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -235,7 +247,8 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 2. Select the required workflow definition.
     <div class="grid cards example-images" markdown>
 
-    - ![Select Approval Workflow Definition](../../media/development/approval-workflows/select-approval-workflow-definition.png){ .on-glb }
+    - ![Select Approval Workflow Definition](../../media/development/approval-workflows/ss_select-approval-workflow-definition_light.png#only-light){ .on-glb }
+    ![Select Approval Workflow Definition](../../media/development/approval-workflows/ss_select-approval-workflow-definition_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -243,7 +256,8 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 4. Select the details button for a specific workflow.
     <div class="grid cards example-images" markdown>
 
-    - ![Approval Workflow Definition details](../../media/development/approval-workflows/approval-workflow-definition-details.png){ .on-glb }
+    - ![Approval Workflow Definition details](../../media/development/approval-workflows/ss_approval-workflow-definition-details_light.png#only-light){ .on-glb }
+    ![Approval Workflow Definition details](../../media/development/approval-workflows/ss_approval-workflow-definition-details_dark.png#only-dark){ .on-glb }
 
     </div>
 
@@ -267,9 +281,22 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 
 <div class="grid cards example-images" markdown>
 
-- ![Approval Workflow details](../../media/development/approval-workflows/approval-workflow-details.png){ .on-glb }
+- ![Approval Workflow details](../../media/development/approval-workflows/ss_approval-workflow-details_light.png#only-light){ .on-glb }
+![Approval Workflow details](../../media/development/approval-workflows/ss_approval-workflow-details_dark.png#only-dark){ .on-glb }
 
 </div>
+
+#### Cancel Approval Workflow
+
+User can cancel his own Approval Workflow.
+
+1. Go to Approval Workflow view [see](#check-state-as-object-operatorapprover)
+2. Use Actions button dropdown and select `Cancel Approval Workflow`
+    - ![Approval Workflow cancel](../../media/development/approval-workflows/ss_cancel-approval-workflow_light.png#only-light){ .on-glb }
+    ![Approval Workflow cancel](../../media/development/approval-workflows/ss_cancel-approval_workflow_dark.png#only-dark){ .on-glb }
+3. Confirm using confirmation form
+    - ![Approval Workflow cancellation form](../../media/development/approval-workflows/ss_approval-workflow-cancellation-form_light.png#only-light){ .on-glb }
+    ![Approval Workflow cancellation form](../../media/development/approval-workflows/ss_approval-workflow-cancellation-form_dark.png#only-dark){ .on-glb }
 
 ### Using Approval Workflow via API
 
@@ -279,7 +306,7 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Approved for deployment"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/approve
 ```
@@ -288,7 +315,7 @@ http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 -d '{"comment": "Deny reason"}' \
 http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/deny
 ```
@@ -302,7 +329,7 @@ Retrieves a list of approval workflow stages filtered by their status relative t
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```
 
@@ -311,11 +338,22 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=true
 ```no-highlight
 curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=3.0; indent=4" \
 http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 ```
 
 If the parameter is omitted, all stages are returned regardless of approval status.
+
+#### Cancel Workflow
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=3.0; indent=4" \
+-d '{"comment": "Cancel reason"}' \
+http://nautobot/api/extras/approval-workflow/$APPROVAL_WORKFLOW_ID/cancel
+```
 
 ## Permissions by Persona
 
@@ -365,10 +403,13 @@ Responsible for designing, managing, and configuring approval workflow definitio
 Approval actions are controlled not only by permissions but also by **approver group membership** defined in each workflow definition:
 
 - Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage, how to create user group via the admin UI check [here](users/groups.md)).
-- A user must belong to the stage’s approver group to:
+- A user must belong to the stage’s approver group or be a super user to:
     - See the stage in the **My Approvals** tab.
     - Perform approval or denial actions.
-- If the user has the required permissions but is **not** a member of the approver group, the stage will not appear in their dashboard and no actions will be available.
+- If the user has the required permissions but is **not** either a member of the approver group or a super user, the stage will not appear in their dashboard and no actions will be available.
+
+!!! note
+    A Nautobot super user is considered to be members of all Approval Groups.
 
 ## Upgrade Considerations
 

@@ -1459,13 +1459,14 @@ textarea {
 }
 
 /* Code */
-code:not(.hljs) {
+:not(pre) > code:not(.hljs) { /* Select only `code` which are not immediate children of `pre`, that is _inline code_. */
   @extend kbd;
 }
 
 pre:not(:has(code.hljs)) { /* Do not include highlight.js in this rule because it has its own set of styles. */
   background: var(--#{$prefix}secondary-bg);
   border-radius: $border-radius;
+  color: $kbd-color;
   padding-block: map.get($spacers, 8);
   padding-inline: map.get($spacers, 10);
 }
@@ -1525,12 +1526,13 @@ body {
   @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
+    "sidenav banner-global-area drawer"
     "sidenav header             drawer"
     "sidenav main-content       drawer"
     "sidenav banner-bottom-area drawer"
     "sidenav footer             drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
-  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
+  grid-template-rows: fit-content(0) fit-content(0) 1fr fit-content(0) fit-content(0);
   overflow-y: scroll;
 
   #sidenav {

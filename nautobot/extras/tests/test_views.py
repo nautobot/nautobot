@@ -301,6 +301,282 @@ class ApprovalWorkflowViewTestCase(
             "current_state": ApprovalWorkflowStateChoices.DENIED,
         }
 
+    def test_render_action_cancel_in_approval_workflow_view(self):
+        """Test a view called ApprovalWorkflowUIViewSet."""
+        with self.subTest("Test Stage view when Approval Workflow is OPEN and superuser"):
+            approval_workflow = self.approval_workflows[0]
+            self.user.is_superuser = True
+            self.user.save()
+
+            url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
+            response = self.client.get(url, follow=True)
+            self.assertHttpStatus(response, 200)
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            cancel_dropdown_item = f"""
+            <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
+                <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
+                Cancel Approval Workflow
+            </a>
+            """
+            self.assertContains(response, action_dropdown, html=True)
+            self.assertContains(response, cancel_dropdown_item, html=True)
+
+        with self.subTest("Test Stage view when Approval Workflow is OPEN and submitter"):
+            approval_workflow = self.approval_workflows[0]
+            approval_workflow.user = self.user
+            approval_workflow.save()
+            self.add_permissions("extras.view_approvalworkflow")
+
+            url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
+            response = self.client.get(url, follow=True)
+            self.assertHttpStatus(response, 200)
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            cancel_dropdown_item = f"""
+            <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
+                <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
+                Cancel Approval Workflow
+            </a>
+            """
+            self.assertContains(response, action_dropdown, html=True)
+            self.assertContains(response, cancel_dropdown_item, html=True)
+
+        with self.subTest("Test Stage view when Approval Workflow is OPEN and not superuser/submitter"):
+            approval_workflow = self.approval_workflows[0]
+            approval_workflow.user = None
+            approval_workflow.save()
+            self.user.is_superuser = False
+            self.user.save()
+            self.add_permissions("extras.view_approvalworkflow")
+
+            url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
+            response = self.client.get(url, follow=True)
+            self.assertHttpStatus(response, 200)
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            cancel_dropdown_item = f"""
+            <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
+                <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
+                Cancel Approval Workflow
+            </a>
+            """
+            self.assertContains(response, action_dropdown, html=True)
+            # cancel dropdown item should not display
+            self.assertNotContains(response, cancel_dropdown_item, html=True)
+
+        with self.subTest("Test Stage view when Approval Workflow is CANCELED"):
+            approval_workflow = self.approval_workflows[0]
+            approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+            approval_workflow.save()
+            self.user.is_superuser = True
+            self.user.save()
+
+            url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
+            response = self.client.get(url, follow=True)
+            self.assertHttpStatus(response, 200)
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            cancel_dropdown_item = f"""
+            <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
+                <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
+                Cancel Approval Workflow
+            </a>
+            """
+            self.assertContains(response, action_dropdown, html=True)
+            self.assertNotContains(response, cancel_dropdown_item, html=True)
+
+    def test_cancel_workflow_endpoint_permission_denied(self):
+        """User cannot cancel if not submitter and workflow is active."""
+        approval_workflow = self.approval_workflows[0]
+
+        # Make sure workflow is active
+        self.assertTrue(approval_workflow.is_active)
+        # Make sure user is not a submitter
+        self.assertNotEqual(self.user, approval_workflow.user)
+        # Make sure user is not a superuser
+        self.assertFalse(self.user.is_superuser)
+
+        url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+        response = self.client.get(url, follow=True)
+
+        self.assertHttpStatus(response, 403)
+
+    def test_cancel_workflow_endpoint_not_permitted_cancel(self):
+        """User cannot cancel if not submitter and workflow is active."""
+        approval_workflow = self.approval_workflows[0]
+
+        # Make sure workflow is active
+        self.assertTrue(approval_workflow.is_active)
+        # Make sure user is not a submitter
+        self.assertNotEqual(self.user, approval_workflow.user)
+        # Make sure user is not a superuser
+        self.assertFalse(self.user.is_superuser)
+        self.add_permissions("extras.view_approvalworkflow")
+
+        url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+        response = self.client.get(url, follow=True)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(
+            response,
+            "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
+        )
+
+    def test_cancel_workflow_finished(self):
+        """Cannot cancel a finished (inactive) workflow."""
+        approval_workflow = self.approval_workflows[0]
+
+        # set user as submitter
+        approval_workflow.user = self.user
+        approval_workflow.current_state = ApprovalWorkflowStateChoices.APPROVED
+        approval_workflow.save()
+
+        self.add_permissions("extras.view_approvalworkflow")
+
+        url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+        response = self.client.get(url, follow=True)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not cancel finished approval workflow.")
+
+    def test_cancel_workflow_get(self):
+        """GET cancel view renders confirmation form."""
+        approval_workflow = self.approval_workflows[0]
+        # set user as submitter
+        approval_workflow.user = self.user
+        approval_workflow.save()
+        self.add_permissions("extras.view_approvalworkflow")
+
+        with self.subTest("without existing commens"):
+            url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+            response = self.client.get(url)
+
+            self.assertHttpStatus(response, 200)
+            self.assertTemplateUsed(response, "extras/approval_workflow/cancel.html")
+            self.assertBodyContains(response, "Are you sure you want to cancel")
+            self.assertBodyContains(response, "Comments")
+            # text area is empty
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+            self.assertContains(response, expected_comment_area, html=True)
+
+        with self.subTest("with existing comments"):
+            # everything is needed to add a comment to Approval workflow ...
+            approver_groups = Group.objects.create(name="Test Group")
+            approval_workflow_stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+                approval_workflow_definition=approval_workflow.approval_workflow_definition,
+                sequence=100,
+                name="Test Approval Workflow Stage Definition",
+                min_approvers=1,
+                denial_message="Stage Denial Message",
+                approver_group=approver_groups,
+            )
+            approval_workflow_stage = ApprovalWorkflowStage.objects.create(
+                approval_workflow=approval_workflow,
+                approval_workflow_stage_definition=approval_workflow_stage_definition,
+                state=ApprovalWorkflowStateChoices.PENDING,
+            )
+            ApprovalWorkflowStageResponse.objects.create(
+                approval_workflow_stage=approval_workflow_stage,
+                user=self.user,
+                comments="new comment",
+                state=ApprovalWorkflowStateChoices.COMMENT,
+            )
+            url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+            response = self.client.get(url)
+
+            self.assertHttpStatus(response, 200)
+            self.assertTemplateUsed(response, "extras/approval_workflow/cancel.html")
+            self.assertBodyContains(response, "Are you sure you want to cancel")
+            self.assertBodyContains(response, "Comments")
+            # text area is not empty
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments">new comment</textarea>'
+            self.assertContains(response, expected_comment_area, html=True)
+
+    def test_cancel_workflow_post(self):
+        """POST cancel successfully cancels workflow."""
+        approval_workflow = self.approval_workflows[0]
+        approval_workflow.user = self.user
+        approval_workflow.save()
+        self.add_permissions("extras.view_approvalworkflow")
+
+        # add one stage to Approval workflow
+        approver_groups = Group.objects.create(name="Test Group")
+        approval_workflow_stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=approval_workflow.approval_workflow_definition,
+            sequence=100,
+            name="Test Approval Workflow Stage Definition",
+            min_approvers=1,
+            denial_message="Stage Denial Message",
+            approver_group=approver_groups,
+        )
+        ApprovalWorkflowStage.objects.create(
+            approval_workflow=approval_workflow,
+            approval_workflow_stage_definition=approval_workflow_stage_definition,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        with self.subTest("without existing response"):
+            url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+            request = {
+                "path": url,
+                "data": post_data({"comments": "Cancel this workflow"}),
+            }
+
+            response = self.client.post(**request, follow=True)
+
+            self.assertHttpStatus(response, 200)
+
+            approval_workflow.refresh_from_db()
+            self.assertEqual(approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
+
+            self.assertTrue(
+                ApprovalWorkflowStageResponse.objects.filter(
+                    user=self.user, state=ApprovalWorkflowStateChoices.CANCELED, comments="Cancel this workflow"
+                ).exists()
+            )
+
+            self.assertBodyContains(response, f"You canceled {approval_workflow}.")
+
+    def test_cancel_workflow_post_updates_existing_response(self):
+        approval_workflow = self.approval_workflows[0]
+        approval_workflow.user = self.user
+        approval_workflow.save()
+        self.add_permissions("extras.view_approvalworkflow")
+
+        # add one stage to Approval workflow
+        approver_groups = Group.objects.create(name="Test Group")
+        approval_workflow_stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=approval_workflow.approval_workflow_definition,
+            sequence=100,
+            name="Test Approval Workflow Stage Definition",
+            min_approvers=1,
+            denial_message="Stage Denial Message",
+            approver_group=approver_groups,
+        )
+        ApprovalWorkflowStage.objects.create(
+            approval_workflow=approval_workflow,
+            approval_workflow_stage_definition=approval_workflow_stage_definition,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        existing_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow.active_stage,
+            user=self.user,
+            comments="old comment",
+            state=ApprovalWorkflowStateChoices.COMMENT,
+        )
+        url = reverse("extras:approvalworkflow_cancel", args=[approval_workflow.pk])
+        request = {
+            "path": url,
+            "data": post_data({"comments": "updated cancel comment"}),
+        }
+
+        response = self.client.post(**request, follow=True)
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertEqual(
+            existing_response,
+            ApprovalWorkflowStageResponse.objects.get(
+                user=self.user, state=ApprovalWorkflowStateChoices.CANCELED, comments="updated cancel comment"
+            ),
+        )
+
 
 class ApprovalWorkflowStageViewTestCase(
     ViewTestCases.GetObjectViewTestCase,
@@ -419,18 +695,32 @@ class ApprovalWorkflowStageViewTestCase(
         self.client.force_login(self.user)
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
-        # Try GET with model-level permission
+        # Try GET with model-level permission but not belonging to the approver group
         url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to approve this")
+
+        # Try GET with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
 
-        # Try POST with model-level permission
+        # Try POST with model-level permission but not belonging to the approver group
         request = {
             "path": url,
             "data": post_data({"comments": "Approved!"}),
         }
         response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to approve this")
+
+        # Try POST with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -469,8 +759,10 @@ class ApprovalWorkflowStageViewTestCase(
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
         # Try GET with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-success">')  # Assert the success panel is present
         self.assertBodyContains(response, "existing comment")
@@ -480,7 +772,9 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "Approved!"}),
         }
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # Response should be updated
@@ -494,24 +788,50 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.APPROVED)
         self.assertEqual(new_response.comments, "Approved!")
 
+    def test_approve_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_approve", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not approve canceled approval workflow.")
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_deny_endpoint(self):
         """Test the deny endpoint."""
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
-        # Try GET with model-level permission
+        # Try GET with model-level permission but not belonging to the approver group
         url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to deny this")
+
+        # Try GET with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
 
-        # Try POST with model-level permission
+        # Try POST with model-level permission but not belonging to the approver group
         request = {
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
         response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "You are not permitted to deny this")
+
+        # Try POST with belonging to the approver group
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -550,18 +870,22 @@ class ApprovalWorkflowStageViewTestCase(
         self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
 
         # Try GET with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, '<div class="card border-danger">')  # Assert the danger panel is present
         self.assertBodyContains(response, "existing comment")
 
         # Try POST with model-level permission
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
         request = {
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
         response = self.client.post(**request, follow=True)
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # Response should be updated
@@ -577,6 +901,18 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertBodyContains(
             response, f"You denied {approval_workflow_stage}."
         )  # Assert the denial message is present
+
+    def test_deny_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_deny", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not deny canceled approval workflow.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_comment_endpoint(self):
@@ -706,6 +1042,69 @@ class ApprovalWorkflowStageViewTestCase(
         )
         self.assertEqual(new_response.state, ApprovalWorkflowStateChoices.COMMENT)
         self.assertEqual(new_response.comments, "New comment")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_add_comment_to_pending_approval(self):
+        """
+        Test editing or adding a comment in the approval stage that already has one approval,
+        but needs two. Only edit the comment don't change the state from APPROVED to COMMENT.
+        """
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        # check min_approver to 2
+        approval_workflow_stage.approval_workflow_stage_definition.min_approvers = 2
+        approval_workflow_stage.approval_workflow_stage_definition.save()
+        # create new response with a comment
+        new_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=approval_workflow_stage,
+            user=self.user,
+            comments="approved comment",
+            state=ApprovalWorkflowStateChoices.APPROVED,
+        )
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        self.client.force_login(self.user)
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        # Try GET again in form should be previous message
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, new_response.comments)
+
+        request = {
+            "path": url,
+            "data": post_data({"comments": "Edit approved comment"}),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        approval_workflow_stage.refresh_from_db()
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=approval_workflow_stage, user=self.user
+            ).count(),
+            1,
+        )
+        edited_response = ApprovalWorkflowStageResponse.objects.get(
+            approval_workflow_stage=approval_workflow_stage, user=self.user
+        )
+        # assert state is still APPROVED
+        self.assertEqual(edited_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(edited_response.comments, "Edit approved comment")
+
+    def test_comment_canceled_approval_workflow(self):
+        approval_workflow_stage = ApprovalWorkflowStage.objects.first()
+        approval_workflow_stage.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+        approval_workflow_stage.approval_workflow.save()
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.view_approvalworkflowstage")
+
+        url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Can not comment canceled approval workflow.")
 
 
 class ApprovalWorkflowStageResponseViewTestCase(

@@ -336,19 +336,19 @@ class ApprovalWorkflowTable(BaseTable):
         model = ApprovalWorkflow
         fields = (
             "pk",
-            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
-            "current_state",
             "user",
+            "current_state",
+            "approval_workflow_definition",
         )
         default_columns = (
             "pk",
-            "approval_workflow_definition",
             "object_under_review_content_type",
             "object_under_review",
-            "current_state",
             "user",
+            "current_state",
+            "approval_workflow_definition",
             "actions",
         )
 
@@ -374,11 +374,11 @@ class ApprovalWorkflowStageTable(BaseTable):
     actions_needed = tables.TemplateColumn(
         template_code="""
         {% if record.remaining_approvals == 1 %}
-        {{ record.remaining_approvals }} more approval needed
+            {{ record.remaining_approvals }} more approval needed
         {% elif record.remaining_approvals == 0 %}
-        <span class="text-secondary">&mdash;</span>
+            <span class="text-secondary">&mdash;</span>
         {% else %}
-        {{ record.remaining_approvals }} more approvals needed
+            {{ record.remaining_approvals }} more approvals needed
         {% endif %}
         """,
         orderable=False,
@@ -426,6 +426,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
         verbose_name="Current Stage",
     )
+    approval_workflow__object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
     )
@@ -437,6 +438,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         model = ApprovalWorkflowStage
         fields = (
             "pk",
+            "approval_workflow__object_under_review_content_type",
             "object_under_review",
             "approval_workflow",
             "approval_workflow_stage",
@@ -446,9 +448,10 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
         )
         default_columns = (
             "pk",
-            "approval_workflow_stage",
-            "approval_workflow",
+            "approval_workflow__object_under_review_content_type",
             "object_under_review",
+            "approval_workflow",
+            "approval_workflow_stage",
             "actions_needed",
             "state",
             "actions",

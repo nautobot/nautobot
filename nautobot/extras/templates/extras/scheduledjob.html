@@ -143,7 +143,9 @@
                         <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>
                     </tr>
                 {% empty %}
-                    <tr><td>—</td></tr>
+                    <tr>
+                        <td><span class="text-secondary">&mdash;</span></td>
+                    </tr>
                 {% endfor %}
             </table>
         </div>

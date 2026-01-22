@@ -1,4 +1,0 @@
-Updated development dependency `autoprefixer` to `^10.4.22`.
-Updated development dependency `mini-css-extract-plugin` to `^2.9.4`.
-Updated development dependency `postcss` to `^8.5.6`.
-Updated development dependency `sass-loader` to `^16.0.6`.

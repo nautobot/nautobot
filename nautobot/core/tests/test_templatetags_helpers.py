@@ -48,23 +48,23 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(
             helpers.hyperlinked_email("admin@example.com"), '<a href="mailto:admin@example.com">admin@example.com</a>'
         )
-        self.assertEqual(helpers.hyperlinked_email(None), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_email(None), helpers.HTML_NONE)
 
     def test_hyperlinked_phone_number(self):
         self.assertEqual(helpers.hyperlinked_phone_number("555-1234"), '<a href="tel:555-1234">555-1234</a>')
-        self.assertEqual(helpers.hyperlinked_phone_number(None), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_phone_number(None), helpers.HTML_NONE)
 
     def test_placeholder(self):
-        self.assertEqual(helpers.placeholder(None), '<span class="text-secondary">&mdash;</span>')
-        self.assertEqual(helpers.placeholder([]), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.placeholder(None), helpers.HTML_NONE)
+        self.assertEqual(helpers.placeholder([]), helpers.HTML_NONE)
         self.assertEqual(helpers.placeholder("something"), "something")
 
     def test_pre_tag(self):
-        self.assertEqual(helpers.pre_tag(None), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag(None), helpers.HTML_NONE)
         self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
         self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
-        self.assertEqual(helpers.pre_tag("", format_empty_value=False), '<span class="text-secondary">&mdash;</span>')
-        self.assertEqual(helpers.pre_tag([], format_empty_value=False), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.pre_tag("", format_empty_value=False), helpers.HTML_NONE)
+        self.assertEqual(helpers.pre_tag([], format_empty_value=False), helpers.HTML_NONE)
         self.assertEqual(helpers.pre_tag("something", format_empty_value=False), "<pre>something</pre>")
 
     def test_add_html_id(self):
@@ -252,6 +252,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.get_item(data, "first"), "1st")
         self.assertEqual(helpers.get_item(data, "second"), "2nd")
 
+        self.assertEqual(helpers.get_item({}, "first"), None)
+        self.assertEqual(helpers.get_item("", "first"), None)
+
     def test_render_boolean(self):
         for value in [True, "arbitrary string", 1]:
             self.assertEqual(
@@ -263,7 +266,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 helpers.render_boolean(value),
                 '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>',
             )
-        self.assertEqual(helpers.render_boolean(None), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.render_boolean(None), helpers.HTML_NONE)
 
     def test_hyperlinked_object_with_color(self):
         vlan_with_role = VLAN.objects.filter(role__isnull=False).first()
@@ -276,7 +279,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
             f'<span class="badge" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
-        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), '<span class="text-secondary">&mdash;</span>')
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), helpers.HTML_NONE)
 
     @tag("example_app")
     @override_settings(BANNER_TOP="¡Hola, mundo!")

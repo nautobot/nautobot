@@ -10,7 +10,10 @@ Most migrations outside of the UI updates are minimal. However, for completeness
 | Can run `pylint --disable=all --enable=nb-deprecated-class --load-plugins=pylint_nautobot --rcfile=/dev/null <path>` with no errors.                                                                                              |
 | Do not have a reference to `DataComplianceRule` or `ComplianceError` in your code.                                                                                                                                                |
 | Do not have a reference to `execute_query` or `execute_saved_query` in your code.                                                                                                                                                 |
-| Can run `nautobot-server validate_models extras.dynamicgroup` with no output.                                                                                                                                                     |
+| Can run `nautobot-server validate_models extras.dynamicgroup extras.savedview` with no output.                                                                                                                                    |
 | Do not use the REST API (minor change if using pynautobot required to keep same behavior).                                                                                                                                        |
 
 More detailed documentation for each of these checks is provided in the next section.
+
+!!! tip
+    It is recommended to upgrade your production instance from Nautobot 2.4 to 3.x in separate steps. Attempting to combine both upgrades can complicate troubleshooting and make it harder to identify the source of any issues. If you are running Nautobot 1.x or a version earlier than 2.4, upgrade to the latest 2.4.x first before proceeding to 3.x.

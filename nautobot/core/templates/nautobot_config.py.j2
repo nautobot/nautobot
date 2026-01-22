@@ -43,6 +43,19 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
 # )
 
+# Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
+# CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
+#     "NAUTOBOT_CELERY_BEAT_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+# )
+
+# Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
+# CELERY_WORKER_READINESS_FILE = os.getenv(
+#     "NAUTOBOT_CELERY_WORKER_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_ready")
+# )
+
+# Celery health probes as files - if enabled, Celery worker health probes will be implemented as files
+# CELERY_HEALTH_PROBES_AS_FILES = is_truthy(os.getenv("NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES", "False"))
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -94,7 +107,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
 # If running Nautobot under a single domain, you may not need to set this variable;
 # if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
-# You also want to set this variable if you are facing CSRF validation issues such as 
+# You also want to set this variable if you are facing CSRF validation issues such as
 # 'CSRF failure has occured' or 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
 # https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
 #
@@ -397,7 +410,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
 
-# Storage backend to use for Job input files and Job output files.
+# (Deprecated) Storage backend to use for Job input files and Job output files.
 #
 # Note: the default is for backwards compatibility and it is recommended to change it if possible for your deployment.
 #
@@ -555,16 +568,21 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
-# By default uploaded media is stored on the local filesystem. Using Django-storages is also supported. Provide the
-# class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG.
-# These default to None and {} respectively.
-#
-# STORAGE_BACKEND = 'storages.backends.s3.S3Storage'
-# STORAGE_CONFIG = {
-#     'AWS_ACCESS_KEY_ID': 'Key ID',
-#     'AWS_SECRET_ACCESS_KEY': 'Secret',
-#     'AWS_STORAGE_BUCKET_NAME': 'nautobot',
-#     'AWS_S3_REGION_NAME': 'eu-west-1',
+# Storage of various file types
+# STORAGES = {
+#     # The default storage backend, for things like user-uploaded image attachments, etc.
+#     "default": {
+#         "BACKEND": "django.core.files.storage.FileSystemStorage",
+#     },
+#     # The storage backend to use for static file serving
+#     "staticfiles": {
+#         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+#     },
+#     # The storage backend to use for Job input files and Job output files
+#     # Note: default is for backwards compatibility and it's recommended to change if possible for your deployment.
+#     "nautobotjobfiles": {
+#         "BACKEND": "db_file_storage.storage.DatabaseFileStorage",
+#     },
 # }
 
 # Reject invalid UI/API filter parameters, or discard them while logging a warning?
