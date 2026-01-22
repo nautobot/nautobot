@@ -20,6 +20,7 @@ __all__ = (
     "DatePicker",
     "DateTimePicker",
     "NumberWithSelect",
+    "SelectMultipleOrderable",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugWidget",
@@ -89,6 +90,20 @@ class BulkEditNullBooleanSelect(forms.NullBooleanSelect):
             ("3", "No"),
         )
         self.attrs["class"] = "nautobot-select2-static"
+
+
+class SelectMultipleOrderable(forms.SelectMultiple):
+    """
+    Modified the stock SelectMultiple widget to render a set of controls with draggable list group rows to enable
+    ordering and checkboxes to simplify the selection process.
+    """
+
+    template_name = "widgets/select_multiple_orderable.html"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.attrs["class"] = "visually-hidden"
 
 
 class SelectWithDisabled(forms.Select):

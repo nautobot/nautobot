@@ -402,6 +402,10 @@ $modal-title-line-height: $line-height-base;
 $list-group-item-padding-y: $table-cell-padding-y;
 $list-group-item-padding-x: $table-cell-padding-x;
 
+$list-group-hover-bg:     var(--#{$prefix}primary-bg-subtle);
+$list-group-active-color: var(--#{$prefix}primary-text-emphasis);
+$list-group-active-bg:    var(--#{$prefix}primary-bg-subtle);
+
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
 $breadcrumb-margin-bottom:  0;
@@ -1434,6 +1438,11 @@ textarea {
   td & {
     min-width: 100px;
   }
+}
+
+/* List groups */
+.list-group-item-action {
+  @include transition($btn-transition);
 }
 
 /* Breadcrumbs */

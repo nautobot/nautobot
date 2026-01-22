@@ -287,8 +287,8 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     columns = forms.MultipleChoiceField(
         choices=[],
         required=False,
-        widget=forms.SelectMultiple(attrs={"size": 20}),
-        help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
+        widget=nautobot_widgets.SelectMultipleOrderable(),
+        help_text="Use the controls below to arrange columns in the desired order and select which columns to display.",
     )
 
     def __init__(self, table, *args, **kwargs):
