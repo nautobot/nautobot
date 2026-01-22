@@ -315,3 +315,6 @@ $(document).ready((e) => {
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
+htmx.onLoad((content) => {
+    initializeResultPerPageSelection(content);
+})
