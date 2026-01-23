@@ -970,7 +970,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if global_saved_view:
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
-        response = Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
+        response = Response(
+            {"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view}
+        )
         patch_vary_headers(response, ["HX-Request"])
         return response
 
