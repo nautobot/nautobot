@@ -61,18 +61,17 @@
 
                         // Merge form data from all individual checkboxes to an array of values.
                         const values = [...form.querySelectorAll('input[id^="id_"]')].reduce(
-                            (values, field) =>
-                                ({
-                                    ...values,
-                                    [field.getAttribute('name')]: [
-                                        ...(values[field.getAttribute('name')] ?? []),
-                                        /*
-                                         * Place the condition with `field.checked` here rather than somewhere before,
-                                         * because the property should always be present, even when no input is checked.
-                                         */
-                                        ...(field.checked ? [field.value] : []),
-                                    ],
-                                }),
+                            (values, field) => ({
+                                ...values,
+                                [field.getAttribute('name')]: [
+                                    ...(values[field.getAttribute('name')] ?? []),
+                                    /*
+                                     * Place the condition with `field.checked` here rather than somewhere before,
+                                     * because the property should always be present, even when no input is checked.
+                                     */
+                                    ...(field.checked ? [field.value] : []),
+                                ],
+                            }),
                             {},
                         );
 

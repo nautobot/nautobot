@@ -103,7 +103,9 @@ class SelectMultipleOrderable(forms.SelectMultiple):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.attrs["class"] = "list-group nb-draggable-container nb-select-multiple-orderable-list flex-grow-1 mx-n20 py-16"
+        self.attrs["class"] = (
+            "list-group nb-draggable-container nb-select-multiple-orderable-list flex-grow-1 mx-n20 py-16"
+        )
 
 
 class SelectWithDisabled(forms.Select):
