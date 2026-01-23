@@ -81,6 +81,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.FileInput,
             forms.RadioSelect,
             nautobot_widgets.ClearableFileInput,
+            nautobot_widgets.SelectMultipleOrderable,
         ]
 
         for field in self.fields.values():

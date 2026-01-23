@@ -44,7 +44,6 @@ import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { initializeSearch } from './search.js';
-import { initializeSelectMultipleOrderable } from './select-multiple-orderable.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
@@ -82,9 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Search
   initializeSearch();
-
-  // Select Multiple Orderable
-  initializeSelectMultipleOrderable();
 
   // Select2
   window.nb.select2 = { initializeSelect2Fields, setSelect2Value };

@@ -39,12 +39,10 @@
                     if (form.closest(FORM_SELECTOR)) {
                         event.preventDefault();
 
-                        // Deselect all options before form submission.
-                        form.querySelector('select[name="columns"]')
-                            .querySelectorAll('option')
-                            .forEach((option) => {
-                                option.selected = false;
-                            });
+                        // Uncheck all checkboxes before form submission.
+                        form.querySelectorAll('input[id^="id_"]').forEach((input) => {
+                            input.checked = false;
+                        });
 
                         form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true, composed: false }));
                     }
@@ -58,27 +56,30 @@
                         // Keep the drawer open after page reload caused by form submission.
                         window.nb.history.saveState();
 
-                        // Derive an array from the dotted path to the config root
+                        // Derive an array from the dotted path to the config root.
                         const path = form.getAttribute('data-config-root').split('.');
 
-                        // Assign the form data to the child node
-                        const values = [
-                            ...form.querySelectorAll(':is(button, input, select, textarea)[id^="id_"][name]'),
-                        ].reduce(
-                            (values, field) => ({
-                                ...values,
-                                [field.getAttribute('name')]:
-                                    field.tagName.toLowerCase() === 'select' && field.getAttribute('multiple') !== null
-                                    ? [...field.selectedOptions].map((option) => option.value)
-                                    : field.value,
-                            }),
+                        // Merge form data from all individual checkboxes to an array of values.
+                        const values = [...form.querySelectorAll('input[id^="id_"]')].reduce(
+                            (values, field) =>
+                                ({
+                                    ...values,
+                                    [field.getAttribute('name')]: [
+                                        ...(values[field.getAttribute('name')] ?? []),
+                                        /*
+                                         * Place the condition with `field.checked` here rather than somewhere before,
+                                         * because the property should always be present, even when no input is checked.
+                                         */
+                                        ...(field.checked ? [field.value] : []),
+                                    ],
+                                }),
                             {},
                         );
 
-                        // Construct a nested JSON object from the path
+                        // Construct a nested JSON object from the path.
                         const data = [...path].reverse().reduce((data, node) => ({ [node]: data }), values);
 
-                        // Make the REST API request
+                        // Make the REST API request.
                         try {
                             const response = await fetch(`${nautobot_api_path}users/config/`, {
                                 body: JSON.stringify(data),
@@ -90,11 +91,11 @@
                                 throw response;
                             }
 
-                            // Reload the page
+                            // Reload the page.
                             const urlSearchParams = new URLSearchParams(window.location.search);
                             if (urlSearchParams.has('saved_view')) {
                                 urlSearchParams.set('table_changes_pending', 'true');
-                                const nextHref = `${window.location.origin}${window.location.pathname}${urlSearchParams}${window.location.hash}`;
+                                const nextHref = `${window.location.origin}${window.location.pathname}?${urlSearchParams}${window.location.hash}`;
                                 window.location.assign(nextHref);
                             } else {
                                 window.location.reload();
