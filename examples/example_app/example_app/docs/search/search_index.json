@@ -1,1 +1,0 @@
-{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"index.html","title":"Example App","text":""},{"location":"models/examplemodel.html","title":"Example Model","text":"<p>This example has a name and a number field.</p>"}]}
