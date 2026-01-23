@@ -1151,6 +1151,63 @@ class APIViewTestCases:
                 "self.choices_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
             )
 
+    class BulkRenameObjectsViewTestCase(APITestCase):
+        rename_data = {
+            "find": "^(.*)$",
+            "replace": "\\1X",  # Append an X to the original value
+            "use_regex": True,
+        }
+        bulk_rename_count = 3
+
+        def _get_bulk_rename_url(self):
+            viewname = lookup.get_route_for_model(self.model, "bulk-rename", api=True)
+            return reverse(viewname)
+
+        def _get_bulk_rename_instances(self):
+            instances = list(self._get_queryset().all()[: self.bulk_rename_count])
+            if len(instances) < self.bulk_rename_count:
+                self.skipTest("Insufficient objects to test bulk rename")
+            return instances
+
+        def _bulk_rename_payload(self, ids, **extra):
+            payload = {"ids": ids}
+            payload.update(self.rename_data)
+            payload.update(extra)
+            return payload
+
+        def test_bulk_rename_objects_without_permission(self):
+            objects = self._get_bulk_rename_instances()
+            ids = [str(obj.pk) for obj in objects]
+            data = self._bulk_rename_payload(ids)
+
+            with utils.disable_warnings("django.request"):
+                response = self.client.post(self._get_bulk_rename_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+        def test_bulk_rename_objects(self):
+            objects = self._get_bulk_rename_instances()
+            ids = [str(obj.pk) for obj in objects]
+            data = self._bulk_rename_payload(ids)
+
+            original_names = {str(obj.pk): obj.name for obj in objects}
+
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+            )
+            self.user.is_superuser = True
+            self.user.save()
+            response = self.client.post(self._get_bulk_rename_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(len(response.data), len(objects))
+
+            response_by_id = {obj["id"]: obj for obj in response.data}
+            for obj in objects:
+                obj.refresh_from_db()
+                expected_name = original_names[str(obj.pk)] + "X"
+                self.assertEqual(obj.name, expected_name)
+                self.assertIn(str(obj.pk), response_by_id)
+                self.assertEqual(response_by_id[str(obj.pk)]["name"], expected_name)
+
     class DeleteObjectViewTestCase(APITestCase):
         def get_deletable_object(self):
             """
