@@ -2921,10 +2921,8 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="related_changes_table",
-                add_button_route=None,
-                max_display_count=50,
                 header_extra_content_template_path="extras/inc/related_changes_header.html",
-                footer_content_template_path="extras/inc/related_changes_footer.html",
+                footer_content_template_path=None,
             ),
         )
     )
@@ -2959,7 +2957,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         if self.action == "retrieve":
             related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
             related_changes_table = tables.ObjectChangeTable(
-                data=related_changes,
+                data=related_changes[:50],  # Limit for performance
                 orderable=False,
             )
             paginate = {

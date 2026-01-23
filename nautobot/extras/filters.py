@@ -1391,8 +1391,6 @@ class ObjectChangeFilterSet(BaseFilterSet):
         label="User name (ID or username)",
     )
 
-    id_ne = MultiValueUUIDFilter(field_name="pk", label="Object Change(ID)", exclude=True)
-
     class Meta:
         model = ObjectChange
         fields = [
