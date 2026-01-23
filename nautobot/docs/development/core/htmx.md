@@ -10,14 +10,34 @@ The purpose of this document is not to advertise HTMX (though we think it's pret
 
 ## Detecting an HTMX request in a view
 
-For piecemeal page rendering (like the object-list view example above), rather than write a separate Nautobot/Django view for each part of the page, we generally recommend having a single view that behaves differently when requested via HTMX versus otherwise. Conveniently, HTMX requests always set the otherwise unset `HX-Request` header, so your code can do something like this:
+For piecemeal page rendering (like the object-list view example above), rather than write a separate Nautobot/Django view for each part of the page, it may be more convenient to implement a single view that behaves differently when requested via HTMX versus otherwise. Conveniently, HTMX requests always set the otherwise unset `HX-Request` header, so your code might do something like this:
 
 ```python
 def get(request, **kwargs):
     if request.headers.get("HX-Request", False):
         # it's an HTMX request
-        # perform partial rendering of expensive components as appropriate and return the relevant HTML fragment
+        # perform partial rendering of expensive components as appropriate
+        response = render(request, "components/htmx/my_fragment.html", ...)
     else:
         # not an HTMX request
-        # perform full-page render, skipping expensive components, and return the rendered HTML page.
+        # perform full-page render, but with placeholders in the template for expensive components
+        response = render(request, "my_page.html", ...)
+```
+
+However! If you do this, be aware that you need to also make sure that the web browser cache can recognizes that these are two different requests and responses (despite having the same URL and query parameters). The recommended way to do this is to use Django's `django.utils.cache.patch_vary_headers()` API to mark the response as differing based on that same `HX-Request` header:
+
+```python
+def get(request, **kwargs):
+    if request.headers.get("HX-Request", False):
+        # it's an HTMX request
+        # perform partial rendering of expensive components as appropriate
+        response = render(request, "components/htmx/my_fragment.html", ...)
+    else:
+        # not an HTMX request
+        # perform full-page render, but with placeholders in the template for expensive components
+        response = render(request, "my_page.html", ...)
+
+    # Allow for the browser cache to distinguish between the two responses based on the HX-Request header
+    patch_vary_headers(response, ["HX-Request"])
+    return response
 ```

@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -969,7 +970,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if global_saved_view:
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
-        return Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
+        response = Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):

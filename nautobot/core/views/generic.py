@@ -18,6 +18,7 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import resolve, reverse
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -421,8 +422,11 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             context["title"] = self.get_view_titles(model).render(context)
 
         if htmx_request:
-            return render(request, "components/htmx/list_view_table.html", context)
-        return render(request, self.template_name, context)
+            response = render(request, "components/htmx/list_view_table.html", context)
+        else:
+            response = render(request, self.template_name, context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
