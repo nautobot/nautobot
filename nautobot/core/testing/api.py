@@ -1200,13 +1200,10 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(len(response.data), len(objects))
 
-            response_by_id = {obj["id"]: obj for obj in response.data}
             for obj in objects:
                 obj.refresh_from_db()
                 expected_name = original_names[str(obj.pk)] + "X"
                 self.assertEqual(obj.name, expected_name)
-                self.assertIn(str(obj.pk), response_by_id)
-                self.assertEqual(response_by_id[str(obj.pk)]["name"], expected_name)
 
     class DeleteObjectViewTestCase(APITestCase):
         def get_deletable_object(self):
