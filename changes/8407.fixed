@@ -1,0 +1,1 @@
+Fixed issue adding new devices due to Attribute Error 'NoneType' object has no attribute 'location'.
