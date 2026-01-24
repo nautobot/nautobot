@@ -30,7 +30,7 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -750,15 +750,236 @@ class RackUIViewSet(NautobotUIViewSet):
         }
     )
 
+    class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            if request.user.has_perms(self.add_permissions or []):
+                return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
+            return None
+
+    class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "space_utilization" or key == "power_utilization":
+                return self.get_utilization_graph(value)
+
+            if key == "devices":
+                request = context["request"]
+                obj = get_obj_from_context(context)
+                device_count = Device.objects.restrict(request.user, "view").filter(rack=obj).count()
+                if not device_count:
+                    return helpers.HTML_NONE
+                full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
+                link = format_html('<a href="{}">{}</a>', full_url, device_count)
+                return link
+
+            return super().render_value(key, value, context)
+
+        def get_utilization_graph(self, value):
+            data = helpers.utilization_graph(value)
+            return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+    class DimensionsObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+
+            if key == "u_height":
+                if not value:
+                    return helpers.HTML_NONE
+                orientation = "descending" if obj.desc_units else "ascending"
+                return format_html("{}U ({})", value, orientation)
+
+            if key == "outer_width" or key == "outer_depth":
+                if not value:
+                    return helpers.HTML_NONE
+                return format_html("{} {}", value, obj.get_outer_unit_display())
+
+            return super().render_value(key, value, context)
+
+    class NonRackedDevicesObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("dcim.add_device"):
+                return None
+
+            obj = get_obj_from_context(context)
+            params = []
+            if obj is not None:
+                params.append(("rack", obj.pk))
+                if obj.location is not None:
+                    params.append(("location", obj.location.pk))
+
+            params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
+            return f"{reverse('dcim:device_add')}?{urlencode(params)}"
+
+    class RackNavigationButton(object_detail.Button):
+        def __init__(self, *, direction, **kwargs):
+            self.direction = direction
+            label = "Previous Rack" if direction == "prev" else "Next Rack"
+            icon = "mdi mdi-chevron-left" if direction == "prev" else "mdi mdi-chevron-right"
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.BLUE,
+                template_path="dcim/inc/rack_nav.html",
+                **kwargs,
+            )
+
+        def get_link(self, context: Context):
+            target = context.get(f"{self.direction}_rack")
+            if target:
+                return reverse("dcim:rack", kwargs={"pk": target.pk})
+            return None
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes") or {}
+            if not extra_context["link"]:
+                attributes.update({"aria-disabled": "true", "disabled": "disabled"})
+            extra_context["attributes"] = attributes
+            return extra_context
+
+    class RackToggleButton(object_detail.Button):
+        def __init__(self, *, label, icon, extra_classes, **kwargs):
+            self.extra_classes = extra_classes
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.GREY,
+                template_path="dcim/inc/rack_toggle.html",
+                attributes={"selected": "selected"},
+                **kwargs,
+            )
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes", {}) or {}
+            attributes.setdefault("selected", "selected")
+            extra_context["attributes"] = attributes
+            extra_context["extra_classes"] = self.extra_classes
+            return extra_context
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            RackObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                fields=[
+                    "location",
+                    "rack_group",
+                    "facility_id",
+                    "tenant",
+                    "status",
+                    "role",
+                    "serial",
+                    "asset_tag",
+                    "devices",
+                    "space_utilization",
+                    "power_utilization",
+                ],
+            ),
+            DimensionsObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Dimensions",
+                fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                table_class=tables.PowerFeedUtilizationTable,
+                table_filter="rack",
+                add_button_route=None,
+            ),
+            ImageAttachmentObjectsTablePanel(
+                table_title="Images",
+                section=SectionChoices.LEFT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="rack",
+                weight=400,
+                include_columns=["actions"],
+                add_permissions=[
+                    "extras.add_imageattachment",
+                ],
+                enable_related_link=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=500,
+                table_class=tables.RackReservationTable,
+                table_filter="rack",
+                exclude_columns=["pk", "reservation", "location", "rack"],
+                include_columns=[
+                    "created",
+                    "actions",
+                ],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=600,
+                template_path="dcim/rack_layout.html",
+            ),
+            NonRackedDevicesObjectsTablePanel(
+                weight=700,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="nonracked_devices_table",
+                related_field_name="rack",
+                table_title="Non-Racked Devices",
+                exclude_columns=[
+                    "status",
+                    "tenant",
+                    "location",
+                    "rack",
+                    "manufacturer",
+                    "primary_ip",
+                    "actions",
+                ],
+                include_columns=["parent_device"],
+                list_url_extra_params={"position__isnull": True},
+            ),
+        ),
+        extra_buttons=(
+            RackNavigationButton(direction="prev", weight=20),
+            RackNavigationButton(direction="next", weight=30),
+            RackToggleButton(
+                label="Show Device Full Name",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-fullname",
+                weight=40,
+            ),
+            RackToggleButton(
+                label="Show Images",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-images",
+                weight=50,
+            ),
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
             # Get 0U and child devices located within the rack
-            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
                 "device_type__manufacturer"
             )
-
+            nonracked_devices_table = tables.NonRackedDevicesTable(nonracked_devices)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(nonracked_devices_table)
+            context["nonracked_devices_table"] = nonracked_devices_table
             peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
             if instance.rack_group:
@@ -768,13 +989,6 @@ class RackUIViewSet(NautobotUIViewSet):
 
             context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
             context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-            context["power_feeds"] = (
-                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-            )
-            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
         return context
 
 
