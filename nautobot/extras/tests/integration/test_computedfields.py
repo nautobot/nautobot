@@ -65,12 +65,13 @@ class ComputedFieldsTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsListMi
         nb_drawer_open_xpath = "//section[contains(@class, 'nb-drawer') and contains(@class, 'nb-drawer-open')]"
         self.assertTrue(self.browser.is_element_present_by_xpath(nb_drawer_open_xpath, wait_time=5))
         self.assertTrue(self.browser.find_by_xpath(nb_drawer_open_xpath).is_visible(wait_time=5))
-        select_option = self.browser.find_by_xpath(
-            ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
+        checkbox = self.browser.find_by_xpath(
+            "//ol[@id='id_columns']/li/label[normalize-space()='Device Computed Field']/preceding-sibling::input[@type='checkbox']"
         )
-        self.assertEqual(len(select_option), 1)
-        select_option.click()
-        self.browser.find_by_xpath(".//input[@value='Save']").click()
-        self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
-        self.browser.find_by_xpath(".//input[@value='Reset']").click()
-        self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))
+        self.assertEqual(len(checkbox), 1)
+        self.scroll_element_into_view(element=checkbox)
+        checkbox.click()
+        self.browser.find_by_xpath("//form[contains(@class, 'userconfigform')]//button[@type='submit']").click()
+        self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!", wait_time=5))
+        self.browser.find_by_xpath("//form[contains(@class, 'userconfigform')]//button[@type='reset']").click()
+        self.assertTrue(self.browser.is_text_not_present(f"{self.device.name} is awesome!", wait_time=5))
