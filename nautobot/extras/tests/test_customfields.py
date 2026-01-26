@@ -2367,6 +2367,22 @@ class CustomFieldTableTest(TestCase):
         cf_multi_select.default = ["Foo", "Bar"]
         cf_multi_select.validated_save()
 
+        # JSON custom field
+        cf_json = CustomField(
+            type=CustomFieldTypeChoices.TYPE_JSON,
+            label="JSON Field",
+        )
+        cf_json.validated_save()
+        cf_json.content_types.set([content_type])
+
+        # Markdown custom field
+        cf_markdown = CustomField(
+            type=CustomFieldTypeChoices.TYPE_MARKDOWN,
+            label="Markdown Field",
+        )
+        cf_markdown.validated_save()
+        cf_markdown.content_types.set([content_type])
+
         statuses = Status.objects.get_for_model(Location)
 
         # Create a location
@@ -2375,7 +2391,7 @@ class CustomFieldTableTest(TestCase):
             name="Location Custom", status=statuses.first(), location_type=location_type
         )
 
-        # Assign custom field values for location 2
+        # Assign custom field values for location
         self.location._custom_field_data = {
             cf_text.key: "bar",
             cf_integer.key: 456,
@@ -2384,16 +2400,39 @@ class CustomFieldTableTest(TestCase):
             cf_url.key: "http://example.com/2",
             cf_select.key: "Bar",
             cf_multi_select.key: ["Bar", "Baz"],
+            cf_json.key: {"hello": "world"},
+            cf_markdown.key: "## Heading",
         }
         self.location.validated_save()
 
+        # Create a second location
+        self.location_2 = Location.objects.create(
+            name="Location Custom 2", status=statuses.first(), location_type=location_type
+        )
+
+        # Assign custom field values for location 2
+        self.location_2._custom_field_data = {
+            cf_text.key: "<script></script>",
+            cf_integer.key: 0,
+            cf_boolean.key: False,
+            cf_date.key: None,
+            cf_url.key: "",
+            cf_select.key: None,
+            cf_multi_select.key: [],
+            cf_json.key: {},
+            cf_markdown.key: "",
+        }
+        self.location_2.validated_save()
+
+        self.maxDiff = None
+
     def test_custom_field_table_render(self):
-        queryset = Location.objects.filter(name=self.location.name)
+        queryset = Location.objects.filter(name__in=[self.location.name, self.location_2.name])
         location_table = LocationTable(queryset)
 
         custom_column_expected = {
             "text_field": "bar",
-            "number_field": "456",
+            "number_field": 456,
             "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
@@ -2401,18 +2440,45 @@ class CustomFieldTableTest(TestCase):
             "multi_choice_field": (
                 '<span class="badge bg-secondary">Bar</span> <span class="badge bg-secondary">Baz</span>'
             ),
+            "json_field": '<pre><code class="language-json">{\n&quot;hello&quot;: &quot;world&quot;\n}</code></pre>',
+            "markdown_field": "<h2>Heading</h2>",
         }
 
         bound_row = location_table.rows[0]
 
         for col_name, col_expected_value in custom_column_expected.items():
-            internal_col_name = "cf_" + col_name
-            custom_column = location_table.base_columns.get(internal_col_name)
-            self.assertIsNotNone(custom_column, internal_col_name)
-            self.assertIsInstance(custom_column, CustomFieldColumn)
+            with self.subTest(col_name=col_name, col_expected_value=col_expected_value):
+                internal_col_name = "cf_" + col_name
+                custom_column = location_table.base_columns.get(internal_col_name)
+                self.assertIsNotNone(custom_column, internal_col_name)
+                self.assertIsInstance(custom_column, CustomFieldColumn)
 
-            rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
-            self.assertEqual(rendered_value, col_expected_value)
+                rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
+                self.assertHTMLEqual(str(rendered_value), str(col_expected_value))
+
+        custom_column_expected_2 = {
+            "text_field": "<script></script>",
+            "number_field": 0,
+            "boolean_field": '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>',
+            "date_field": '<span class="text-secondary">&mdash;</span>',
+            "url_field": '<span class="text-secondary">&mdash;</span>',
+            "choice_field": '<span class="text-secondary">&mdash;</span>',
+            "multi_choice_field": '<span class="text-secondary">&mdash;</span>',
+            "json_field": '<pre><code class="language-json">{}</code></pre>',
+            "markdown_field": '<span class="text-secondary">&mdash;</span>',
+        }
+
+        bound_row = location_table.rows[1]
+
+        for col_name, col_expected_value in custom_column_expected_2.items():
+            with self.subTest(col_name=col_name, col_expected_value=col_expected_value):
+                internal_col_name = "cf_" + col_name
+                custom_column = location_table.base_columns.get(internal_col_name)
+                self.assertIsNotNone(custom_column, internal_col_name)
+                self.assertIsInstance(custom_column, CustomFieldColumn)
+
+                rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
+                self.assertHTMLEqual(str(rendered_value), str(col_expected_value))
 
 
 class CustomFieldFilterFormTest(TestCase):

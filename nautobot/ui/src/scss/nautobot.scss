@@ -402,6 +402,10 @@ $modal-title-line-height: $line-height-base;
 $list-group-item-padding-y: $table-cell-padding-y;
 $list-group-item-padding-x: $table-cell-padding-x;
 
+$list-group-hover-bg:     var(--#{$prefix}primary-bg-subtle);
+$list-group-active-color: var(--#{$prefix}primary-text-emphasis);
+$list-group-active-bg:    var(--#{$prefix}primary-bg-subtle);
+
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
 $breadcrumb-margin-bottom:  0;
@@ -1436,6 +1440,11 @@ textarea {
   }
 }
 
+/* List groups */
+.list-group-item-action {
+  @include transition($btn-transition);
+}
+
 /* Breadcrumbs */
 .breadcrumb-item {
   align-items: center;
@@ -1526,12 +1535,13 @@ body {
   @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
+    "sidenav banner-global-area drawer"
     "sidenav header             drawer"
     "sidenav main-content       drawer"
     "sidenav banner-bottom-area drawer"
     "sidenav footer             drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
-  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
+  grid-template-rows: fit-content(0) fit-content(0) 1fr fit-content(0) fit-content(0);
   overflow-y: scroll;
 
   #sidenav {

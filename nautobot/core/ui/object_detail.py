@@ -1917,6 +1917,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
 
     def render_value(self, key, value, context: Context):
         """Render a given custom field value appropriately depending on what type of custom field it is."""
+        # TODO: this logic could be unified with CustomFieldColumn.render()?
         cf = key
         if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             return render_boolean(value)

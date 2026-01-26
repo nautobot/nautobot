@@ -1,0 +1,21 @@
+{% with id=widget.attrs.id %}
+    <ol{% if id %} id="{{ id }}"{% endif %}{% if widget.attrs.class %} class="{{ widget.attrs.class }}"{% endif %}>
+        {% for group, options, index in widget.optgroups %}
+            {% for option in options %}
+                <li class="form-check list-group-item-action nb-draggable my-0 ps-20">
+                    <input
+                        class="form-check-input my-6"
+                        id="{{ id }}_option_{{ option.value }}"
+                        name="{{ widget.name }}"
+                        type="checkbox"
+                        value="{{ option.value }}"
+                        {% if option.attrs.selected %} checked{% endif %}
+                    >
+                    <label class="form-check-label py-6 pe-20 w-100" for="{{ id }}_option_{{ option.value }}">
+                        {{ option.label }}
+                    </label>
+                </li>
+            {% endfor %}
+        {% endfor %}
+    </ol>
+{% endwith %}
