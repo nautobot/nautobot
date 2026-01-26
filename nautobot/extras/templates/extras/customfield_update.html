@@ -1,5 +1,6 @@
 {% extends 'generic/object_create.html' %}
 {% load static %}
+{% load helpers %}
 {% load form_helpers %}
 
 {% block form %}
@@ -23,6 +24,58 @@
         <div class="card-body">
             {% render_field form.content_types %}
         </div>
+    </div>
+    <div class="card" id="nb-scope-filter-form-container" hx-swap-oob="true" hx-on::after-settle="initializeScopeFilter(event)">
+        <div class="card-header"><strong>Scope filter</strong></div>
+        {% if content_type_selected %}
+            <div class="card-body">
+                <ul id="filter-tabs" class="nav nav-tabs">
+                    {% if filter_form %}
+                        <li role="presentation" class="nav-item">
+                            <a class="nav-link{% if filter_form %} active{% endif %}"  href="#default-filter" role="tab" data-bs-toggle="tab">
+                                Basic
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if dynamic_filter_form %}
+                        <li role="presentation" class="nav-item">
+                            <a class="nav-link position-relative{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                                Advanced
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                <div class="tab-content h-100">
+                    {% if filter_form %}
+                        <div id="default-filter" role="tabpanel" class="tab-pane fade{% if filter_form %} show active{% endif %} h-100 p-20">
+                            <div class="h-100 vstack">
+                                <div class="align-content-start flex-fill pb-20">
+                                    {% for field in filter_form.hidden_fields %}
+                                        {{ field }}
+                                    {% endfor %}
+                                    {% for field in filter_form.visible_fields %}
+                                        {% if field.name == "q" %}
+                                        <!--  Skip q field -->
+                                        {% else %}
+                                            <div class="nb-form-group">
+                                                {% if field|widget_type == 'checkboxinput' %}
+                                                    <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
+                                                {% else %}
+                                                    {{ field.label_tag }}
+                                                    {{ field }}
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            Please select content types first.
+        {% endif %}
     </div>
     <div class="card">
         <div class="card-header"><strong>Validation Rules</strong></div>
@@ -86,7 +139,8 @@
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
-
+    {# Field for HTMX request to properly re-render scope filter form. It's need some adjustments if it's edit form. #}
+    <input type="hidden" name="x-pk" value="{{ object.pk|default:'' }}"/>
 {% endblock form %}
 
 {% block javascript %}
@@ -104,5 +158,23 @@
             keepFieldValues: 'input[type="number"]',
             added: jsify_form
         });
+
+        {# Re-map select2 events to plain `change` event to make HTMX requests working. #}
+        document.addEventListener("DOMContentLoaded", function() {
+            $('#id_content_types').on('select2:select', function (e) {
+                htmx.trigger('#id_content_types', 'change')
+            });
+            $('#id_content_types').on('select2:unselect', function (e) {
+                htmx.trigger('#id_content_types', 'change')
+            });
+            $('#id_content_types').on('select2:clear', function (e) {
+                htmx.trigger('#id_content_types', 'change')
+            });
+        });
+
+        {# Function to re-initialize select2 selects after htmx re-renders part of template. #}
+        const initializeScopeFilter = event => {
+            window.nb.select2.initializeSelect2Fields(event.target)
+        }
     </script>
 {% endblock javascript %}

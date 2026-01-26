@@ -39,7 +39,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -980,6 +980,19 @@ class CustomField(
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
 
+    @property
+    def filter_field(self):
+        return self.add_prefix_to_cf_key()
+
+    @property
+    def scope_filter_model_class(self):
+        return self.content_types.all()[0].model_class()
+
+    @property
+    def scope_filter_prefixed(self):
+        if self.scope_filter:
+            return {f"scope-{name}": value for name, value in self.scope_filter.items()}
+
     def should_render(self, instance: Model) -> bool:
         """
         This method is responsible for checking if custom field should be visible on instance DetailView,
@@ -995,7 +1008,7 @@ class CustomField(
         if not self.scope_filter:
             return True
 
-        model_class = self.content_types.all()[0].model_class()
+        model_class = self.scope_filter_model_class
         filterset_class = get_filterset_for_model(model_class)
         filterset = filterset_class(
             data=self.scope_filter,
@@ -1007,6 +1020,55 @@ class CustomField(
             return False
 
         return True
+
+    def set_scope_filter(self, form_data):
+        """
+        Set all desired fields from `form_data` into `scope_filter` dict.
+
+        Args:
+            form_data (dict): Dictionary of filter parameters, generally from a filter form's cleaned data.
+        """
+        model_class = self.scope_filter_model_class
+        filterset_class = get_filterset_for_model(model_class)
+        filterset = filterset_class(form_data)
+        filterset_form = filterset.form
+        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
+
+        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
+        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
+        # filterset form, but will also catch errors in case a user-created dict is provided instead.
+        if not filterset_form.is_valid():
+            raise ValidationError(filterset_form.errors)
+
+        new_filter: dict = {}
+
+        for field_name in filterset_form.fields.keys():
+            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
+            field_value = filterset_form.cleaned_data[field_name]
+
+            # ---- type coercions (URL-friendly + reversible) ----
+            if isinstance(field, forms.ModelMultipleChoiceField):
+                if not field_value:
+                    continue
+                field_to_query = getattr(field, "to_field_name", None) or "pk"
+                new_value = [getattr(item, field_to_query) for item in field_value]
+
+            elif isinstance(field, forms.ModelChoiceField):
+                if not field_value:
+                    continue
+                field_to_query = getattr(field, "to_field_name", None) or "pk"
+                new_value = getattr(field_value, field_to_query, None)
+
+            else:
+                new_value = field_value
+
+            # Drop empty values
+            if new_value in (None, "", [], {}, ()):
+                logger.debug("Not storing empty value (%s) for %s", field_value, field_name)
+                continue
+
+            new_filter[field_name] = new_value
+        self.scope_filter = new_filter
 
 
 @extras_features(

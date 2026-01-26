@@ -13,7 +13,7 @@ from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
-from django.template.loader import get_template, TemplateDoesNotExist
+from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
@@ -50,6 +50,7 @@ from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_form_for_model,
     get_model_for_view_name,
     get_route_for_model,
     get_table_class_string_from_view_name,
@@ -71,7 +72,11 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
+from nautobot.core.views.utils import (
+    common_detail_view_context,
+    get_obj_from_context,
+    prepare_cloned_fields,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -97,6 +102,7 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
 from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
 
+from ..core.forms.forms import DynamicFilterFormSet
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
@@ -111,6 +117,7 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
+
 from .jobs import get_job
 from .models import (
     ApprovalWorkflow,
@@ -1305,8 +1312,18 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         if self.action in ("create", "update"):
             if request.POST:
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
+
+                model_class = self.get_content_type_model_class(request.POST)
+                scope_filter_context = self.get_scope_filter_context(model_class, request.POST)
+                context.update(**scope_filter_context)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
+
+                if content_type := instance.content_types.first():
+                    scope_filter_context = self.get_scope_filter_context(
+                        content_type.model_class(), instance.scope_filter_prefixed, instance=instance
+                    )
+                    context.update(**scope_filter_context)
 
         if self.action == "retrieve":
             choices_data = []
@@ -1320,6 +1337,52 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         return context
 
+    @staticmethod
+    def get_content_type_model_class(post_data):
+        """
+        This function will validate ContentType from POST and then return proper model class
+        """
+        content_type_form = forms.CustomFieldContentTypesForm(data=post_data)
+        if content_type_form.is_valid():
+            if content_type_form.cleaned_data["content_types"].exists():
+                content_type = content_type_form.cleaned_data["content_types"][0]
+                return content_type.model_class()
+            return None
+
+        raise ValidationError(content_type_form.errors)
+
+    def get_scope_filter_context(self, model_class, scope_filter_data, instance=None):
+        """
+        Function responsible for generating context for scope filter form.
+        """
+        filterset_class = get_filterset_for_model(model_class)
+        filterset = filterset_class(
+            data=scope_filter_data,
+            queryset=model_class.objects.all(),
+            prefix="scope",
+        )
+
+        filterset_form = get_form_for_model(model_class, form_prefix="Filter")
+        filterset_form_instance = filterset_form(scope_filter_data, prefix="scope")
+
+        # if instance is passed, check & delete "self custom field" from fields list
+        if instance and instance.filter_field in filterset_form_instance.fields.keys():
+            filterset_form_instance.fields.pop(instance.filter_field)
+
+        # display_filter_params = [
+        #     check_filter_for_display(filterset.filters, field_name, values)
+        #     for field_name, values in scope_filter.items()
+        # ]
+
+        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
+
+        return {
+            # "filter_params": display_filter_params,
+            "dynamic_filter_form": dynamic_filter_form,
+            "filter_form": filterset_form_instance,
+            "content_type_selected": True,
+        }
+
     def form_save(self, form, **kwargs):
         obj = super().form_save(form, **kwargs)
 
@@ -1331,7 +1394,45 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         else:
             raise ValidationError(choices.errors)
 
+        # Process the data for scope filter
+        filter_form = ctx["filter_form"]
+        if filter_form.is_valid():
+            obj.set_scope_filter(filter_form.cleaned_data)
+            obj.save()
+        else:
+            raise ValidationError(filter_form.errors)
+
         return obj
+
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="scope_filter_fields",
+        url_name="scope_filter_fields",
+        custom_view_base_action="change",
+    )
+    def scope_filter_fields_for_content_types(self, request, *args, **kwargs):
+        """
+        HTMX endpoint to re-render scope filter part of form on content type update.
+        """
+        context = {}
+
+        model_class = self.get_content_type_model_class(request.POST)
+        if model_class:
+            instance = None
+            if pk := request.POST.get("x-pk"):
+                instance = get_object_or_404(self.queryset, pk=pk)
+
+            context = self.get_scope_filter_context(model_class, request.POST, instance=instance)
+
+        # It's rendering the whole template, but due to `hx-swap-oob` in template
+        # HTMX will swap only part of the page
+        html = render_to_string(
+            template_name=self.template_name,
+            context=context,
+            request=request,
+        )
+        return HttpResponse(html)
 
 
 #

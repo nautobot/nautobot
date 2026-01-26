@@ -313,5 +313,8 @@ $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
+
+    window.nb.jsify_form = jsify_form
+    // document.addEventListener('htmx:afterSettle', (d) => console.log(d, 'sddsad'));
 })
 
