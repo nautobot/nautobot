@@ -1508,6 +1508,11 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         )
 
     def test_custom_field_is_always_visible(self):
+        """
+        By design custom field scope filter should be applied only on UI.
+        This test is checking this behavior: if custom field will be still visible on API response,
+        even if not match the custom field scope filter.
+        """
         self.add_permissions("dcim.view_location")
         # scope filter is set to some number so it shouldn't match any of test Location
         # but just in case, we're excluding anything that contains that number
@@ -1518,7 +1523,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data, dict)
-        # cf1 should be always visible in response
+        # cf1 should be always visible in API response
         self.assertIn("cf1", response.data["custom_fields"])
 
 

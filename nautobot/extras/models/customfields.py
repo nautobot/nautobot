@@ -308,7 +308,7 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
-            if not field.show_custom_field(instance=self):
+            if not field.should_render(instance=self):
                 continue
             data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
@@ -980,7 +980,7 @@ class CustomField(
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
 
-    def show_custom_field(self, instance: Model) -> bool:
+    def should_render(self, instance: Model) -> bool:
         """
         This method is responsible for checking if custom field should be visible on instance DetailView,
         according to the filters set in `self.scope_filter`.
@@ -1002,7 +1002,7 @@ class CustomField(
             queryset=model_class.objects.filter(pk=instance.pk),
         )
 
-        if not filterset.qs:
+        if not filterset.qs.exists():
             # Queryset with applied scope_filter is empty, so hide this field
             return False
 
