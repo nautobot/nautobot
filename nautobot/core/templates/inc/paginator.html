@@ -30,8 +30,10 @@
         <nav
             {% if htmx_enabled|default:False %}
                 hx-push-url="true"
-                hx-target="#{{ table_id }}"
+                hx-select="#{{ table_id }}"
                 hx-select-oob="#{{ paginator_id|default:'paginator' }},#select_all_box"
+                hx-swap="outerHTML show:#{{ paginator_id|default:'paginator' }}:bottom "
+                hx-target="#{{ table_id }}"
             {% endif %}
         >
             <ul class="pagination mb-0">
