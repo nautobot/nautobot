@@ -281,7 +281,7 @@ class DynamicGroup(PrimaryModel):
                 continue
 
             return_fields[field_name] = filter_field
-
+        print(return_fields)
         return return_fields
 
     def get_filter_fields(self):
