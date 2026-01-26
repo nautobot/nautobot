@@ -316,6 +316,5 @@ $(document).ready((e) => {
 });
 
 htmx.onLoad((content) => {
-    initializeResultPerPageSelection(content);
     window.nb.checkbox.initializeCheckboxes();
 });

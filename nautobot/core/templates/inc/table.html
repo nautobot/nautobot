@@ -65,11 +65,7 @@
                             colspan="{% if last_column_name == 'actions' %}{{ table.columns|length }}{% else %}{{ table.columns|length|add:1 }}{% endif %}"
                             class="text-center text-secondary"
                         >
-                            {% if table.deferred_rendering|default:False %}
-                                <img class="htmx-indicator" src="{% static 'img/ajax-loader.gif' %}" alt="Loading...">
-                            {% else %}
-                                &mdash; {{ table.empty_text }} &mdash;
-                            {% endif %}
+                            &mdash; {{ table.empty_text }} &mdash;
                         </td>
                     </tr>
                 {% endif %}

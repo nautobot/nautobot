@@ -1,6 +1,17 @@
 {% load helpers %}
 
-<div id="{{ paginator_id|default:'paginator' }}" class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
+<div id="{{ paginator_id|default:'paginator' }}"
+    class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary"
+    {% if htmx_enabled|default:False %}
+        hx-history="false"
+        hx-indicator="#{{ table_id }}-htmx-indicator"
+        hx-push-url="true"
+        hx-select="#{{ table_id }}"
+        hx-select-oob="#{{ paginator_id|default:'paginator' }},#select_all_box"
+        hx-swap="outerHTML show:#{{ paginator_id|default:'paginator' }}:bottom "
+        hx-target="#{{ table_id }}"
+    {% endif %}
+>
     {% if page %}
         <div>
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
@@ -20,22 +31,21 @@
                 <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
             {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
+                <option value="{{ n }}"
+                    {% if page.paginator.per_page == n %} selected="selected"{% endif %}
+                    {% if htmx_enabled|default:False %}
+                        hx-get="{% legacy_querystring request per_page=n %}"
+                    {% endif %}
+                >
+                    {{ n }}
+                </option>
             {% endfor %}
         </select>
         per page
     </form>
     {% if paginator.num_pages > 1 %}
         <div class="vr border-start my-8"></div>
-        <nav
-            {% if htmx_enabled|default:False %}
-                hx-push-url="true"
-                hx-select="#{{ table_id }}"
-                hx-select-oob="#{{ paginator_id|default:'paginator' }},#select_all_box"
-                hx-swap="outerHTML show:#{{ paginator_id|default:'paginator' }}:bottom "
-                hx-target="#{{ table_id }}"
-            {% endif %}
-        >
+        <nav>
             <ul class="pagination mb-0">
                 {% if page.has_previous %}
                     <li class="page-item">

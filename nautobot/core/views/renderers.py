@@ -104,7 +104,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
                 )
-                table.deferred_rendering = not htmx_request  # flag for use in template rendering
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":

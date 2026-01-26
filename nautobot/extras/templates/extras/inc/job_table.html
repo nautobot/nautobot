@@ -1,8 +1,7 @@
 {% load querystring from django_tables2 %}
 {% load table_config_button from helpers %}
-{% load static %}
 
-<table id="job_accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+<table id="job_accordion" hx-history="false" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}
         <thead>
             <tr>
@@ -51,11 +50,7 @@
             {% if table.empty_text %}
                 <tr>
                     <td colspan="{{ table.columns|length }}" class="text-center text-secondary">
-                        {% if table.deferred_rendering|default:False %}
-                            <img class="htmx-indicator" src="{% static 'img/ajax-loader.gif' %}" alt="Loading...">
-                        {% else %}
-                            &mdash; {{ table.empty_text }} &mdash;
-                        {% endif %}
+                        &mdash; {{ table.empty_text }} &mdash;
                     </td>
                 </tr>
             {% endif %}
