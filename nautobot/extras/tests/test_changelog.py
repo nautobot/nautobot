@@ -252,7 +252,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         )
         url = reverse("extras:objectchange_list")
         with self.assertLogs(level="WARNING") as cm:
-            response = self.client.get(url)
+            response = self.client.get(url, headers={"HX-Request": "true"})
             self.assertHttpStatus(response, 200)
             self.assertContains(response, oc.object_repr)
             self.assertIn(

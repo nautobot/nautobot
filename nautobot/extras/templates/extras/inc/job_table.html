@@ -1,7 +1,7 @@
 {% load querystring from django_tables2 %}
 {% load table_config_button from helpers %}
 
-<table id="job_accordion" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+<table id="job_accordion" hx-history="false" hx-swap-oob="true" {% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
     {% if table.show_header %}
         <thead>
             <tr>
@@ -49,7 +49,9 @@
         {% empty %}
             {% if table.empty_text %}
                 <tr>
-                    <td colspan="{{ table.columns|length }}" class="text-center text-secondary">&mdash; {{ table.empty_text }} &mdash;</td>
+                    <td colspan="{{ table.columns|length }}" class="text-center text-secondary">
+                        &mdash; {{ table.empty_text }} &mdash;
+                    </td>
                 </tr>
             {% endif %}
         {% endfor %}

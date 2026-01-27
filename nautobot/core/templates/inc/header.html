@@ -14,23 +14,25 @@
                 />
                 <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
                     <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
-                    {% if content_type %}
-                        {% for tab_name, tab_details in nav_menu.tabs.items %}
-                            {% for group_name, group_details in tab_details.groups.items %}
-                                {% for item_link, item_details in group_details.items.items %}
-                                    {% if item_details.is_active %}
-                                        <span class="badge border" data-nb-link="{{ item_link }}"><!--
-                                            -->in: {{ item_details.name }}<!--
-                                            --><button tabindex="-1" type="button">
-                                            <span aria-hidden="true" class="mdi mdi-close"></span>
-                                            <span class="visually-hidden">Remove</span>
-                                        </button>
-                                        </span>
-                                    {% endif %}
+                    {% spaceless %}
+                        {% if content_type %}
+                            {% for tab_name, tab_details in nav_menu.tabs.items %}
+                                {% for group_name, group_details in tab_details.groups.items %}
+                                    {% for item_link, item_details in group_details.items.items %}
+                                        {% if item_details.is_active %}
+                                            <span class="badge border" data-nb-link="{{ item_link }}"><!--
+                                                -->in: {{ item_details.name }}<!--
+                                                --><button tabindex="-1" type="button">
+                                                <span aria-hidden="true" class="mdi mdi-close"></span>
+                                                <span class="visually-hidden">Remove</span>
+                                            </button>
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             {% endfor %}
-                        {% endfor %}
-                    {% endif %}
+                        {% endif %}
+                    {% endspaceless %}
                     <span
                         aria-hidden="true"
                         class="align-items-center d-inline-flex gap-4 text-nowrap{% if not request.GET.q %} text-secondary{% endif %}"

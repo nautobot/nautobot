@@ -1,13 +1,26 @@
 {% load render_table from django_tables2 %}
 {% load helpers %}
+{% load static %}
 
-<div class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3">
+<div hx-history="false" hx-swap-oob="true"
+     {% if table_id %}id="{{ table_id }}"{% endif %}
+     class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3"
+>
     {% if heading %}
         <div class="card-header{% if card_class %} bg-{{ card_class }}{% endif %}">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
     <div class="table-responsive">
+        <div id="{{ table_id|default:"table" }}-htmx-indicator" class="htmx-indicator">
+            <div class="position-absolute w-100 h-100 bg-body opacity-50 nb-z-dropdown">
+                <div class="position-absolute top-50 start-50 translate-middle">
+                    <div class="spinner-border">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% render_table table table_inc_template|default:'inc/table.html' %}
     </div>
     {% if add_obj_url %}

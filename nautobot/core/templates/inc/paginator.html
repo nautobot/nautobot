@@ -1,6 +1,15 @@
 {% load helpers %}
 
-<div class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
+<div id="{{ paginator_id|default:'paginator' }}"
+     class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary"
+     {% if htmx_enabled|default:False %}
+         hx-history="false"
+         hx-indicator="#{{ table_id }}-htmx-indicator"
+         hx-push-url="true"
+         hx-swap="none show:#{{ paginator_id|default:'paginator' }}:bottom"
+         hx-swap-oob="true"
+     {% endif %}
+>
     {% if page %}
         <div>
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
@@ -20,7 +29,14 @@
                 <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
             {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
+                <option value="{{ n }}"
+                        {% if page.paginator.per_page == n %} selected="selected"{% endif %}
+                        {% if htmx_enabled|default:False %}
+                            hx-get="{% legacy_querystring request per_page=n %}"
+                        {% endif %}
+                >
+                    {{ n }}
+                </option>
             {% endfor %}
         </select>
         per page
@@ -31,21 +47,37 @@
             <ul class="pagination mb-0">
                 {% if page.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="{% legacy_querystring request page=page.previous_page_number %}" aria-label="Previous">
+                        <a aria-label="Previous" class="page-link" href="{% legacy_querystring request page=page.previous_page_number %}"
+                           {% if htmx_enabled|default:False %}
+                               hx-get="{% legacy_querystring request page=page.previous_page_number %}"
+                           {% endif %}
+                        >
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
                 {% endif %}
                 {% for p in page.smart_pages %}
                     {% if p %}
-                        <li class="page-item {% if page.number == p %} active{% endif %}"><a class="page-link" href="{% legacy_querystring request page=p %}">{{ p }}</a></li>
+                        <li class="page-item {% if page.number == p %} active{% endif %}">
+                            <a class="page-link" href="{% legacy_querystring request page=p %}"
+                               {% if htmx_enabled|default:False %}
+                                   hx-get="{% legacy_querystring request page=p %}"
+                               {% endif %}
+                            >
+                                {{ p }}
+                            </a>
+                        </li>
                     {% else %}
                         <li class="page-item disabled"><a class="page-link" tabindex="-1">&hellip;</a></li>
                     {% endif %}
                 {% endfor %}
                 {% if page.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{% legacy_querystring request page=page.next_page_number %}" aria-label="Next">
+                        <a aria-label="Next" class="page-link" href="{% legacy_querystring request page=page.next_page_number %}"
+                           {% if htmx_enabled|default:False %}
+                               hx-get="{% legacy_querystring request page=page.next_page_number %}"
+                           {% endif %}
+                        >
                             <span aria-hidden="true">&raquo;</span>
                         </a>
                     </li>

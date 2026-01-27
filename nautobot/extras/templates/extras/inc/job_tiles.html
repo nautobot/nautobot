@@ -13,7 +13,7 @@
     </style>
 {% endblock %}
 
-<div class="nb-tiles">
+<div class="nb-tiles" hx-history="false" hx-swap-oob="true">
     {% for row in table.page.object_list|default:table.rows %}
         <article class="nb-tile{% if not perms.extras.run_job or not row.record.runnable %} nb-disabled{% endif %}">
             <header class="nb-tile-header">
@@ -84,7 +84,9 @@
         </article>
     {% empty %}
         {% if table.empty_text %}
-            <div class="text-center text-secondary">&mdash; {{ table.empty_text }} &mdash;</div>
+            <div class="text-center text-secondary">
+                &mdash; {{ table.empty_text }} &mdash;
+            </div>
         {% endif %}
     {% endfor %}
 </div>
