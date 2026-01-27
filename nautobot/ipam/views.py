@@ -42,6 +42,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
+from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.load_balancers.tables import LoadBalancerPoolMemberTable, VirtualServerTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -517,6 +518,40 @@ class PrefixUIViewSet(NautobotUIViewSet):
             ),
         ],
     )
+
+    def get_filter_params(self, request):
+        filter_params = super().get_filter_params(request).copy()
+        if "max_depth" not in filter_params:
+            max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
+            if max_depth >= 0:
+                filter_params["max_depth"] = max_depth
+                messages.info(
+                    request,
+                    format_html(
+                        "This table has been automatically filtered by the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> value of {max_depth}.",
+                        max_depth=max_depth,
+                    ),
+                )
+        if "type" not in filter_params:
+            if get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False):
+                filter_params["type"] = [PrefixTypeChoices.TYPE_CONTAINER]
+                messages.info(
+                    request,
+                    format_html(
+                        "This table has been automatically filtered by the configured "
+                        "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
+                    ),
+                )
+        return filter_params
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if no others
+        if all(key in ["max_depth", "type"] for key in self.filter_params):
+            if "type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]:
+                self.hide_hierarchy_ui = False
+        return queryset
 
     def get_extra_context(self, request, instance):
         if self.action == "retrieve" and instance is not None:

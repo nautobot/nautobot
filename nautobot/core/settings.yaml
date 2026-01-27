@@ -1533,6 +1533,22 @@ properties:
     environment_variable: "NAUTOBOT_PREFER_IPV4"
     is_constance_config: true
     type: "boolean"
+  PREFIX_LIST_DEFAULT_CONTAINER_ONLY:
+    default: false
+    description: >-
+      If set to True, the Prefix list view will default to a filter of `type=container`.
+      Enabling this may improve performacne when the number of records is large.
+    environment_variable: "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"
+    is_constance_config: true
+    type: "boolean"
+  PREFIX_LIST_DEFAULT_MAX_DEPTH:
+    default: -1
+    description: >-
+      Default `max_depth` filter to apply to Prefix list view (-1 for no filter).
+      Setting this to a small non-negative value may improve performance when the number of records is large.
+    environment_variable: "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"
+    is_constance_config: true
+    type: "integer"
   PUBLISH_ROBOTS_TXT:
     default: true
     description: >-

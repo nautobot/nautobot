@@ -191,6 +191,18 @@ PLUGINS_CONFIG = {}
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Default filters for Prefix list view
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+):
+    PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
+
 # Publish a simple "no-index" robots.txt for Nautobot?
 PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
 
@@ -820,6 +832,22 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="per_page_defaults_field",
     ),
+    "PREFIX_LIST_DEFAULT_CONTAINER_ONLY": ConstanceConfigItem(
+        default=False,
+        help_text=mark_safe(
+            "Enable a default <code>type=container</code> filter on Prefix list views.\n"
+            "Enabling this may improve performance when the number of records is large."
+        ),
+        field_type=bool,
+    ),
+    "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=-1,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Prefix list views (-1 for no filter).\n"
+            "Setting this to a small non-negative value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
         help_text=mark_safe(
@@ -891,7 +919,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": [
+        "JOB_CREATE_FILE_MAX_SIZE",
+        "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
+        "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+    ],
     "Rack Elevation Rendering": [
         "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",

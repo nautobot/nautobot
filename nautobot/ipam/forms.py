@@ -437,6 +437,7 @@ class PrefixFilterForm(
         "type",
         "ip_version",
         "prefix_length",
+        "max_depth",
         "vrfs",
         "present_in_vrf_id",
         "status",
@@ -468,6 +469,10 @@ class PrefixFilterForm(
         choices=PREFIX_MASK_LENGTH_CHOICES,
         label="Prefix length",
         widget=StaticSelect2(),
+    )
+    max_depth = forms.IntegerField(
+        required=False,
+        help_text="Maximum nesting depth within parent prefixes",
     )
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),

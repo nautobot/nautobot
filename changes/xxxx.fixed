@@ -1,0 +1,1 @@
+Fixed dynamic-group filter calculation for cases where the filter is using `exclude=True`.

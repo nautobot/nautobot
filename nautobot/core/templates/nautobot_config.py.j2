@@ -496,6 +496,19 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
 #     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Default filters for Prefix list view
+#
+# if (
+#     "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+#     and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+# ):
+#     PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+# if (
+#     "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+#     and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+# ):
+#     PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
+
 # Publish a simple "no-index" robots.txt for Nautobot?
 # PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
 
