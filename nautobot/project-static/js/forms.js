@@ -162,37 +162,64 @@ function initializeDateTimePicker(context){
     });
 }
 
-function initializeVLANModeSelection(context){
-    this_context = $(context);
-    if( this_context.find('select#id_mode').length > 0 ) { // Not certain for the length check here as if none is find it should not apply the onChange
-        this_context.find('select#id_mode').on('change', function () {
-            if ($(this).val() == '') {
-                $('select#id_untagged_vlan').val('');
-                $('select#id_untagged_vlan').trigger('change');
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().hide();
-                $('select#id_tagged_vlans').parent().parent().hide();
+function initializeVLANModeSelection(context) {
+    const $ctx = $(context || document);
+
+    $ctx.find("select#id_mode").each(function () {
+        const $mode = $(this);
+
+        // Anchor to the nearest form (preferred) or a local container as fallback
+        const $root = $mode.closest("form").length ? $mode.closest("form") : $mode.closest(".card, .card-body");
+
+        const $untagged = $root.find("#id_untagged_vlan");
+        const $tagged = $root.find("#id_tagged_vlans");
+
+        if (!$untagged.length || !$tagged.length) return;
+
+        const $rowUntagged = $untagged.parent().parent();
+        const $rowTagged = $tagged.parent().parent();
+
+        function setRowVisible($row, visible) {
+            const el = $row && $row.length ? $row[0] : null;
+            if (!el) return;
+            el.classList.toggle("d-none", !visible);
+        }
+
+        function apply(mode) {
+            // Normalize mode (Select2 can return null)
+            mode = mode || "";
+
+            if (mode === "") {
+                // Clear values
+                $untagged.val("").trigger("change");
+                $tagged.val(null).trigger("change"); // better than [] for select2, works for multi
+                setRowVisible($rowUntagged, false);
+                setRowVisible($rowTagged, false);
+            } else if (mode === "access") {
+                $tagged.val(null).trigger("change");
+                setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, false);
+            } else if (mode === "tagged") {
+                setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, true);
+            } else if (mode === "tagged-all") {
+                $tagged.val(null).trigger("change");
+                setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, false);
             }
-            else if ($(this).val() == 'access') {
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().hide();
-            }
-            else if ($(this).val() == 'tagged') {
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().show();
-            }
-            else if ($(this).val() == 'tagged-all') {
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().hide();
-            }
+        }
+
+        // Prevent double-binding
+        if ($mode.data("vlanModeBound")) return;
+        $mode.data("vlanModeBound", true);
+
+        $mode.on("change", function () {
+            apply($mode.val());
         });
-        this_context.find('select#id_mode').trigger('change');
-    }
+
+        // Initial state
+        apply($mode.val());
+    });
 }
 
 function initializeSortableList(context){
