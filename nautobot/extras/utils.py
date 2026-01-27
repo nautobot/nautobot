@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import logging
 import re
+import subprocess
 import sys
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -16,6 +17,7 @@ from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
 from django.template.loader import get_template, TemplateDoesNotExist
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
@@ -27,12 +29,14 @@ from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
 from nautobot.extras.constants import (
@@ -703,6 +707,62 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
 
     transaction.on_commit(create_kubernetes_job)
+    return job_result
+
+
+def run_console_log_job_and_return_job_result(job_result, job_kwargs):
+    """Pass the job to Subprocess."""
+
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
+    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result.pk}"]
+
+    def execute_subprocess_job():
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
+        )
+        stdout_lines = []
+        stderr_lines = []
+
+        # Read stdout in real-time
+        for line in iter(process.stdout.readline, ""):
+            if line:
+                line = line.rstrip()
+                stdout_lines.append(line)
+
+        process.stdout.close()
+
+        # Read stderr
+        stderr = process.stderr.read()
+        if stderr:
+            for line in stderr.splitlines():
+                stderr_lines.append(line)
+
+        process.stderr.close()
+        print(" === STDOUT ===")
+        print("\n".join(stdout_lines))
+        print(" === END STDOUT ===")
+
+        print("=== STDERR ===")
+        print("\n".join(stderr_lines))
+        print(" === END STDERR ===")
+        return_code = process.wait()
+
+        if return_code != 0:
+            exc_type = "SubprocessError"
+            exc_message = f"Subprocess exited with return code {return_code}"
+            job_result.result = {
+                "exc_type": exc_type,
+                "exc_message": exc_message,
+            }
+            job_result.status = JobResultStatusChoices.STATUS_FAILURE
+            if stderr_lines:
+                job_result.traceback = sanitize("\n".join(stderr_lines))
+            job_result.date_done = timezone.now()
+            job_result.save()
+            return job_result
+
+    transaction.on_commit(execute_subprocess_job)
     return job_result
 
 

@@ -172,7 +172,7 @@ class UtilsTestCase(TestCase):
         )
         # Mock the log method to avoid database writes during test
         job_result.log = mock.Mock()
-        job_kwargs = '{"key": "value"}'
+        job_kwargs = {"key": "value"}
 
         # Setup kubernetes client mocks
         mock_config_instance = mock.MagicMock()
