@@ -113,7 +113,7 @@ export const initializeDraggable = () => {
         draggableContainer.style.setProperty(
           '--drop-indicator-inset',
           (() => {
-            const HEIGHT = '0.125rem'; // Constant drop indicator height = `0.25rem` (`4px`).
+            const HEIGHT = '0.125rem'; // Constant drop indicator height = `0.125rem` (`2px`).
             const heightHalf = `${parseFloat(HEIGHT) / 2}rem`;
 
             if (insertBefore) {
