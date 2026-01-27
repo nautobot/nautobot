@@ -408,7 +408,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
                 type=data["field_type"],
                 label=f"Location-Custom-Field-{data['field_type']!s}",
                 required=False,
-                scope_filter={"name": "Location A"},
+                scope_filter={"name": ["Location A"]},
             )
             cf.validated_save()
             cf.content_types.set([obj_type])
