@@ -117,7 +117,6 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-
 from .jobs import get_job
 from .models import (
     ApprovalWorkflow,
@@ -1351,7 +1350,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         raise ValidationError(content_type_form.errors)
 
-    def get_scope_filter_context(self, model_class, scope_filter_data, instance=None):
+    def get_scope_filter_context(self, model_class, scope_filter_data):
         """
         Function responsible for generating context for scope filter form.
         """
@@ -1364,10 +1363,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         filterset_form = get_form_for_model(model_class, form_prefix="Filter")
         filterset_form_instance = filterset_form(scope_filter_data, prefix="scope")
-
-        # if instance is passed, check & delete "self custom field" from fields list
-        if instance and instance.filter_field in filterset_form_instance.fields.keys():
-            filterset_form_instance.fields.pop(instance.filter_field)
 
         # display_filter_params = [
         #     check_filter_for_display(filterset.filters, field_name, values)
@@ -1419,11 +1414,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         model_class = self.get_content_type_model_class(request.POST)
         if model_class:
-            instance = None
-            if pk := request.POST.get("x-pk"):
-                instance = get_object_or_404(self.queryset, pk=pk)
-
-            context = self.get_scope_filter_context(model_class, request.POST, instance=instance)
+            context = self.get_scope_filter_context(model_class, request.POST)
 
         # It's rendering the whole template, but due to `hx-swap-oob` in template
         # HTMX will swap only part of the page
