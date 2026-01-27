@@ -2083,6 +2083,24 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
 /* Draggable */
 .nb-draggable-container {
+  /*
+   * This is just initial `0` size of the drop indicator pseudo-element, otherwise this custom property is managed
+   * exclusively by `draggable.js` script. Inset shorthand corresponds to `${top} ${right} ${bottom} ${left}`.
+   */
+  --drop-indicator-inset: 0 0 100% 100%;
+
+  /* Drop indicator */
+  &::before {
+    background-color:  var(--#{$prefix}primary-text-emphasis);
+    border-radius: $border-radius;
+    content: "";
+    display: inline-block;
+    inset: var(--drop-indicator-inset, 0);
+    pointer-events: none;
+    position: absolute;
+    z-index: $zindex-fixed;
+  }
+
   .nb-draggable {
     &.nb-dragging {
       opacity: 0.5;
@@ -2090,6 +2108,25 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
     .nb-draggable-handle {
       cursor: move;
+    }
+  }
+}
+
+/* Select multiple orderable */
+.nb-select-multiple-orderable-list {
+  .list-group-item-action {
+    outline: none;
+
+    .nb-draggable-handle {
+      @include transition($transition-fade);
+      opacity: 0;
+    }
+
+    &:focus-visible,
+    &:hover {
+      .nb-draggable-handle {
+        opacity: 1;
+      }
     }
   }
 }
