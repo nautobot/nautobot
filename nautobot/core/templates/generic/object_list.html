@@ -141,7 +141,7 @@
                         <span id="select_all_box" class="visually-hidden card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div hx-get="" hx-params="*" hx-trigger="load" hx-select="#object_table" hx-select-oob="#paginator,#select_all_box">
+                        <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -151,7 +151,7 @@
                         </div>
                     </form>
                 {% else %}
-                    <div hx-get="" hx-params="*" hx-trigger="load" hx-select="#object_table", hx-select-oob="#paginator">
+                    <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}

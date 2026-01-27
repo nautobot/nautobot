@@ -2,13 +2,16 @@
 {% load helpers %}
 {% load static %}
 
-<div {% if table_id %}id="{{ table_id }}" {% endif %}class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3">
+<div hx-history="false" hx-swap-oob="true"
+     {% if table_id %}id="{{ table_id }}"{% endif %}
+     class="card{% if card_class %} border-{{ card_class }} {% endif %} mb-3"
+>
     {% if heading %}
         <div class="card-header{% if card_class %} bg-{{ card_class }}{% endif %}">
             <strong>{{ heading }}</strong>
         </div>
     {% endif %}
-    <div class="table-responsive" hx-history="false">
+    <div class="table-responsive">
         <div id="{{ table_id|default:"table" }}-htmx-indicator" class="htmx-indicator">
             <div style="background-color: #ffffff80; position: absolute; height: 100%; width: 100%; z-index: 1000">
                 <img style="position: absolute; top: 50%; left: 50%" src="{% static 'img/ajax-loader.gif' %}" alt="Loading...">
