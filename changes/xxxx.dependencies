@@ -1,1 +1,2 @@
+Updated dependency `django` to `>=5.2.10,<5.3`.
 Updated dependency `django-celery-beat` to `>=2.8.1,<2.9`.
