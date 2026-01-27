@@ -160,7 +160,12 @@ export const initializeDraggable = () => {
   const onDrop = (event) => {
     const { draggable } = dragDataRef.current;
     if (draggable) {
-      // Disable drop default actions. Instead, handle drop in `onDragEnd` due to inconsistent `onDrop` behavior.
+      /*
+       * Disable drop default actions. Instead, handle drop in `onDragEnd` due to inconsistent `onDrop` behavior.
+       * "Inconsistent" means that in theory `onDrop` should always fire when draggable element is dropped inside a
+       * valid container, but apparently in practice it is not always the case, and sometimes for some reason drops are
+       * "lost". `onDragEnd` on the other hand fires always when drag action ends and can be used deterministically.
+       */
       event.preventDefault();
     }
   };
