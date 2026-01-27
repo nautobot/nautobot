@@ -13,10 +13,12 @@
     {% endif %}
     <div class="table-responsive">
         <div id="{{ table_id|default:"table" }}-htmx-indicator" class="htmx-indicator">
-            <div class="position-absolute w-100 h-100 bg-body opacity-50" style="z-index: 1000">
-                <img class="position-absolute top-50 start-50 translate-middle"
-                     src="{% static 'img/ajax-loader.gif' %}" alt="Loading..."
-                >
+            <div class="position-absolute w-100 h-100 bg-body opacity-50 nb-z-dropdown">
+                <div class="position-absolute top-50 start-50 translate-middle">
+                    <div class="spinner-border">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
             </div>
         </div>
         {% render_table table table_inc_template|default:'inc/table.html' %}
