@@ -1002,11 +1002,7 @@ class CustomField(
             queryset=model_class.objects.filter(pk=instance.pk),
         )
 
-        if not filterset.qs.exists():
-            # Queryset with applied scope_filter is empty, so hide this field
-            return False
-
-        return True
+        return filterset.qs.exists()
 
 
 @extras_features(
