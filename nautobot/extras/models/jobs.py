@@ -2,7 +2,6 @@
 
 import contextlib
 from datetime import datetime, timedelta
-import json
 import logging
 import signal
 from typing import Optional, TYPE_CHECKING, Union
@@ -862,7 +861,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # And from the kubernetes pod, we specify "--local"/synchronous=True
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
-            return run_kubernetes_job_and_return_job_result(job_result, json.dumps(job_kwargs))
+            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
