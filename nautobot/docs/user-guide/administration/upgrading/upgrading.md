@@ -51,6 +51,14 @@ Query OK, 1 row affected (0.07 sec)
 
 Please see the [official MySQL documentation on migrating collation encoding settings](https://dev.mysql.com/blog-archive/mysql-8-0-collations-migrating-from-older-collations/) for more information on troubleshooting any issues you may encounter.
 
+### Updating from Nautobot 1.x to 2.x
+
+See [Upgrading from Nautobot v1](from-v1/upgrading-from-nautobot-v1.md). In general we would recommend updating to the latest available 1.x release (v1.6.32 as of this writing) as an intermediate step, then updating directly to the latest patch release of your target 2.x minor version.
+
+### Updating from Nautobot 2.x to 3.x
+
+See [Upgrading from Nautobot v2](from-v2/index.md). In general we would recommend updating to the latest available 2.x release as an intermediate step, then updating directly to the latest patch release of your target 3.x minor version.
+
 ## Update Prerequisites to Required Versions
 
 Nautobot v3.0.0 and later requires the following:
@@ -58,16 +66,23 @@ Nautobot v3.0.0 and later requires the following:
 | Dependency | Minimum Version |
 | ---------- | --------------- |
 | Python     | 3.10            |
-| PostgreSQL | 14.0            |
+| PostgreSQL | 14.0¹           |
 | Redis      | 4.0             |
 
---- 2.1.0
+¹ PostgreSQL versions 12.x and 13.x have reached end-of-life, and support for these versions has been dropped in Nautobot 3.1. As such, it is our recommendation that you upgrade to PostgreSQL 14+ while still on Nautobot 2.4 or Nautobot 3.0 as a separate action / maintenance window to minimize the number of simultaneous changes.
+
+!!! warning
+    PostgreSQL major version upgrades typically require manual steps to update or migrate the database structure. Refer to [Upgrading PostgreSQL](postgresql.md) for more guidance on how migrate to a newer major version of PostgreSQL.
+
+As with all dependencies, we would recommend that you follow usual industry best practices, and periodically update to the latest applicable patch version of each of these dependencies in order to receive applicable security fixes and other bug fixes.
+
+--- 2.1.0 "Dropped support for PostgreSQL 11"
     Support for versions of PostgreSQL older than 12.0 was removed.
 
---- 2.4.0
+--- 2.4.0 "Dropped support for Python 3.8"
     Support for Python 3.8 was removed.
 
---- 2.4.20
+--- 2.4.20 "Dropped support for Python 3.9"
     Support for Python 3.9 was removed.
 
 --- 3.1.0

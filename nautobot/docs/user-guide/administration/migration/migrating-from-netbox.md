@@ -125,7 +125,7 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 ### IPAM Network Field Types
 
 !!! tip
-    Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../../platform-functionality/rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
+    Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../../platform-functionality/rest-api/filtering.md#ipam-custom-filters) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
 
 All IPAM objects with network field types (`ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 

@@ -402,6 +402,10 @@ $modal-title-line-height: $line-height-base;
 $list-group-item-padding-y: $table-cell-padding-y;
 $list-group-item-padding-x: $table-cell-padding-x;
 
+$list-group-hover-bg:     var(--#{$prefix}primary-bg-subtle);
+$list-group-active-color: var(--#{$prefix}primary-text-emphasis);
+$list-group-active-bg:    var(--#{$prefix}primary-bg-subtle);
+
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
 $breadcrumb-margin-bottom:  0;
@@ -1436,6 +1440,11 @@ textarea {
   }
 }
 
+/* List groups */
+.list-group-item-action {
+  @include transition($btn-transition);
+}
+
 /* Breadcrumbs */
 .breadcrumb-item {
   align-items: center;
@@ -1526,12 +1535,13 @@ body {
   @include transition(padding-inline .35s ease);
   display: grid;
   grid-template-areas:
+    "sidenav banner-global-area drawer"
     "sidenav header             drawer"
     "sidenav main-content       drawer"
     "sidenav banner-bottom-area drawer"
     "sidenav footer             drawer";
   grid-template-columns: fit-content(0) minmax(0, 1fr) fit-content(0);
-  grid-template-rows: fit-content(0) 1fr fit-content(0) fit-content(0);
+  grid-template-rows: fit-content(0) fit-content(0) 1fr fit-content(0) fit-content(0);
   overflow-y: scroll;
 
   #sidenav {
@@ -2073,6 +2083,24 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
 /* Draggable */
 .nb-draggable-container {
+  /*
+   * This is just initial `0` size of the drop indicator pseudo-element, otherwise this custom property is managed
+   * exclusively by `draggable.js` script. Inset shorthand corresponds to `${top} ${right} ${bottom} ${left}`.
+   */
+  --drop-indicator-inset: 0 0 100% 100%;
+
+  /* Drop indicator */
+  &::before {
+    background-color:  var(--#{$prefix}primary-text-emphasis);
+    border-radius: $border-radius;
+    content: "";
+    display: inline-block;
+    inset: var(--drop-indicator-inset, 0);
+    pointer-events: none;
+    position: absolute;
+    z-index: $zindex-fixed;
+  }
+
   .nb-draggable {
     &.nb-dragging {
       opacity: 0.5;
@@ -2080,6 +2108,25 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
     .nb-draggable-handle {
       cursor: move;
+    }
+  }
+}
+
+/* Select multiple orderable */
+.nb-select-multiple-orderable-list {
+  .list-group-item-action {
+    outline: none;
+
+    .nb-draggable-handle {
+      @include transition($transition-fade);
+      opacity: 0;
+    }
+
+    &:focus-visible,
+    &:hover {
+      .nb-draggable-handle {
+        opacity: 1;
+      }
     }
   }
 }

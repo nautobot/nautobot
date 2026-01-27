@@ -125,6 +125,5 @@
 {% block javascript %}
     {{ block.super }}
     {% include 'extras/inc/jobresult_js.html' with result=result %}
-    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
     <script src="{% versioned_static 'js/log_level_filtering.js' %}"></script>
 {% endblock %}
