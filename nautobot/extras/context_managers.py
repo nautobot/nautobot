@@ -21,16 +21,18 @@ class ChangeContext:
     one will be generated to relate any changes to this transaction. Convenience
     classes are provided for each context.
 
-    :param user: User object
-    :param request: WSGIRequest object to retrieve user from django rest framework after authentication is performed
-    :param context: Context of the transaction, must match a choice in nautobot.extras.choices.ObjectChangeEventContextChoices
-    :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
+    Args:
+        user (User): User object
+        request (WSGIRequest): object to retrieve user from django rest framework after authentication is performed
+        context (ObjectChangeEventContextChoices): Context of the transaction
+        context_detail (Optional[str]): extra details about the transaction (ex: plugin name that initiated the change)
+        change_id (Optional[UUID]): Object to uniquely identify the transaction. One will be generated if not supplied
 
     The next two parameters are used as caching fields when updating an object with no previous ObjectChange instances.
     They are used to populate the `pre_change` field of an ObjectChange snapshot in get_snapshot().
-    :param pre_object_data: Optional dictionary of serialized object data to be used in the object snapshot
-    :param pre_object_data_v2: Optional dictionary of serialized object data to be used in the object snapshot
+
+        pre_object_data (dict): Optional dictionary of serialized object data to be used in the object snapshot
+        pre_object_data_v2 (dict): Optional dictionary of serialized object data to be used in the object snapshot
     """
 
     defer_object_changes = False  # advanced usage, for creating object changes in bulk
@@ -151,12 +153,10 @@ class WebChangeContext(ChangeContext):
 
 
 @contextmanager
-def change_logging(change_context):
+def change_logging(change_context: ChangeContext):
     """
     Enable change logging by connecting the appropriate signals to their receivers before code is run, and
     disconnecting them afterward.
-
-    :param change_context: ChangeContext instance
     """
 
     # Set change logging state
@@ -182,22 +182,22 @@ def web_request_context(
     By default, when working with the Django ORM, neither change logging nor webhook processing occur
     unless manually invoked and this context manager handles those functions. A valid User object must be provided.
 
-    Example usage:
+    Examples:
+        >>> from nautobot.extras.context_managers import web_request_context
+        >>> user = User.objects.get(username="admin")
+        >>> with web_request_context(user, context_detail="manual-fix"):
+        ...     lt = Location.objects.get(name="Root")
+        ...     lax = Location(name="LAX", location_type=lt)
+        ...     lax.validated_save()
 
-    >>> from nautobot.extras.context_managers import web_request_context
-    >>> user = User.objects.get(username="admin")
-    >>> with web_request_context(user, context_detail="manual-fix"):
-    ...     lt = Location.objects.get(name="Root")
-    ...     lax = Location(name="LAX", location_type=lt)
-    ...     lax.validated_save()
-
-    :param user: User object
-    :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
-    :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
-    :param context: Optional string value of the generated change log entries' "change_context" field.
-        Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
-        Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
-    :param request: Optional web request instance, one will be generated if not supplied
+    Args:
+        user (User): User object
+        context_detail (str): Optional extra details about the transaction (ex: plugin name that initiated the change)
+        change_id (Optional[UUID]): Object to uniquely identify the transaction. One will be generated if not supplied
+        context (str): Optional string value of the generated change log entries' "change_context" field.
+            Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
+            Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
+        request (Request): Optional web request instance, one will be generated if not supplied
     """
     from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
 

@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import tag, TestCase
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
@@ -18,10 +18,21 @@ class TableTestCase(TestCase):
     def _validate_sorted_tree_queryset_same_with_table_queryset(self, queryset, table_class, field_name):
         with self.subTest(f"Assert sorting {table_class.__name__} on '{field_name}'"):
             table = table_class(queryset.with_tree_fields(), order_by=field_name)
-            table_queryset_data = table.data.data.values_list("pk", flat=True)
-            sorted_queryset = queryset.with_tree_fields().extra(order_by=[field_name]).values_list("pk", flat=True)
+            table_queryset_data = table.data.data.values_list(field_name, flat=True)
+            sorted_queryset = (
+                queryset.with_tree_fields().extra(order_by=[field_name]).values_list(field_name, flat=True)
+            )
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
+        with self.subTest(f"Assert sorting {table_class.__name__} on '-{field_name}'"):
+            table = table_class(queryset.with_tree_fields(), order_by=f"-{field_name}")
+            table_queryset_data = table.data.data.values_list(field_name, flat=True)
+            sorted_queryset = (
+                queryset.with_tree_fields().extra(order_by=[f"-{field_name}"]).values_list(field_name, flat=True)
+            )
+            self.assertEqual(list(table_queryset_data), list(sorted_queryset))
+
+    @tag("example_app")
     def test_tree_model_table_orderable(self):
         """Assert TreeNode model table are orderable."""
         location_type = LocationType.objects.get(name="Campus")
@@ -61,15 +72,43 @@ class TableTestCase(TestCase):
             table_avail_fields = set(model_field_names) & set(table_class.Meta.fields)
             for table_field_name in table_avail_fields:
                 self._validate_sorted_tree_queryset_same_with_table_queryset(queryset, table_class, table_field_name)
-                self._validate_sorted_tree_queryset_same_with_table_queryset(
-                    queryset, table_class, f"-{table_field_name}"
-                )
 
         # Test for `rack_count`
         queryset = RackGroupTable.Meta.model.objects.annotate(rack_count=count_related(Rack, "rack_group")).all()
         self._validate_sorted_tree_queryset_same_with_table_queryset(queryset, RackGroupTable, "rack_count")
-        self._validate_sorted_tree_queryset_same_with_table_queryset(queryset, RackGroupTable, "-rack_count")
 
+        # https://github.com/nautobot/nautobot/issues/7330 - sorting by custom field
+        l1 = Location.objects.first()
+        l1._custom_field_data["example_app_auto_custom_field"] = "alpha"
+        l1.validated_save()
+        l2 = Location.objects.last()
+        l2._custom_field_data["example_app_auto_custom_field"] = "omega"
+        l2.validated_save()
+        table = LocationTable(
+            Location.objects.exclude(_custom_field_data__example_app_auto_custom_field="Default value")
+        )
+
+        table.order_by = ["cf_example_app_auto_custom_field"]
+        table_queryset_data = table.data.data.values_list("pk", flat=True)
+        sorted_queryset = (
+            Location.objects.with_tree_fields()
+            .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
+            .extra(order_by=["_custom_field_data__example_app_auto_custom_field"])
+            .values_list("pk", flat=True)
+        )
+        self.assertEqual(list(table_queryset_data), list(sorted_queryset))
+
+        table.order_by = ["-cf_example_app_auto_custom_field"]
+        table_queryset_data = table.data.data.values_list("pk", flat=True)
+        sorted_queryset = (
+            Location.objects.with_tree_fields()
+            .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
+            .extra(order_by=["-_custom_field_data__example_app_auto_custom_field"])
+            .values_list("pk", flat=True)
+        )
+        self.assertEqual(list(table_queryset_data), list(sorted_queryset))
+
+    @tag("example_app")
     def test_base_table_apis(self):
         """
         Test BaseTable APIs, specifically visible_columns and configurable_columns.

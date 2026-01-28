@@ -1,6 +1,6 @@
 # Interfaces
 
-Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](../../platform-functionality/status.md) and may optionally be assigned a MAC address, MTU, IEEE 802.1Q mode (tagged or access) and an operational [`role`](../../platform-functionality/role.md). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
+Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](../../platform-functionality/status.md) and may optionally be assigned a MAC address, MTU, speed, duplex, IEEE 802.1Q mode (tagged or access) and an operational [`role`](../../platform-functionality/role.md). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
 
 The following operational statuses are available by default:
 
@@ -10,7 +10,25 @@ The following operational statuses are available by default:
 * Decommissioning
 * Failed
 
+## Speed and duplex
+
++++ 2.4.22
+
+* `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
+* `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
+
+### Validation rules
+
+* LAG interfaces: do not support `speed` or `duplex`.
+* Virtual and wireless interfaces: do not support `speed` or `duplex`.
+* Optical/backplane and similar non‑copper types: do not support `duplex` (must be blank/null).
+* Copper twisted‑pair types: `duplex` and `speed` may be set.
+
+## Cabling
+
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
+
+## LAGs
 
 Physical interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically. Interfaces can be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
 

@@ -23,7 +23,6 @@ from nautobot.core.api.utils import (
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -31,15 +30,19 @@ from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
     PowerFeedTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
+    PowerPathChoices,
     PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackElevationDetailRenderChoices,
@@ -61,6 +64,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -79,6 +83,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     PathEndpoint,
     Platform,
@@ -132,12 +137,6 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         return None
 
 
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CableTerminationModelSerializerMixin)
-class CableTerminationSerializer(CableTerminationModelSerializerMixin):
-    pass
-
-
 class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
     connected_endpoint_type = serializers.SerializerMethodField(read_only=True)
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
@@ -176,12 +175,6 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
             if obj._path is not None:
                 return obj._path.is_active
         return None
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
-class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
-    pass
 
 
 class ModularDeviceComponentTemplateSerializerMixin:
@@ -533,6 +526,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
             "vc_priority": {"label": "Virtual chassis priority"},
+            "clusters": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):
@@ -700,6 +694,8 @@ class InterfaceSerializer(
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True, source="_ip_address_count")
+    speed = serializers.IntegerField(required=False, allow_null=True)
+    duplex = ChoiceField(choices=InterfaceDuplexChoices, allow_blank=True, required=False)
 
     class Meta:
         model = Interface
@@ -970,6 +966,8 @@ class VirtualChassisSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
 
 
 class PowerPanelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    panel_type = ChoiceField(choices=PowerPanelTypeChoices, allow_blank=True, required=False)
+    power_path = ChoiceField(choices=PowerPathChoices, allow_blank=True, required=False)
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -984,8 +982,12 @@ class PowerFeedSerializer(
     NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
+    power_path = ChoiceField(choices=PowerPathChoices, allow_blank=True, required=False)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
+    breaker_pole_count = ChoiceField(
+        choices=PowerFeedBreakerPoleChoices, allow_blank=True, allow_null=True, required=False
+    )
 
     class Meta:
         model = PowerFeed
@@ -1017,7 +1019,10 @@ class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
 
 class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     capabilities = serializers.ListField(
-        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True, required=False
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False),
+        allow_empty=True,
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -1027,7 +1032,10 @@ class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 class ControllerManagedDeviceGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     capabilities = serializers.ListField(
-        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True, required=False
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False),
+        allow_empty=True,
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -1123,4 +1131,24 @@ class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSe
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = InterfaceVDCAssignment
+        fields = "__all__"
+
+
+class ModuleFamilySerializer(NautobotModelSerializer):
+    """API serializer for ModuleFamily objects."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:modulefamily-detail")
+    module_type_count = serializers.IntegerField(read_only=True)
+    module_bay_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ModuleFamily
+        fields = "__all__"
+
+
+class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
+    """Serializer for DeviceClusterAssignment model."""
+
+    class Meta:
+        model = DeviceClusterAssignment
         fields = "__all__"

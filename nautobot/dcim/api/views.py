@@ -14,15 +14,18 @@ from rest_framework.mixins import ListModelMixin
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.serializers import StatsSerializer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewname, validated_viewname
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
@@ -36,6 +39,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -54,6 +58,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -164,6 +169,45 @@ class LocationViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
+
+    @extend_schema(
+        filters=False,
+        responses={200: StatsSerializer(many=True)},
+    )
+    @action(detail=True, url_path="stats")
+    def stats(self, request, pk):
+        """Retrieve statistics for counts of related models associated to this Location and its descendants."""
+        obj = get_object_or_404(self.queryset, pk=pk)
+        descendants_pks = obj.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
+        distinct = len(descendants_pks) > 1
+
+        result = []
+        for related_model, query in [
+            (Rack, "location__in"),
+            (Device, "location__in"),
+            (Prefix, "location__in"),
+            (VLAN, "location__in"),
+            (Circuit, "circuit_terminations__location__in"),
+            (VirtualMachine, "cluster__location__in"),
+        ]:
+            qs = related_model.objects.restrict(request.user, "view").filter(**{query: descendants_pks})
+            if distinct or related_model == Circuit:
+                qs = qs.distinct()
+            count = qs.count()
+            result.append(
+                {
+                    "title": bettertitle(related_model._meta.verbose_name_plural),
+                    "count": count,
+                    "ui_url": (
+                        reverse(validated_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                    "api_url": (
+                        reverse(validated_api_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                }
+            )
+
+        return Response(result)
 
 
 #
@@ -644,6 +688,14 @@ class CableViewSet(NautobotModelViewSet):
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
+    def get_queryset(self):
+        # 6933 fix: with prefetch related in queryset
+        # DeviceInterface is not properly cleared of _path_id
+        queryset = super().get_queryset()
+        if self.action == "destroy":
+            queryset = queryset.prefetch_related(None)
+        return queryset
+
 
 #
 # Virtual chassis
@@ -836,3 +888,20 @@ class InterfaceVDCAssignmentViewSet(ModelViewSet):
     queryset = InterfaceVDCAssignment.objects.all()
     serializer_class = serializers.InterfaceVDCAssignmentSerializer
     filterset_class = filters.InterfaceVDCAssignmentFilterSet
+
+
+class ModuleFamilyViewSet(NautobotModelViewSet):
+    """API viewset for interacting with ModuleFamily objects."""
+
+    queryset = ModuleFamily.objects.annotate(
+        module_type_count=count_related(ModuleType, "module_family"),
+        module_bay_count=count_related(ModuleBay, "module_family"),
+    )
+    serializer_class = serializers.ModuleFamilySerializer
+    filterset_class = filters.ModuleFamilyFilterSet
+
+
+class DeviceClusterAssignmentViewSet(ModelViewSet):
+    queryset = DeviceClusterAssignment.objects.all()
+    serializer_class = serializers.DeviceClusterAssignmentSerializer
+    filterset_class = filters.DeviceClusterAssignmentFilterSet

@@ -1,16 +1,72 @@
 """Utilities for looking up related classes and information."""
 
 import inspect
+from operator import attrgetter
 import re
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import ForeignKey, Model
 from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
-from django.utils.module_loading import import_string
 from django.views.generic.base import RedirectView
+
+from nautobot.core.utils.module_loading import import_string_optional
+
+
+def resolve_attr(obj, dotted_field):
+    """
+    Resolve nested attributes on a Django model instance using a Django-style
+    double-underscore path (e.g. 'location_type__nestable').
+
+    Args:
+        obj: A Django model instance.
+        dotted_field (str): Dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None:
+            - The string representation of the resolved attribute value.
+            - If the attribute is boolean, returns the field label in title case
+              if True, or 'Not <Field Label>' if False.
+            - Returns None if any attribute in the path does not exist or is None.
+
+    Example:
+        >>> resolve_attr(location, "name")
+        'Aisle'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Nestable'
+
+        >>> resolve_attr(location, "location_type__nestable")
+        'Not Nestable'
+    """
+    try:
+        val = attrgetter(dotted_field.replace("__", "."))(obj)
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+    # to avoid circular import
+    from nautobot.core.templatetags.helpers import bettertitle
+
+    # handle booleans specially
+    if isinstance(val, bool):
+        attrs = dotted_field.split("__")
+        # take last part of dotted_field ("nestable" in "location_type__nestable")
+        field_label = bettertitle(attrs[-1].replace("_", " "))
+        return field_label if val else f"Not {field_label}"
+
+    return str(val) if val else None
+
+
+def get_breadcrumbs_for_model(model, view_type: str = "List"):
+    """Get a UI Component Framework 'Breadcrumbs' instance for the given model's related UIViewSet or generic view."""
+    view = get_view_for_model(model)
+    if hasattr(view, "get_breadcrumbs"):
+        return view.get_breadcrumbs(model, view_type=view_type)
+    return None
 
 
 def get_changes_for_model(model):
@@ -30,15 +86,44 @@ def get_changes_for_model(model):
     raise TypeError(f"{model!r} is not a Django Model class or instance")
 
 
+def get_detail_view_components_context_for_model(model) -> dict:
+    """Helper method for DistinctViewTabs etc. to retrieve the UI Component Framework context for the base detail view.
+
+    Functionally equivalent to calling `get_breadcrumbs_for_model()`, `get_object_detail_content_for_model()`,
+    `get_view_titles_for_model()` and ``get_extra_detail_view_action_buttons_for_model()` but marginally more efficient.
+    """
+    context = {
+        "breadcrumbs": None,
+        "object_detail_content": None,
+        "extra_detail_view_action_buttons": None,
+        "view_titles": None,
+    }
+
+    view = get_view_for_model(model, view_type="")
+    if view is not None:
+        if hasattr(view, "get_breadcrumbs"):
+            context["breadcrumbs"] = view.get_breadcrumbs(model, view_type="")
+        if hasattr(view, "get_view_titles"):
+            context["view_titles"] = view.get_view_titles(model, view_type="")
+        if hasattr(view, "object_detail_content"):
+            context["object_detail_content"] = view.object_detail_content
+        if hasattr(view, "extra_detail_view_action_buttons"):
+            context["extra_detail_view_action_buttons"] = view.extra_detail_view_action_buttons
+
+    return context
+
+
 def get_model_from_name(model_name):
     """Given a full model name in dotted format (example: `dcim.model`), a model class is returned if valid.
 
-    :param model_name: Full dotted name for a model as a string (ex: `dcim.model`)
-    :type model_name: str
+    Args:
+        model_name (str): Full dotted name for a model as a string (ex: `dcim.model`)
 
-    :raises TypeError: If given model name is not found.
+    Raises:
+        TypeError: If given model name is not found.
 
-    :return: Found model.
+    Returns:
+        (Model): Found model.
     """
 
     try:
@@ -132,13 +217,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
-    try:
-        return import_string(object_path)
-    # The name of the module is not correct or unable to find the desired object for this model
-    except (AttributeError, ImportError, ModuleNotFoundError):
-        pass
-
-    return None
+    return import_string_optional(object_path)
 
 
 def get_filterset_for_model(model):
@@ -176,6 +255,18 @@ def get_form_for_model(model, form_prefix=""):
     """
     object_suffix = f"{form_prefix}Form"
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
+
+
+def get_object_detail_content_for_model(model):
+    """Get the UI Component Framework 'object_detail_content' for the given model's related UIViewSet or ObjectView."""
+    view = get_view_for_model(model)
+    return getattr(view, "object_detail_content", None)
+
+
+def get_extra_detail_view_action_buttons_for_model(model):
+    """Get the UI Component Framework 'extra_detail_view_action_buttons' for the given model's related UIViewSet or ObjectView."""
+    view = get_view_for_model(model)
+    return getattr(view, "extra_detail_view_action_buttons", ())
 
 
 def get_related_field_for_models(from_model, to_model):
@@ -245,6 +336,14 @@ def get_view_for_model(model, view_type=""):
     return result
 
 
+def get_view_titles_for_model(model, view_type: str = "List"):
+    """Get a UI Component Framework 'Titles' instance for the given model's related UIViewSet or generic view."""
+    view = get_view_for_model(model)
+    if hasattr(view, "get_view_titles"):
+        return view.get_view_titles(model, view_type=view_type)
+    return None
+
+
 def get_model_for_view_name(view_name):
     """
     Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
@@ -301,11 +400,10 @@ def get_table_class_string_from_view_name(view_name):
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:
-        instance: A model class instance
+        instance (Model): A model class instance
 
     Returns:
-        created_by: Username of the user that created the instance
-        last_updated_by: Username of the user that last modified the instance
+        (str, str): Usernames of the users that created the instance and last modified the instance.
     """
     from nautobot.extras.choices import ObjectChangeActionChoices
     from nautobot.extras.models import ObjectChange
@@ -314,17 +412,47 @@ def get_created_and_last_updated_usernames_for_model(instance):
     created_by = None
     last_updated_by = None
     try:
-        created_by_record = object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).first()
+        created_by_record = (
+            object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).only("user_name").first()
+        )
         if created_by_record is not None:
             created_by = created_by_record.user_name
     except ObjectChange.DoesNotExist:
         pass
 
-    last_updated_by_record = object_change_records.first()
+    last_updated_by_record = object_change_records.only("user_name").first()
     if last_updated_by_record:
         last_updated_by = last_updated_by_record.user_name
 
     return created_by, last_updated_by
+
+
+def get_user_from_instance(instance):
+    """
+    Retrieve the user object from a model instance, regardless of the field name.
+
+    This function inspects the given model instance to find a ForeignKey that points
+    to the current AUTH_USER_MODEL (as defined in Django settings). It does not require
+    the user-related field to have a fixed name (e.g., "user", "creator", "owner").
+
+    Args:
+        instance (models.Model): A Django model instance that may contain a ForeignKey
+            to the configured user model.
+
+    Returns:
+        User instance if a user-related ForeignKey exists and is populated,
+        otherwise None.
+
+    Example:
+        >>> schedule = ScheduledJob.objects.first()
+        >>> user = get_user_from_instance(schedule)
+        >>> print(user.username)
+    """
+    UserModel = settings.AUTH_USER_MODEL
+    for field in instance._meta.get_fields():
+        if isinstance(field, ForeignKey) and field.related_model._meta.label == UserModel:
+            return getattr(instance, field.name, None)
+    return None
 
 
 def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):
@@ -425,6 +553,8 @@ def get_url_for_url_pattern(url_pattern):
     # Fixup tokens in path-style "classic" view URLs:
     # "/admin/users/user/<id>/password/"
     url = re.sub(r"<id>", "00000000-0000-0000-0000-000000000000", url)
+    # "/data-validation-engine/data-compliance/<model>/00000000-0000-0000-0000-000000000000/"
+    url = re.sub(r"<model>", "circuits.circuit", url)
     # "/silk/request/<uuid:request_id>/profile/<int:profile_id>/"
     url = re.sub(r"<int:\w+>", "1", url)
     # "/admin/admin/logentry/<path:object_id>/"

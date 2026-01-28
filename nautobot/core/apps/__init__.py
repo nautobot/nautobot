@@ -9,7 +9,6 @@ from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import urlencode
-from django.utils.module_loading import import_string
 from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
@@ -31,7 +30,8 @@ from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
     NavMenuTab,
     NAV_CONTEXT_NAMES,
 )
-
+from nautobot.core.utils.module_loading import import_string_optional
+from nautobot.core.utils.patch_social_django import patch_django_storage
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -60,17 +60,11 @@ class NautobotConfig(AppConfig):
         """
         Ready function initiates the import application.
         """
-        try:
-            homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
+        if homepage_layout := import_string_optional(f"{self.name}.{self.homepage_layout}"):
             register_homepage_panels(self.path, self.label, homepage_layout)
-        except ImportError:
-            pass
 
-        try:
-            menu_items = import_string(f"{self.name}.{self.menu_tabs}")
+        if menu_items := import_string_optional(f"{self.name}.{self.menu_tabs}"):
             register_menu_items(menu_items)
-        except ImportError:
-            pass
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -334,9 +328,10 @@ class CoreConfig(NautobotConfig):
             # Register in django_jinja
             library.filter(name=name, fn=func)
 
+        from graphene.types.scalars import BigInt
         from graphene_django.converter import convert_django_field
 
-        from nautobot.core.graphql import BigInteger
+        import nautobot.core.jobs  # noqa: F401  # unused-import -- but this import registers the system jobs
 
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
@@ -350,8 +345,8 @@ class CoreConfig(NautobotConfig):
 
         @convert_django_field.register(BigIntegerField)
         def convert_biginteger(field, registry=None):  # pylint: disable=redefined-outer-name
-            """Convert BigIntegerField to BigInteger scalar."""
-            return BigInteger()
+            """Convert BigIntegerField to BigInt scalar."""
+            return BigInt()
 
         from django.conf import settings
         from django.contrib.auth.models import update_last_login
@@ -362,6 +357,13 @@ class CoreConfig(NautobotConfig):
         if settings.MAINTENANCE_MODE:
             logger.warning("Maintenance mode enabled: disabling update of most recent login time")
             user_logged_in.disconnect(update_last_login, dispatch_uid="update_last_login")
+
+        # SECURITY
+        # Patch social_django to prevent account takeover vulnerability
+        from social_django.models import DjangoStorage
+
+        # TODO: When upgrading to 5.6.0 or later, remove the patch
+        patch_django_storage(DjangoStorage)
 
         post_migrate.connect(post_migrate_send_nautobot_database_ready, sender=self)
 

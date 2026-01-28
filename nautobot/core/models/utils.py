@@ -147,7 +147,7 @@ def serialize_object_v2(obj):
     # Try serializing obj(model instance) using its API Serializer
     try:
         serializer_class = get_serializer_for_model(obj.__class__)
-        data = serializer_class(obj, context={"request": None, "depth": 1}).data
+        data = serializer_class(obj, context={"request": None, "depth": 1, "exclude_m2m": False}).data
     except SerializerNotFound:
         # Fall back to generic JSON representation of obj
         data = serialize_object(obj)

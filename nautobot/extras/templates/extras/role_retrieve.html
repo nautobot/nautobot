@@ -2,11 +2,11 @@
 {% load helpers %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Role</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>
@@ -32,7 +32,7 @@
             <tr>
                 <td>Color</td>
                 <td>
-                    <span class="label color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
+                    <span class="label nb-color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
                 </td>
             </tr>
             <tr>
@@ -47,180 +47,244 @@
 
 {% block content_full_width_page %}
     {% if device_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Devices</strong>
             </div>
             {% include 'inc/table.html' with table=device_table %}
             {% if perms.dcim.add_device %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
+        {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
     {% endif %}
     {% if interface_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Interfaces</strong>
             </div>
             {% include 'inc/table.html' with table=interface_table %}
             {% if perms.dcim.add_interface %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:interface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:interface_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Interface
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
+        {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
     {% endif %}
     {% if rack_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Racks</strong>
             </div>
             {% include 'inc/table.html' with table=rack_table %}
             {% if perms.dcim.add_rack %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:rack_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:rack_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Rack
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=rack_table.paginator page=rack_table.page %}
+        {% include 'inc/paginator.html' with paginator=rack_table.paginator page=rack_table.page %}
     {% endif %}
     {% if ipaddress_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>IP Addresses</strong>
             </div>
             {% include 'inc/table.html' with table=ipaddress_table %}
             {% if perms.ipam.add_ipaddress %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'ipam:ipaddress_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'ipam:ipaddress_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add IP Address
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=ipaddress_table.paginator page=ipaddress_table.page %}
+        {% include 'inc/paginator.html' with paginator=ipaddress_table.paginator page=ipaddress_table.page %}
     {% endif %}
     {% if prefix_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Prefixes</strong>
             </div>
             {% include 'inc/table.html' with table=prefix_table %}
             {% if perms.ipam.add_prefix %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Prefix
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=prefix_table.paginator page=prefix_table.page %}
+        {% include 'inc/paginator.html' with paginator=prefix_table.paginator page=prefix_table.page %}
     {% endif %}
     {% if virtual_machine_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Virtual Machines</strong>
             </div>
             {% include 'inc/table.html' with table=virtual_machine_table %}
             {% if perms.virtualization.add_virtualmachine %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'virtualization:virtualmachine_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'virtualization:virtualmachine_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Machine
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
+        {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
     {% endif %}
     {% if vminterface_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VM Interfaces</strong>
             </div>
             {% include 'inc/table.html' with table=vminterface_table %}
             {% if perms.virtualization.add_vminterface %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VM Interface
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
+        {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
     {% endif %}
     {% if vlan_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>VLANs</strong>
             </div>
             {% include 'inc/table.html' with table=vlan_table %}
             {% if perms.ipam.add_vlan %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VLAN
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+        {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
     {% endif %}
-     <div class="row"></div>
+    <div class="row"></div>
     {% if controller_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Controllers</strong>
             </div>
             {% include 'inc/table.html' with table=controller_table %}
             {% if perms.dcim.add_controller %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:controller_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:controller_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Controller
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
+        {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
     {% endif %}
     {% if module_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Modules</strong>
             </div>
             {% include 'inc/table.html' with table=module_table %}
             {% if perms.dcim.add_module %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:module_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:module_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Module
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
+        {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
     {% endif %}
     {% if vdc_table %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Virtual Device Contexts</strong>
             </div>
             {% include 'inc/table.html' with table=vdc_table %}
             {% if perms.dcim.add_virtualdevicecontext %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:virtualdevicecontext_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'dcim:virtualdevicecontext_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Device Context
                     </a>
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
+        {% include 'inc/paginator.html' with paginator=vdc_table.paginator page=vdc_table.page %}
     {% endif %}
- {% endblock content_full_width_page %}
+    {% if vpn_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>VPNs</strong>
+            </div>
+            {% include 'inc/table.html' with table=vpn_table %}
+            {% if perms.vpn.add_vpn %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpn_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=vpn_table.paginator page=vpn_table.page %}
+    {% endif %}
+    {% if vpn_profile_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>VPN Profiles</strong>
+            </div>
+            {% include 'inc/table.html' with table=vpn_profile_table %}
+            {% if perms.vpn.add_vpnprofile %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpnprofile_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Profile
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=vpn_profile_table.paginator page=vpn_profile_table.page %}
+    {% endif %}
+    {% if vpn_tunnel_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>VPN Tunnels</strong>
+            </div>
+            {% include 'inc/table.html' with table=vpn_tunnel_table %}
+            {% if perms.vpn.add_vpntunnel %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpntunnel_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Tunnel
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=vpn_tunnel_table.paginator page=vpn_tunnel_table.page %}
+    {% endif %}
+    {% if vpn_tunnel_endpoint_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>VPN Tunnel Endpoints</strong>
+            </div>
+            {% include 'inc/table.html' with table=vpn_tunnel_endpoint_table %}
+            {% if perms.vpn.add_vpntunnelendpoint %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpntunnelendpoint_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Tunnel Endpoint
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=vpn_tunnel_endpoint_table.paginator page=vpn_tunnel_endpoint_table.page %}
+    {% endif %}
+{% endblock content_full_width_page %}

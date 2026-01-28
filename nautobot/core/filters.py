@@ -5,12 +5,22 @@ import uuid
 from django import forms as django_forms
 from django.conf import settings
 from django.db import models
+from django.db.models.constants import LOOKUP_SEP
+from django.db.models.fields.related import ManyToManyRel, ManyToOneRel, OneToOneRel
 from django.forms.utils import ErrorDict, ErrorList
 from django.utils.encoding import force_str
 from django.utils.text import capfirst
 import django_filters
 from django_filters.constants import EMPTY_VALUES
-from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
+from django_filters.filterset import remote_queryset
+from django_filters.utils import (
+    get_field_parts,
+    get_model_field,
+    label_for_filter,
+    resolve_field,
+    verbose_field_name,
+    verbose_lookup_expr,
+)
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 import timezone_field
@@ -90,6 +100,10 @@ class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.Mul
 
 class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
+
+    def __init__(self, *args, choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.choices = list(choices) if choices is not None else None
 
 
 class MultiValueBigNumberFilter(MultiValueNumberFilter):
@@ -175,7 +189,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
         if self.distinct:
             qs = qs.distinct()
@@ -209,14 +223,12 @@ class ContentTypeFilterMixin:
             return qs
 
         if value.isdigit():
-            return qs.filter(**{f"{self.field_name}__pk": value})
-
+            return self.get_method(qs)(**{f"{self.field_name}__pk": value})
         try:
             app_label, model = value.lower().split(".")
         except ValueError:
             return qs.none()
-
-        return qs.filter(
+        return self.get_method(qs)(
             **{
                 f"{self.field_name}__app_label": app_label,
                 f"{self.field_name}__model": model,
@@ -244,12 +256,17 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
         content_type = ContentTypeChoiceFilter(
             choices=FeatureQuery("dynamic_groups").get_choices,
         )
+
+    In most cases you should use `ContentTypeMultipleChoiceFilter` instead.
     """
 
 
 class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
+
+    Does NOT allow filtering by PK at this time; it would need to be reimplemented similar to
+    NaturalKeyOrPKMultipleChoiceFilter as a breaking change.
 
     Defaults to joining multiple options with "AND". Pass `conjoined=False` to
     override this behavior to join with "OR" instead.
@@ -265,43 +282,14 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         kwargs.setdefault("conjoined", True)
         super().__init__(*args, **kwargs)
 
-    def filter(self, qs, value):
-        """Filter on value, which should be list of content-type names.
-
-        e.g. `['dcim.device', 'dcim.rack']`
-        """
-        if not self.conjoined:
-            q = models.Q()
-
-        for v in value:
-            if self.conjoined:
-                qs = ContentTypeFilter.filter(self, qs, v)
-            else:
-                if v.isdigit():
-                    q |= models.Q(**{f"{self.field_name}__pk": value})
-                    continue
-                # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
-                # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
-                # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
-                # Q((field__app_label="dcim" AND field__model="device") OR (field__app_label="ipam" AND field__model="VLAN"))
-                try:
-                    app_label, model = v.lower().split(".")
-                except ValueError:
-                    continue
-                q |= models.Q(
-                    **{
-                        f"{self.field_name}__app_label": app_label,
-                        f"{self.field_name}__model": model,
-                    }
-                )
-
-        if not self.conjoined:
-            qs = qs.filter(q)
-
-        if self.distinct:
-            qs = qs.distinct()
-
-        return qs
+    def get_filter_predicate(self, v):
+        if v.isdigit():
+            return {f"{self.field_name}__pk": v}
+        try:
+            app_label, model = v.lower().split(".")
+        except ValueError:
+            return {f"{self.field_name}__pk": v}
+        return {f"{self.field_name}__app_label": app_label, f"{self.field_name}__model": model}
 
 
 class MappedPredicatesFilterMixin:
@@ -426,9 +414,75 @@ class MappedPredicatesFilterMixin:
         return qs.distinct()
 
 
+class ModelMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+    """Subclass of the django-filters class by the same name with an improved default `label` formulation."""
+
+    def __init__(self, *args, **kwargs):
+        if "to_field_name" in kwargs:
+            self.to_field_name = kwargs["to_field_name"]
+        super().__init__(*args, **kwargs)
+
+    @property
+    def to_field_name_label(self):
+        if hasattr(self, "to_field_name") and hasattr(self, "model") and self.to_field_name != "id":
+            field_name = self.field_name
+            if field_name.endswith(f"__{self.to_field_name}"):  # e.g. field_name = "device__name", to_field_name="name"
+                field_name = LOOKUP_SEP.join(field_name.split(LOOKUP_SEP)[:-1])
+            to_field_name = LOOKUP_SEP.join([field_name, self.to_field_name])
+            field_parts = get_field_parts(self.model, to_field_name)  # pylint: disable=no-member
+            if field_parts:
+                return field_parts[-1].verbose_name
+            return self.to_field_name
+        return "ID"
+
+    @property
+    def label(self):  # pylint: disable=arguments-differ,invalid-overridden-method
+        """
+        Override django_filters.Filter.label property to generate a more useful default label.
+
+        Examples:
+            >>> import django_filters
+            >>> from nautobot.core.filters import BaseFilterSet, ModelMultipleChoiceFilter
+            >>> class DemoFilterSet(BaseFilterSet):
+            ...      class Meta:
+            ...          model = Interface
+            ...          fields = []
+            ...      old_device = django_filters.ModelMultipleChoiceFilter(queryset=Device.objects.all(), field_name="device")
+            ...      new_device = ModelMultipleChoiceFilter(queryset=Device.objects.all(), field_name="device")
+            ...      device_name = ModelMultipleChoiceFilter(queryset=Device.objects.all(), field_name="device", to_field_name="name")
+            ...
+            >>> DemoFilterSet().filters["old_device"].label
+            'Device'
+            >>> DemoFilterSet().filters["new_device"].label
+            'Device (ID)'
+            >>> DemoFilterSet().filters["device_name"].label
+            'Device (Name)'
+        """
+        if self._label is None and hasattr(self, "model"):
+            name = verbose_field_name(self.model, self.field_name)  # pylint: disable=no-member
+            if name == "[invalid name]":
+                name = self.field_name
+            verbose_expression = ["exclude", name] if self.exclude else [name]
+
+            # Nautobot-specific enhancement
+            verbose_expression.append(f"({self.to_field_name_label})")
+
+            # iterable lookups indicate a LookupTypeField, which should not be verbose
+            if isinstance(self.lookup_expr, str):
+                verbose_expression.append(verbose_lookup_expr(self.lookup_expr))
+
+            verbose_expression = [force_str(part) for part in verbose_expression if part]
+            self._label = capfirst(" ".join(verbose_expression))
+        return self._label
+
+    @label.setter
+    def label(self, value):  # pylint: disable=invalid-overridden-method
+        self._label = value
+
+
 # TODO(timizuo): NaturalKeyOrPKMultipleChoiceFilter is not currently handling pk Integer field properly; resolve this in issue #3336
 @extend_schema_field(OpenApiTypes.STR)
-class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+class NaturalKeyOrPKMultipleChoiceFilter(ModelMultipleChoiceFilter):
     """
     Filter that supports filtering on values matching the `pk` field and another
     field of a foreign-key related object. The desired field is set using the `to_field_name`
@@ -450,6 +504,17 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
         self.natural_key = kwargs.setdefault("to_field_name", "name")
         self.prefers_id = prefers_id
         super().__init__(*args, **kwargs)
+
+    @property
+    def to_field_name_label(self):
+        """
+        Override ModelMultipleChoiceFilter.to_field_name_label to indicate both field_name options.
+
+        Examples:
+            >>> VirtualMachineFilterSet().filters["software_image_files"].label
+            'Software Image Files (Image File Name or ID)'
+        """
+        return f"{super().to_field_name_label} or ID"
 
     def get_filter_predicate(self, v):
         """
@@ -544,9 +609,12 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         """
         if value:
             # django-tree-queries
-            value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            value = [
+                node.cacheable_descendants_pks(include_self=True) if not isinstance(node, str) else node
+                for node in value
+            ]
 
-        # This new_value is going to be a list of querysets that needs to be flattened.
+        # This new_value is going to be a list of lists that needs to be flattened.
         value = list(data_utils.flatten_iterable(value))
 
         # Construct a list of filter predicates that will be used to generate the Q object.
@@ -568,7 +636,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         return query
 
     def filter(self, qs, value):
-        if value in EMPTY_VALUES:
+        if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
@@ -600,9 +668,32 @@ class BaseFilterSet(django_filters.FilterSet):
             models.DecimalField: {"filter_class": MultiValueDecimalFilter},
             models.EmailField: {"filter_class": MultiValueCharFilter},
             models.FloatField: {"filter_class": MultiValueFloatFilter},
+            # TODO: should be NaturalKeyOrPKMultipleChoiceFilter but not all models have a "name" or other natural key
+            models.ForeignKey: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda field: {
+                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if field.null else None,
+                    "queryset": remote_queryset(field),
+                    "to_field_name": field.remote_field.field_name,
+                },
+            },
             models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
             models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
+            models.ManyToManyField: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                },
+            },
+            models.OneToOneField: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                    "to_field_name": f.remote_field.field_name,
+                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
+                },
+            },
             models.PositiveIntegerField: {"filter_class": MultiValueNumberFilter},
             models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
             models.SlugField: {"filter_class": MultiValueCharFilter},
@@ -611,6 +702,25 @@ class BaseFilterSet(django_filters.FilterSet):
             models.TimeField: {"filter_class": MultiValueTimeFilter},
             models.URLField: {"filter_class": MultiValueCharFilter},
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
+            ManyToManyRel: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                },
+            },
+            ManyToOneRel: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                },
+            },
+            OneToOneRel: {
+                "filter_class": ModelMultipleChoiceFilter,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
+                },
+            },
             core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             core_fields.TagsField: {"filter_class": TagFilter},
             timezone_field.TimeZoneField: {"filter_class": MultiValueCharFilter},
@@ -642,6 +752,9 @@ class BaseFilterSet(django_filters.FilterSet):
             (
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
+                ContentTypeFilter,
+                ContentTypeChoiceFilter,
+                ContentTypeMultipleChoiceFilter,
                 MultiValueUUIDFilter,
                 TagFilter,
                 TreeNodeMultipleChoiceFilter,
@@ -820,6 +933,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Contacts (name or ID)",
                 )
+                cls.declared_filters["contacts"] = filters["contacts"]  # pylint: disable=no-member
 
             if "teams" not in filters:
                 filters["teams"] = NaturalKeyOrPKMultipleChoiceFilter(
@@ -828,6 +942,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     to_field_name="name",
                     label="Teams (name or ID)",
                 )
+                cls.declared_filters["teams"] = filters["teams"]  # pylint: disable=no-member
 
         if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):  # pylint: disable=no-member
             if not hasattr(cls._meta.model, "static_group_association_set"):  # pylint: disable=no-member
@@ -848,6 +963,7 @@ class BaseFilterSet(django_filters.FilterSet):
                     query_params={"content_type": cls._meta.model._meta.label_lower},  # pylint: disable=no-member
                     label="Dynamic groups (name or ID)",
                 )
+                cls.declared_filters["dynamic_groups"] = filters["dynamic_groups"]  # pylint: disable=no-member
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:  # pylint: disable=no-member

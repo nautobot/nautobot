@@ -162,22 +162,17 @@ properties:
     type: "string"
   BRANDING_FILEPATHS:
     default:
-      css: null
       favicon: null
-      header_bullet: null
       icon_16: null
       icon_32: null
       icon_180: null
       icon_192: null
       icon_mask: null
-      javascript: null
       logo: null
-      nav_bullet: null
     description: >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
       custom branding of your Nautobot instance.
-      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
-      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
+      Each of the assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
       If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
     details: |-
@@ -186,22 +181,15 @@ properties:
 
       +++ 2.2.4
           The `css` and `javascript` assets were added as options.
+
+      --- 3.0.0
+          The `header_bullet`, `nav_bullet`, `javascript`, and `css` assets were removed.
     properties:
-      css:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global CSS file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
-      header_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for various view headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
         default: null
@@ -227,21 +215,11 @@ properties:
         default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
-      javascript:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Custom global JavaScript file"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
         default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
-      nav_bullet:
-        "$ref": "#/definitions/relative_path"
-        default: null
-        description: "Bullet image used for nav menu headers"
-        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
     version_added: "1.2.0"
   BRANDING_PREPENDED_FILENAME:
@@ -405,6 +383,14 @@ properties:
     see_also:
       "Celery documentation": "https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-broker_use_ssl"
     type: "object"
+  CELERY_HEALTH_PROBES_AS_FILES:
+    default: false
+    description: "Optional configuration for Celery workers to use file-based health probes."
+    environment_variable: "NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES"
+    see_also:
+      "`CELERY_WORKER_HEARTBEAT_FILE`": "#celery_worker_heartbeat_file"
+      "`CELERY_WORKER_READINESS_FILE`": "#celery_worker_readiness_file"
+    type: "boolean"
   CELERY_REDIS_BACKEND_USE_SSL:
     default: false
     description: "Optional configuration for Celery to use custom SSL certificates to connect to Redis."
@@ -447,6 +433,13 @@ properties:
     see_also:
       "`CELERY_TASK_SOFT_TIME_LIMIT`": "#celery_task_soft_time_limit"
     type: "integer"
+  CELERY_WORKER_HEARTBEAT_FILE:
+    default: "/tmp/nautobot_celery_worker_heartbeat"
+    description: "A file touched by the Celery worker every second while it is alive, suitable for health checks."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE"
+    see_also:
+      "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
+    type: "string"
   CELERY_WORKER_PREFETCH_MULTIPLIER:
     default: 4
     description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
@@ -475,6 +468,13 @@ properties:
       type: "integer"
     type: "array"
     version_added: "1.5.10"
+  CELERY_WORKER_READINESS_FILE:
+    default: "/tmp/nautobot_celery_worker_ready"
+    description: "A file touched by the Celery worker when it starts and is ready to accept tasks."
+    environment_variable: "NAUTOBOT_CELERY_WORKER_READINESS_FILE"
+    see_also:
+      "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
+    type: "string"
   CELERY_WORKER_REDIRECT_STDOUTS:
     default: true
     description: "If enabled stdout and stderr of running jobs will be redirected to the task logger."
@@ -758,16 +758,22 @@ properties:
       "`nautobot-server send_installation_metrics`": "../tools/nautobot-server.md#send_installation_metrics"
     type: "string"
     version_added: "1.6.0"
-  DEVICE_NAME_AS_NATURAL_KEY:
-    default: false
+  DEVICE_UNIQUENESS:
+    default: "location_tenant_name"
     description: >-
       `Device` names are not guaranteed globally-unique by Nautobot but in practice they often are.
-      Set this to `True` to use the device `name` alone as the natural key for `Device` objects.
-      Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
-    environment_variable: "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"
+      Select how Devices are uniquely identified:
+        - 'location_tenant_name': combination of Location + Tenant + Name
+        - 'name': Device name must be globally unique
+        - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+      The `DEVICE_UNIQUENESS` setting also determines which fields Nautobot treats as the natural key for a Device.
+        - If set to "location_tenant_name", the natural key is the combination of Name, Tenant, and Location.
+        - If set to "name", the natural key is the device name alone.
+        - If set to "none", Nautobot falls back to using the primary key for uniqueness.
+    environment_variable: "NAUTOBOT_DEVICE_UNIQUENESS"
     is_constance_config: true
-    type: "boolean"
-    version_added: "2.0.0"
+    type: "string"
+    version_added: "3.0.0"
   EVENT_BROKERS:
     default: {}
     description: >-
@@ -1008,14 +1014,18 @@ properties:
     environment_variable: "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"
     is_constance_config: true
     see_also:
-      "`JOB_FILE_IO_STORAGE`": "#job_file_io_storage"
+      "`STORAGES`": "#storages"
     type: "integer"
     version_added: "2.1.0"
   JOB_FILE_IO_STORAGE:
-    default: "db_file_storage.storage.DatabaseFileStorage"
     description: >-
-      The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
+      (Deprecated) Backend storage engine for handling files provided as input to Jobs and files generated as output
+      by Jobs.
     details: |-
+      !!! warning
+          This setting is deprecated and will be removed in Nautobot v3.1.
+          In its place, you should set [`STORAGES["nautobotjobfiles"]["BACKEND"]`](#storages).
+
       !!! warning
           For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this
           currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database;
@@ -1039,7 +1049,7 @@ properties:
       it's permissible to leave this at its default, but know that storing files in the database is provided here
       as a "least-worst" option only.
 
-      !!! caution
+      !!! warning
           It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as
           there should be no pre-existing Job output files, although any existing scheduled Jobs that have
           file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs
@@ -1048,7 +1058,7 @@ properties:
           Migrating Job stored files from one backend to another is out of scope for this document.
     environment_variable: "NAUTOBOT_JOB_FILE_IO_STORAGE"
     see_also:
-      "`STORAGE_BACKEND`": "#storage_backend"
+      "`STORAGES`": "#storages"
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
     type: "string"
     version_added: "2.1.0"
@@ -1061,7 +1071,7 @@ properties:
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
   KUBERNETES_DEFAULT_SERVICE_ADDRESS:
-    default: ""
+    default: "https://kubernetes.default.svc"
     description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
     environment_variable: "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS"
     type: "string"
@@ -1069,16 +1079,17 @@ properties:
   KUBERNETES_JOB_MANIFEST:
     default: {}
     description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_MANIFEST"
     type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
-    default: ""
+    default: "nautobot-job"
     description: "Name of the Kubernetes pod."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAME"
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAMESPACE:
-    default: ""
+    default: "default"
     description: "Name of the namespace that the Kubernetes pod is created in."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
     type: "string"
@@ -1377,6 +1388,15 @@ properties:
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     type: "boolean"
+  METRICS_EXPERIMENTAL_CACHING_DURATION:
+    default: 0
+    description: >-
+      The number of seconds to cache Nautobot App metrics before refreshing them.
+      A value of `0` means no caching (i.e. always recompute metrics on each request). This feature is experimental
+      and may change or be removed in a future release, including patch releases.
+    environment_variable: "NAUTOBOT_METRICS_EXPERIMENTAL_CACHING_DURATION"
+    type: "integer"
+    version_added: "2.4.18"
   NAPALM_ARGS:
     additionalProperties: true
     default: {}
@@ -1487,9 +1507,9 @@ properties:
       }
       ```
 
-      The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `netutils_parser`,
-      `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have
-      an alternative network driver that you want your Nautobot instance to include.
+      The default top-level keys consists of `ansible`, `hier_config`, `napalm`, etc, and comes from netutils, but
+      you can also add additional keys if you have an alternative network driver that you want your Nautobot instance
+      to include.
     is_constance_config: true
     type: "object"
     version_added: "1.6.0"
@@ -1852,9 +1872,12 @@ properties:
     see_also:
       "Django documentation for `STATIC_ROOT`": "https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT"
   STORAGE_BACKEND:
-    default: null
-    description: "The backend storage engine for handling uploaded files (e.g. image attachments)."
+    description: "(Deprecated) Backend storage engine for handling uploaded files (e.g. image attachments)."
     details: |-
+      !!! warning
+          This setting is deprecated and will be removed in Nautobot v3.1.
+          In its place, you should set [`STORAGES["default"]["BACKEND"]`](#storages).
+
       Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/)
       package, which provides backends for several popular file storage services.
       If not configured, local filesystem storage will be used.
@@ -1863,21 +1886,89 @@ properties:
           For an example of using `django-storages` with AWS S3 buckets, visit the
           [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
-      The configuration parameters for the specified storage backend are defined under the
-      [`STORAGE_CONFIG`](#storage_config) setting.
+      The configuration parameters for the specified storage backend are defined under the settings
+      [`STORAGE_CONFIG`](#storage_config) (deprecated) or [`STORAGES`](#storages) (recommended).
     see_also:
-      "`JOB_FILE_IO_STORAGE`": "#job_file_io_storage"
+      "`STORAGES`": "#storages"
     type: "string"
   STORAGE_CONFIG:
-    default: {}
-    description: "A dictionary of configuration parameters for the storage backend configured as STORAGE_BACKEND."
+    description: "(Deprecated) Dictionary of config parameters for the storage backend configured as STORAGE_BACKEND."
     details: |-
+      !!! warning
+          This setting is deprecated and will be removed in Nautobot v3.1. In its place, you should set
+          [`STORAGES["default"]["OPTIONS"]` and/or `STORAGES["staticfiles"]["OPTIONS"]`](#storages).
+
+          Note that `STORAGE_CONFIG` is implemented to provide a bit of configuration "magic" that
+          `STORAGES["..."]["OPTIONS"]` does not; specifically, when `STORAGE_BACKEND` is using any module from
+          `django-storages`, if `STATICFILES_STORAGE` is also using `django-storages`, the `STORAGE_CONFIG` will be
+          automatically applied to both file storage types. When using `STORAGES` instead of `STORAGE_CONFIG`, this is
+          not automatically the case, permitting the two types to be configured independently, but also potentially
+          requiring duplicate configuration under `STORAGES["default"]["OPTIONS"]` and
+          `STORAGES["staticfiles"]["OPTIONS"]` if both types are using the same backend.
+
       The specific parameters to be used here are specific to each backend.
 
       If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ignored.
     see_also:
+      "`STORAGES`": "#storages"
       "`django-storages` documentation": "https://django-storages.readthedocs.io/en/stable/"
     type: "object"
+  STORAGES:
+    default:
+      default:
+        BACKEND: "django.core.files.storage.FileSystemStorage"
+      staticfiles:
+        BACKEND: "django.contrib.staticfiles.storage.StaticFilesStorage"
+      nautobotjobfiles:
+        BACKEND: "db_file_storage.storage.DatabaseFileStorage"
+    details: |-
+      Dictionary defining configuration of storage backends for "default" files (such as user-uploaded image file
+      attachments to Devices and Locations), "static" files such as CSS and Javascript assets, and "nautobotjob" files
+      (file inputs to and outputs from Nautobot Jobs).
+
+      !!! info
+          This setting replaces and unifies the previous settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`,
+          `STATICFILES_STORAGE`, `STORAGE_BACKEND` and `STORAGE_CONFIG`, which are all now deprecated and will be
+          removed in Nautobot v3.1.
+
+      !!! tip
+          Nautobot can integrate with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/)
+          package, which provides backends for several popular file storage services. For an example of using
+          `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md)
+          Nautobot user-guide.
+
+      By default, local filesystem storage will be used for "default" and "static" files, and "nautobotjob"
+      files will be stored in the Nautobot database.
+
+      !!! warning
+          The default storage for "nautobotjob" files is defined to preserve backwards compatibility with older
+          versions of Nautobot, but it is not typically the best or recommended option in many cases (see below)
+          and may change in a future major release of Nautobot.
+
+      If your Nautobot server instance(s) and your Celery worker instance(s) share a common
+      [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of
+      Nautobot) then we recommend changing `STORAGES["nautobotjobfiles"]["BACKEND"]` to
+      `"django.core.files.storage.FileSystemStorage"` to store Job files on the filesystem (which will place them
+      into a `files/` subdirectory under [`MEDIA_ROOT`](#media_root)) instead of in the database.
+
+      If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem,
+      we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options
+      such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
+
+      If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then
+      it's permissible to leave `STORAGES["nautobotjobfiles"]["BACKEND"]` at its default value, but know that storing
+      files in the database is provided here as a "least-worst" option only.
+
+      !!! warning
+          Changing this setting after Nautobot has created any of the above file types will of course require
+          migrating any existing files to the new storage backend or location. Steps for doing so are out of scope
+          for this document.
+    see_also:
+      "Django documentation for `STORAGES`": "https://docs.djangoproject.com/en/4.2/ref/settings/#std-setting-STORAGES"
+      "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
+      "`django-storages` documentation": "https://django-storages.readthedocs.io/en/stable/"
+    type: "object"
+    version_added: "3.0.3"
   STRICT_FILTERING:
     default: true
     description: >-

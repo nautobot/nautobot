@@ -30,7 +30,7 @@ Webhooks can now be triggered when creating/updating/deleting `CustomField` and 
 
 #### Database Ready Signal ([#13](https://github.com/nautobot/nautobot/issues/13))
 
-After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../development/apps/api/platform-features/populating-extensibility-features.md).
+After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../development/apps/api/platform-features/prepopulating-data.md).
 
 #### GraphQL Filters at All Levels ([#248](https://github.com/nautobot/nautobot/issues/248))
 
@@ -70,7 +70,7 @@ Please refer to the [plugin development documentation](../development/apps/index
 
 #### IPAM custom lookups for filtering ([#982](https://github.com/nautobot/nautobot/issues/982))
 
-Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../user-guide/platform-functionality/rest-api//filtering.md#network-and-host-fields) for more specifics and examples.
+Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../user-guide/platform-functionality/rest-api/filtering.md#ipam-custom-filters) for more specifics and examples.
 
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 

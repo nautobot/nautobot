@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
-from nautobot.dcim.models.devices import Controller, Device, DeviceType
+from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
@@ -96,7 +96,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip4__host",
                 "primary_ip6__parent__namespace__name",
                 "primary_ip6__host",
-                "cluster__name",
                 "virtual_chassis__name",
                 "controller_managed_device_group__name",
                 "device_redundancy_group__name",
@@ -123,7 +122,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "rack",
                 "primary_ip4",
                 "primary_ip6",
-                "cluster",
                 "virtual_chassis",
                 "controller_managed_device_group",
                 "device_redundancy_group",
@@ -151,13 +149,13 @@ class CSVParsingRelatedTestCase(TestCase):
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_NO_OBJECT)
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT)
 
+        expected_location_nested_lookup_values = {
+            f"location__{'parent__' * depth}name": CSV_NO_OBJECT
+            for depth in range(2, Location.objects.max_tree_depth() + 1)
+        }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
             location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
-            expected_location_nested_lookup_values = {
-                f"location__{'parent__' * depth}name": CSV_NO_OBJECT
-                for depth in range(2, Location.objects.max_tree_depth() + 1)
-            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             self.assertEqual(
                 location_lookup_value,
                 {
@@ -228,7 +226,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip4__host": CSV_NO_OBJECT,
                 "primary_ip6__parent__namespace__name": CSV_NO_OBJECT,
                 "primary_ip6__host": CSV_NO_OBJECT,
-                "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
                 "controller_managed_device_group__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,
@@ -317,3 +314,94 @@ class CSVParsingRelatedTestCase(TestCase):
             tenant=self.device2.tenant,
         )
         self.assertEqual(device4.tags.count(), 0)
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_m2m_field_import(self):
+        """Test CSV import of M2M field."""
+
+        platform = Platform.objects.first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+
+        software_version = SoftwareVersion.objects.create(
+            platform=platform, version="Test version 1.0.0", status=software_version_status
+        )
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_1.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_2.bin",
+                status=software_image_file_status,
+                default_image=True,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name="software_image_file_qs_test_3.bin",
+                status=software_image_file_status,
+            ),
+        )
+
+        user = UserFactory.create()
+        user.is_superuser = True
+        user.is_active = True
+        user.save()
+        self.client.force_login(user)
+
+        with self.subTest("Import M2M field using list of UUIDs"):
+            import_data = f"""name,device_type,location,role,status,software_image_files
+TestDevice5,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_image_files[0].pk},{software_image_files[1].pk}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(Device.objects.count(), 3)
+
+            # Assert TestDevice5 got created with the right fields
+            device5 = Device.objects.get(
+                name="TestDevice5",
+                location=self.device.location,
+                device_type=self.device.device_type,
+                role=self.device.role,
+                status=self.device.status,
+                tenant=None,
+            )
+            self.assertEqual(device5.software_image_files.count(), 2)
+
+        with self.subTest("Import M2M field using multiple identifying fields"):
+            import_data = f"""name,device_type,location,role,status,software_image_files__software_version,software_image_files__image_file_name
+TestDevice6,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_version.pk},{software_version.pk}","{software_image_files[0].image_file_name},{software_image_files[1].image_file_name}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(Device.objects.count(), 4)
+
+            # Assert TestDevice5 got created with the right fields
+            device6 = Device.objects.get(
+                name="TestDevice6",
+                location=self.device.location,
+                device_type=self.device.device_type,
+                role=self.device.role,
+                status=self.device.status,
+                tenant=None,
+            )
+            self.assertEqual(device6.software_image_files.count(), 2)
+
+        with self.subTest("Import M2M field using incorrect number of values"):
+            import_data = f"""name,device_type,location,role,status,software_image_files__software_version,software_image_files__image_file_name
+TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_version.pk},{software_version.pk}","{software_image_files[0].image_file_name},{software_image_files[1].image_file_name},{software_image_files[2].image_file_name}"
+"""
+            data = {"csv_data": import_data}
+            url = reverse("dcim:device_import")
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Incorrect number of values provided for the software_image_files field")
+            self.assertEqual(Device.objects.count(), 4)

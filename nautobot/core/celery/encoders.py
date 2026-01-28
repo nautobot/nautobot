@@ -1,5 +1,7 @@
 import logging
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
 
@@ -40,6 +42,12 @@ class NautobotKombuJSONEncoder(JSONEncoder):
                 # TODO: change to natural key to provide additional context if object is deleted from the db
                 "display": getattr(obj, "display", str(obj)),
             }
+
+            if "nautobot_version_control" in settings.PLUGINS:
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+                data["__nautobot_branch__"] = active_branch()
+
             return data
 
         elif isinstance(obj, set):
@@ -52,5 +60,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             # JobResult.result uses NautobotKombuJSONEncoder as an encoder and expects a JSONSerializable object,
             # although an exception, such as a RuntimeException, can be supplied as the obj.
             return f"{obj.__class__.__name__}: {obj}"
+        elif isinstance(obj, ZoneInfo):
+            return obj.key
         else:
             return super().default(obj)

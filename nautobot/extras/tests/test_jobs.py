@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.utils import timezone
 
@@ -167,7 +167,7 @@ class JobTest(TestCase):
         self.assertTrue(job_class.supports_dryrun)
         self.assertTrue(job_model.supports_dryrun)
 
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
@@ -212,7 +212,7 @@ register_jobs(MyJob)
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
                     # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
                     self.assertNotIn("dry_run.TestDryRun", jobs_data.keys())
-                    self.assertNotIn("pass.TestPassJob", jobs_data.keys())
+                    self.assertNotIn("pass_job.TestPassJob", jobs_data.keys())
 
                     # Create a second Job in the same module
                     with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
@@ -286,6 +286,20 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    @tag("example_app")
+    def test_app_dynamic_jobs(self):
+        """
+        Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
+        """
+        with mock.patch("nautobot.extras.jobs.get_jobs", autospec=True) as mock_get_jobs:
+            # example_app_with_view_override provides dynamic jobs
+            get_job("example_app_with_view_override.jobs.ExampleHiddenJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=True)
+            mock_get_jobs.reset_mock()
+            # example_app does NOT provide dynamic jobs
+            get_job("example_app.jobs.ExampleEverythingJob", reload=True)
+            mock_get_jobs.assert_called_once_with(reload=False)
+
 
 class JobTransactionTest(TransactionTestCase):
     """
@@ -339,6 +353,7 @@ class JobTransactionTest(TransactionTestCase):
             "BulkEditObjects",
             content_type=job_ct.id,
             edit_all=False,
+            pk_list=pk_list,
             filter_query_params={},
             form_data={
                 "pk": pk_list,
@@ -382,6 +397,7 @@ class JobTransactionTest(TransactionTestCase):
             "BulkEditObjects",
             content_type=job_ct.id,
             edit_all=False,
+            pk_list=pk_list,
             filter_query_params={},
             form_data={
                 "pk": pk_list,
@@ -423,7 +439,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test with pass result.
         """
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_result = create_job_result_and_run_job(module, name)
         self.assertJobResultStatus(job_result)
@@ -630,6 +646,26 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(logs.filter(message="I should NOT be logged to the database").exists())
         self.assertTrue(logs.filter(message="I should be logged to the database").exists())
 
+    def test_log_counts_by_level(self):
+        """
+        Test that related JobLogEntry counts are stored for JobResult list summary.
+        """
+        module = "log_counts_by_level"
+        name = "TestLogCountsByLevel"
+        job_result = create_job_result_and_run_job(module, name)
+
+        self.assertGreater(job_result.job_log_entries.count(), 0)
+        self.assertIsNotNone(job_result.debug_log_count)
+        self.assertEqual(job_result.debug_log_count, 0)
+        self.assertIsNotNone(job_result.success_log_count)
+        self.assertEqual(job_result.success_log_count, 1)
+        self.assertIsNotNone(job_result.info_log_count)
+        self.assertEqual(job_result.info_log_count, 3)
+        self.assertIsNotNone(job_result.warning_log_count)
+        self.assertEqual(job_result.warning_log_count, 2)
+        self.assertIsNotNone(job_result.error_log_count)
+        self.assertEqual(job_result.error_log_count, 3)
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.
@@ -693,7 +729,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         job_result_1 = create_job_result_and_run_job(module, name)
         self.assertJobResultStatus(job_result_1)
@@ -891,9 +927,9 @@ class JobFileOutputTest(TransactionTestCase):
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
-    # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
-    # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
-    # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+    # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
+    # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
+    # so override_settings(STORAGES["nautobotjobfiles"]["BACKEND"]) doesn't work the way you'd hope it would.
 
     def test_output_file_too_large(self):
         module = "file_output"
@@ -946,7 +982,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
-        module = "pass"
+        module = "pass_job"
         name = "TestPassJob"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -1044,7 +1080,7 @@ class JobButtonReceiverTest(TestCase):
 
     def test_is_job_button(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "pass_job"
             name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_button_receiver)
@@ -1107,7 +1143,7 @@ class JobHookReceiverTest(TestCase):
 
     def test_is_job_hook(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "pass_job"
             name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
@@ -1246,10 +1282,10 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         status = models.Status.objects.get_for_model(Location).first()
         loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
         models.ObjectChange.objects.all().delete()
-        tag = models.Tag.objects.create(name="A Test Tag")
-        tag.content_types.add(ContentType.objects.get_for_model(Location))
+        tag_instance = models.Tag.objects.create(name="A Test Tag")
+        tag_instance.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
-            loc.tags.add(tag)
+            loc.tags.add(tag_instance)
         job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
         self.assertIsNotNone(job_result)
         expected_log_messages = [
@@ -1269,7 +1305,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             models.ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="pass.TestPassJob",
+                task="pass_job.TestPassJob",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -1278,7 +1314,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         models.ScheduledJob.objects.create(
             name="test7",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -1306,7 +1342,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = models.ScheduledJob.objects.create(
             name="weekly_interval",
-            task="pass.TestPassJob",
+            task="pass_job.TestPassJob",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

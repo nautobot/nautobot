@@ -1,5 +1,9 @@
 # Nautobot Security Policy
 
+## Dependency and Maintenance Management
+
+For information about how we manage dependencies, including in our Docker images as well as backporting fixes to our LTM releases, please see our [Security and Maintenance Policy](./nautobot/docs/user-guide/administration/security/index.md).
+
 ## Security Announcements
 
 Join the `#nautobot` channel in the Network to Code Slack for messages about security and release announcements.
@@ -46,5 +50,4 @@ Below are the current team members responsible for receiving and triaging Nautob
 
 - Glenn Matthews (**[@glennmatthews](https://github.com/glennmatthews)**) `<glenn.matthews@networktocode.com>` [[4096R/C3DF1C5D9727F82ACF8F743238BF0D0E68B9F76C]](https://keybase.io/glennmatthews/pgp_keys.asc)
 - Bryan Culver (**[@bryanculver](https://github.com/bryanculver)**) `<bryan.culver@networktocode.com>` [[4096R/810BA9FC788A8B2C9EB9559C834D7494DEDB1DD8]](https://keybase.io/bryanculver/pgp_keys.asc)
-- John Anderson (**[@lampwins](https://github.com/lampwins)**) `<john.anderson@networktocode.com>`
 - Jonathan Swisher (**[@LoneStar-Swish](https://github.com/LoneStar-Swish)**) `<jonathan.swisher@networktocode.com>` [[4096R/E0B0E95E80BF2E652BABA4C67BC452A3795882D6]](https://keybase.io/jswisher/pgp_keys.asc)

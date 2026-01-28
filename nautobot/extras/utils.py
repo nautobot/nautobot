@@ -25,10 +25,16 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
-from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    DynamicGroupTypeChoices,
+    JobQueueTypeChoices,
+    ObjectChangeActionChoices,
+)
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -133,13 +139,14 @@ def change_logged_models_queryset():
     Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
     queryset = None
-    cache_key = "nautobot.extras.utils.change_logged_models_queryset"
+    cache_key = construct_cache_key(change_logged_models_queryset, branch_aware=False)
     with contextlib.suppress(redis.exceptions.ConnectionError):
         queryset = cache.get(cache_key)
     if queryset is None:
         queryset = ChangeLoggedModelsQuery().as_queryset()
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+            cache.set(cache_key, queryset, timeout=None)
     return queryset
 
 
@@ -202,13 +209,14 @@ class FeatureQuery:
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
         choices = None
-        cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
+        cache_key = construct_cache_key(self, method_name="choices", feature=self.feature)
         with contextlib.suppress(redis.exceptions.ConnectionError):
             choices = cache.get(cache_key)
         if choices is None:
             choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
             with contextlib.suppress(redis.exceptions.ConnectionError):
-                cache.set(cache_key, choices)
+                # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+                cache.set(cache_key, choices, timeout=None)
         return choices
 
     def list_subclasses(self):
@@ -218,13 +226,14 @@ class FeatureQuery:
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
         subclasses = None
-        cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
+        cache_key = construct_cache_key(self, method_name="subclasses", feature=self.feature)
         with contextlib.suppress(redis.exceptions.ConnectionError):
             subclasses = cache.get(cache_key)
         if subclasses is None:
             subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
             with contextlib.suppress(redis.exceptions.ConnectionError):
-                cache.set(cache_key, subclasses)
+                # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
+                cache.set(cache_key, subclasses, timeout=None)
         return subclasses
 
 
@@ -275,11 +284,14 @@ def extras_features(*features):
     """
 
     def wrapper(model_class):
-        # Initialize the model_features store if not already defined
+        # Initialize the model_features and feature_models stores if not already defined
         if "model_features" not in registry:
             registry["model_features"] = {f: collections.defaultdict(list) for f in EXTRAS_FEATURES}
+        if "feature_models" not in registry:
+            registry["feature_models"] = {f: [] for f in EXTRAS_FEATURES}
         for feature in features:
             if feature in EXTRAS_FEATURES:
+                registry["feature_models"][feature].append(model_class)
                 app_label, model_name = model_class._meta.label_lower.split(".")
                 registry["model_features"][feature][app_label].append(model_name)
             else:
@@ -352,6 +364,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": [],
             "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
+        {
+            "feature_name": "approval_workflows",
+            "field_names": [],
+            "additional_constraints": {"is_approval_workflow_model": True},
+        },
     ]
 
     app_models = apps.get_models()
@@ -385,8 +402,9 @@ def get_celery_queues():
     from nautobot.core.celery import app  # prevent circular import
 
     celery_queues = None
+    cache_key = construct_cache_key(get_celery_queues, branch_aware=False)
     with contextlib.suppress(redis.exceptions.ConnectionError):
-        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
+        celery_queues = cache.get(cache_key)
 
     if celery_queues is None:
         celery_queues = {}
@@ -400,14 +418,13 @@ def get_celery_queues():
             except redis.exceptions.ConnectionError as err:
                 logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
                 active_queues = None
-        if active_queues is None:
-            return celery_queues
-        for task_queue_list in active_queues.values():
-            distinct_queues = {q["name"] for q in task_queue_list}
-            for queue in distinct_queues:
-                celery_queues[queue] = celery_queues.get(queue, 0) + 1
+        if active_queues is not None:
+            for task_queue_list in active_queues.values():
+                distinct_queues = {q["name"] for q in task_queue_list}
+                for queue in distinct_queues:
+                    celery_queues[queue] = celery_queues.get(queue, 0) + 1
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
+            cache.set(cache_key, celery_queues, timeout=5)
 
     return celery_queues
 
@@ -489,7 +506,7 @@ def task_queues_as_choices(task_queues):
             worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
         else:
             worker_count = celery_queues.get(queue, 0)
-        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
+        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[: worker_count ^ 1]})"
         choices.append((queue, description))
     return choices
 
@@ -651,7 +668,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
-def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
+def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
     """
@@ -661,17 +678,6 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     pod_token = settings.KUBERNETES_TOKEN_PATH
 
-    configuration = kubernetes.client.Configuration()
-    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-    configuration.ssl_ca_cert = pod_ssl_ca_cert
-    with open(pod_token, "r") as token_file:
-        token = token_file.read().strip()
-    # configure API Key authorization: BearerToken
-    configuration.api_key_prefix["authorization"] = "Bearer"
-    configuration.api_key["authorization"] = token
-    with kubernetes.client.ApiClient(configuration) as api_client:
-        api_instance = kubernetes.client.BatchV1Api(api_client)
-
     job_result.task_kwargs = job_kwargs
     job_result.save()
     pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
@@ -680,10 +686,23 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
         "runjob_with_job_result",
         f"{job_result.pk}",
     ]
-    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
-    api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
-    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
+
+    def create_kubernetes_job():
+        """Create and read the Kubernetes job after the transaction commits."""
+        configuration = kubernetes.client.Configuration()
+        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+        configuration.ssl_ca_cert = pod_ssl_ca_cert
+        with open(pod_token, "r", encoding="utf-8") as token_file:
+            token = token_file.read().strip()
+        # configure API Key authorization: BearerToken
+        configuration.api_key_prefix["authorization"] = "Bearer"
+        configuration.api_key["authorization"] = token
+        with kubernetes.client.ApiClient(configuration) as api_client:
+            api_instance = kubernetes.client.BatchV1Api(api_client)
+            job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+            api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+
+    transaction.on_commit(create_kubernetes_job)
     return job_result
 
 
@@ -912,3 +931,38 @@ def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
         except FilterSetFieldNotFound:
             pass
     return param_dict
+
+
+def get_pending_approval_workflow_stages(user, queryset):
+    """
+    Return a list of pending approval workflow stages.
+    """
+    from nautobot.extras.models import ApprovalWorkflow, ApprovalWorkflowStage, ApprovalWorkflowStageResponse
+
+    if user.is_anonymous:
+        return ApprovalWorkflowStage.objects.none()
+    group_pks = user.groups.all().values_list("pk", flat=True)
+    # we only want currently active stages on the approver
+    active_stage_pks = []
+    for workflow in ApprovalWorkflow.objects.all():
+        if workflow.active_stage:
+            active_stage_pks.append(workflow.active_stage.pk)
+    # Get the ApprovalWorkflowStages that are already approved by the current user
+    approved_approval_workflow_stages = ApprovalWorkflowStageResponse.objects.filter(
+        state=ApprovalWorkflowStateChoices.APPROVED,
+        user=user,
+    ).values_list("approval_workflow_stage", flat=True)
+
+    # Return only the approval workflow stages that are pending and active currently
+    # and belong to a pending approval workflow
+    # and are assigned to the current user or any of the groups the user belongs to
+    return (
+        queryset.filter(
+            pk__in=active_stage_pks,
+            approval_workflow__current_state=ApprovalWorkflowStateChoices.PENDING,
+            state=ApprovalWorkflowStateChoices.PENDING,
+            approval_workflow_stage_definition__approver_group__pk__in=group_pks,
+        )
+        .exclude(pk__in=approved_approval_workflow_stages)
+        .order_by("created")
+    )

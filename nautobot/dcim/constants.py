@@ -7,6 +7,7 @@ from .choices import InterfaceTypeChoices
 #
 
 RACK_U_HEIGHT_DEFAULT = 42
+RACK_U_HEIGHT_MAXIMUM = 500
 
 RACK_ELEVATION_BORDER_WIDTH = 2
 RACK_ELEVATION_LEGEND_WIDTH_DEFAULT = 30
@@ -36,6 +37,13 @@ VIRTUAL_IFACE_TYPES = interface_type_by_category["Virtual interfaces"]
 
 NONCONNECTABLE_IFACE_TYPES = VIRTUAL_IFACE_TYPES + WIRELESS_IFACE_TYPES
 
+COPPER_TWISTED_PAIR_IFACE_TYPES = [
+    InterfaceTypeChoices.TYPE_100ME_FIXED,
+    InterfaceTypeChoices.TYPE_1GE_FIXED,
+    InterfaceTypeChoices.TYPE_2GE_FIXED,
+    InterfaceTypeChoices.TYPE_5GE_FIXED,
+    InterfaceTypeChoices.TYPE_10GE_FIXED,
+]
 
 #
 # PowerFeeds
@@ -94,22 +102,6 @@ COMPATIBLE_TERMINATION_TYPES = {
         "rearport",
         "circuittermination",
     ],
-}
-
-#
-# Platforms
-#
-
-NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
-    "ansible",
-    "hier_config",
-    "napalm",
-    "netmiko",
-    "netutils_parser",
-    "ntc_templates",
-    "pyats",
-    "pyntc",
-    "scrapli",
 }
 
 #

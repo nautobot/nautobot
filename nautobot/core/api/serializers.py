@@ -64,6 +64,7 @@ class OptInFieldsMixin:
         - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
           `include` query parameter. (applies to GET requests only)
         - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
+          If `exclude_m2m` is not provided, only `tags`, `content_types`, and `object_types` are included by default.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -102,9 +103,13 @@ class OptInFieldsMixin:
 
             # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
             # don't get included in the response.
-            if is_truthy(params.get("exclude_m2m", "false")):
+            # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
+            exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
+            if exclude_m2m is None or is_truthy(exclude_m2m):
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                        if exclude_m2m is None and field_instance.source in constants.DEFAULT_M2M_FIELDS:
+                            continue
                         field_instance.write_only = True
 
             self.__pruned_fields = fields
@@ -239,7 +244,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             }
             case_query[lookup_field] = models.Case(
                 models.When(**when_case),
-                default=models.Value(constants.CSV_NO_OBJECT),
+                default=models.Value(constants.CSV_NO_OBJECT.encode("utf-8"))
+                if output_field == VarbinaryIPField
+                else models.Value(constants.CSV_NO_OBJECT),
                 output_field=output_field(),
             )
         return case_query
@@ -892,3 +899,12 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     context = serializers.DictField(default=dict)
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
+
+
+class StatsSerializer(serializers.Serializer):
+    """Serializer for rendering linkable statistics, e.g. related object counts for a Location."""
+
+    title = serializers.CharField()
+    count = serializers.IntegerField()
+    ui_url = serializers.URLField()
+    api_url = serializers.URLField()

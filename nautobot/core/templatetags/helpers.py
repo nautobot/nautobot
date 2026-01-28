@@ -1,10 +1,14 @@
+from collections.abc import Iterable
 import datetime
+from importlib import resources
 import json
 import logging
 import re
+from typing import Literal
 from urllib.parse import parse_qs, quote_plus
 
 from django import template
+from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
@@ -12,9 +16,11 @@ from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.formats import date_format
+from django.utils.html import format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
+from django.utils.translation import gettext as _
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -22,13 +28,12 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
-from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
+from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
-HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
-HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
-HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
+HTML_NONE = mark_safe('<span class="text-secondary">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -68,7 +73,7 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches">Router</a>'
         >>> hyperlinked_object(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object("Hello")
         'Hello'
         >>> hyperlinked_object(location)
@@ -110,7 +115,7 @@ def placeholder(value):
 
     Example:
         >>> placeholder("")
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> placeholder("hello")
         "hello"
     """
@@ -121,23 +126,29 @@ def placeholder(value):
 
 @library.filter()
 @register.filter()
-def pre_tag(value):
+def pre_tag(value, format_empty_value=True):
     """Render a value within `<pre></pre>` tags to enable formatting.
 
     Args:
         value (any): Input value, can be any variable.
+        format_empty_value (bool): Whether format empty value or render placeholder.
 
     Returns:
-        (str): Value wrapped in `<pre></pre>` tags.
+        (str): Value wrapped in `<pre></pre>` tags or placeholder if None or format_empty_values=False and empty
 
     Example:
         >>> pre_tag("")
         '<pre></pre>'
         >>> pre_tag("hello")
         '<pre>hello</pre>'
+        >>> pre_tag("", format_empty_value=False)
+        '<span class="text-secondary">&mdash;</span>'
     """
-    if value is not None:
+    if format_empty_value and value is not None:
         return format_html("<pre>{}</pre>", value)
+    elif value:
+        return format_html("<pre>{}</pre>", value)
+
     return HTML_NONE
 
 
@@ -180,13 +191,13 @@ def render_boolean(value):
         (str): HTML
             '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
             - or -
-            '<span class="text-muted">&mdash;</span>' if None value
+            '<span class="text-secondary">&mdash;</span>' if None value
             - or -
             '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
 
     Examples:
         >>> render_boolean(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> render_boolean(True or "arbitrary string" or 1)
         '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
         >>> render_boolean(False or "" or 0)
@@ -390,17 +401,19 @@ def humanize_speed(speed):
         1544 => "1.544 Mbps"
         100000 => "100 Mbps"
         10000000 => "10 Gbps"
+        1000000000 => "1 Tbps"
+        1600000000 => "1.6 Tbps"
+        10000000000 => "10 Tbps"
     """
     if not speed:
         return ""
-    if speed >= 1000000000 and speed % 1000000000 == 0:
-        return f"{int(speed / 1000000000)} Tbps"
-    elif speed >= 1000000 and speed % 1000000 == 0:
-        return f"{int(speed / 1000000)} Gbps"
-    elif speed >= 1000 and speed % 1000 == 0:
-        return f"{int(speed / 1000)} Mbps"
+
+    if speed >= 1000000000:
+        return f"{speed / 1000000000:g} Tbps"
+    elif speed >= 1000000:
+        return f"{speed / 1000000:g} Gbps"
     elif speed >= 1000:
-        return f"{float(speed) / 1000} Mbps"
+        return f"{speed / 1000:g} Mbps"
     else:
         return f"{speed} Kbps"
 
@@ -482,11 +495,13 @@ def percentage(x, y):
 @library.filter()
 @register.filter()
 def get_docs_url(model):
-    """Return the likely static documentation path for the specified model, if it can be found/predicted.
+    """Return the documentation URL for the specified model, if it can be found/predicted.
 
     - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
         - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
-    - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
+    - Apps (plugins) are expected to be documented within their package at
+      ``docs/models/{model_name}.html`` and are served dynamically through
+      the ``AppDocsView`` endpoint (``/docs/<app_name>/<path>``).
 
     Any model can define a `documentation_static_path` class attribute if it needs to override the above expectations.
 
@@ -500,16 +515,36 @@ def get_docs_url(model):
 
     Example:
         >>> get_docs_url(location_instance)
-        "static/docs/models/dcim/location.html"
+        "static/docs/user-guide/core-data-model/dcim/location.html"
+        >>> get_docs_url(virtual_server_instance)
+        "static/docs/user-guide/core-data-model/load-balancers/virtualserver.html"
+        >>> get_docs_url(example_model)
+        "/docs/example-app/models/examplemodel.html"
     """
     if hasattr(model, "documentation_static_path"):
         path = model.documentation_static_path
     elif model._meta.app_label in settings.PLUGINS:
+        app_label = model._meta.app_label
+        app_config = apps.get_app_config(app_label)
+        app_base_url = getattr(app_config, "base_url", None) or app_config.label
+        path = f"models/{model._meta.model_name}.html"
+        # Check that the file actually exists inside the app's docs folder
+        try:
+            base_dir = resources.files(app_label) / "docs"
+            file_path = base_dir / path
+            if file_path.is_file():
+                return reverse("docs_file", kwargs={"app_base_url": app_base_url, "path": path})
+        except ModuleNotFoundError:
+            pass
+        logger.debug("No documentation found for %s (expected at %s)", type(model), path)
+        # define path to try to get static
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
     elif model._meta.app_label == "extras":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
     else:
-        path = f"docs/user-guide/core-data-model/{model._meta.app_label}/{model._meta.model_name}.html"
+        path = (
+            f"docs/user-guide/core-data-model/{model._meta.app_label.replace('_', '-')}/{model._meta.model_name}.html"
+        )
 
     # Check to see if documentation exists in any of the static paths.
     if find(path):
@@ -607,7 +642,13 @@ def get_item(d, key):
     Example:
         >>> get_item(data, key)
         "value"
+        >>> get_item({}, "hello")
+        None
+        >>> get_item("hello", "some_key")
+        None
     """
+    if not isinstance(d, dict):
+        return None
     return d.get(key)
 
 
@@ -702,7 +743,7 @@ def render_ancestor_hierarchy(value):
     if not value or not hasattr(value, "ancestors"):
         return HTML_NONE
 
-    result = format_html('<ul class="tree-hierarchy">')
+    result = format_html('<ul class="nb-tree-hierarchy">')
     append_to_result = format_html("</ul>")
 
     for ancestor in value.ancestors():
@@ -723,7 +764,7 @@ def render_ancestor_hierarchy(value):
                 value=hyperlinked_object(ancestor, "name"),
                 nestable_tag=nestable_tag,
             )
-        append_to_result += format_html("</ul></li>")
+        append_to_result = format_html("</ul></li>") + append_to_result
 
     nestable_tag = format_html('<span title="nestable">↺</span>') if getattr(value, "nestable", False) else ""
 
@@ -758,8 +799,25 @@ def render_address(address):
             quote_plus(address),
         )
         address = format_html_join("", "{}<br>", ((line,) for line in address.split("\n")))
-        return format_html('<div class="pull-right noprint">{}</div>{}', map_link, address)
+        return format_html('<div class="float-end d-print-none">{}</div>{}', map_link, address)
     return HTML_NONE
+
+
+@register.filter()
+def render_m2m(queryset, full_listing_link, verbose_name_plural, max_visible=5):
+    total_count = queryset.count()
+    display_count = min(total_count, max_visible)
+    if not display_count:
+        return HTML_NONE
+
+    items = [hyperlinked_object(record) for record in queryset[:display_count]]
+
+    remaining = total_count - display_count
+    if remaining > 0:
+        link = format_html('<a href="{}">... View {} more {}</a>', full_listing_link, remaining, verbose_name_plural)
+        items.append(link)
+
+    return format_html_join("", "<div>{}</div>", ((item,) for item in items)) if items else HTML_NONE
 
 
 @library.filter()
@@ -772,7 +830,7 @@ def render_button_class(value):
         value (str): A string representing the button class (e.g., 'primary').
 
     Returns:
-        str: HTML string for a button with the given class.
+        (str): HTML string for a button with the given class.
 
     Example:
         >>> render_button_class("primary")
@@ -780,7 +838,11 @@ def render_button_class(value):
     """
     if value:
         base = value.split()[0]
-        return format_html('<button class="btn btn-{}">{}</button>', base.lower(), base.capitalize())
+        return format_html(
+            '<button class="btn btn-{}">{}</button>',
+            base.lower() if base.lower() != "default" else "secondary",
+            base.capitalize(),
+        )
     return ""
 
 
@@ -792,7 +854,7 @@ def render_job_run_link(value):
         value (Job): The job object.
 
     Returns:
-        str: HTML anchor tag linking to the job's run view.
+        (str): HTML anchor tag linking to the job's run view.
     """
     if hasattr(value, "class_path"):
         url = reverse("extras:job_run_by_class_path", kwargs={"class_path": value.class_path})
@@ -808,9 +870,29 @@ def label_list(value, suffix=""):
         return HTML_NONE
     return format_html_join(
         " ",
-        '<span class="label label-default">{0}{1}</span>',
+        '<span class="badge bg-secondary">{0}{1}</span>',
         ((item, suffix) for item in value),
     )
+
+
+@library.filter()
+@register.filter()
+def format_timezone(time_zone):
+    """
+    Return a human-readable representation of a time zone including:
+      - Time zone name and UTC offset on the first line
+      - Local date and time on the next line (in smaller font)
+    """
+    if not time_zone:
+        return HTML_NONE
+
+    now = datetime.datetime.now(time_zone)
+
+    # Locale-aware formatting (respects USE_L10N + active locale)
+    local_time = date_format(now, format="DATETIME_FORMAT", use_l10n=True)
+
+    result = f"{time_zone} (UTC {now.strftime('%z')})<br><small>{_('Local time')}: {local_time}</small>"
+    return format_html(result)
 
 
 #
@@ -823,11 +905,7 @@ def get_attr(obj, attr, default=None):
     return getattr(obj, attr, default)
 
 
-@register.simple_tag()
-def querystring(request, **kwargs):
-    """
-    Append or update the page number in a querystring.
-    """
+def _base_querystring(request, **kwargs):
     querydict = request.GET.copy()
     for k, v in kwargs.items():
         if v is not None:
@@ -841,21 +919,84 @@ def querystring(request, **kwargs):
         return ""
 
 
+# TODO: Remove this tag in Nautobot 3.0.
+
+
+@register.simple_tag()
+@deprecation.method_deprecated(
+    "Leverage `legacy_querystring` instead of `querystring` if this templatetag is required. In Nautobot 3.0, "
+    "`querystring` will be removed in preparation for Django 5.2 in which there is a built-in querystring tag "
+    "that operates differently. You may find that `django_querystring` is more appropriate for your use case "
+    "and is a replica of Django 5.2's `querystring` templatetag."
+)
+def querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+@register.simple_tag()
+def legacy_querystring(request, **kwargs):
+    return _base_querystring(request, **kwargs)
+
+
+# Note: This is vendored from Django 5.2
+@register.simple_tag(name="django_querystring", takes_context=True)
+def django_querystring(context, query_dict=None, **kwargs):
+    """
+    Add, remove, and change parameters of a ``QueryDict`` and return the result
+    as a query string. If the ``query_dict`` argument is not provided, default
+    to ``request.GET``.
+
+    For example::
+
+        {% django_querystring foo=3 %}
+
+    To remove a key::
+
+        {% django_querystring foo=None %}
+
+    To use with pagination::
+
+        {% django_querystring page=page_obj.next_page_number %}
+
+    A custom ``QueryDict`` can also be used::
+
+        {% django_querystring my_query_dict foo=3 %}
+    """
+    if query_dict is None:
+        query_dict = context["request"].GET
+    params = query_dict.copy()
+    for key, value in kwargs.items():
+        if value is None:
+            if key in params:
+                del params[key]
+        elif isinstance(value, Iterable) and not isinstance(value, str):
+            params.setlist(key, value)
+        else:
+            params[key] = value
+    if not params and not query_dict:
+        return ""
+    query_string = params.urlencode()
+    return f"?{query_string}"
+
+
 @register.simple_tag()
 def table_config_button(table, table_name=None, extra_classes="", disabled=False):
     if table_name is None:
         table_name = table.__class__.__name__
-    html_template = (
-        '<button type="button" class="btn btn-default {}'
-        '" data-toggle="modal" data-target="#{}_config" {} title="Configure table">'
-        '<i class="mdi mdi-cog"></i> Configure</button>'
-    )
-    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
-
-
-@register.simple_tag()
-def table_config_button_small(table, table_name=None):
-    return table_config_button(table, table_name, "btn-xs")
+    html_template = """<button
+            type="button"
+            class="btn border-0 float-end rounded-0 text-end text-secondary {}"
+            data-nb-toggle="drawer"
+            data-nb-target="#{}_config"
+            {}
+            title="Configure table"
+            aria-controls="{}_config"
+            aria-expanded="false"
+        >
+            <span class="mdi mdi-cog" aria-hidden="true"></span>
+            <span class="visually-hidden">Configure</span>
+        </button>"""
+    return format_html(html_template, extra_classes, table_name, "disabled" if disabled else "", table_name)
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
@@ -946,11 +1087,12 @@ def table_config_form(table, table_name=None):
     }
 
 
-@register.inclusion_tag("utilities/templatetags/filter_form_modal.html")
-def filter_form_modal(
+@register.inclusion_tag("utilities/templatetags/filter_form_drawer.html")
+def filter_form_drawer(
     filter_form,
     dynamic_filter_form,
     model_plural_name,
+    filter_params,
     filter_form_name="FilterForm",
     dynamic_filter_form_name="DynamicFilterForm",
 ):
@@ -958,6 +1100,7 @@ def filter_form_modal(
         "model_plural_name": model_plural_name,
         "filter_form": filter_form,
         "filter_form_name": filter_form_name,
+        "filter_params": filter_params,
         "dynamic_filter_form": dynamic_filter_form,
         "dynamic_filter_form_name": dynamic_filter_form_name,
     }
@@ -1117,6 +1260,21 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
     }
 
 
+@register.inclusion_tag("utilities/templatetags/advanced_filter_indicator.html")
+def advanced_filter_indicator(basic_filter_form, filter_params):
+    """
+    Display Advanced filter indicator if there are filters applied which are not visible in Basic filter form.
+    """
+    is_visible = False
+    if basic_filter_form and filter_params:
+        basic_filter_form_field_names = [field.name for field in basic_filter_form.visible_fields()]
+        for filter_param in filter_params:
+            if filter_param["name"] not in basic_filter_form_field_names or filter_param["name"] == "q":
+                is_visible = True
+                break
+    return {"is_visible": is_visible}
+
+
 @register.simple_tag
 def custom_branding_or_static(branding_asset, static_asset):
     """
@@ -1124,7 +1282,7 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
     else:
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
@@ -1161,7 +1319,7 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0
         base_depth (int, optional): Starting depth (number of dots to skip rendering).
 
     Returns:
-        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+        (str): A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
              otherwise an empty string.
     """
     if hide_hierarchy_ui or tree_depth == 0:
@@ -1177,7 +1335,7 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0
 def hyperlinked_object_with_color(obj):
     """Render the display view of an object."""
     if obj:
-        content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
+        content = f'<span class="badge" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return HTML_NONE
 
@@ -1214,7 +1372,7 @@ def hyperlinked_object_target_new_tab(value, field="display"):
         >>> hyperlinked_object_target_new_tab(device_role)
         '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
         >>> hyperlinked_object_target_new_tab(None)
-        '<span class="text-muted">&mdash;</span>'
+        '<span class="text-secondary">&mdash;</span>'
         >>> hyperlinked_object_target_new_tab("Hello")
         'Hello'
         >>> hyperlinked_object_target_new_tab(location)
@@ -1223,6 +1381,25 @@ def hyperlinked_object_target_new_tab(value, field="display"):
         '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Leaf</a>'
     """
     return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
+
+
+@register.filter()
+def get_object_link(value):
+    """Function to retrieve just absolute url to the given model instance.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+
+    Returns:
+        (str): url to the object if it defines get_absolute_url(), empty string otherwise.
+    """
+    if value is None:
+        return ""
+
+    if hasattr(value, "get_absolute_url"):
+        return value.get_absolute_url()
+
+    return ""
 
 
 def _build_hyperlink(value, field="", target="", rel=""):
@@ -1255,3 +1432,64 @@ def _build_hyperlink(value, field="", target="", rel=""):
         except AttributeError:
             pass
     return format_html("{}", display)
+
+
+@register.simple_tag(takes_context=True)
+def saved_view_title(context, mode: Literal["html", "plain"] = "html"):
+    """
+    Creates a formatted title that includes saved view information.
+    Usage: <h1>{{ title }}{% saved_view_title "html" %}</h1>
+    """
+    new_changes_not_applied = context.get("new_changes_not_applied", False)
+    current_saved_view = context.get("current_saved_view")
+
+    if not current_saved_view:
+        return ""
+
+    if new_changes_not_applied:
+        title = format_html(' — <i title="Pending changes not saved">{}</i>', current_saved_view.name)
+    else:
+        title = format_html(" — {}", current_saved_view.name)
+
+    if mode == "plain":
+        return strip_tags(title)
+
+    return title
+
+
+@register.inclusion_tag("echarts/echarts.html")
+def render_echart(chart, chart_config, chart_container_id, chart_width="100%", chart_height="32rem"):
+    """
+    Render ECharts chart with provided chart object and config.
+    """
+    return {
+        "chart": chart,
+        "chart_config": chart_config,
+        "chart_width": chart_width,
+        "chart_height": chart_height,
+        "chart_container_id": chart_container_id,
+    }
+
+
+# https://www.djangosnippets.org/snippets/545/
+@register.tag(name="captureas")
+def do_captureas(parser, token):
+    try:
+        _, args = token.contents.split(None, 1)
+    except ValueError:
+        raise template.TemplateSyntaxError("'captureas' node requires a variable name.")
+    nodelist = parser.parse(("endcaptureas",))
+    parser.delete_first_token()
+    return CaptureasNode(nodelist, args)
+
+
+class CaptureasNode(template.Node):
+    def __init__(self, nodelist, varname):
+        self.nodelist = nodelist
+        self.varname = varname
+
+    def render(self, context):
+        output = self.nodelist.render(context)
+        output = output.strip()
+        context[self.varname] = mark_safe(output)  # noqa: S308  # we already rendered it, so it's 'safe' now?
+        return ""

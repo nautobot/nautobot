@@ -4,11 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Wireless",
-        weight=200,
+        icon=NavigationIconChoices.WIRELESS,
+        weight=NavigationWeightChoices.WIRELESS,
         groups=(
             NavMenuGroup(
                 name="Wireless",

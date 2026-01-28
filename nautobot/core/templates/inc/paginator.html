@@ -1,45 +1,56 @@
 {% load helpers %}
 
-<div class="paginator text-right">
-    {% if paginator.num_pages > 1 %}
-        <nav>
-            <ul class="pagination pull-right">
-                {% if page.has_previous %}
-                    <li><a href="{% querystring request page=page.previous_page_number %}"><i class="mdi mdi-chevron-double-left"></i></a></li>
-                {% endif %}
-                {% for p in page.smart_pages %}
-                    {% if p %}
-                        <li{% if page.number == p %} class="active"{% endif %}><a href="{% querystring request page=p %}">{{ p }}</a></li>
-                    {% else %}
-                        <li class="disabled"><span>&hellip;</span></li>
-                    {% endif %}
-                {% endfor %}
-                {% if page.has_next %}
-                    <li><a href="{% querystring request page=page.next_page_number %}"><i class="mdi mdi-chevron-double-right"></i></a></li>
-                {% endif %}
-            </ul>
-        </nav>
+<div class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
+    {% if page %}
+        <div>
+            Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
+        </div>
+        <div class="vr border-start my-8"></div>
     {% endif %}
-    <form method="get" class="form-inline">
-        {% for k, v_list in request.GET.lists %}
-            {% if k != 'per_page' %}
-                {% for v in v_list %}
-                    <input type="hidden" name="{{ k }}" value="{{ v }}" />
+    <form class="align-items-center d-flex gap-4" method="get">
+        {% for key, value_list in request.GET.lists %}
+            {% if key != 'per_page' %}
+                {% for value in value_list %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}" />
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <select name="per_page" id="per_page" class="form-control">
+        <select name="per_page" id="per_page" class="form-select">
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
             {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
             {% endfor %}
-        </select> per page
-        {% if page %}
-            <div class="text-right text-muted">
-                Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
-            </div>
-        {% endif %}
+        </select>
+        per page
     </form>
+    {% if paginator.num_pages > 1 %}
+        <div class="vr border-start my-8"></div>
+        <nav>
+            <ul class="pagination mb-0">
+                {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% legacy_querystring request page=page.previous_page_number %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% for p in page.smart_pages %}
+                    {% if p %}
+                        <li class="page-item {% if page.number == p %} active{% endif %}"><a class="page-link" href="{% legacy_querystring request page=p %}">{{ p }}</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><a class="page-link" tabindex="-1">&hellip;</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% legacy_querystring request page=page.next_page_number %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
 </div>

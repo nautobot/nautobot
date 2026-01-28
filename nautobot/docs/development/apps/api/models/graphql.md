@@ -91,4 +91,7 @@ Arguments:
     * `request` (`django.test.client.RequestFactory`, optional): Used to authenticate.
     * `user` (`django.contrib.auth.models.User`, optional): Used to authenticate.
 
-Returned is a GraphQL object which holds the same data as returned from GraphiQL. Use `execute_query().to_dict()` to get the data back inside of a dictionary.
+Both functions return a GraphQL `ExecutionResult` object, with attributes including `data` (the dictionary describing a successful response to the query) and `errors` (a list of errors encountered while running the query, if any).
+
++/- 3.0.0
+    The GraphQL object returned by these functions no longer has a `to_dict()` method, but instead has native `data` and `errors` Python attributes.

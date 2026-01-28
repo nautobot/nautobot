@@ -70,6 +70,12 @@ def is_truthy(arg):
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
+ORIGINAL_COMPOSE_FILES = [
+    "docker-compose.yml",
+    "docker-compose.postgres.yml",
+    "docker-compose.dev.yml",
+]
+
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
@@ -77,15 +83,11 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            "python_ver": "3.12",
+            "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
-            "compose_files": [
-                "docker-compose.yml",
-                "docker-compose.postgres.yml",
-                "docker-compose.dev.yml",
-            ],
+            "compose_files": ORIGINAL_COMPOSE_FILES.copy(),
             # Image names to use when building from "main" branch
             "docker_image_names_main": [
                 # Production containers - not containing development tools
@@ -167,6 +169,9 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
+    if is_truthy(context.nautobot.local):
+        raise Exit("docker_compose task called but context specifies local, i.e. not to use docker compose")
+
     NAUTOBOT_VER = get_nautobot_major_minor_version(context)
     project_name = (
         "development"
@@ -184,13 +189,10 @@ def docker_compose(context, command, **kwargs):
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
     # Determine which ports mapping strategy to use
-    if context.nautobot.ephemeral_ports:
-        ports_type = "ephemeral"
-    else:
-        ports_type = "static"
-    compose_command_tokens.append(
-        f'-f "{os.path.join(context.nautobot.compose_dir, f"docker-compose.{ports_type}-ports.yml")}"'
-    )
+    if context.nautobot.ephemeral_ports and context.nautobot.compose_files == ORIGINAL_COMPOSE_FILES:
+        compose_command_tokens.append(
+            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
+        )
 
     compose_command_tokens.append(command)
 
@@ -494,7 +496,7 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 @task(help={"service": "If specified, only affect this service."})
 def debug(context, service=None):
     """Start Nautobot and its dependencies in debug mode."""
-    print("Starting Nautobot in debug mode...")
+    print(f"Starting {service or 'Nautobot'} in debug mode...")
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
@@ -504,7 +506,7 @@ def debug(context, service=None):
 @task(help={"service": "If specified, only affect this service."})
 def start(context, service=None):
     """Start Nautobot and its dependencies in detached mode."""
-    print("Starting Nautobot in detached mode...")
+    print(f"Starting {service or 'Nautobot'} in detached mode...")
     docker_compose(context, "up --detach", service=service)
     dump_service_ports_to_disk(context)
 
@@ -512,14 +514,14 @@ def start(context, service=None):
 @task(help={"service": "If specified, only affect this service."})
 def restart(context, service=None):
     """Gracefully restart containers."""
-    print("Restarting Nautobot...")
+    print(f"Restarting {service or 'Nautobot'}...")
     docker_compose(context, "restart", service=service)
 
 
 @task(help={"service": "If specified, only affect this service."})
 def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
-    print("Stopping Nautobot...")
+    print(f"Stopping {service or 'Nautobot'}...")
     if not service:
         docker_compose(context, "--profile '*' down --remove-orphans")
     else:
@@ -601,13 +603,20 @@ def logs(context, service="", follow=False, tail=0):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context, quiet=False):
+@task(
+    help={
+        "quiet": "Suppress verbose output on launch",
+        "print_sql": "Enable printing of all executed SQL statements",
+    }
+)
+def nbshell(context, quiet=False, print_sql=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     if quiet:
         command += " --quiet"
+    if print_sql:
+        command += " --print-sql"
 
     run_command(context, command)
 
@@ -712,6 +721,35 @@ def loaddata(context, filepath="db_output.json"):
     run_command(context, command)
 
 
+@task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
+def npm(context, command):
+    """Execute any given npm command inside `ui` directory."""
+    run_command(context, f"npm --prefix nautobot/ui {command}")
+
+
+@task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
+def ui_build(context, watch=False):
+    """Build Nautobot UI from source."""
+    command = "run build"
+    if watch:
+        command += ":watch"
+    npm(context, command)
+
+
+@task
+def ui_code_check(context):
+    """Check Nautobot UI source code style and formatting."""
+    command = "run code:check"
+    npm(context, command)
+
+
+@task
+def ui_code_format(context):
+    """Format Nautobot UI source code."""
+    command = "run code:format"
+    npm(context, command)
+
+
 @task()
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
@@ -803,10 +841,11 @@ def pylint(context, target=None, recursive=False):
         "fix": "Automatically apply formatting and linting recommendations. May not be able to fix all linting issues.",
         "target": "File or directory to inspect, repeatable (default: all files in the project will be inspected)",
         "output_format": "For CI purposes, can be ignored otherwise.",
+        "diff": "Display any problems ruff finds",
     },
     iterable=["target"],
 )
-def ruff(context, fix=False, target=None, output_format="concise"):
+def ruff(context, fix=False, diff=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
         target = ["development", "examples", "nautobot", "tasks.py"]
@@ -814,12 +853,16 @@ def ruff(context, fix=False, target=None, output_format="concise"):
     command = "ruff format "
     if not fix:
         command += "--check "
+        if diff:
+            command += "--diff "
     command += " ".join(target)
     format_result = run_command(context, command, warn=True)
 
     command = "ruff check "
     if fix:
         command += "--fix "
+    elif diff:
+        command += "--diff "
     command += f"--output-format {output_format} "
     command += " ".join(target)
     lint_result = run_command(context, command, warn=True)
@@ -843,9 +886,62 @@ def yamllint(context):
 def serve_docs(context):
     """Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
-        run_command(context, "mkdocs serve")
+        run_command(context, "mkdocs serve --livereload")
     else:
         start(context, service="mkdocs")
+
+
+@task(iterable=["path"])
+def compress_images(context, path=None, fix=False):
+    """Check whether included images are well-optimized, and optionally compress them if desirable."""
+    try:
+        from PIL import Image
+    except ImportError:
+        raise Exit("Pillow (PIL) must be installed, perhaps you need to use 'poetry run invoke'?")
+
+    if not path:
+        path = ["nautobot", "examples"]
+
+    unoptimized = 0
+    for root_dir in path:
+        for root, dirnames, filenames in os.walk(root_dir):
+            if "node_modules" in dirnames:
+                dirnames.remove("node_modules")
+            if "dist" in dirnames:
+                dirnames.remove("dist")
+            for filename in [f for f in filenames if f.endswith(".png")]:
+                filepath = os.path.join(root, filename)
+                img = Image.open(filepath)
+                if img.format != "PNG":
+                    print(f"{filepath} isn't actually a PNG file??")
+                    unoptimized += 1
+                elif img.mode == "RGBA":  # 24-bit color with alpha channel
+                    # Does it actually *use* the alpha channel for transparency?
+                    extrema = img.getextrema()
+                    # Is the minimum [0] alpha [3] value for any pixel in the image less than full opacity (255)?
+                    if extrema[3][0] == 255:
+                        # no actual transparency, we can strip the alpha channel and convert it to indexed mode
+                        if fix:
+                            # Note that converting directly from RGBA to P mode will always use a "web-safe" palette,
+                            # rather than an appropriately adaptive palette. Hence why we do it in two steps.
+                            img = img.convert(mode="RGB")
+                            img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                            img.save(filepath, optimize=True)
+                            print(f"Optimized {filepath}")
+                        else:
+                            print(f"{filepath} has an unnecessary alpha channel.")
+                            unoptimized += 1
+                elif img.mode == "RGB":
+                    if fix:
+                        img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                        img.save(filepath, optimize=True)
+                        print(f"Optimized {filepath}")
+                    else:
+                        print(f"{filepath} is not indexed color mode.")
+                        unoptimized += 1
+
+    if unoptimized > 0:
+        raise Exit(f"Found {unoptimized} image files that are not optimized", code=1)
 
 
 @task
@@ -863,6 +959,40 @@ def markdownlint(context, fix=False):
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
+    run_command(context, command)
+
+
+@task(help={"fix": "Automatically apply linting recommendations. May not be able to fix all linting issues."})
+def eslint(context, fix=False):
+    """Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag."""
+    command = "run eslint"
+    if fix:
+        command += ":fix"
+    npm(context, command)
+
+
+@task(help={"fix": "Automatically apply recommended formatting."})
+def prettier(context, fix=False):
+    """Run Prettier to perform JavaScript code formatting. By default only validate the formatting, optionally apply it with `--fix` flag."""
+    command = "run prettier"
+    if fix:
+        command += ":fix"
+    npm(context, command)
+
+
+@task
+def djhtml(context, fix=False):
+    """Indent Django template files."""
+    command = "djhtml nautobot/*/templates examples/*/*/templates --tabwidth 4"
+    if not fix:
+        command += " --check"
+    run_command(context, f'bash -c "{command}"')  # needed for glob expansion
+
+
+@task
+def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
+    """Lint and check Django template files formatting."""
+    command = "djlint nautobot examples --lint"
     run_command(context, command)
 
 
@@ -887,9 +1017,11 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        if current_major != 2:
+        if current_major > 3:
             raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
+        api_versions = ["2.1", "2.2", "2.3", "2.4"] + [
+            f"{current_major}.{minor}" for minor in range(0, current_minor + 1)
+        ]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
@@ -901,6 +1033,7 @@ def check_schema(context, api_version=None):
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -921,6 +1054,7 @@ def tests(
     append_coverage=False,
     buffer=True,
     cache_test_fixtures=True,
+    config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
     exclude_tag=None,
     failfast=False,
@@ -939,6 +1073,14 @@ def tests(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
+    if tag and "integration" in tag and not is_truthy(context.nautobot.local):
+        # Integration tests require selenium to be up and running!
+        start(context, service="selenium")
+
+    if tag and "migration_test" in tag:
+        # Migration tests hit the database pretty hard, so running them in parallel tends to not work out
+        parallel = False
+
     if coverage and not append_coverage:
         run_command(context, "coverage erase")
 
@@ -951,9 +1093,9 @@ def tests(
         command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     else:
         command = f"nautobot-server test {label}"
-    command += " --config=nautobot/core/tests/nautobot_config.py"
+    command += f" --config={config_file}"
     # booleans
-    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+    if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
@@ -983,8 +1125,8 @@ def tests(
 
     if coverage:
         run_command(context, "coverage combine")
-
-        run_command(context, "coverage report --skip-covered --include 'nautobot/*'")
+        run_command(context, "coverage report --skip-covered")
+        run_command(context, "coverage lcov -o lcov.info")
 
 
 @task(
@@ -1003,7 +1145,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         # dropdb: error: could not connect to database template1: could not connect to server: No such file or directory
         start(context, service="db")
         source_file = os.path.basename(dataset)
-        context.run(f"docker cp '{dataset}' nautobot-db-1:/tmp/{source_file}")
+        docker_compose(context, f"cp '{dataset}' db:/tmp/{source_file}")
         run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
 
     if db_engine == "postgres":
@@ -1036,6 +1178,10 @@ def lint(context):
     yamllint(context)
     ruff(context)
     pylint(context)
+    eslint(context)
+    prettier(context)
+    djhtml(context)
+    djlint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)

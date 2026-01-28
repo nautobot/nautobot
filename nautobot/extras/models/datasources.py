@@ -1,25 +1,45 @@
 """Models for representing external data sources."""
 
 from contextlib import contextmanager
-from importlib.util import find_spec
 import logging
 import os
 import shutil
 import tempfile
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.git import GitRepo
-from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
+from nautobot.extras.utils import extras_features
 
 logger = logging.getLogger(__name__)
+
+
+class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    def get_for_provided_contents(self, provided_contents_type):
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
+            # cache invalidated explicitly by nautobot.extras.signals.invalidate_gitrepository_provided_contents_cache
+            cache.set(cache_key, queryset, timeout=None)
+        return queryset
 
 
 @extras_features(
@@ -75,6 +95,8 @@ class GitRepository(PrimaryModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
+    objects = GitRepositoryManager()
+
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
@@ -100,17 +122,13 @@ class GitRepository(PrimaryModel):
 
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
-                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
-                f"requested slug is {self.slug}"
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, requested slug is {self.slug}"
             )
 
         if not self.present_in_database:
-            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
-            # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
-            if find_spec(self.slug) is not None:
-                raise ValidationError(
-                    f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
-                )
+            permitted, reason = check_name_safe_to_import_privately(self.slug)
+            if not permitted:
+                raise ValidationError({"slug": f"Please choose a different slug; {self.slug!r} is {reason}"})
 
         if self.provided_contents:
             q = models.Q()
@@ -180,6 +198,8 @@ class GitRepository(PrimaryModel):
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
+    sync.alters_data = True
+
     @contextmanager
     def clone_to_directory_context(self, path=None, branch=None, head=None, depth=0):
         """
@@ -206,6 +226,8 @@ class GitRepository(PrimaryModel):
             # Cleanup the temporary directory
             if path_name:
                 self.cleanup_cloned_directory(path_name)
+
+    clone_to_directory_context.alters_data = True
 
     def clone_to_directory(self, path=None, branch=None, head=None, depth=0):
         """
@@ -246,6 +268,8 @@ class GitRepository(PrimaryModel):
         logger.info(f"Cloned repository {self.name} to {path_name}")
         return path_name
 
+    clone_to_directory.alters_data = True
+
     def cleanup_cloned_directory(self, path):
         """
         Cleanup the cloned directory.
@@ -259,3 +283,5 @@ class GitRepository(PrimaryModel):
         except OSError as os_error:
             # log error if the cleanup fails
             logger.error(f"Failed to cleanup temporary directory at {path}: {os_error}")
+
+    cleanup_cloned_directory.alters_data = True

@@ -1,46 +1,83 @@
 {
-  "baseBranches": ["develop", "next"],
-  "enabledManagers": ["pip_requirements", "poetry"],
+  "baseBranchPatterns": [
+    "develop",
+    "next"
+  ],
+  "enabledManagers": [
+    "npm",
+    "poetry"
+  ],
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "labels": [
     "dependencies"
   ],
+  "lockFileMaintenance": {
+    "description": "Update poetry.lock to keep transitive dependencies up-to-date once a week as well.",
+    "enabled": true
+  },
   "packageRules": [
     {
-      "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
-      "groupName": "Lock-file Patch Releases for Develop",
-      "matchBaseBranches": ["develop"],
+      "matchManagers": [
+        "poetry"
+      ],
+      "matchBaseBranches": [
+        "develop"
+      ],
+      "groupName": "Python Dependency Patch Updates for Develop",
       "schedule": [
         "before 3am on Friday"
       ],
-      "major": {"enabled": false},
-      "minor": {"enabled": false}
+      "major": {
+        "enabled": false
+      },
+      "minor": {
+        "enabled": false
+      }
     },
     {
-      "description": "Schedule next updates.",
-      "groupName": "Lock-file Patch Releases for Next",
-      "matchBaseBranches": ["next"],
-      "schedule": [
-        "before 2am on Friday"
+      "matchManagers": [
+        "poetry"
       ],
-      "rangeStrategy": "update-lockfile"
+      "matchBaseBranches": [
+        "next"
+      ],
+      "groupName": "Python Dependency Updates for Next",
+      "schedule": [
+        "before 2am on Tuesday"
+      ]
     },
     {
-      "description": "Require dashboard approval for non-patch updates to graphene-django-optimizer and django-timezone-field.",
-      "dependencyDashboardApproval": true,
-      "matchBaseBranches": ["next"],
-      "matchPackageNames": ["graphene-django-optimizer", "django-timezone-field"],
-      "matchUpdateTypes": ["major", "minor"]
+      "matchManagers": [
+        "npm"
+      ],
+      "matchBaseBranches": [
+        "develop"
+      ],
+      "groupName": "NPM Dependency Patch Updates for Develop",
+      "schedule": [
+        "before 3am on Friday"
+      ],
+      "major": {
+        "enabled": false
+      },
+      "minor": {
+        "enabled": false
+      }
     },
     {
-      "description": "Require dashboard approval for major updates for packages known to have breaking changes.",
-      "dependencyDashboardApproval": true,
-      "matchBaseBranches": ["next"],
-      "matchPackageNames": ["django-taggit"],
-      "matchUpdateTypes": ["major"]
+      "matchManagers": [
+        "npm"
+      ],
+      "matchBaseBranches": [
+        "next"
+      ],
+      "groupName": "NPM Dependency Updates for Next",
+      "schedule": [
+        "before 2am on Tuesday"
+      ]
     }
   ],
-  "rangeStrategy": "in-range-only"
+  "rangeStrategy": "bump"
 }

@@ -5,189 +5,239 @@ exploring GraphQL.
 If you wish to receive JSON, provide the header "Accept: application/json" or
 add "&raw" to the end of the URL within a browser.
 -->
+{% load plugins %}
 {% load static %}
 {% load helpers %}
+{% load ui_framework %}
 <!DOCTYPE html>
 <html>
-<head>
-  {% include 'inc/media.html' %}
-  {% block extra_styles %}{% endblock %}
-  <!-- Nautobot template requirements -->
-  <title>{% block title %}GraphiQL{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+    <head>
+        {% include 'inc/media.html' %}
+        {% block extra_styles %}{% endblock %}
+        <!-- Nautobot template requirements -->
+        <title>{% render_title %} - {{ settings.BRANDING_TITLE }}</title>
 
-  <!-- GraphiQL template requirements -->
-  <style>
-    #editor {
-      margin: 0;
-      width: 100%;
-      height: calc(100vh - 56px - 3rem);
-    }
-    .toolbar .dropdown-menu > li > a {
-        clear: left;
-        margin-right: 120px;  /* leave room for the "Save Changes" button if present */
-    }
-    .graphiql-container .doc-explorer-title-bar {
-      box-sizing: content-box;
-  }
-    .graphiql-container .history-title-bar {
-      box-sizing: content-box;
-  }
-  .graphiql-container .docExplorerShow {
-    white-space: nowrap;
-  }
-  </style>
-  <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
-  <link rel="stylesheet"
-        href="{% static 'graphiql-1.5.16/graphiql.min.css' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.5.16/graphiql.min.css'">
-  <script src="{% static 'whatwg-fetch-3.6.2/fetch.umd.min.js' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=whatwg-fetch-3.6.2/fetch.umd.min.js'"></script>
-  <script src="{% static 'react-16.14.0/react.production.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=react-16.14.0/react.production.min.js'"></script>
-  <script src="{% static 'react-dom-16.14.0/react-dom.production.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=react-dom-16.14.0/react-dom.production.min.js'"></script>
-  <script src="{% static 'graphiql-1.5.16/graphiql.min.js' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.5.16/graphiql.min.js'"></script>
-  <script src="{% static 'subscriptions-transport-ws-0.9.18/client.min.js' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=subscriptions-transport-ws-0.9.18/client.min.js'"></script>
-</head>
-<body>
-  <!-- Nautobot page contents -->
-  {% include 'inc/nav_menu.html' %}
-  {% include 'modals/modal_theme.html' with name='theme'%}
-  {% include 'inc/javascript.html' %}
-  <div class="container-fluid wrapper" id="main-content">
-    <!-- GraphiQL page contents -->
-    <div id="editor"></div>
-  </div>
-  {% include 'inc/footer.html' %}
-  {% csrf_token %}
-  <script type="application/javascript">
-    window.GRAPHENE_SETTINGS = {
-    {% if subscription_path %}
-      subscriptionPath: "{{subscription_path}}",
-    {% endif %}
-      graphiqlHeaderEditorEnabled: {{ graphiql_header_editor_enabled|yesno:"true,false" }},
-    };
-  </script>
-  <script src="{% static 'graphene_django/graphiql.js' %}"></script>
-  <script>
-  {% if perms.extras.view_graphqlquery %}
-    document.addEventListener('DOMContentLoaded', function() {
-      queries_tab = `
-        <div class="btn-group" role="button">
-          <button class="toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
-              <span>Queries </span>
-              <span class="caret"></span>
-          </button>
-          <ul class="dropdown-menu" id="graphql-queries-menu">
-            <li class="dropdown-header">Saved Queries</li>
-              {% for query in saved_graphiql_queries %}
-                <li>
-                    {% if request.GET.id|slugify == query.id|slugify %}
-                        <div class="buttons pull-right">
-                            <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
+        <!-- GraphiQL template requirements -->
+        <style>
+            .graphiql-container,
+            .graphiql-dialog,
+            .graphiql-dialog-overlay,
+            .graphiql-tooltip,
+            [data-radix-popper-content-wrapper] {
+                --color-primary: 211, 100%, 50% !important; /* $blue-0: #007dff; */
+                --color-secondary: 208, 13%, 36% !important; /* $gray-3: #505d68; */
+                --color-tertiary: 0, 0%, 10% !important; /* $black-0: #1a1a1a; */
+                --color-info: var(--color-primary) !important;
+                --color-success: 126, 72%, 39% !important; /* $green-0: #1ca92a; */
+                --color-warning: 31, 94%, 45% !important; /* $orange-0: #e07807; */
+                --color-error: 0, 76%, 50% !important; /* $red-0: #e01f1f; */
+                --color-neutral: var(--color-secondary) !important;
+                --color-base: 0, 0%, 96% !important; /* $gray-0: #f4f4f4; */
+
+                --font-family: "Ubuntu", sans-serif !important;
+                --font-family-mono: "Ubuntu Mono", monospace !important;
+                --font-size-body: 0.875rem; !important; /* 14px */
+            }
+
+            /*
+             * Original selector is `body.graphiql-dark`, not `[data-bs-theme="dark"]` - this is to force inheriting theme from
+             * Nautobot rather than GraphiQL maintaining its own theme. `graphene-django` does not provie an option to override
+             * its theme.
+             */
+            [data-bs-theme="dark"] .graphiql-container,
+            [data-bs-theme="dark"] .graphiql-dialog,
+            [data-bs-theme="dark"] .graphiql-dialog-overlay,
+            [data-bs-theme="dark"] .graphiql-tooltip,
+            [data-bs-theme="dark"] [data-radix-popper-content-wrapper] {
+                --color-primary: 209, 100%, 60% !important; /* $blue-0-dark: #339dff; */
+                --color-secondary: 0, 0%, 71% !important; /* $gray-3-dark: #b5b5b5; */
+                --color-tertiary: 0, 0%, 100% !important; /* $black-0-dark: #ffffff; */
+                --color-success: 27, 63%, 49% !important; /* $green-0-dark: #2ecc40; */
+                --color-warning: 30, 100%, 60% !important; /* $orange-0-dark: #ff9933; */
+                --color-error: 0, 100%, 65% !important; /* $red-0-dark: #ff4c4c; */
+                --color-base: 0, 0%, 12% !important; /* $gray-0-dark: #1e1e1e; */
+            }
+
+            #main-content {
+                padding: 0;
+            }
+
+            #editor {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+            .graphiql-toolbar .dropdown-menu {
+                width: max-content;
+            }
+
+            /* Save Changes button */
+            .graphiql-toolbar .dropdown-menu a.btn {
+                color: #e07807 !important;
+            }
+
+        </style>
+        <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
+        <link rel="stylesheet"
+              href="{% static 'dist/css/graphql-libraries.css' %}"
+              onerror="nb.media.handleFailure(this)">
+        <script src="{% static 'dist/js/graphql-libraries.js' %}" onerror="nb.media.handleFailure(this)"></script>
+        <script src="{% static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
+    </head>
+    <body>
+        <!-- Nautobot page contents -->
+        {% include 'inc/nav_menu.html' %}
+        <header id="header">
+            <div class="banner-alert-area">
+                {% include 'inc/header_banners.html' %}
+            </div>
+            <div class="container-fluid mb-12 mt-16">
+                <div class="row">
+                    <div class="col-4">
+                        {% render_title as title %}
+                        {% include 'inc/page_title.html' with title=title %}
+                    </div>
+                    {% include 'inc/header.html' %}
+                    <div class="col-12">
+                        {% render_breadcrumbs %}
+                    </div>
+                </div>
+            </div>
+            {% block header %}{% endblock header %}
+        </header>
+        {% include 'inc/javascript.html' %}
+        <main class="container-fluid wrapper" id="main-content" tabindex="-1">
+            <!-- GraphiQL page contents -->
+            <div id="editor"></div>
+        </main>
+        {% include 'inc/footer.html' %}
+        {% csrf_token %}
+        <script type="application/javascript">
+            window.GRAPHENE_SETTINGS = {
+                {% if subscription_path %}
+                    subscriptionPath: "{{subscription_path}}",
+                {% endif %}
+                graphiqlHeaderEditorEnabled: {{ graphiql_header_editor_enabled|yesno:"true,false" }},
+                graphiqlShouldPersistHeaders: {{ graphiql_should_persist_headers|yesno:"true,false" }},
+                graphiqlInputValueDeprecation: {{ graphiql_input_value_deprecation|yesno:"true,false" }},
+            };
+        </script>
+        <script src="{% static 'graphene_django/graphiql.js' %}"></script>
+        <script>
+            {% if perms.extras.view_graphqlquery %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    queries_tab = `
+                        <div>
+                            <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                                <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                            </button>
+                            <ul class="dropdown-menu" id="graphql-queries-menu">
+                                <li class="dropdown-header">Saved Queries</li>
+                                {% for query in saved_graphiql_queries %}
+                                    <li class="hstack gap-4">
+                                         {% if request.GET.id|slugify == query.id|slugify %}
+                                             <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
+                                                 <strong>{{ query.name }}</strong>
+                                             </a>
+                                             <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
+                                         {% else %}
+                                             <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
+                                         {% endif %}
+                                    </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item" onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</button>
+                                </li>
+                            </ul>
                         </div>
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
-                            <strong>{{ query.name }}</strong>
-                        </a>
-                    {% else %}
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
-                    {% endif %}
-                </li>
-              {% endfor %}
-              <li class="divider" role="separator"></li>
-                <li>
-                    <a onclick="populate_model()" data-toggle="modal" data-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</a>
-                </li>
-            </ul>
-        </div>
-      `
-      $(".toolbar").append(queries_tab);
-    }, false);
-  {% endif %}
+                    `;
+                    $(".graphiql-toolbar").append(queries_tab);
+                }, false);
+            {% endif %}
 
-    function reload(id, query, variables) {
-      if (variables == null){
-          variables = '{}';
-      }
-      window.location.replace("#");
-      window.location.hash = 'query=' + query + "&variables=" + variables;
+            function reload(id, query, variables) {
+                if (variables == null){
+                    variables = '{}';
+                }
+                window.location.replace("#");
+                window.location.hash = 'query=' + query + "&variables=" + variables;
 
-      search = new URLSearchParams(location.search);
-      search.set('id', id);
-      location.search = search.toString();
-    }
+                search = new URLSearchParams(location.search);
+                search.set('id', id);
+                location.search = search.toString();
+            }
 
-    function getHashParams() {
+            function getHashParams() {
       // Retrieve fragments (# params) from URL
       // All fragments are converted into a JSON object
       // To modify the GraphiQL termial, hash fragments in the URL need to be set,
       // this then adds text to the query, vairable and output text boxes in the UI.
-      var hashParams = {};
-      var matches,
-          re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
-          re_match_query_param_and_value = /([^&;=]+)=?([^&;]*)/g,
-          decode_and_replace_plus_with_space = function (s) { return decodeURIComponent(s.replace(re_match_plus, " ")); },
-          query_text = window.location.hash.substring(1);
+                var hashParams = {};
+                var matches,
+                    re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
+                re_match_query_param_and_value = /([^&;=]+)=?([^&;]*)/g,
+                decode_and_replace_plus_with_space = function (s) { return decodeURIComponent(s.replace(re_match_plus, " ")); },
+                query_text = window.location.hash.substring(1);
 
-      while (matches = re_match_query_param_and_value.exec(query_text))
-        hashParams[decode_and_replace_plus_with_space(matches[1])] = decode_and_replace_plus_with_space(matches[2]);
+                while (matches = re_match_query_param_and_value.exec(query_text))
+                    hashParams[decode_and_replace_plus_with_space(matches[1])] = decode_and_replace_plus_with_space(matches[2]);
 
-      return hashParams;
-    }
+                return hashParams;
+            }
 
-    function save() {
-      var url = new URL(window.location.href);
-      var id = url.searchParams.get("id");
-      var result_window = $(".result-window").find(".CodeMirror-code");
-      if (!id) {
-        var html = `
+            function save() {
+                var url = new URL(window.location.href);
+                var id = url.searchParams.get("id");
+                var result_window = $(".result-window").find(".CodeMirror-code");
+                if (!id) {
+                    var html = `
 <pre class="CodeMirror-code">
   <span role="presentation" style="padding-right: 0.1px">
     <span class="cm-def">Unable to find query ID.</span>
   </span>
 </pre>
         `;
-        result_window.html(html);
-        return
-      };
+                    result_window.html(html);
+                    return
+                };
 
-      var graphql_data = JSON.stringify({"query": getHashParams().query});
+                var graphql_data = JSON.stringify({"query": getHashParams().query});
 
-      $.ajax({
-        url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
-        method: "PATCH",
-        headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
-        contentType: "application/json",
-        dataType: "json",
-        data: graphql_data,
-        success: function(data) {
-            data = JSON.stringify(data, undefined, 2).split("\n");
-            var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">Success:</span></span></pre>`;
-            for(var i = 0;i < data.length;i++){
-              html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">${data[i]}</span></span></pre>`;
-            };
-            result_window.html(html);
-        },
-        error: function(error) {
-            error = JSON.stringify(error, undefined, 2).split("\n");
-            var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">Failure:</span></span></pre>`;
-            for(var i = 0;i < error.length;i++){
-              html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">${error[i]}</span></span></pre>`;
-            };
-            result_window.html(html);
-        }
-      });
-    }
+                $.ajax({
+                    url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
+                    method: "PATCH",
+                    headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+                    contentType: "application/json",
+                    dataType: "json",
+                    data: graphql_data,
+                    success: function(data) {
+                        data = JSON.stringify(data, undefined, 2).split("\n");
+                        var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">Success:</span></span></pre>`;
+                        for(var i = 0;i < data.length;i++){
+                            html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">${data[i]}</span></span></pre>`;
+                        };
+                        result_window.html(html);
+                    },
+                    error: function(error) {
+                        error = JSON.stringify(error, undefined, 2).split("\n");
+                        var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">Failure:</span></span></pre>`;
+                        for(var i = 0;i < error.length;i++){
+                            html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">${error[i]}</span></span></pre>`;
+                        };
+                        result_window.html(html);
+                    }
+                });
+            }
 
-    function populate_model() {
-      query = getHashParams().query;
-      model_query = $("#id_query");
-      model_query.val(query);
-    }
+            function populate_model() {
+                query = getHashParams().query;
+                model_query = $("#id_query");
+                model_query.val(query);
+            }
 
-  </script>
-  {% modal_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
-</body>
+        </script>
+        {% modal_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
+    </body>
 </html>

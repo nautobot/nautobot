@@ -4,12 +4,11 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
-from django.db.models import Prefetch, ProtectedError, Q
+from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
-from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
@@ -23,22 +22,32 @@ from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import handle_protectederror
+from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface, Location
+from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
-from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
+from nautobot.load_balancers.tables import LoadBalancerPoolMemberTable, VirtualServerTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.tables import VPNTunnelEndpointTable
 
-from . import filters, forms, tables
+from . import filters, forms, tables, ui
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -106,7 +115,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         context.update({"object_detail_content": self.object_detail_content})
         return context
 
-    @action(detail=True, url_path="vrfs")
+    @action(
+        detail=True,
+        url_path="vrfs",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_vrf"],
+    )
     def vrfs(self, request, *args, **kwargs):
         instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
@@ -128,7 +142,12 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
         prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
@@ -146,7 +165,13 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             }
         )
 
-    @action(detail=True, url_path="ip-addresses", url_name="ip_addresses")
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ip_addresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
     def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
         ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
@@ -218,6 +243,8 @@ class VRFUIViewSet(NautobotUIViewSet):
                 table_class=tables.VRFDeviceAssignmentTable,
                 table_filter="vrf",
                 table_title="Assigned Devices",
+                related_list_url_name="dcim:device_list",
+                related_field_name="vrfs",
                 exclude_columns=["vrf", "namespace", "rd"],
                 add_button_route=None,
             ),
@@ -302,15 +329,14 @@ class RIRUIViewSet(NautobotUIViewSet):
 #
 
 
-class PrefixListView(generic.ObjectListView):
-    filterset = filters.PrefixFilterSet
-    filterset_form = forms.PrefixFilterForm
-    table = tables.PrefixDetailTable
-    template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.all()
+class PrefixUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.PrefixBulkEditForm
+    filterset_class = filters.PrefixFilterSet
+    filterset_form_class = forms.PrefixFilterForm
+    form_class = forms.PrefixForm
+    serializer_class = serializers.PrefixSerializer
+    table_class = tables.PrefixDetailTable
 
-
-class PrefixView(generic.ObjectView):
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -320,41 +346,202 @@ class PrefixView(generic.ObjectView):
         "vlan__vlan_group",
         "namespace",
     ).prefetch_related("locations")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model=Namespace),
+                InstanceBreadcrumbItem(instance=context_object_attr("namespace")),
+                ModelBreadcrumbItem(
+                    model=Prefix,
+                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
+                    label_type="plural",
+                ),
+            ]
+        }
+    )
+    view_titles = Titles(
+        titles={
+            "prefixes": f"{DEFAULT_TITLES['detail']} - Prefixes",
+            "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
+        }
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            ui.PrefixObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Prefix",
+                # TODO: can be changed to __all__ as a part of NAUTOBOT-1053
+                fields=[
+                    "namespace",
+                    "ip_version",
+                    "status",
+                    "role",
+                    "type",
+                    "tenant",
+                    "locations",
+                    "vlan",
+                    "rir",
+                    "date_allocated",
+                    "description",
+                    "utilization",
+                ],
+                ignore_nonexistent_fields=True,  # utilization it's not a field
+                value_transforms={
+                    "ip_version": [lambda v: f"IPv{v}" if v is not None else helpers.placeholder(v)],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=tables.PrefixTable,
+                table_attribute="default_ancestors",
+                table_title="Parent Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="ancestors",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=tables.VRFPrefixAssignmentTable,
+                table_attribute="vrf_assignments",
+                table_title="Assigned VRFs",
+                related_field_name="prefix",
+                related_list_url_name="ipam:vrf_list",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                table_class=CloudNetworkTable,
+                table_attribute="cloud_networks",
+                table_title="Assigned Cloud Networks",
+                exclude_columns=["actions", "assigned_prefix_count", "circuit_count", "cloud_service_count"],
+                related_field_name="prefixes",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                table_class=VPNTunnelEndpointTable,
+                table_attribute="vpn_tunnel_endpoints",
+                table_title="VPN Tunnel Endpoints Protecting Prefix",
+                exclude_columns=[
+                    "vpn_profile",
+                    "destination_ipaddress",
+                    "destination_fqdn",
+                    "protected_prefixes_dg_count",
+                    "protected_prefixes_count",
+                    "actions",
+                ],
+                related_field_name="protected_prefixes",
+                add_button_route=None,
+                paginate=False,
+                show_table_config_button=False,
+            ),
+        ],
+        extra_tabs=[
+            object_detail.DistinctViewTab(
+                weight=800,
+                tab_id="prefixes",
+                label="Child Prefixes",
+                related_object_attribute="default_descendants",
+                url_name="ipam:prefix_prefixes",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="prefix_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="within",
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="ip-addresses",
+                label="IP Addresses",
+                related_object_attribute="all_ips",
+                url_name="ipam:prefix_ipaddresses",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="ip_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="prefix",
+                    ),
+                ],
+            ),
+        ],
+        extra_buttons=[
+            object_detail.Button(
+                weight=100,
+                label="Available",
+                render_on_tab_id="prefixes",
+                template_path="ipam/inc/toggle_available.html",
+            ),
+            ui.AddChildPrefixButton(
+                weight=200,
+                label="Add Child Prefix",
+                link_name="ipam:prefix_add",
+                color=ButtonActionColorChoices.SUBMIT,
+                icon="mdi-plus-thick",
+                required_permissions=["ipam.add_prefix"],
+                render_on_tab_id="prefixes",
+            ),
+            object_detail.Button(
+                weight=100,
+                label="Available",
+                render_on_tab_id="ip-addresses",
+                template_path="ipam/inc/toggle_available.html",
+            ),
+            ui.AddIPAddressButton(
+                weight=200,
+                label="Add an IP Address",
+                link_name="ipam:ipaddress_add",
+                color=ButtonActionColorChoices.SUBMIT,
+                icon="mdi-plus-thick",
+                required_permissions=["ipam.add_ipaddress"],
+                render_on_tab_id="ip-addresses",
+            ),
+        ],
+    )
 
     def get_extra_context(self, request, instance):
-        # Parent prefixes table
-        parent_prefixes = instance.ancestors().restrict(request.user, "view")
-        parent_prefix_table = tables.PrefixTable(parent_prefixes, exclude=["namespace"])
+        if self.action == "retrieve" and instance is not None:
+            if instance.parent != instance.get_parent():
+                messages.warning(
+                    request,
+                    format_html(
+                        "The <code>parent</code> field on this record appears to be set incorrectly. "
+                        'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                        reverse(
+                            "extras:job_run_by_class_path",
+                            kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                        ),
+                        "Check/Fix IPAM Parents",
+                    ),
+                )
+        return super().get_extra_context(request, instance)
 
-        vrfs = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
-
-        cloud_networks = instance.cloud_networks.restrict(request.user, "view")
-        cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
-        cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(parent_prefix_table)
-        RequestConfig(request, paginate).configure(vrf_table)
-        RequestConfig(request, paginate).configure(cloud_network_table)
-
-        return {
-            "vrf_table": vrf_table,
-            "parent_prefix_table": parent_prefix_table,
-            "cloud_network_table": cloud_network_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PrefixPrefixesView(generic.ObjectView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_prefixes.html"
-
-    def get_extra_context(self, request, instance):
-        # Child prefixes table
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+    )
+    def prefixes(self, request, *args, **kwargs):
+        instance = self.get_object()
         child_prefixes = instance.descendants().restrict(request.user, "view")
 
         # Add available prefixes to the table if requested
@@ -364,7 +551,9 @@ class PrefixPrefixesView(generic.ObjectView):
 
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
+            configurable=True,
             exclude=["namespace"],
+            user=request.user,
             data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
@@ -385,23 +574,30 @@ class PrefixPrefixesView(generic.ObjectView):
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&within={instance.prefix}"
 
-        return {
-            "first_available_prefix": instance.get_first_available_prefix(),
-            "base_tree_depth": instance.ancestors().count(),
-            "prefix_table": prefix_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "prefixes",
-            "show_available": request.GET.get("show_available", "true") == "true",
-        }
+        return Response(
+            {
+                "first_available_prefix": instance.get_first_available_prefix(),
+                "base_tree_depth": instance.ancestors().count(),
+                "prefix_table": prefix_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "prefixes",
+                "view_action": "prefixes",
+                "show_available": request.GET.get("show_available", "true") == "true",
+                "badge_count_override": child_prefixes.count(),
+            }
+        )
 
-
-class PrefixIPAddressesView(generic.ObjectView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_ipaddresses.html"
-
-    def get_extra_context(self, request, instance):
+    @action(
+        detail=True,
+        url_path="ip-addresses",
+        url_name="ipaddresses",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddress"],
+    )
+    def ip_addresses(self, request, *args, **kwargs):
         # Find all IPAddresses belonging to this Prefix
+        instance = self.get_object()
         ipaddresses = instance.get_all_ips().restrict(request.user, "view")
 
         # Add available IP addresses to the table if requested
@@ -410,7 +606,11 @@ class PrefixIPAddressesView(generic.ObjectView):
         )
 
         ip_table = tables.IPAddressTable(
-            ipaddresses, exclude=["parent__namespace"], data_transform_callback=data_transform_callback
+            ipaddresses,
+            configurable=True,
+            exclude=["parent__namespace"],
+            user=request.user,
+            data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_table.columns.show("pk")
@@ -430,166 +630,18 @@ class PrefixIPAddressesView(generic.ObjectView):
         namespace_id = instance.namespace_id
         bulk_querystring = f"namespace={namespace_id}&parent={instance.prefix}"
 
-        return {
-            "first_available_ip": instance.get_first_available_ip(),
-            "ip_table": ip_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "ip-addresses",
-            "show_available": request.GET.get("show_available", "true") == "true",
-        }
-
-
-class PrefixEditView(generic.ObjectEditView):
-    queryset = Prefix.objects.all()
-    model_form = forms.PrefixForm
-    template_name = "ipam/prefix_edit.html"
-
-    def successful_post(self, request, obj, created, _logger):
-        """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
-        # 3.0 TODO: remove these checks after enabling strict enforcement of the equivalent logic in Prefix.save()
-        edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.pk})
-        warning_msg = format_html(
-            '<p>This <a href="{}#prefix-hierarchy">will be considered invalid data</a> in a future release.</p>',
-            static("docs/models/ipam/prefix.html"),
+        return Response(
+            {
+                "first_available_ip": instance.get_first_available_ip(),
+                "ip_table": ip_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "ip-addresses",
+                "view_action": "ip_addresses",
+                "show_available": request.GET.get("show_available", "true") == "true",
+                "badge_count_override": ipaddresses.count(),
+            }
         )
-        if obj.parent and obj.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[obj.type]:
-            parent_edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk})
-            messages.warning(
-                request,
-                format_html(
-                    '{} is a {} prefix but its parent <a href="{}">{}</a> is a {}. {} Consider '
-                    '<a href="{}">changing the type of {}</a> and/or <a href="{}">{}</a> to resolve this issue.',
-                    obj,
-                    obj.type.title(),
-                    obj.parent.get_absolute_url(),
-                    obj.parent,
-                    obj.parent.type.title(),
-                    warning_msg,
-                    edit_url,
-                    obj,
-                    parent_edit_url,
-                    obj.parent,
-                ),
-            )
-
-        invalid_children = obj.children.filter(
-            ~Q(type__in=constants.PREFIX_ALLOWED_CHILD_TYPES[obj.type]),  # exclude valid children
-        )
-
-        if invalid_children.exists():
-            children_link = format_html('<a href="{}?parent={}">its children</a>', reverse("ipam:prefix_list"), obj.pk)
-            if obj.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not contain child prefixes of type Pool. {} "
-                        "Consider creating an intermediary Network prefix, or changing the type of {} to Network, "
-                        "to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        children_link,
-                    ),
-                )
-            elif obj.type == choices.PrefixTypeChoices.TYPE_NETWORK:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Network prefix and should not contain child prefixes of types Container or Network. "
-                        '{} Consider <a href="{}">changing the type of {}</a> to Container, '
-                        "or changing the type of {} to Pool, to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        edit_url,
-                        obj,
-                        children_link,
-                    ),
-                )
-            else:  # TYPE_POOL
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Pool prefix and should not contain other prefixes. {} "
-                        'Consider either <a href="{}">changing the type of {}</a> to Container or Network, '
-                        "or deleting {}, to resolve this issue.",
-                        obj,
-                        warning_msg,
-                        edit_url,
-                        obj,
-                        children_link,
-                    ),
-                )
-
-        if obj.ip_addresses.exists() and obj.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            ip_warning_msg = format_html(
-                '<p>This <a href="{}#ipaddress-parenting-concrete-relationship">will be considered invalid data</a> '
-                "in a future release.</p>",
-                static("docs/models/ipam/ipaddress.html"),
-            )
-            shortest_child_mask_length = min([ip.mask_length for ip in obj.ip_addresses.all()])
-            if shortest_child_mask_length > obj.prefix_length:
-                ip_link = format_html(
-                    '<a href="{}?parent={}">these IP addresses</a>', reverse("ipam:ipaddress_list"), obj.pk
-                )
-                create_url = reverse("ipam:prefix_add") + urlencode(
-                    {
-                        "namespace": obj.namespace.pk,
-                        "type": choices.PrefixTypeChoices.TYPE_NETWORK,
-                        "prefix": obj.prefix,
-                    }
-                )
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not directly contain IP addresses. {} "
-                        'Consider either <a href="{}">changing the type of {}</a> to Network, '
-                        'or <a href="{}">creating one or more child prefix(es) of type Network</a> to contain {}, '
-                        "to resolve this issue.",
-                        obj,
-                        ip_warning_msg,
-                        edit_url,
-                        obj,
-                        create_url,
-                        ip_link,
-                    ),
-                )
-            else:
-                messages.warning(
-                    request,
-                    format_html(
-                        "{} is a Container prefix and should not directly contain IP addresses. {} "
-                        'Consider <a href="{}">changing the type of {}</a> to Network to resolve this issue.',
-                        obj,
-                        ip_warning_msg,
-                        edit_url,
-                        obj,
-                    ),
-                )
-
-        super().successful_post(request, obj, created, _logger)
-
-
-class PrefixDeleteView(generic.ObjectDeleteView):
-    queryset = Prefix.objects.all()
-    template_name = "ipam/prefix_delete.html"
-
-
-class PrefixBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Prefix.objects.all()
-    table = tables.PrefixTable
-
-
-class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.all()
-    filterset = filters.PrefixFilterSet
-    table = tables.PrefixTable
-    form = forms.PrefixBulkEditForm
-
-
-class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.all()
-    filterset = filters.PrefixFilterSet
-    table = tables.PrefixTable
 
 
 #
@@ -633,6 +685,14 @@ class IPAddressListView(generic.ObjectListView):
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent.namespace")),
+            ]
+        }
+    )
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -653,6 +713,14 @@ class IPAddressView(generic.ObjectView):
         )
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
 
+        # Load balancer pool members table
+        load_balancer_pool_members = instance.load_balancer_pool_members.all().restrict(request.user, "view")
+        load_balancer_pool_members_table = LoadBalancerPoolMemberTable(load_balancer_pool_members, orderable=False)
+
+        # Virtual servers table
+        virtual_servers = instance.virtual_servers.all().restrict(request.user, "view")
+        virtual_servers_table = VirtualServerTable(virtual_servers, orderable=False, exclude=["vip"])
+
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
@@ -660,9 +728,54 @@ class IPAddressView(generic.ObjectView):
         RequestConfig(request, paginate).configure(parent_prefixes_table)
         RequestConfig(request, paginate).configure(related_ips_table)
 
+        try:
+            parent = instance._get_closest_parent()
+            if instance.parent != parent:
+                messages.warning(
+                    request,
+                    format_html(
+                        "The <code>parent</code> field on this record appears to be set incorrectly. "
+                        'You may wish to <a href="{}">run the {} system Job</a> to repair this and other records.',
+                        reverse(
+                            "extras:job_run_by_class_path",
+                            kwargs={"class_path": "nautobot.ipam.jobs.cleanup.FixIPAMParents"},
+                        ),
+                        "Check/Fix IPAM Parents",
+                    ),
+                )
+        except ValidationError:  # No valid parent found
+            if instance.parent is None:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode({"prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}"))})
+                )
+            else:
+                add_url = (
+                    reverse("ipam:prefix_add")
+                    + "?"
+                    + urlencode(
+                        {
+                            "prefix": str(netaddr.IPNetwork(f"{instance.host}/{instance.mask_length}")),
+                            "namespace": instance.parent.namespace.pk,
+                        }
+                    )
+                )
+            messages.warning(
+                request,
+                format_html(
+                    "The <code>parent</code> field on this record appears to be set incorrectly, and furthermore "
+                    "there appears to be no valid Prefix to contain this record at present. "
+                    'Consider <a href="{}">creating an appropriate Prefix</a> to resolve this issue.',
+                    add_url,
+                ),
+            )
+
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
+            "load_balancer_pool_members_table": load_balancer_pool_members_table,
+            "virtual_servers_table": virtual_servers_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -683,53 +796,7 @@ class IPAddressEditView(generic.ObjectEditView):
 
     def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
-        # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
-        if obj.parent.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            warning_msg = format_html(
-                '<p>This <a href="{}#ipaddress-parenting-concrete-relationship">will be considered invalid data</a> '
-                "in a future release.</p>",
-                static("docs/models/ipam/ipaddress.html"),
-            )
-            parent_link = format_html('<a href="{}">{}</a>', obj.parent.get_absolute_url(), obj.parent)
-            if obj.parent.prefix_length < obj.mask_length:
-                create_url = (
-                    reverse("ipam:prefix_add")
-                    + "?"
-                    + urlencode(
-                        {
-                            "namespace": obj.parent.namespace.pk,
-                            "prefix": str(netaddr.IPNetwork(f"{obj.host}/{obj.mask_length}")),
-                            "type": choices.PrefixTypeChoices.TYPE_NETWORK,
-                        }
-                    )
-                )
-                messages.warning(
-                    request,
-                    format_html(
-                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
-                        'Consider <a href="{}">creating an intermediate /{} prefix of type Network</a> '
-                        "to resolve this issue.",
-                        obj,
-                        parent_link,
-                        warning_msg,
-                        create_url,
-                        obj.mask_length,
-                    ),
-                )
-            else:
-                messages.warning(
-                    request,
-                    format_html(
-                        "IP address {} currently has prefix {} as its parent, which is a Container. {} "
-                        'Consider <a href="{}">changing the prefix</a> to type Network or Pool to resolve this issue.',
-                        obj,
-                        parent_link,
-                        warning_msg,
-                        reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk}),
-                    ),
-                )
-
-        # Add IpAddress to interface if interface is in query_params
+        # Add IPAddress to interface if interface is in query_params
         if "interface" in request.GET or "vminterface" in request.GET:
             interface, _ = retrieve_interface_or_vminterface_from_request(request)
             interface.ip_addresses.add(obj)
@@ -1058,7 +1125,9 @@ class IPAddressVMInterfacesView(generic.ObjectView):
         vm_interfaces = instance.vm_interfaces.restrict(request.user, "view").prefetch_related(
             Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
         )
-        vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
+        vm_interface_table = tables.IPAddressVMInterfaceTable(
+            data=vm_interfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
             "virtualization.delete_vminterface"
         ):
@@ -1189,118 +1258,124 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
 #
 
 
-class VLANListView(generic.ObjectListView):
+class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
+    bulk_update_form_class = forms.VLANBulkEditForm
+    filterset_class = filters.VLANFilterSet
+    filterset_form_class = forms.VLANFilterForm
+    form_class = forms.VLANForm
+    serializer_class = serializers.VLANSerializer
+    table_class = tables.VLANDetailTable
     queryset = VLAN.objects.all()
-    filterset = filters.VLANFilterSet
-    filterset_form = forms.VLANFilterForm
-    table = tables.VLANDetailTable
-
-
-class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans")).select_related(
-        "role",
-        "status",
-        "tenant__tenant_group",
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="vlan_group", parent_lookup_key="name"),
+            ]
+        }
     )
 
-    def get_extra_context(self, request, instance):
-        prefixes = (
-            Prefix.objects.restrict(request.user, "view")
-            .filter(vlan=instance)
-            .select_related(
-                "status",
-                "role",
-                # "vrf",
-                "namespace",
-            )
-        )
-        prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
+    class VLANObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "locations":
+                instance = get_obj_from_context(context)
+                return helpers.render_m2m(value.all(), f"/dcim/locations/?vlans={instance.pk}", key)
+            return super().render_value(key, value, context)
 
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
+    class PrefixObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            obj = get_obj_from_context(context)
+            request = context["request"]
+            return_url = context.get("return_url", obj.get_absolute_url())
 
-        return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
+            if request.user.has_perms(self.add_permissions or []):
+                params = []
+                if obj.tenant:
+                    params.append(("tenant", obj.tenant.pk))
+                if obj.pk:
+                    params.append(("vlan", obj.pk))
+                if hasattr(obj, "locations"):
+                    params += [("locations", loc.pk) for loc in obj.locations.all()]
+                params.append(("return_url", return_url))
+                return reverse("ipam:prefix_add") + "?" + urlencode(params)
+            return None
 
-
-class VLANInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_interfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_interfaces().select_related("device")
-        members_table = tables.VLANDevicesTable(interfaces)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "interfaces",
-        }
-
-
-class VLANVMInterfacesView(generic.ObjectView):
-    queryset = VLAN.objects.all()
-    template_name = "ipam/vlan_vminterfaces.html"
-
-    def get_extra_context(self, request, instance):
-        interfaces = instance.get_vminterfaces().select_related("virtual_machine")
-        members_table = tables.VLANVirtualMachinesTable(interfaces)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(members_table)
-
-        return {
-            "members_table": members_table,
-            "active_tab": "vminterfaces",
-        }
-
-
-class VLANEditView(generic.ObjectEditView):
-    queryset = VLAN.objects.all()
-    model_form = forms.VLANForm
-    template_name = "ipam/vlan_edit.html"
-
-
-class VLANDeleteView(generic.ObjectDeleteView):
-    queryset = VLAN.objects.all()
-
-
-class VLANBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VLAN.objects.all()
-    table = tables.VLANTable
-
-
-class VLANBulkEditView(generic.BulkEditView):
-    queryset = VLAN.objects.select_related(
-        "vlan_group",
-        "status",
-        "tenant",
-        "role",
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            VLANObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                additional_fields=["locations"],
+            ),
+            PrefixObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.PrefixTable,
+                table_filter="vlan_id",
+                exclude_columns=["vlan"],
+                hide_hierarchy_ui=True,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                label="Device Interfaces",
+                url_name="ipam:vlan_device_interfaces",
+                tab_id="device_interfaces",
+                related_object_attribute="interfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Device Interfaces",
+                        table_class=tables.VLANDevicesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        related_field_name="vlan_id",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+            object_detail.DistinctViewTab(
+                weight=200,
+                label="VM Interfaces",
+                url_name="ipam:vlan_vm_interfaces",
+                tab_id="vm_interfaces",
+                related_object_attribute="vminterfaces",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        table_title="Virtual Machine Interfaces",
+                        table_class=tables.VLANVirtualMachinesTable,
+                        table_filter=["untagged_vlan", "tagged_vlans"],
+                        related_field_name="vlan_id",
+                        add_button_route=None,
+                    ),
+                ),
+            ),
+        ),
     )
-    filterset = filters.VLANFilterSet
-    table = tables.VLANTable
-    form = forms.VLANBulkEditForm
 
-
-class VLANBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLAN.objects.select_related(
-        "vlan_group",
-        "status",
-        "tenant",
-        "role",
+    @action(
+        detail=True,
+        url_path="device-interfaces",
+        url_name="device_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interface"],
     )
-    filterset = filters.VLANFilterSet
-    table = tables.VLANTable
+    def device_interfaces(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=True,
+        url_path="vm-interfaces",
+        url_name="vm_interfaces",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["virtualization.view_vminterface"],
+    )
+    def vm_interfaces(self, request, *args, **kwargs):
+        return Response({})
 
 
 #
@@ -1333,6 +1408,14 @@ class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImpor
     queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("ip_addresses")
     serializer_class = serializers.ServiceSerializer
     table_class = tables.ServiceTable
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("parent")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

@@ -1,16 +1,25 @@
 {% if perms.dcim.change_cable %}
     {% if cable.status.name == 'Connected' %}
-        <a href="#" class="btn btn-warning btn-xs cable-toggle connected" title="Mark planned" data="{{ cable.pk }}">
-            <i class="mdi mdi-lan-disconnect" aria-hidden="true"></i>
-        </a>
+        <li>
+            <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">
+                <span class="mdi mdi-lan-disconnect" aria-hidden="true"></span>
+                Mark planned
+            </a>
+        </li>
     {% else %}
-        <a href="#" class="btn btn-success btn-xs cable-toggle" title="Mark installed" data="{{ cable.pk }}">
-            <i class="mdi mdi-lan-connect" aria-hidden="true"></i>
-        </a>
+        <li>
+            <a href="#" class="dropdown-item text-success cable-toggle" data="{{ cable.pk }}">
+                <span class="mdi mdi-lan-connect" aria-hidden="true"></span>
+                Mark installed
+            </a>
+        </li>
     {% endif %}
 {% endif %}
 {% if perms.dcim.delete_cable %}
-    <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ object.get_absolute_url }}" title="Remove cable" class="btn btn-danger btn-xs">
-            <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i>
-    </a>
+    <li>
+        <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
+            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
+            Remove cable
+        </a>
+    </li>
 {% endif %}

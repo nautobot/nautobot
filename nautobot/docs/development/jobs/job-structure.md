@@ -101,6 +101,9 @@ If you code a multi-line description, the first line only will be used in the de
 
 ### `approval_required`
 
+--- 3.0.0 "Field removed in favor of approval workflows"
+    The `approval_required` field was removed. Jobs no longer support approval requirements through this flag. For updated workflows and approval handling, [refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md#job-approvals).
+
 Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
@@ -136,7 +139,7 @@ Unless set to False, it prevents the Job's input parameters from being saved to 
 Important notes about Jobs with sensitive variables:
 
 - Such Jobs cannot be scheduled to run in the future or on a recurring schedule (as Scheduled Jobs must by necessity store their variables in the database for future reference).
-- Jobs with sensitive variables cannot be marked as requiring approval (as Jobs pending approval must store their variables in the database until approved).
+- Jobs with sensitive variables cannot create an approval workflow for them at runtime, if one is defined (as Jobs pending approval must store their variables in the database until approved).
 
 ### `hidden`
 
@@ -243,6 +246,9 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 
 +++ 2.2.0 "Additional blocks"
     Added the `job_form` and `schedule_form` sub-blocks to `extras/job.html`, for use by Jobs that just want to override the rendered forms without replacing all of `{% block content %}`.
+
++++ 3.0.0 "Added job_form_wrapper"
+    Added the `job_form_wrapper` sub-block to `extras/job.html`, for use by Jobs that additionally want to override the card titles, headers, footers, etc. without replacing all of `{% block content %}`,
 
 For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
@@ -606,7 +612,7 @@ register_jobs(ExportText)
 The `create_file()` method accepts a filename and file contents (as `str` or `bytes`). Files are saved alongside the JobResult and remain available until the JobResult is deleted.
 
 !!! note
-    The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/settings.md#job_file_io_storage) settings.
+    The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`STORAGES["nautobotjobfiles"]`](../../user-guide/administration/configuration/settings.md#storages) settings.
 
 ### The `run()` Method
 
@@ -693,7 +699,6 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | Reserved Name             | Purpose                                                                 |
 |---------------------------|-------------------------------------------------------------------------|
 | `after_return`            | [special method](#the-after_return-method)                              |
-| `approval_required`       | [metadata property](#approval_required)                                 |
 | `as_form`                 | class method                                                            |
 | `as_form_class`           | class method                                                            |
 | `before_start`            | [special method](#the-before_start-method)                              |
