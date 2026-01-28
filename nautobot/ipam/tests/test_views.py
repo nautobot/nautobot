@@ -1,6 +1,7 @@
 import datetime
 import random
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from django.test import override_settings
@@ -252,6 +253,145 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=1000)
+    def test_list_objects_default_filters(self):
+        """Test the PREFIX_LIST_DEFAULT_CONTAINER_ONLY and PREFIX_LIST_DEFAULT_MAX_DEPTH settings."""
+        self.add_permissions("ipam.view_prefix")
+        list_url = self.get_list_url()
+
+        with self.subTest("By default, all prefixes are listed"):
+            response = self.client.get(list_url, headers={"HX-Request": True})
+            for prefix in self._get_queryset().all():
+                self.assertBodyContains(response, str(prefix.pk))
+            # Indentation should be present in table rendering
+            self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None or prefix.parent.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("With both settings, both should apply"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER and (
+                        prefix.parent is None
+                        or prefix.parent.parent is None
+                        or prefix.parent.parent.parent is None
+                        or prefix.parent.parent.parent.parent is None
+                    ):
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=-1):
+                # Check for message in base page - not present since both configs are explicitly disabled
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for un-filtered prefix list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    self.assertBodyContains(response, str(prefix.pk))
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("Settings do not apply when explicit filters are present"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+                # Check for message in base page - not present since an explicit filter is applied
+                prefix_status = Status.objects.get_for_model(Prefix).first()
+                response = self.client.get(list_url + f"?status={prefix_status.name}")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url + f"?status={prefix_status.name}", headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.status == prefix_status:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True, count=0)
+
+                # Check for message in base page - not present since an explicit filter is applied
+                response = self.client.get(list_url + "?ip_version=4")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for filtered prefix list in table
+                response = self.client.get(list_url + "?ip_version=4", headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.ip_version == 4:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):

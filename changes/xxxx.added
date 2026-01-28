@@ -1,2 +1,3 @@
-Added `max_depth` filter support to the Prefix list view. Notably, applying this filter does _not_ remove the hierarchy indentation in the rendered table as it's essentially a cutoff on the data depth rather than an ordinary filter.
+Added `max_depth` filter support to the Prefix list view.
+Added `max_depth` and `namespace` filters to the Prefix basic filter form.
 Added support for the settings/Constance variables `PREFIX_LIST_DEFAULT_MAX_DEPTH` and `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`. Configuring either or both of these may improve the performance of the Prefix list view at scale.

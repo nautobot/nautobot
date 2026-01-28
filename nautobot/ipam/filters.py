@@ -388,9 +388,7 @@ class PrefixFilterSet(
         return queryset.filter(pk__in=ancestor_ids)
 
     def generate_query_filter_max_depth(self, value):
-        param = "parent__isnull"
-        for i in range(int(value)):
-            param = "parent__" + param
+        param = f"{'parent__' * (1 + int(value))}isnull"
         query = Q(**{param: False})
         return query
 

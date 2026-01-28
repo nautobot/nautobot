@@ -1,1 +1,2 @@
 Enhanced the "Max Length" dropdown in the Prefix list view to allow deselecting a previously selected value.
+Changed Prefix list view behaviro so that filtering by the filters `ip_version`, `max_depth`, `namespace`, `prefix_length__lte`, and/or `type=Container` (in the absence of any other filters) will not prevent the indentation of prefixes based on their nesting depth.
