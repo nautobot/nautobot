@@ -221,6 +221,11 @@ def extend_schema_type_filter(schema_type, model):
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:
             resolver_name = f"resolve_{field.name}"
+
+            if resolver_fn := getattr(schema_type, resolver_name, None):
+                setattr(schema_type, resolver_name, resolver_fn)
+                continue
+
             search_params = generate_list_search_parameters(child_schema_type)
             # Add OneToMany field to schema_type
             schema_type._meta.fields[field.name] = graphene.Field.mounted(
