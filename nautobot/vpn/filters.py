@@ -11,7 +11,7 @@ from nautobot.apps.filters import (
     TenancyModelFilterSetMixin,
 )
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, RouteTarget
 
 from . import models
 
@@ -245,3 +245,58 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
+
+
+#
+# L2VPN FilterSets
+#
+
+
+class L2VPNFilterSet(
+    StatusModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    NautobotFilterSet
+):
+    """Filter for L2VPN."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "slug": "icontains",
+            "description": "icontains",
+            "identifier": "exact",
+        }
+    )
+    import_targets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RouteTarget.objects.all(),
+        to_field_name="name",
+        label="Import Target (name or ID)",
+    )
+    export_targets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RouteTarget.objects.all(),
+        to_field_name="name",
+        label="Export Target (name or ID)",
+    )
+
+    class Meta:
+        model = models.L2VPN
+        fields = ["id", "name", "slug", "type", "identifier", "description"]
+
+
+class L2VPNTerminationFilterSet(NautobotFilterSet):
+    """Filter for L2VPNTermination."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "l2vpn__name": "icontains",
+        }
+    )
+    l2vpn = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.L2VPN.objects.all(),
+        to_field_name="slug",
+        label="L2VPN (slug or ID)",
+    )
+
+    class Meta:
+        model = models.L2VPNTermination
+        fields = ["id", "l2vpn"]
