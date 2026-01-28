@@ -519,38 +519,55 @@ class PrefixUIViewSet(NautobotUIViewSet):
         ],
     )
 
-    def get_filter_params(self, request):
-        filter_params = super().get_filter_params(request).copy()
-        if "max_depth" not in filter_params:
-            max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
-            if max_depth >= 0:
-                filter_params["max_depth"] = max_depth
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self.filter_params:
+            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
+            default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
+            if default_container_only and default_max_depth >= 0:
+                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
+                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+                queryset = queryset.exclude(**{param: False})
                 messages.info(
-                    request,
+                    self.request,
                     format_html(
-                        "This table has been automatically filtered by the configured "
-                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> value of {max_depth}.",
-                        max_depth=max_depth,
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{default_max_depth}</code> "
+                        "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
+                        default_max_depth=default_max_depth,
                     ),
                 )
-        if "type" not in filter_params:
-            if get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False):
-                filter_params["type"] = [PrefixTypeChoices.TYPE_CONTAINER]
+            elif default_max_depth >= 0:
+                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+                queryset = queryset.exclude(**{param: False})
                 messages.info(
-                    request,
+                    self.request,
                     format_html(
-                        "This table has been automatically filtered by the configured "
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{default_max_depth}</code>.",
+                        default_max_depth=default_max_depth,
+                    ),
+                )
+            elif default_container_only:
+                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the enabled "
                         "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
                     ),
                 )
-        return filter_params
 
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
-        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if no others
-        if all(key in ["max_depth", "type"] for key in self.filter_params):
-            if "type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]:
-                self.hide_hierarchy_ui = False
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
+        # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
+        # - ip_version
+        # - max_depth
+        # - prefix_length__lte
+        # - type=container (*only*)
+        if all(key in ["ip_version", "max_depth", "prefix_length__lte", "type"] for key in self.filter_params) and (
+            "type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]
+        ):
+            self.hide_hierarchy_ui = False
         return queryset
 
     def get_extra_context(self, request, instance):
