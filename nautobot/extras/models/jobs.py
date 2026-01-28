@@ -2,7 +2,6 @@
 
 import contextlib
 from datetime import datetime, timedelta
-import json
 import logging
 import signal
 from typing import Optional, TYPE_CHECKING, Union
@@ -63,6 +62,7 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
     get_job_queue_worker_count,
+    run_console_log_job_and_return_job_result,
     run_kubernetes_job_and_return_job_result,
 )
 
@@ -896,6 +896,11 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
+        # console log run job
+        run_console_log_job = False
+        if run_console_log_job and not synchronous:
+            return run_console_log_job_and_return_job_result(job_result, job_kwargs)
+
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
         # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
@@ -903,7 +908,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
             # TODO: make this branch aware!
-            return run_kubernetes_job_and_return_job_result(job_result, json.dumps(job_kwargs))
+            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,

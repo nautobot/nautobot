@@ -1,0 +1,1 @@
+Added initial support for running jobs in a subprocess and asynchronously capturing console output.

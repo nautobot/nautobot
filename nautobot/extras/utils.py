@@ -4,8 +4,11 @@ import copy
 import hashlib
 import hmac
 import logging
+from queue import Empty, Queue
 import re
+import subprocess
 import sys
+import threading
 from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
@@ -16,6 +19,7 @@ from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
 from django.template.loader import get_template, TemplateDoesNotExist
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
@@ -27,12 +31,14 @@ from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
 from nautobot.extras.constants import (
@@ -703,6 +709,85 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
 
     transaction.on_commit(create_kubernetes_job)
+    return job_result
+
+
+def run_console_log_job_and_return_job_result(job_result, job_kwargs):
+    """Pass the job to Subprocess."""
+
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
+    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result.pk}"]
+
+    queue_stdout = Queue()
+    queue_stderr = Queue()
+
+    def read_stream(stream, queue):
+        """Read from stream line by line and push to queue."""
+        for line in iter(stream.readline, ""):
+            if line:
+                queue.put(line)
+        stream.close()
+
+    def execute_subprocess_job():
+        with subprocess.Popen(  # noqa: S603 cmd built from trusted internal values
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
+        ) as process:
+            read_stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, queue_stdout))
+            read_stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, queue_stderr))
+            read_stdout_thread.start()
+            read_stderr_thread.start()
+
+            print(" === STDOUT ===")
+            while process.poll() is None:
+                try:
+                    line = queue_stdout.get_nowait()
+                    if line is not None:
+                        print(line, end="")
+                except Empty:
+                    pass
+            print(" === END STDOUT ===")
+
+            print(" === STDERR ===")
+            while process.poll() is None:
+                try:
+                    line = queue_stderr.get_nowait()
+                    if line is not None:
+                        print(line, end="")
+                except Empty:
+                    pass
+            print(" === END STDERR ===")
+
+            return_code = process.wait()
+            read_stdout_thread.join()
+            read_stderr_thread.join()
+
+            if return_code != 0:
+                trace_stderr_lines = []
+                # Read traceback
+                if process.poll() is not None:
+                    while True:
+                        try:
+                            line = queue_stderr.get_nowait()
+                            if line is None:
+                                break
+                            trace_stderr_lines.append(line.rstrip())
+                            print(line, end="")
+                        except Empty:
+                            break
+                exc_type = "SubprocessError"
+                exc_message = f"Subprocess exited with return code {return_code}"
+                job_result.result = {
+                    "exc_type": exc_type,
+                    "exc_message": exc_message,
+                }
+                job_result.status = JobResultStatusChoices.STATUS_FAILURE
+                if trace_stderr_lines:
+                    job_result.traceback = sanitize("\n".join(trace_stderr_lines))
+                job_result.date_done = timezone.now()
+                job_result.save()
+
+    transaction.on_commit(execute_subprocess_job)
     return job_result
 
 
