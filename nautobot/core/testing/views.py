@@ -1889,6 +1889,8 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_modular_component_create_form_fields(self):
             """Test that the modular component create form has the expected fields."""
+            if self.model._meta.label_lower == "virtualization.vminterface":
+                self.skipTest("Not applicable to VMInterface")
             expected_labels = ["Description", "Device"]
             if issubclass(self.model, ModularComponentModel):
                 expected_labels.append("Module")
