@@ -17,7 +17,7 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -821,6 +821,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
 
     object_detail_content = None
+    extra_detail_view_action_buttons = ()
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -929,10 +930,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 self.filterset_class(),
             )
 
+        resolved_path = resolve(request.path)
+        # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
+        view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
+
         # Check if there is a default for this view for this specific user
         user_default_saved_view = None
-        app_label, model_name = queryset.model._meta.label.split(".")
-        view_name = f"{app_label}:{model_name.lower()}_list"
         user = request.user
         if not isinstance(user, AnonymousUser):
             try:
@@ -1159,7 +1162,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 **BulkDeleteObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
-                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
                 return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
             else:
                 scheduled_job.delete()
@@ -1194,7 +1197,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 **BulkEditObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
-                messages.success(request, "Job '{scheduled_job.name}' successfully submitted for approval")
+                messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
                 return redirect("extras:scheduledjob_approvalworkflow", pk=scheduled_job.pk)
             else:
                 scheduled_job.delete()

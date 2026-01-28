@@ -2,7 +2,6 @@
 
 import contextlib
 from datetime import datetime, timedelta
-import json
 import logging
 import signal
 from typing import Optional, TYPE_CHECKING, Union
@@ -253,6 +252,7 @@ class Job(PrimaryModel):
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
     is_data_compliance_model = False
+    is_version_controlled = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -533,6 +533,7 @@ class JobLogEntry(BaseModel):
 
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    is_version_controlled = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
@@ -585,6 +586,7 @@ class JobQueue(PrimaryModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
     is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         ordering = ["name"]
@@ -616,6 +618,7 @@ class JobQueueAssignment(BaseModel):
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         unique_together = ["job", "job_queue"]
@@ -695,6 +698,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
     hide_in_diff_view = True
     is_data_compliance_model = False
+    is_version_controlled = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -907,7 +911,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
             # TODO: make this branch aware!
-            return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
+            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
@@ -1147,6 +1151,7 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+    is_version_controlled = False
     is_data_compliance_model = False
 
     def __str__(self):
@@ -1286,6 +1291,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
     is_data_compliance_model = False
+    is_version_controlled = False
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
@@ -1341,6 +1347,15 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
+
+    def on_workflow_canceled(self, approval_workflow):
+        """When canceled, set decision_date to decision_date from approval workflow."""
+        self.decision_date = approval_workflow.decision_date
+        self.enabled = False
+        self.save()
+
+        publish_event_payload = {"data": serialize_object_v2(self)}
+        publish_event(topic="nautobot.jobs.approval.canceled", payload=publish_event_payload)
 
     def get_approval_template(self):
         """

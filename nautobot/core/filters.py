@@ -609,9 +609,12 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         """
         if value:
             # django-tree-queries
-            value = [node.descendants(include_self=True) if not isinstance(node, str) else node for node in value]
+            value = [
+                node.cacheable_descendants_pks(include_self=True) if not isinstance(node, str) else node
+                for node in value
+            ]
 
-        # This new_value is going to be a list of querysets that needs to be flattened.
+        # This new_value is going to be a list of lists that needs to be flattened.
         value = list(data_utils.flatten_iterable(value))
 
         # Construct a list of filter predicates that will be used to generate the Q object.
