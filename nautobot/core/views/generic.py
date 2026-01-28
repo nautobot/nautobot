@@ -1387,7 +1387,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
 
         if form.is_valid():
             new_components = []
-            data = deepcopy(request.POST)
+            data = deepcopy(form.cleaned_data)
 
             names = form.cleaned_data["name_pattern"]
             labels = form.cleaned_data.get("label_pattern")
