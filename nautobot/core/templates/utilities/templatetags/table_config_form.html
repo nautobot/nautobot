@@ -75,6 +75,17 @@
                             {},
                         );
 
+                        // We check if everything is unchecked, since that would indicate it was a reset action.
+                        const allOrder = [...form.querySelectorAll('input[id^="id_"]')].map(field => field.value);
+                        const checkedOrder = [...form.querySelectorAll('input[id^="id_"]:checked')].map(field => field.value);
+
+                        // Prefer resetting the order if all checkboxes are unchecked, if not set the full order.
+                        if (!checkedOrder.length) {
+                            values['columns_order'] = [];
+                        } else if (allOrder.length) {
+                            values['columns_order'] = allOrder;
+                        }
+
                         // Construct a nested JSON object from the path.
                         const data = [...path].reverse().reduce((data, node) => ({ [node]: data }), values);
 

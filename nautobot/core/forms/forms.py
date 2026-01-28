@@ -297,8 +297,59 @@ class TableConfigForm(BootstrapMixin, forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Initialize columns field based on table attributes
-        self.fields["columns"].choices = table.configurable_columns
+        def _resolve_columns_order(request, table_name):
+            """
+            Precedence:
+            1) saved_view table_config override (if present and accessible)
+            2) If table_changes_pending, return columns_order as-is (to preserve unsaved changes)
+            3) user config tables.<table_name>.columns_order
+            4) None
+            """
+            if request is None:
+                return None
+
+            # Default from user config
+            columns_order = request.user.get_config(f"tables.{table_name}.columns_order")
+            if not isinstance(columns_order, (list, tuple)):
+                columns_order = None
+
+            saved_view_id = request.GET.get("saved_view")
+            if not saved_view_id:
+                return columns_order
+
+            table_changes_pending = request.GET.get("table_changes_pending")
+            if table_changes_pending:
+                return columns_order
+
+            # Don't import from core to extras at module level to avoid circular imports
+            from nautobot.extras.models import SavedView
+
+            saved_view = SavedView.objects.restrict(request.user, "view").filter(pk=saved_view_id).first()
+            if not saved_view:
+                return columns_order
+
+            view_table_order = (saved_view.config or {}).get("table_config", {}).get(table_name, {}).get("columns_order")
+
+            if isinstance(view_table_order, list):
+                return view_table_order
+
+            return columns_order
+
+        request = getattr(table, "request", None)
+        columns_order = _resolve_columns_order(request=request, table_name=self.table_name)
+
+        # Reorder configurable_columns (example [('name', 'Name'), ('location', 'Location')] based on the user config
+        # columns_order (example ['location', 'name']) and ensure all columns in configurable_columns are present
+        if isinstance(columns_order, list):
+            by_key = {col[0]: col for col in table.configurable_columns}
+
+            ordered = [by_key[key] for key in columns_order if key in by_key]
+            ordered_keys = set(key for key in columns_order if key in by_key)
+            remaining = [col for col in table.configurable_columns if col[0] not in ordered_keys]
+
+            self.fields["columns"].choices = ordered + remaining
+        else:
+            self.fields["columns"].choices = table.configurable_columns
         self.fields["columns"].initial = table.visible_columns
 
     @property
