@@ -9,14 +9,19 @@ from nautobot.extras.models import Job, JobLogEntry
 
 
 def validate_job_and_job_data(command, user, job_class_path, data=None):
-    job_data = {}
-    try:
-        if data and isinstance(data, str):
+    if not data:
+        job_data = {}
+    elif isinstance(data, str):
+        try:
             job_data = json.loads(data)
-        else:
-            job_data = data
-    except json.decoder.JSONDecodeError as error:
-        raise CommandError(f"Invalid JSON data:\n{error!s}") from error
+        except json.decoder.JSONDecodeError as error:
+            raise CommandError(f"Invalid JSON data:\n{error!s}") from error
+        if not isinstance(job_data, dict):
+            raise CommandError(f"Invalid job data: {job_data}")
+    elif isinstance(data, dict):
+        job_data = data
+    else:
+        raise CommandError(f"Invalid job data: {data}")
 
     if not get_job(job_class_path, reload=True):
         raise CommandError(f'Job "{job_class_path}" not found')
