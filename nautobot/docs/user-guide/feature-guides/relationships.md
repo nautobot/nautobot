@@ -40,24 +40,24 @@ To create a relationship, navigate to **Extensibility > Data Management > Relati
 
 A simple relationship between `Device to VLAN` which is a `many-to-many` relationship. This relationship is `many-to-many` because more than one Devices can be assigned more than one VLANs. This relationship object is shown below.
 
-![many-to-many example](./images/relationships/01-relationships-light.png#only-light){ .on-glb }
-![many-to-many example](./images/relationships/01-relationships-dark.png#only-dark){ .on-glb }
+![many-to-many example](./images/relationships/01-relationships_light.png#only-light){ .on-glb }
+![many-to-many example](./images/relationships/01-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/extras/relationships/cedcf63b-002f-570d-a2f0-4d0550d56e91/`"
 
 ### Extensibility of a Relationship
 
 Now that this relationship is created we can navigate over to a Device detail view and we see `VLANs` is now listed under the `Relationships` section.
 
-![device-to-vlan relationship](./images/relationships/02-relationships-light.png#only-light){ .on-glb }
-![device-to-vlan relationship](./images/relationships/02-relationships-dark.png#only-dark){ .on-glb }
+![device-to-vlan relationship](./images/relationships/02-relationships_light.png#only-light){ .on-glb }
+![device-to-vlan relationship](./images/relationships/02-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/`"
 
 What if your business requirements or terminology differs from what you want? For example lets say you want `VLANs` to be called `VIDs`, you can simply update the relationship `source label` field based on your needs.
 
 You can see now the relationship name is `VIDs` instead of `VLANs`.
 
-![updated-source-label](./images/relationships/03-relationships-light.png#only-light){ .on-glb }
-![updated-source-label](./images/relationships/03-relationships-dark.png#only-dark){ .on-glb }
+![updated-source-label](./images/relationships/03-relationships_light.png#only-light){ .on-glb }
+![updated-source-label](./images/relationships/03-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/edit/`"
 
 !!! info
@@ -67,28 +67,28 @@ Business requirements are one concept to take into account when making `labels`,
 
 In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 2 VLANs` doesn't give the same context as `Configured VLANs: 2 VLANs`.
 
-![updated-source-label-expanded](./images/relationships/10-relationships-light.png#only-light){ .on-glb }
-![updated-source-label-expanded](./images/relationships/10-relationships-dark.png#only-dark){ .on-glb }
+![updated-source-label-expanded](./images/relationships/10-relationships_light.png#only-light){ .on-glb }
+![updated-source-label-expanded](./images/relationships/10-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/edit/`"
 
 In a similar fashion the destination label can make it move evident that these VLANs are in use on the devices. A destination label `In use on devices: 2 devices` is far superior to the default of `Devices: 2 devices`. Providing these labels makes it easier for users of the system to understand the relationships, especially if they weren't the initial implementor of the relationship.
 
-![updated-destination-label-expanded](./images/relationships/11-relationships-light.png#only-light){ .on-glb }
-![updated-destination-label-expanded](./images/relationships/11-relationships-dark.png#only-dark){ .on-glb }
+![updated-destination-label-expanded](./images/relationships/11-relationships_light.png#only-light){ .on-glb }
+![updated-destination-label-expanded](./images/relationships/11-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/`"
 
 Next, some of the visibility options will be discussed. The first option to be demonstrated is the ability to `Move to Advanced tab`. In some cases a particular relationship may not be relevant to the typical user (maybe it's used exclusively in automation) and so you may want the relationship data to be displayed on the `Advanced` tab instead of within the default detail view of the object.
 
 First the option needs to be enabled.
 
-![advanced-tab-relationship](./images/relationships/04-relationships-light.png#only-light){ .on-glb }
-![advanced-tab-relationship](./images/relationships/04-relationships-dark.png#only-dark){ .on-glb }
+![advanced-tab-relationship](./images/relationships/04-relationships_light.png#only-light){ .on-glb }
+![advanced-tab-relationship](./images/relationships/04-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/extras/relationships/add/`"
 
 Once the option is enabled you will see the relationship is now moved to the `Advanced` tab.
 
-![advanced-tab-relationship-view](./images/relationships/05-relationships-light.png#only-light){ .on-glb }
-![advanced-tab-relationship-view](./images/relationships/05-relationships-dark.png#only-dark){ .on-glb }
+![advanced-tab-relationship-view](./images/relationships/05-relationships_light.png#only-light){ .on-glb }
+![advanced-tab-relationship-view](./images/relationships/05-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/?tab=advanced`"
 
 Another visibility option is the `Hide on Source Object` and `Hide on Destination Object`, these do exactly what you'd expect. If enabled (via checkbox) the relationship will not be displayed on the object under the `Relationships` section.
@@ -102,14 +102,14 @@ To continue on this example say we want to limit the relationship on the device 
 
 The filterset below can be used to accomplish this.
 
-![relationship-filterset](./images/relationships/06-relationships-light.png#only-light){ .on-glb }
-![relationship-filterset](./images/relationships/06-relationships-dark.png#only-dark){ .on-glb }
+![relationship-filterset](./images/relationships/06-relationships_light.png#only-light){ .on-glb }
+![relationship-filterset](./images/relationships/06-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/extras/relationships/cedcf63b-002f-570d-a2f0-4d0550d56e91/edit/`"
 
 Once this has been applied you can navigate to the Device and attempt to add the relationship. As seen in the screenshot below only `VLANs` matching the filterset are shown and available to be related.
 
-![available-filtered](./images/relationships/07-relationships-light.png#only-light){ .on-glb }
-![available-filtered](./images/relationships/07-relationships-dark.png#only-dark){ .on-glb }
+![available-filtered](./images/relationships/07-relationships_light.png#only-light){ .on-glb }
+![available-filtered](./images/relationships/07-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/43e0c7a2-3939-5fcf-bc2f-c659f1c40d46/edit/`"
 
 As detailed in the [extras](https://docs.nautobot.com/projects/core/en/stable/models/extras/relationship/) documentation the API can be used to determine what can be filtered on. Below is a quick example of how to do that.
@@ -125,14 +125,14 @@ This will load the Swagger documentation, the next step would be to navigate to 
 
 In this example the `Destination type` chosen was `ipam | VLAN`. We can use that to search in the Swagger docs for `ipam/vlans`.
 
-![swagger-crud](./images/relationships/08-relationships-light.png#only-light){ .on-glb }
-![swagger-crud](./images/relationships/08-relationships-dark.png#only-dark){ .on-glb }
+![swagger-crud](./images/relationships/08-relationships_light.png#only-light){ .on-glb }
+![swagger-crud](./images/relationships/08-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/api/docs/`"
 
 As seen above this endpoint supports all the methods, but if we dig into the `GET` method we will see the parameters that are available.
 
-![get-parameters](./images/relationships/09-relationships-light.png#only-light){ .on-glb }
-![get-parameters](./images/relationships/09-relationships-dark.png#only-dark){ .on-glb }
+![get-parameters](./images/relationships/09-relationships_light.png#only-light){ .on-glb }
+![get-parameters](./images/relationships/09-relationships_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/api/docs/#/ipam/ipam_vlans_list`"
 
 !!! warn
