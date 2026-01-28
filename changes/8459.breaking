@@ -1,0 +1,1 @@
+Dropped support for PostgreSQL versions 12 and 13 as a consequence of upgrading to Django 5.2.

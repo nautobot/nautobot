@@ -61,14 +61,13 @@ class JobTest(TestCase):
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
-<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
-<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>""",
+<input type="number" name="var_int" value="0" max="3600" class="form-control" required placeholder="None" aria-describedby="id_var_int_helptext" id="id_var_int">
+<br><span class="helptext" id="id_var_int_helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th> <td>
+<input type="number" name="var_int_no_default" max="3600" class="form-control" placeholder="None" aria-describedby="id_var_int_no_default_helptext" id="id_var_int_no_default">
+<br><span class="helptext" id="id_var_int_no_default_helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
 
@@ -1264,7 +1263,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1290,7 +1289,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),

@@ -2792,7 +2792,7 @@ class RoleTest(ModelTestCases.BaseModelTestCase):
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
-        self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
+        self.assertQuerySetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
 class SavedViewTest(ModelTestCases.BaseModelTestCase):
@@ -3753,5 +3753,5 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
         conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
         self.assertEqual(
             conflicts["type_create"],
-            [f"A webhook already exists for create on dcim | device to URL {self.url}"],
+            [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
         )

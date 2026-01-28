@@ -198,8 +198,8 @@ class VRF(PrimaryModel):
             #       where multiple different-RD VRFs with the same name may already exist.
             # ["namespace", "name"],
         ]
-        index_together = [
-            ["namespace", "name", "rd"],
+        indexes = [
+            models.Index(fields=("namespace", "name", "rd")),
         ]
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
@@ -624,10 +624,10 @@ class Prefix(PrimaryModel):
             "network",
             "prefix_length",
         )
-        index_together = [
-            ["network", "broadcast", "prefix_length"],
-            ["namespace", "network", "broadcast", "prefix_length"],
-            ["namespace", "ip_version", "network", "prefix_length"],
+        indexes = [
+            models.Index(fields=("network", "broadcast", "prefix_length")),
+            models.Index(fields=("namespace", "network", "broadcast", "prefix_length")),
+            models.Index(fields=("namespace", "ip_version", "network", "prefix_length")),
         ]
         unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
@@ -1417,8 +1417,8 @@ class IPAddress(PrimaryModel):
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
-        index_together = [
-            ["ip_version", "host", "mask_length"],
+        indexes = [
+            models.Index(fields=("ip_version", "host", "mask_length")),
         ]
 
     def __init__(self, *args, address=None, namespace=None, **kwargs):

@@ -53,34 +53,34 @@ class IPAddressQuerySet(TestCase):
         }
 
     def test_net_host_contained(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/24")),
             [instance for ip, instance in self.ips.items() if "10.0" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/30")),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[0-3]/", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/31")),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[0-1]/", ip)],
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.queryset.net_host_contained(netaddr.IPNetwork("10.0.10.0/24")),
             [],
         )
 
     def test_net_in(self):
         args = ["10.0.0.1/24"]
-        self.assertQuerysetEqualAndNotEmpty(self.queryset.net_in(args), [self.ips["10.0.0.1/24"]])
+        self.assertQuerySetEqualAndNotEmpty(self.queryset.net_in(args), [self.ips["10.0.0.1/24"]])
 
         args = ["10.0.0.1"]
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.queryset.net_in(args), [self.ips["10.0.0.1/24"], self.ips["10.0.0.1/25"]]
         )
 
         args = ["10.0.0.1/24", "10.0.0.1/25"]
-        self.assertQuerysetEqualAndNotEmpty(self.queryset.net_in(args), [self.ips[arg] for arg in args])
+        self.assertQuerySetEqualAndNotEmpty(self.queryset.net_in(args), [self.ips[arg] for arg in args])
 
     def test_get_by_address(self):
         address = self.queryset.net_in(["10.0.0.1/24"])[0]
@@ -167,88 +167,88 @@ class IPAddressQuerySet(TestCase):
             "fe80::": 0,
         }
         for term, cnt in search_terms.items():
-            # TODO refactor to be able to use assertQuerysetEqualAndNotEmpty()
+            # TODO refactor to be able to use assertQuerySetEqualAndNotEmpty()
             self.assertEqual(self.queryset.string_search(term).count(), cnt)
 
     def test_host_family(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__family=4),
             [instance for ip, instance in self.ips.items() if "." in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__family=6),
             [instance for ip, instance in self.ips.items() if ":" in ip],
         )
 
     def test_host_net_host(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host="10.0.0.1"),
             [self.ips["10.0.0.1/24"], self.ips["10.0.0.1/25"]],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host="10.0.0.2"),
             [self.ips["10.0.0.2/24"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__net_host="10.0.0.50"), [])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__net_host="10.0.0.50"), [])
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host="2001:db8::1"),
             [self.ips["2001:db8::1/64"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__net_host="2001:db8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__net_host="2001:db8::5"), [])
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__net_host="10.0.0.1"),
             [self.ips["10.0.0.1/24"], self.ips["10.0.0.1/25"]],
         )
 
     def test_host_net_host_contained(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24"),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="10.0.0.0/30"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[0-3]/", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="10.0.0.0/31"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[0-1]/", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="10.0.0.2/31"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[2-3]/", ip)],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__net_host_contained="10.0.10.0/24"), [])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__net_host_contained="10.0.10.0/24"), [])
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_host_contained="2001:db8::/64"),
             [instance for ip, instance in self.ips.items() if "2001:db8:" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__net_host_contained="2222:db8::/64"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__net_host_contained="2222:db8::/64"), [])
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__net_host_contained="10.0.0.0/24"),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__net_host_contained="2001:db8::/64"),
             [instance for ip, instance in self.ips.items() if "2001:db8:" in ip],
         )
 
     def test_host_net_in(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["10.0.0.0/31", "10.0.0.2/31"]),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.0\.0\.[0-3]/", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["10.0.0.0/24"]),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__net_in=["172.16.0.0/24"]), [])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__net_in=["172.16.0.0/24"]), [])
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["2001:db8::/64"]),
             [instance for ip, instance in self.ips.items() if "2001:db8::" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["10.0.0.0/24", "2001:db8::/64"]),
             self.ips.values(),
         )
@@ -257,13 +257,13 @@ class IPAddressQuerySet(TestCase):
         extra_ip = IPAddress.objects.create(
             address="192.168.0.1/24", namespace=self.namespace, tenant=None, status=self.ipaddr_status
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["192.168.0.0/31"]),
             [extra_ip],
         )
 
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__net_in=["10.0.0.0/24"]),
             [instance for ip, instance in self.ips.items() if "10.0.0" in ip],
         )
@@ -295,42 +295,42 @@ class IPAddressQuerySet(TestCase):
         "Not currently supported on postgresql",
     )
     def test_host_exact(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__exact="10.0.0.1"),
             [instance for ip, instance in self.ips.items() if "10.0.0.1/" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__exact="10.0.0.2"),
             [self.ips["10.0.0.2/24"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__exact="10.0.0.10"), [])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__exact="10.0.0.10"), [])
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iexact="10.0.0.1"),
             [instance for ip, instance in self.ips.items() if "10.0.0.1/" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iexact="10.0.0.2"),
             [self.ips["10.0.0.2/24"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iexact="10.0.0.10"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iexact="10.0.0.10"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__exact="2001:db8::1"),
             [self.ips["2001:db8::1/64"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__exact="2001:db8::5"), [])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__exact="2001:db8::5"), [])
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iexact="2001:db8::1"),
             [self.ips["2001:db8::1/64"]],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iexact="2001:db8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iexact="2001:db8::5"), [])
 
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__exact="10.0.0.1"),
             [instance for ip, instance in self.ips.items() if "10.0.0.1/" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__iexact="2001:db8::1"),
             [self.ips["2001:db8::1/64"]],
         )
@@ -340,37 +340,37 @@ class IPAddressQuerySet(TestCase):
         "Not currently supported on postgresql",
     )
     def test_host_endswith(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__endswith="0.2"),
             [instance for ip, instance in self.ips.items() if "0.2/" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__endswith="0.1"),
             [instance for ip, instance in self.ips.items() if "0.1/" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__endswith="0.50"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__endswith="0.50"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iendswith="0.2"),
             [instance for ip, instance in self.ips.items() if "0.2/" in ip],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iendswith="0.1"),
             [instance for ip, instance in self.ips.items() if "0.1/" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iendswith="0.50"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iendswith="0.50"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__endswith="8::1"),
             [instance for ip, instance in self.ips.items() if "8::1/" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__endswith="8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__endswith="8::5"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iendswith="8::1"),
             [instance for ip, instance in self.ips.items() if "8::1/" in ip],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iendswith="8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iendswith="8::5"), [])
 
         # https://github.com/nautobot/nautobot/issues/3480
         self.assertEqual(IPAddress.objects.select_related("nat_inside").filter(host__endswith="0.1").count(), 2)
@@ -381,52 +381,52 @@ class IPAddressQuerySet(TestCase):
         "Not currently supported on postgresql",
     )
     def test_host_startswith(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__startswith="10.0.0."),
             [instance for ip, instance in self.ips.items() if ip.startswith("10.0.0.")],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__startswith="10.0.0.1"),
             [instance for ip, instance in self.ips.items() if ip.startswith("10.0.0.1")],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__startswith="10.50.0."), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__startswith="10.50.0."), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__istartswith="10.0.0."),
             [instance for ip, instance in self.ips.items() if ip.startswith("10.0.0.")],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__istartswith="10.0.0.1"),
             [instance for ip, instance in self.ips.items() if ip.startswith("10.0.0.1")],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__istartswith="10.50.0."), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__istartswith="10.50.0."), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__startswith="2001:db8::"),
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::")],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__startswith="2001:db8::1"),
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::1")],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__startswith="2001:db8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__startswith="2001:db8::5"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__istartswith="2001:db8::"),
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::")],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__istartswith="2001:db8::1"),
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::1")],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__istartswith="2001:db8::5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__istartswith="2001:db8::5"), [])
 
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__startswith="10.0"),
             [instance for ip, instance in self.ips.items() if ip.startswith("10.0")],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__istartswith="2001:db8::"),
             [instance for ip, instance in self.ips.items() if ip.startswith("2001:db8::")],
         )
@@ -436,44 +436,44 @@ class IPAddressQuerySet(TestCase):
         "Not currently supported on postgresql",
     )
     def test_host_regex(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__regex=r"10\.(.*)\.1"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.(.*)\.1", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__regex=r"10\.(.*)\.4"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.(.*)\.4", ip)],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__regex=r"10\.(.*)\.50"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__regex=r"10\.(.*)\.50"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iregex=r"10\.(.*)\.1"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.(.*)\.1", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iregex=r"10\.(.*)\.4"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.(.*)\.4", ip)],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iregex=r"10\.(.*)\.50"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iregex=r"10\.(.*)\.50"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__regex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__regex=r"2001(.*)5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__regex=r"2001(.*)5"), [])
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.filter(host__iregex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
-        self.assertQuerysetEqual(IPAddress.objects.filter(host__iregex=r"2001(.*)5"), [])
+        self.assertQuerySetEqual(IPAddress.objects.filter(host__iregex=r"2001(.*)5"), [])
 
         # https://github.com/nautobot/nautobot/issues/3480
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__regex=r"10\.(.*)\.1"),
             [instance for ip, instance in self.ips.items() if re.match(r"10\.(.*)\.1", ip)],
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             IPAddress.objects.select_related("nat_inside").filter(host__iregex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )

@@ -19,6 +19,7 @@ from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
+import django_celery_beat.models as django_celery_beat_models
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
 from timezone_field import TimeZoneField
@@ -1132,8 +1133,12 @@ class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesM
 
 class ScheduledJobs(models.Model):
     """Helper table for tracking updates to scheduled tasks.
-    This stores a single row with ident=1.  last_update is updated
-    via django signals whenever anything is changed in the ScheduledJob model.
+
+    Is and must remain API-compatible with `django_celery_beat.models.PeriodicTasks` model, because it is used
+    in place of that model via `nautobot.core.celery.schedulers.NautobotDatabaseScheduler`.
+
+    This stores a single row with `ident=1`.
+    `last_update` is updated via Django signals whenever anything is changed in the `ScheduledJob` model.
     Basically this acts like a DB data audit trigger.
     Doing this so we also track deletions, and not just insert/update.
     """
@@ -1150,7 +1155,7 @@ class ScheduledJobs(models.Model):
 
     @classmethod
     def changed(cls, instance, raw=False, **kwargs):
-        """This function acts as a signal handler to track changes to the scheduled job that is triggered before a change"""
+        """Handler for `ScheduledJob` `pre_save()` and `pre_delete()` signals."""
         if raw:
             return
         if not instance.no_changes:
@@ -1160,7 +1165,7 @@ class ScheduledJobs(models.Model):
 
     @classmethod
     def update_changed(cls, raw=False, **kwargs):
-        """This function acts as a signal handler to track changes to the scheduled job that is triggered after a change"""
+        """Helper method for `ScheduledJobs.changed()`, also a handler for the `ScheduledJob` `post_save()` signal."""
         if raw:
             return
         cls.objects.update_or_create(ident=1, defaults={"last_update": timezone.now()})
@@ -1169,7 +1174,11 @@ class ScheduledJobs(models.Model):
 
     @classmethod
     def last_change(cls):
-        """This function acts as a getter for the last update on scheduled jobs"""
+        """
+        Get the singleton value of the `last_update` field.
+
+        Used by the `DatabaseScheduler.schedule_changed()` method.
+        """
         try:
             return cls.objects.get(ident=1).last_update
         except cls.DoesNotExist:
@@ -1177,58 +1186,113 @@ class ScheduledJobs(models.Model):
 
 
 class ScheduledJob(ApprovableModelMixin, BaseModel):
-    """Model representing a periodic task."""
+    """
+    Model representing a scheduled execution of a Nautobot Job.
 
+    Is and must remain API-compatible with `django_celery_beat.models.PeriodicTask` model, because it is used
+    in place of that model via `nautobot.core.celery.schedulers.NautobotDatabaseScheduler`.
+    """
+
+    #
+    # Fields, properties, and methods for equivalence to PeriodicTask model
+    #
+
+    # equivalent to PeriodicTask.name
     name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,  # note: max_length=200 in PeriodicTask model
         verbose_name="Name",
         help_text="Human-readable description of this scheduled task",
         unique=True,
     )
+
+    # equivalent to PeriodicTask.task
     task = models.CharField(
         # JOB_MAX_NAME_LENGTH is the longest permitted module name as well as the longest permitted class name,
         # so we need to permit a task name of MAX.MAX at a minimum:
-        max_length=JOB_MAX_NAME_LENGTH + 1 + JOB_MAX_NAME_LENGTH,
+        max_length=JOB_MAX_NAME_LENGTH + 1 + JOB_MAX_NAME_LENGTH,  # note: max_length=200 in PeriodicTask model
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
     )
-    # Note that we allow job_model to be null and use models.SET_NULL here.
-    # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
-    # deleting the corresponding Job record.
-    job_model = models.ForeignKey(
-        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
-    )
+
+    # TODO: PeriodicTask.interval is a nullable ForeignKey to an IntervalSchedule record
     interval = models.CharField(choices=JobExecutionType, max_length=255)
-    args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
-    kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    job_queue = models.ForeignKey(
-        to="extras.JobQueue",
-        on_delete=models.SET_NULL,
-        related_name="scheduled_jobs",
-        null=True,
+
+    # TODO: PeriodicTask.crontab is a nullable ForeignKey to a CrontabSchedule record
+    crontab = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
-        verbose_name="Job Queue Override",
+        verbose_name="Custom cronjob",
+        help_text="Cronjob syntax string for custom scheduling",
     )
+
+    # equivalent to PeriodicTask.solar -- unused in Nautobot at this time
+    solar = models.ForeignKey(
+        django_celery_beat_models.SolarSchedule, on_delete=models.CASCADE, null=True, blank=True, editable=False
+    )
+
+    # equivalent to PeriodicTask.clocked -- unused in Nautobot at this time
+    clocked = models.ForeignKey(
+        django_celery_beat_models.ClockedSchedule, on_delete=models.CASCADE, null=True, blank=True, editable=False
+    )
+
+    # equivalent to PeriodicTask.args, but using a JSONField instead of a TextField
+    args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
+
+    # equivalent to PeriodicTask.kwargs, but using a JSONField instead of a TextField
+    kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+
+    # equivalent to PeriodicTask.queue field -- unused in Nautobot at this time, see job_queue below instead
+    @property
+    def queue(self) -> str:
+        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
+        return self.job_queue.name if self.job_queue else ""
+
+    # equivalent to PeriodicTask.exchange -- unused in Nautobot at this time, AMQP-specific
+    exchange = models.CharField(  # noqa: DJ001
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, default=None, editable=False
+    )
+
+    # equivalent to PeriodicTask.routing_key -- unused in Nautobot at this time, AMQP-specific
+    routing_key = models.CharField(  # noqa: DJ001
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, default=None, editable=False
+    )
+
+    # equivalent to PeriodicTask.headers -- unused in Nautobot at this time, AMQP-specific
+    headers = models.TextField(blank=True, default="{}", editable=False)
+
+    # equivalent to PeriodicTask.priority -- unused in Nautobot at this time
+    priority = models.PositiveIntegerField(blank=True, null=True, default=None, editable=False)
+
+    # equivalent to PeriodicTask.expires -- unused in Nautobot at this time
+    expires = models.DateTimeField(blank=True, null=True, editable=False)
+
+    # equivalent to PeriodicTask.expire_seconds -- unused in Nautobot at this time
+    expire_seconds = models.PositiveIntegerField(blank=True, null=True, editable=False)
+
+    # equivalent to PeriodicTask.one_off
     one_off = models.BooleanField(
         default=False,
         verbose_name="One-off Task",
         help_text="If True, the schedule will only run the task a single time",
     )
+
+    # equivalent to PeriodicTask.start_time
     start_time = models.DateTimeField(
+        # TODO: PeriodicTask.start_time is blank=True, null=True?
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
-    # Django always stores DateTimeField as UTC internally, but we want scheduled jobs to respect DST and similar,
-    # so we need to store the time zone the job was scheduled under as well.
-    time_zone = TimeZoneField(default=timezone.get_default_timezone_name)
+
     # todoindex:
+    # equivalent to PeriodicTask.enabled
     enabled = models.BooleanField(
         default=True,
         verbose_name="Enabled",
         help_text="Set to False to disable the schedule",
     )
+
+    # Equivalent to PeriodicTask.last_run_at
     last_run_at = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1237,22 +1301,89 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="Datetime that the schedule last triggered the task to run. "
         "Reset to None if enabled is set to False.",
     )
+
+    # Equivalent to PeriodicTask.total_run_count
     total_run_count = models.PositiveIntegerField(
         default=0,
         editable=False,
         verbose_name="Total Run Count",
         help_text="Running count of how many times the schedule has triggered the task",
     )
+
+    # Equivalent to PeriodicTask.date_changed
     date_changed = models.DateTimeField(
         auto_now=True,
         verbose_name="Last Modified",
         help_text="Datetime that this scheduled job was last modified",
     )
+
+    # equivalent to PeriodicTask.description
     description = models.TextField(
         blank=True,
         verbose_name="Description",
         help_text="Detailed description about the details of this scheduled job",
     )
+
+    # equivalent to PeriodicTask.expires_ property
+    @property
+    def expires_(self):
+        return self.expires or self.expire_seconds
+
+    # equivalent to PeriodicTask.scheduler property
+    # TODO: PeriodicTask.scheduler will return a [Solar|Interval|Clocked|Crontab]Schedule instance;
+    #       as we don't use those models, we instead return None. This *may* cause issues at some point.
+    @property
+    def scheduler(self):
+        return None
+
+    # equivalent to PeriodicTask.schedule property
+    @property
+    def schedule(self):
+        """An appropriate `celery.schedules.BaseSchedule` instance, currently either a `clocked` or `TzAwareCrontab`."""
+        if self.interval == JobExecutionType.TYPE_FUTURE:
+            # This is one-time clocked task
+            return clocked(clocked_time=self.start_time)
+
+        return self.to_cron()
+
+    # equivalent to PeriodicTask.due_start_time() method
+    def due_start_time(self, tz):
+        if self.interval == JobExecutionType.TYPE_FUTURE:
+            return self.start_time
+
+        start, ends_in, _ = self.to_cron().remaining_delta(self.start_time.astimezone(tz))  # pylint: disable=no-member
+        return start + ends_in
+
+    # equivalent to PeriodicTask.no_changes instance attribute
+    no_changes = False
+
+    #
+    # Nautobot-specific fields, properties, and methods
+    #
+
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+
+    # Note that we allow job_model to be null and use models.SET_NULL here.
+    # This is because we want to be able to keep ScheduledJob records for tracking and auditing purposes even after
+    # deleting the corresponding Job record.
+    job_model = models.ForeignKey(
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
+    )
+
+    # Same reason here for null=True, on_delete=SET_NULL
+    job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        on_delete=models.SET_NULL,
+        related_name="scheduled_jobs",
+        null=True,
+        blank=True,
+        verbose_name="Job Queue Override",
+    )
+
+    # Django always stores DateTimeField as UTC internally, but we want scheduled jobs to respect DST and similar,
+    # so we need to store the time zone the job was scheduled under as well.
+    time_zone = TimeZoneField(default=timezone.get_default_timezone_name)
+
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -1261,8 +1392,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         null=True,
         help_text="User that requested the schedule",
     )
+
     # todoindex:
     approval_required = models.BooleanField(default=False)
+
     decision_date = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1270,15 +1403,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         verbose_name="Approval/Rejection date/time",
         help_text="Datetime that the schedule was approved or denied",
     )
-    crontab = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        verbose_name="Custom cronjob",
-        help_text="Cronjob syntax string for custom scheduling",
-    )
 
     objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
-    no_changes = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
     is_data_compliance_model = False
@@ -1359,19 +1485,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.one_off and self.start_time < timezone.now():
             return "extras/job_approval_confirmation.html"
         return None
-
-    @property
-    def schedule(self):
-        if self.interval == JobExecutionType.TYPE_FUTURE:
-            # This is one-time clocked task
-            return clocked(clocked_time=self.start_time)
-
-        return self.to_cron()
-
-    @property
-    def queue(self) -> str:
-        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
-        return self.job_queue.name if self.job_queue else ""
 
     @property
     def runnable(self):
@@ -1523,7 +1636,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     create_schedule.__func__.alters_data = True
 
-    def to_cron(self):
+    def to_cron(self) -> TzAwareCrontab:
+        """Helper method for self.schedule property."""
         tz = self.time_zone
         t = self.start_time.astimezone(tz)  # pylint: disable=no-member
         if self.interval == JobExecutionType.TYPE_HOURLY:
@@ -1540,3 +1654,4 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 signals.pre_delete.connect(ScheduledJobs.changed, sender=ScheduledJob)
 signals.pre_save.connect(ScheduledJobs.changed, sender=ScheduledJob)
 signals.post_save.connect(ScheduledJobs.update_changed, sender=ScheduledJob)
+# TODO: django-celery-beat also connects update_changed to the post_delete signal, should we?

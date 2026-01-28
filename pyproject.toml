@@ -28,15 +28,12 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=46.0.3,<46.1)",
     # Fundamental web framework for Nautobot
-    "Django (>=4.2.27,<4.3)",
+    "django (>=5.2.10,<5.3)",
     # Adds AJAX capabilities to django-tables2
     "django-ajax-tables (>=1.1.1,<1.2)",
-    # Base functionality for task scheduling with Celery
-    # Not yet upgrading to v2.8.x due to numerous reported issues, including:
-    # https://github.com/celery/django-celery-beat/issues/894
-    # https://github.com/celery/django-celery-beat/issues/922
-    # https://github.com/celery/django-celery-beat/issues/927
-    "django-celery-beat (>=2.7.0,<2.8)",
+    # Database backend for task scheduling with Celery Beat
+    # Pinned to an exact version because we override a number of non-public APIs that could change in a patch release.
+    "django-celery-beat (==2.8.1)",
     # Provides a database backend & models for Celery task results
     "django-celery-results (>=2.6.0,<2.7)",
     # Management of app configuration via the Django admin UI
@@ -116,9 +113,7 @@ dependencies = [
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
     # Social authentication/registration with support for many auth providers
-    # NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
-    #       that addresses a security vulnerability in social-auth-app-django 5.4.3
-    "social-auth-app-django (>=5.4.3,<5.5)",
+    "social-auth-app-django (>=5.6,<5.7)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
 ]

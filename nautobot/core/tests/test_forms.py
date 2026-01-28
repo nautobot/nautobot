@@ -594,7 +594,7 @@ class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
         input_ = [vlan_groups[0].pk, vlan_groups[1].name]
         qs = field.clean(input_)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
-        self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
+        self.assertQuerySetEqual(qs, values=expected_output, transform=lambda x: x.pk)
 
         invalid_values = [
             "",

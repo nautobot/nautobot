@@ -29,7 +29,7 @@ class ImportObjectsUITestCase(SeleniumTestCase):
         self.assertFalse(self.browser.is_text_present("Local facility ID or description", wait_time=1))
 
         # Select a different valid content-type
-        self.browser.find_by_xpath("//li[contains(text(), 'circuits | circuit termination')]", wait_time=10).click()
+        self.browser.find_by_xpath("//li[contains(text(), 'Circuits | circuit termination')]", wait_time=10).click()
 
         self.assertTrue(self.browser.is_text_present("upstream_speed", wait_time=10))
         self.assertTrue(self.browser.is_text_present("Upstream speed, if different from port speed"))

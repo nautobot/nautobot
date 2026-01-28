@@ -66,10 +66,10 @@ Nautobot v3.0.0 and later requires the following:
 | Dependency | Minimum Version |
 | ---------- | --------------- |
 | Python     | 3.10            |
-| PostgreSQL | 12.0¹           |
+| PostgreSQL | 14.0¹           |
 | Redis      | 4.0             |
 
-¹ PostgreSQL versions 12.x and 13.x have reached end-of-life, and support for these versions will be dropped in Nautobot 3.1. As such, it is our recommendation that you upgrade to PostgreSQL 14+ while still on Nautobot 2.4 or Nautobot 3.0 as a separate action / maintenance window to minimize the number of simultaneous changes.
+¹ PostgreSQL versions 12.x and 13.x have reached end-of-life, and support for these versions has been dropped in Nautobot 3.1. As such, it is our recommendation that you upgrade to PostgreSQL 14+ while still on Nautobot 2.4 or Nautobot 3.0 as a separate action / maintenance window to minimize the number of simultaneous changes.
 
 !!! warning
     PostgreSQL major version upgrades typically require manual steps to update or migrate the database structure. Refer to [Upgrading PostgreSQL](postgresql.md) for more guidance on how migrate to a newer major version of PostgreSQL.
@@ -85,13 +85,19 @@ As with all dependencies, we would recommend that you follow usual industry best
 --- 2.4.20 "Dropped support for Python 3.9"
     Support for Python 3.9 was removed.
 
+--- 3.1.0
+    - Support for versions of PostgreSQL older than 14.0 was removed.
+
 Nautobot v1.1.0 and later can optionally support the following:
 
 > *Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
-| MySQL      | 8.0             |
+| MySQL      | 8.0.11          |
+
+--- 3.1.0
+    - Support for versions of MySQL older than 8.0.11 was removed.
 
 !!! tip
     If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](../migration/migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.

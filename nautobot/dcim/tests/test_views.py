@@ -1218,7 +1218,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist" id="id_u_height_error"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 

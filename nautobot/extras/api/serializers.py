@@ -695,7 +695,17 @@ class ScheduledJobSerializer(BaseModelSerializer):
 
     class Meta:
         model = ScheduledJob
-        fields = "__all__"
+        # Exclude database fields that are provided for parity with django-celery-beat but are otherwise unused
+        exclude = [
+            "clocked",
+            "exchange",
+            "expires",
+            "expire_seconds",
+            "headers",
+            "priority",
+            "routing_key",
+            "solar",
+        ]
 
 
 #
