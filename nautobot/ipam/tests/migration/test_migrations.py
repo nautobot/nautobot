@@ -334,7 +334,7 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
 
         with self.subTest("notes"):
             # no notes are assigned to aggregates
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(assigned_object_type=ContentType.objects.get_for_model(Aggregate)),
                 Note.objects.none(),
             )
@@ -342,32 +342,32 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
             self.assertEqual(Note.objects.count(), 5)
 
             # aggregate1 note added on top of existing note on prefix1
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=self.prefix1.id),
                 Note.objects.filter(note__in=["Prefix1 test note", "Aggregate1 test note"]),
             )
 
             # prefix2 note was unchanged
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=self.prefix2.id),
                 Note.objects.filter(note="Prefix2 test note"),
             )
 
             # aggregate3 note was migrated to prefix3
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=self.prefix3.id),
                 Note.objects.filter(note="Aggregate3 test note"),
             )
 
             # no notes for prefix4
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=self.prefix4.id),
                 Note.objects.none(),
             )
 
             # aggregate5 note was migrated to new prefix object
             aggregate5_migrated_prefix = Prefix.objects.get(network="8.5.0.0")
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 Note.objects.filter(
                     assigned_object_type=prefix_ct,
                     assigned_object_id=aggregate5_migrated_prefix.id,
@@ -378,13 +378,13 @@ class AggregateToPrefixMigrationTestCase(MigratorTestCase):
             # no other notes are related to remaining prefixes
             for i in range(5, 13):
                 prefix = Prefix.objects.get(network=f"10.{i}.0.0")
-                self.assertQuerysetEqual(
+                self.assertQuerySetEqual(
                     Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=prefix.id),
                     Note.objects.none(),
                 )
             for i in range(6, 21):
                 prefix = Prefix.objects.get(network=f"8.{i}.0.0")
-                self.assertQuerysetEqual(
+                self.assertQuerySetEqual(
                     Note.objects.filter(assigned_object_type=prefix_ct, assigned_object_id=prefix.id),
                     Note.objects.none(),
                 )
@@ -504,7 +504,7 @@ class IPAMDataMigration0031TestCase(MigratorTestCase):
         IPAddress = self.new_state.apps.get_model("ipam", "IPAddress")
 
         with self.subTest("Verify that all IPAddresses now have a valid parent"):
-            self.assertQuerysetEqual(IPAddress.objects.filter(parent__isnull=True), IPAddress.objects.none())
+            self.assertQuerySetEqual(IPAddress.objects.filter(parent__isnull=True), IPAddress.objects.none())
             for ip in IPAddress.objects.iterator():
                 self.assertLessEqual(netaddr.IPAddress(ip.parent.network), netaddr.IPAddress(ip.host))
                 self.assertGreaterEqual(netaddr.IPAddress(ip.parent.broadcast), netaddr.IPAddress(ip.host))

@@ -35,21 +35,21 @@ class VPNPhase1PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_encryption_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"encryption_algorithm": "AES-128-CBC"}, self.queryset).qs,
             self.queryset.filter(encryption_algorithm__contains=["AES-128-CBC"]),
             ordered=False,
         )
 
     def test_integrity_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"integrity_algorithm": "SHA256"}, self.queryset).qs,
             self.queryset.filter(integrity_algorithm__contains=["SHA256"]),
             ordered=False,
         )
 
     def test_dh_group(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"dh_group": "14"}, self.queryset).qs,
             self.queryset.filter(dh_group__contains=["14"]),
             ordered=False,
@@ -68,21 +68,21 @@ class VPNPhase2PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_encryption_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"encryption_algorithm": "AES-128-CBC"}, self.queryset).qs,
             self.queryset.filter(encryption_algorithm__contains=["AES-128-CBC"]),
             ordered=False,
         )
 
     def test_integrity_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"integrity_algorithm": "SHA256"}, self.queryset).qs,
             self.queryset.filter(integrity_algorithm__contains=["SHA256"]),
             ordered=False,
         )
 
     def test_pfs_group(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"pfs_group": "14"}, self.queryset).qs,
             self.queryset.filter(pfs_group__contains=["14"]),
             ordered=False,

@@ -16,7 +16,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import utils
-from nautobot.core.utils import permissions
+from nautobot.core.utils import deprecation, permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.ipam.models import default_namespace_pk
@@ -266,13 +266,17 @@ class NautobotTestCaseMixin:
 
         self.assertEqual(new_model_dict, relevant_data)
 
-    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
-        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+    def assertQuerySetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerySetEqual with additional logic to assert input queryset and values are not empty"""
 
-        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(qs), 0, "QuerySet cannot be empty")
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
-        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+        return self.assertQuerySetEqual(qs, values, *args, **kwargs)
+
+    @deprecation.method_deprecated_in_favor_of(assertQuerySetEqualAndNotEmpty)
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        return self.assertQuerySetEqualAndNotEmpty(qs, values, *args, **kwargs)
 
     class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
         """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""

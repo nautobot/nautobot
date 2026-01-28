@@ -1,0 +1,2 @@
+Updated dependency `django` to `>=5.2.10,<5.3`.
+Updated dependency `django-celery-beat` to `==2.8.1` for compatibility with Django 5.2; pinned to an exact version due to Nautobot's use of some internals of this dependency.

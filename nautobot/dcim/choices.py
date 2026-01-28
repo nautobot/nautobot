@@ -220,7 +220,7 @@ class ConsolePortTypeChoices(ChoiceSet):
                 (TYPE_USB_MICRO_AB, "USB Micro AB"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -487,10 +487,10 @@ class PowerPortTypeChoices(ChoiceSet):
             ),
         ),
         (
-            "Other",
+            "Other",  # must remain last in the list
             (
                 (TYPE_HARDWIRED, "Hardwired"),
-                (TYPE_OTHER, "Other"),
+                (TYPE_OTHER, "Other"),  # must remain last in the list
             ),
         ),
     )
@@ -747,10 +747,10 @@ class PowerOutletTypeChoices(ChoiceSet):
             ),
         ),
         (
-            "Other",
+            "Other",  # must remain last in the list
             (
                 (TYPE_HARDWIRED, "Hardwired"),
-                (TYPE_OTHER, "Other"),
+                (TYPE_OTHER, "Other"),  # must remain last in the list
             ),
         ),
     )
@@ -1138,7 +1138,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_SUMMITSTACK512, "Extreme SummitStack-512"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -1330,7 +1330,7 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_SPLICE, "Splice"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -1399,7 +1399,7 @@ class CableTypeChoices(ChoiceSet):
             ),
         ),
         (TYPE_POWER, "Power"),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
