@@ -22,11 +22,11 @@ classifiers = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     # Background task processing
-    "celery (>=5.6.1,<5.7)",
+    "celery (>=5.6.2,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.3,<46.1)",
+    "cryptography (>=46.0.4,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.10,<5.3)",
     # Adds AJAX capabilities to django-tables2
@@ -45,7 +45,7 @@ dependencies = [
     # AutoSlugField and shell_plus
     "django-extensions (>=4.1,<4.2)",
     # Advanced query filters
-    "django-filter (>=25.1,<25.2)",
+    "django-filter (>=25.2,<25.3)",
     # Health check endpoint
     "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
@@ -72,7 +72,7 @@ dependencies = [
     "djangorestframework (>=3.16.1,<3.17)",
     # OpenAPI 3.0 schema generation for the REST API
     # Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
-    "drf-spectacular[sidecar] (>=0.28.0,<0.29)",
+    "drf-spectacular[sidecar] (>=0.29.0,<0.30)",
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
@@ -84,25 +84,25 @@ dependencies = [
     # Template rendering engine
     "Jinja2 (>=3.1.6,<3.2)",
     # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
-    "jsonschema (>=4.7.0,<5)",
+    "jsonschema (>=4.26.0,<5)",
     # Library to access Kubernetes API used to develop K8s integration
     "kubernetes (>=33.1.0,<34)",
     # Rendering of markdown files to HTML
-    "Markdown (>=3.8.2,<3.9)",
+    "Markdown (>=3.10.1,<3.11)",
     # IP prefix and address handling
     "netaddr (>=1.3.0,<1.4)",
     # Library of network related utilities including network driver mappings and Jinja Filters
     # Note: netutils is limited in scope, dependencies, and observes semver, as such
     #       we permit a looser (^) version constraint here.
-    "netutils (>=1.14.0,<2)",
+    "netutils (>=1.16.0,<2)",
     # HTML sanitization
     "nh3 (>=0.3.2,<0.4)",
     # Handling of version numbers
-    "packaging (>=23.1)",
+    "packaging (>=23.2)",
     # Image processing library
-    "Pillow (>=12.0.0,<12.1)",
+    "Pillow (>=12.1.0,<12.2)",
     # Custom prometheus metrics
-    "prometheus-client (>=0.23.1,<0.24)",
+    "prometheus-client (>=0.24.1,<0.25)",
     # PostgreSQL database adapter
     # NOTE: psycopg3 is available now and nominally replaces psycopg2
     "psycopg2-binary (>=2.9.11,<2.10)",
@@ -113,25 +113,25 @@ dependencies = [
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
     # Social authentication/registration with support for many auth providers
-    "social-auth-app-django (>=5.6,<5.7)",
+    "social-auth-app-django (>=5.7.0,<5.8)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
 ]
 
 [project.optional-dependencies]
 all = [
-    "django-auth-ldap (>=5.2.0,<5.3)",
+    "django-auth-ldap (>=5.3.0,<5.4)",
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.7,<2.3)",
-    "napalm (>=4.1.0,<6.0.0)",
+    "napalm (>=5.1.0,<6.0.0)",
     "social-auth-core[saml] (>=4.8.3,<4.9)",
 ]
 # LDAP Support
-ldap = [ "django-auth-ldap (>=5.2.0,<5.3)" ]
+ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
 # MySQL database adapter
 mysql = [ "mysqlclient (>=2.2.7,<2.3)" ]
 # NAPALM automation library
-napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
+napalm = [ "napalm (>=5.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
 remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
@@ -177,7 +177,7 @@ faker = "^37.12.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~14.2.0"
+rich = "~14.3.1"
 # Change log management and generation
 towncrier = "~25.8.0"
 # Watch files for celery and mkdocs reload
@@ -215,17 +215,17 @@ djlint = "~1.36.4"
 # Code static analysis
 pylint = "~3.3.9"
 # Pylint extensions for Django
-pylint-django = "~2.6.1"
+pylint-django = "~2.7.0"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.34"
+pymarkdownlnt = "~0.9.35"
 # Combination linter and code formatter
-ruff = "~0.14.10"
+ruff = "~0.14.14"
 # YAML linting
-yamllint = "~1.37.1"
+yamllint = "~1.38.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.1"
+coverage = "~7.13.2"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
@@ -233,7 +233,7 @@ openapi-spec-validator = "~0.7.2"
 # Integration Tests
 requests = "~2.32.5"
 # Selenium web drivers for live integration testing
-selenium = "~4.36.0"
+selenium = "~4.40.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
