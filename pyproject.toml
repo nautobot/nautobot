@@ -28,7 +28,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=46.0.3,<46.1)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.10,<5.3)",
+    "django (>=6.0.1,<6.1)",
     # Adds AJAX capabilities to django-tables2
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -86,7 +86,7 @@ dependencies = [
     # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
     "jsonschema (>=4.7.0,<5)",
     # Library to access Kubernetes API used to develop K8s integration
-    "kubernetes (>=33.1.0,<34)",
+    "kubernetes (>=35.0.0,<36)",
     # Rendering of markdown files to HTML
     "Markdown (>=3.8.2,<3.9)",
     # IP prefix and address handling
@@ -98,7 +98,7 @@ dependencies = [
     # HTML sanitization
     "nh3 (>=0.3.2,<0.4)",
     # Handling of version numbers
-    "packaging (>=23.1)",
+    "packaging (>=26.0)",
     # Image processing library
     "Pillow (>=12.0.0,<12.1)",
     # Custom prometheus metrics
@@ -165,7 +165,7 @@ exclude = [
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 # Currently pinned to 5.2.0 due to https://github.com/django-commons/django-debug-toolbar/issues/2168
-django-debug-toolbar = "~5.2.0"
+django-debug-toolbar = "~6.2.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -173,7 +173,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^37.12.0"
+faker = "^40.1.2"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -203,9 +203,9 @@ mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.1"
+mkdocstrings = "~1.0.2"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.19.0"
+mkdocstrings-python = "~2.0.1"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -213,7 +213,7 @@ djhtml = "~3.0.10"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
-pylint = "~3.3.9"
+pylint = "~4.0.4"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
@@ -239,7 +239,7 @@ splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
-time-machine = "~2.19.0"
+time-machine = "~3.2.0"
 
 [tool.poetry.scripts]
 
