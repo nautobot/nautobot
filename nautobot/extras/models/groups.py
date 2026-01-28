@@ -772,7 +772,10 @@ class DynamicGroup(PrimaryModel):
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in filterset.data.items():
             filter_field = filterset.filters.get(field_name)
-            query &= self._generate_query_for_filter(filter_field, value)
+            if filter_field.exclude:
+                query &= ~self._generate_query_for_filter(filter_field, value)
+            else:
+                query &= self._generate_query_for_filter(filter_field, value)
 
         return query
 
