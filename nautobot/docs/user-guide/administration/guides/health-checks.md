@@ -141,6 +141,9 @@ livenessProbe:
 
 It is advised though to enable the custom [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting in order to use files for probes in Kubernetes. That way even if you have concurrency of `1` in your environment, probes will still work:
 
+!!! warning
+    If you are using Celery version `5.6.1` breaks the creation of Worker's heartbeat file, but still generate readiness files as expected. Upgrading to Celery `5.6.2` resolves the issue. Affected Nautobot versions are `3.0.4` & `3.0.5`.
+
 ```yaml
 readinessProbe:
   exec:

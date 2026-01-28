@@ -35,7 +35,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
 # Background task processing
-celery = "~5.6.1"
+celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
