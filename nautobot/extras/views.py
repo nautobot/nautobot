@@ -1,6 +1,6 @@
 from functools import partial
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import parse_qs
 
 from django.conf import settings
@@ -22,6 +22,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -33,7 +34,6 @@ from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
@@ -965,6 +965,25 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
+class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
+    def __init__(self, *, extra_columns=None, **kwargs):
+        self.extra_columns = extra_columns or []
+
+        # Inject extra columns directly into the table_class.base_columns before initialization
+        table_class = kwargs.get("table_class")
+        if table_class:
+            for name, column in self.extra_columns:
+                # Add to base_columns only if not already present
+                if name not in table_class.base_columns:
+                    table_class.base_columns[name] = column
+
+        super().__init__(**kwargs)
+
+    def get_extra_context(self, context: Dict[str, Any]):
+        # No need to mutate columns here anymore
+        return super().get_extra_context(context)
+
+
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -973,6 +992,128 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
+
+    def get_object_detail_content(self, instance: ConfigContextSchema):
+        """Dynamically construct panels with validation logic using the instance's data_schema."""
+
+        # Shared panels used in both cases
+        panels_common = (
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data_schema",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=["owner"],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Data Schema",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
+                body_content_template_path="extras/inc/configcontextschema_data.html",
+            ),
+        )
+
+        # Bail out early if no usable schema
+        if instance is None or not isinstance(instance.data_schema, dict):
+            return object_detail.ObjectDetailContent(panels=panels_common)
+
+        try:
+            validator = Draft7Validator(instance.data_schema)
+        except SchemaError:
+            validator = {}
+        extra_tabs = (
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="validation",
+                label="Validation",
+                url_name="extras:configcontextschema_validation",
+                panels=(
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_title="Config Contexts",
+                        table_class=tables.ConfigContextTable,
+                        table_filter="config_context_schema",
+                        related_field_name="schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                            ),
+                        ],
+                        include_columns=["validation_state", "actions"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=200,
+                        table_title="Devices",
+                        table_class=DeviceTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=["validation_state"],
+                    ),
+                    ValidationObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=300,
+                        table_title="Virtual Machines",
+                        table_class=VirtualMachineTable,
+                        table_filter="local_config_context_schema",
+                        tab_id="validation",
+                        add_button_route=None,
+                        extra_columns=[
+                            (
+                                "dynamic_group_count",
+                                tables.LinkedCountColumn(
+                                    viewname="extras:dynamicgroup_list",
+                                    url_params={"member_id": "pk"},
+                                    verbose_name="Dynamic Groups",
+                                    reverse_lookup="static_group_associations__associated_object_id",
+                                ),
+                            ),
+                            (
+                                "validation_state",
+                                tables.ConfigContextSchemaValidationStateColumn(
+                                    validator, "local_config_context_data", empty_values=()
+                                ),
+                            ),
+                        ],
+                        include_columns=[
+                            "name",
+                            "status",
+                            "cluster",
+                            "role",
+                            "tenant",
+                            "vcpus",
+                            "memory",
+                            "disk",
+                            "dynamic_group_count",
+                            "validation_state",
+                        ],
+                    ),
+                ),
+            ),
+        )
+
+        return object_detail.ObjectDetailContent(
+            panels=panels_common,
+            extra_tabs=extra_tabs,
+        )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -986,90 +1127,14 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         else:
             context["data_format"] = "json"
 
+        if instance:
+            context["object_detail_content"] = self.get_object_detail_content(instance)
+
         return context
 
-
-class ConfigContextSchemaObjectValidationView(generic.ObjectView):
-    """
-    This view renders a detail tab that shows tables of objects that utilize the given schema object
-    and their validation state.
-    """
-
-    queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema_validation.html"
-
-    def get_extra_context(self, request, instance):
-        """
-        Reuse the model tables for config context, device, and virtual machine but inject
-        the `ConfigContextSchemaValidationStateColumn` and an object edit action button.
-        """
-        # Prep the validator with the schema so it can be reused for all records
-        validator = Draft7Validator(instance.data_schema)
-
-        # Config context table
-        config_context_table = tables.ConfigContextTable(
-            data=instance.config_contexts.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
-                ),
-                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(config_context_table)
-
-        # Device table
-        device_table = DeviceTable(
-            data=instance.devices.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        # Virtual machine table
-        virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(virtual_machine_table)
-
-        return {
-            "config_context_table": config_context_table,
-            "device_table": device_table,
-            "virtual_machine_table": virtual_machine_table,
-            "active_tab": "validation",
-        }
+    @action(detail=True, url_path="validation", custom_view_base_action="view")
+    def validation(self, request, *args, **kwargs):
+        return Response({})
 
 
 #

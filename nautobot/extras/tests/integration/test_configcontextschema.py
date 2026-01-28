@@ -1,19 +1,25 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin):
+class ConfigContextSchemaTestCase(SeleniumTestCase):
     """
     Integration tests for the ConfigContextSchema model
     """
 
     def setUp(self):
         super().setUp()
-        self.login_as_superuser()
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+    def tearDown(self):
+        self.logout()
+        super().tearDown()
 
     def test_create_valid_config_context_schema(self):
         """
@@ -22,17 +28,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         And the user is redirected to the detail page for the new object
         """
         # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.click_navbar_entry("Extensibility", "Config Context Schemas")
-
-        # Click add button
-        self.click_add_item()
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/add/")
 
         # Fill out form
-        self.fill_input("name", "Integration Schema 1")
-        self.fill_input("description", "Description")
-        self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
-        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
+        self.browser.fill("name", "Integration Schema 1")
+        self.browser.fill("description", "Description")
+        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
@@ -48,17 +50,13 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         And the form is populated with the user's previous input
         """
         # Navigate to ConfigContextSchema list view
-        self.browser.visit(self.live_server_url)
-        self.click_navbar_entry("Extensibility", "Config Context Schemas")
-
-        # Click add button
-        self.click_add_item()
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/add/")
 
         # Fill out form
-        self.fill_input("name", "Integration Schema 2")
-        self.fill_input("description", "Description")
-        self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
-        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
+        self.browser.fill("name", "Integration Schema 2")
+        self.browser.fill("description", "Description")
+        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Verify validation error raised to user within form
         self.assertTrue(self.browser.is_text_present("'not a valid type' is not valid under any of the given schemas"))
@@ -129,69 +127,66 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
 
         # Navigate to ConfigContextSchema Validation tab
         self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
-        self.switch_tab("Validation")
+        self.browser.links.find_by_text("Validation").click()
+        xpath_query = "//div[@id[contains(., 'validation')]]//tbody/tr"
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
+        for row in self.browser.find_by_xpath(xpath_query):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
             )
 
         # Edit the schema
-        self.switch_tab("Config Context")
-        self.click_button("#edit-button")
+        self.browser.links.find_by_partial_text("Edit").click()
         # Change property "a" to be type string
-        self.fill_input(
+        self.browser.fill(
             "data_schema",
             '{"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}, "c": {"type": "integer"}}, "additionalProperties": false}',
         )
-        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Navigate to ConfigContextSchema Validation tab
-        self.switch_tab("Validation")
+        self.browser.links.find_by_text("Validation").click()
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
+        for row in self.browser.find_by_xpath(xpath_query):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-1].find_by_tag(
-            "button"
-        ).click()
-        menu = self.browser.find_by_xpath("//ul[contains(@class, 'dropdown-menu') and contains(@class, 'show')]")
-        menu.is_visible(wait_time=5)
-        menu.find_by_tag("a").click()
-
+        self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-1].find_by_css(
+            'a[data-original-title="Edit"]'
+        ).first.click()
+        # breakpoint()
         # Update the property "a" to be a string
-        self.fill_input("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
-        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
+        self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
+        self.browser.find_by_css('button[type="submit"]').first.click()
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
         # Config context still fails
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            self.browser.find_by_xpath(xpath_query)[0].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-2].html,
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            self.browser.find_by_xpath(xpath_query)[2].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )
