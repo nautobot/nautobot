@@ -328,7 +328,9 @@ class TableConfigForm(BootstrapMixin, forms.Form):
             if not saved_view:
                 return columns_order
 
-            view_table_order = (saved_view.config or {}).get("table_config", {}).get(table_name, {}).get("columns_order")
+            view_table_order = (
+                (saved_view.config or {}).get("table_config", {}).get(table_name, {}).get("columns_order")
+            )
 
             if isinstance(view_table_order, list):
                 return view_table_order
