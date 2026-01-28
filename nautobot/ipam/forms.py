@@ -434,6 +434,7 @@ class PrefixFilterForm(
     field_order = [
         "q",
         "within_include",
+        "namespace",
         "type",
         "ip_version",
         "prefix_length",
@@ -458,6 +459,7 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
+    namespace = DynamicModelMultipleChoiceField(queryset=Namespace.objects.all(), to_field_name="name", required=False)
     ip_version = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressVersionChoices),

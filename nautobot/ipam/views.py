@@ -354,7 +354,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 InstanceBreadcrumbItem(instance=context_object_attr("namespace")),
                 ModelBreadcrumbItem(
                     model=Prefix,
-                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
+                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.name},
                     label_type="plural",
                 ),
             ]
@@ -562,10 +562,16 @@ class PrefixUIViewSet(NautobotUIViewSet):
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
         # - ip_version
         # - max_depth
+        # - namespace
         # - prefix_length__lte
         # - type=container (*only*)
-        if all(key in ["ip_version", "max_depth", "prefix_length__lte", "type"] for key in self.filter_params) and (
-            "type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]
+        if (
+            all(
+                key in ["ip_version", "max_depth", "namespace", "prefix_length__lte", "type"]
+                for key in self.filter_params
+            ) and (
+                "type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]
+            )
         ):
             self.hide_hierarchy_ui = False
         return queryset
