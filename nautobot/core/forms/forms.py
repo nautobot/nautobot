@@ -298,20 +298,20 @@ class TableConfigForm(BootstrapMixin, forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        def _resolve_columns_order(request, table_name):
+        def _resolve_columns_order(request):
             """
             Precedence:
             1) saved_view table_config override (if present and accessible)
             2) If table_changes_pending, return columns_order as-is (to preserve unsaved changes)
-            3) user config tables.<table_name>.columns_order
+            3) user config tables.<self.table_name>.columns_order
             4) None
             """
             if request is None or request.user is None or isinstance(request.user, AnonymousUser):
                 return None
 
             # Default from user config
-            columns_order = request.user.get_config(f"tables.{table_name}.columns_order")
-            if not isinstance(columns_order, (list, tuple)):
+            columns_order = request.user.get_config(f"tables.{self.table_name}.columns_order")
+            if not isinstance(columns_order, list):
                 columns_order = None
 
             saved_view_id = request.GET.get("saved_view")
@@ -330,7 +330,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
                 return columns_order
 
             view_table_order = (
-                (saved_view.config or {}).get("table_config", {}).get(table_name, {}).get("columns_order")
+                (saved_view.config or {}).get("table_config", {}).get(self.table_name, {}).get("columns_order")
             )
 
             if isinstance(view_table_order, list):
@@ -339,7 +339,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
             return columns_order
 
         request = getattr(table, "request", None)
-        columns_order = _resolve_columns_order(request=request, table_name=self.table_name)
+        columns_order = _resolve_columns_order(request=request)
 
         # Reorder configurable_columns (example [('name', 'Name'), ('location', 'Location')] based on the user config
         # columns_order (example ['location', 'name']) and ensure all columns in configurable_columns are present

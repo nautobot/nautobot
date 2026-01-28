@@ -59,32 +59,6 @@
                         // Derive an array from the dotted path to the config root.
                         const path = form.getAttribute('data-config-root').split('.');
 
-                        // Merge form data from all individual checkboxes to an array of values.
-                        const values = [...form.querySelectorAll('input[id^="id_"]')].reduce(
-                            (values, field) => ({
-                                ...values,
-                                [field.getAttribute('name')]: [
-                                    ...(values[field.getAttribute('name')] ?? []),
-                                    /*
-                                     * Place the condition with `field.checked` here rather than somewhere before,
-                                     * because the property should always be present, even when no input is checked.
-                                     */
-                                    ...(field.checked ? [field.value] : []),
-                                ],
-                            }),
-                            {},
-                        );
-
-                        // We check if everything is unchecked, since that would indicate it was a reset action.
-                        const allOrder = [...form.querySelectorAll('input[id^="id_"]')].map(field => field.value);
-                        const checkedOrder = [...form.querySelectorAll('input[id^="id_"]:checked')].map(field => field.value);
-
-                        // Prefer resetting the order if all checkboxes are unchecked, if not set the full order.
-                        if (!checkedOrder.length) {
-                            values['columns_order'] = [];
-                        } else if (allOrder.length) {
-                            values['columns_order'] = allOrder;
-                        }
                         const fields = [...form.querySelectorAll('input[id^="id_"]')];
 
                         // We check if everything is unchecked, since that would indicate it was a reset action.

@@ -1174,10 +1174,14 @@ def saved_view_modal(
         view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
         if view_table_config is not None:
             param_dict["table_config"] = view_table_config.get("columns", [])
+        view_table_order = current_saved_view.config.get("table_order", {}).get(f"{table_name}", None)
+        if view_table_order is not None:
+            param_dict["table_order"] = view_table_order.get("columns_order", [])
     else:
         # display default user display
         if request.user is not None and not isinstance(request.user, AnonymousUser):
             param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+            param_dict["table_order"] = request.user.get_config(f"tables.{table_name}.columns_order")
     # If both are not available, do not display table_config
 
     if per_page:
