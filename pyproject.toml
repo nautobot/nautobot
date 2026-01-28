@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.0.5b1"
+version = "3.0.6b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -35,7 +35,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
 # Background task processing
-celery = "~5.6.1"
+celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
