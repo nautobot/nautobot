@@ -4,6 +4,7 @@ import logging
 import re
 
 from django import forms
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
@@ -305,7 +306,7 @@ class TableConfigForm(BootstrapMixin, forms.Form):
             3) user config tables.<table_name>.columns_order
             4) None
             """
-            if request is None:
+            if request is None or request.user is None or isinstance(request.user, AnonymousUser):
                 return None
 
             # Default from user config
