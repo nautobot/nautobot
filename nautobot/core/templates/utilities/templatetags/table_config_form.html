@@ -85,7 +85,29 @@
                         } else if (allOrder.length) {
                             values['columns_order'] = allOrder;
                         }
+                        const fields = [...form.querySelectorAll('input[id^="id_"]')];
 
+                        // We check if everything is unchecked, since that would indicate it was a reset action.
+                        const columns_order = fields.every((field) => !field.checked)
+                            ? // Prefer resetting the order if all checkboxes are unchecked, if not set the full order.
+                        []
+                            : fields.map((field) => field.value);
+
+                        // Merge form data from all individual checkboxes to an array of values.
+                        const values = fields.reduce(
+                            (values, field) => ({
+                                ...values,
+                                [field.getAttribute('name')]: [
+                                    ...(values[field.getAttribute('name')] ?? []),
+                                    /*
+                                     * Place the condition with `field.checked` here rather than somewhere before,
+                                     * because the property should always be present, even when no input is checked.
+                                     */
+                                    ...(field.checked ? [field.value] : []),
+                                ],
+                            }),
+                            { columns_order },
+                        );
                         // Construct a nested JSON object from the path.
                         const data = [...path].reverse().reduce((data, node) => ({ [node]: data }), values);
 
