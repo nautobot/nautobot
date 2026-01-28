@@ -111,3 +111,22 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
+
+#
+# L2VPN Serializers
+#
+
+class L2VPNSerializer(NautobotModelSerializer):
+    """Serializer for L2VPN."""
+    #Todo: Need to implement Slug creation code here
+    class Meta:
+        model = models.L2VPN
+        fields = "__all__"
+
+
+class L2VPNTerminationSerializer(NautobotModelSerializer):
+    """Serializer for L2VPNTermination."""
+
+    class Meta:
+        model = models.L2VPNTermination
+        fields = "__all__"
