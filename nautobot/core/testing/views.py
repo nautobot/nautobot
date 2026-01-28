@@ -31,7 +31,7 @@ from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
 from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
-from nautobot.dcim.models.device_components import ComponentModel
+from nautobot.dcim.models.device_components import ComponentModel, ModularComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -1885,3 +1885,23 @@ class ViewTestCases:
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertBodyContains(response, expected_message)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_modular_component_create_form_fields(self):
+            """Test that the modular component create form has the expected fields."""
+            if self.model._meta.label_lower == "virtualization.vminterface":
+                self.skipTest("Not applicable to VMInterface")
+            expected_labels = ["Description", "Device"]
+            if issubclass(self.model, ModularComponentModel):
+                expected_labels.append("Module")
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.get(self._get_url("add"))
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+
+            for label in expected_labels:
+                # Regex used here as Module Bays have "Required device" rather than just "Device"
+                pattern = rf"<label[^>]*>[^<]*{label}[^<]*</label>"
+                self.assertRegex(response_body, re.compile(pattern, flags=re.IGNORECASE))

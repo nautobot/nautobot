@@ -1,0 +1,2 @@
+Fixed ModularComponentCreateForm forms not showing description field.
+Fixed ComponentCreateView views not applying the specified Tags.
