@@ -923,6 +923,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
+        console_log = job_kwargs.get("console_log", False)
+
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
@@ -933,28 +935,35 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # setup synchronous task logging
             setup_nautobot_job_logging(None, None, app.conf)
 
-            # redirect stdout/stderr to logger and run task
-            redirect_logger = get_logger("celery.redirected")
-            proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-            with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+            def alarm_handler(*args, **kwargs):
+                raise SoftTimeLimitExceeded()
 
-                def alarm_handler(*args, **kwargs):
-                    raise SoftTimeLimitExceeded()
+            # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+            signal.signal(signal.SIGALRM, alarm_handler)
+            signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
 
-                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
-                signal.signal(signal.SIGALRM, alarm_handler)
-                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
-
-                try:
+            try:
+                # Only redirect stdout/stderr if console_log is False
+                if console_log:
                     eager_result = run_job.apply(
                         args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
                     )
-                finally:
-                    # Cancel the scheduled SIGALRM if it hasn't fired already
-                    signal.alarm(0)
+                else:
+                    redirect_logger = get_logger("celery.redirected")
+                    proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+                    with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+                        eager_result = run_job.apply(
+                            args=[job_model.class_path, *job_args],
+                            kwargs=job_kwargs,
+                            task_id=str(job_result.id),
+                            **job_celery_kwargs,
+                        )
+            finally:
+                # Cancel the scheduled SIGALRM if it hasn't fired already
+                signal.alarm(0)
 
             job_result.refresh_from_db()
             # copy from eager result to job result if and only if the job result isn't already in a proper state.
@@ -981,7 +990,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_result.save()
 
         else:
-            console_log = job_kwargs.get("console_log", False)
             if console_log and not synchronous:
                 job_result.task_kwargs = job_kwargs
                 job_result.save()
