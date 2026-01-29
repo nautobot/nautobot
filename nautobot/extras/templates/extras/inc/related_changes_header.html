@@ -1,0 +1,9 @@
+{% load helpers %}
+<strong>{{ body_content_table_verbose_name_plural|bettertitle }}</strong>
+{% if body_content_table.rows|length > 0 %}
+    <a href="{% url 'extras:objectchange_list' %}?request_id={{ obj.request_id }}" class="badge bg-primary">
+        {{ related_changes_count |add:1}}
+    </a>
+{% else %}
+    <span class="badge bg-secondary">0</span>
+{% endif %}
