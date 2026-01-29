@@ -11,6 +11,11 @@
 {% endblock %}
 
 {% block content %}
+    <style>
+        form label {
+            font-size: 1.3rem !important;
+        }
+    </style>
     <form action="" method="post" enctype="multipart/form-data" id="changelist-form" class="form form-horizontal">
         {% csrf_token %}
         <div class="row">

@@ -1,5 +1,31 @@
 {% load i18n static admin_urls admin_modify bootstrapped_goodies_tags %}
 
+<style>
+    tr.form-row {
+        font-size: 1.3rem !important;
+    }
+    td.original p {
+        height: auto !important;
+        min-height: 1.5em !important;
+        margin: 0;
+        padding: 0;
+        font-size: 1.3rem !important;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    td.original p[style] {
+        height: auto !important;
+        min-height: 1.5em !important;
+    }
+    tr.add-row a {
+        font-size: 1.3rem !important;
+    }
+    .related-widget-wrapper-link img {
+        width: 24px !important;
+        vertical-align: middle;
+    }
+</style>
+
 <div class="js-inline-admin-formset inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
      data-inline-type="tabular"
      data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
