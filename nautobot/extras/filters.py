@@ -16,6 +16,7 @@ from nautobot.core.filters import (
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     ModelMultipleChoiceFilter,
+    MultiValueCharFilter,
     MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
@@ -1391,10 +1392,10 @@ class ObjectChangeFilterSet(BaseFilterSet):
         to_field_name="username",
         label="User name (ID or username)",
     )
-    change_context = django_filters.ChoiceFilter(
-        field_name="change_context", label="Change Context", choices=ObjectChangeEventContextChoices
+    change_context = django_filters.MultipleChoiceFilter(
+        label="Change Context", choices=ObjectChangeEventContextChoices
     )
-    change_context_detail = django_filters.CharFilter(field_name="change_context_detail", label="Change Context Detail")
+    change_context_detail = MultiValueCharFilter(label="Change Context Detail")
 
     class Meta:
         model = ObjectChange

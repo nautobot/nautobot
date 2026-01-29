@@ -2183,7 +2183,9 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
             api_url="/api/extras/content-types/",
         ),
     )
-    change_context = forms.ChoiceField(required=False, label="Change Context", choices=ObjectChangeEventContextChoices)
+    change_context = forms.MultipleChoiceField(
+        required=False, label="Change Context", choices=ObjectChangeEventContextChoices
+    )
 
 
 #
