@@ -169,3 +169,79 @@ class EncapsulationChoices(ChoiceSet):
         (openvpn, "OpenVPN"),
         (eoip, "EoIP"),
     )
+
+
+#
+# L2VPN
+#
+
+
+class L2VPNTypeChoices(ChoiceSet):
+    """L2VPN technology type choices."""
+    # Adding all choices as in netbox but focusing on vxlan first .
+    # VPLS types
+    TYPE_VPWS = "vpws"
+    TYPE_VPLS = "vpls"
+
+    # VXLAN types
+    TYPE_VXLAN = "vxlan"
+    TYPE_VXLAN_EVPN = "vxlan-evpn"
+
+    # L2VPN E-VPN types
+    TYPE_MPLS_EVPN = "mpls-evpn"
+    TYPE_PBB_EVPN = "pbb-evpn"
+    TYPE_EVPN_VPWS = "evpn-vpws"
+
+    # E-Line types
+    TYPE_EPL = "epl"
+    TYPE_EVPL = "evpl"
+
+    # E-LAN types
+    TYPE_EPLAN = "ep-lan"
+    TYPE_EVPLAN = "evp-lan"
+
+    # E-Tree types
+    TYPE_EPTREE = "ep-tree"
+    TYPE_EVPTREE = "evp-tree"
+
+    # Other
+    TYPE_SPB = "spb"
+
+    CHOICES = (
+        ("VPLS", (
+            (TYPE_VPWS, "VPWS"),
+            (TYPE_VPLS, "VPLS"),
+        )),
+        ("VXLAN", (
+            (TYPE_VXLAN, "VXLAN"),
+            (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
+        )),
+        ("L2VPN E-VPN", (
+            (TYPE_MPLS_EVPN, "MPLS EVPN"),
+            (TYPE_PBB_EVPN, "PBB EVPN"),
+            (TYPE_EVPN_VPWS, "EVPN VPWS"),
+        )),
+        ("E-Line", (
+            (TYPE_EPL, "EPL"),
+            (TYPE_EVPL, "EVPL"),
+        )),
+        ("E-LAN", (
+            (TYPE_EPLAN, "Ethernet Private LAN"),
+            (TYPE_EVPLAN, "Ethernet Virtual Private LAN"),
+        )),
+        ("E-Tree", (
+            (TYPE_EPTREE, "Ethernet Private Tree"),
+            (TYPE_EVPTREE, "Ethernet Virtual Private Tree"),
+        )),
+        ("Other", (
+            (TYPE_SPB, "SPB"),
+        )),
+    )
+
+    # Point-to-Point types (limited to 2 terminations)
+    P2P = (
+        TYPE_VPWS,
+        TYPE_EPL,
+        TYPE_EPLAN,
+        TYPE_EPTREE,
+    )

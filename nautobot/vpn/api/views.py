@@ -68,3 +68,15 @@ class VPNTunnelEndpointViewSet(NautobotModelViewSet):  # pylint: disable=too-man
     queryset = models.VPNTunnelEndpoint.objects.all()
     serializer_class = serializers.VPNTunnelEndpointSerializer
     filterset_class = filters.VPNTunnelEndpointFilterSet
+
+
+
+class L2VPNViewSet(NautobotModelViewSet):
+    queryset = models.L2VPN.objects.all()
+    serializer_class = serializers.L2VPNSerializer
+    filterset_class = filters.L2VPNFilterSet
+
+class L2VPNTerminationViewSet(NautobotModelViewSet):
+    queryset = models.L2VPNTermination.objects.all()
+    serializer_class = serializers.L2VPNTerminationSerializer
+    filterset_class = filters.L2VPNTerminationFilterSet

@@ -17,14 +17,17 @@ from nautobot.apps.forms import (
     StaticSelect2,
     TagFilterField,
     TagsBulkEditFormMixin,
+    StaticSelect2Multiple,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import DynamicGroup, SecretsGroup
-from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.virtualization.models import VMInterface
 
-from . import choices, models
+from . import choices
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -485,3 +488,158 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, TenancyFilterForm):  # pyl
     model = models.VPNTunnelEndpoint
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
+
+
+#
+# L2VPN Forms
+#
+
+
+class L2VPNForm(NautobotModelForm):
+    """Form for creating and updating L2VPN."""
+
+    import_targets = DynamicModelMultipleChoiceField(
+        queryset=RouteTarget.objects.all(),
+        required=False,
+        label="Import Targets",
+    )
+    export_targets = DynamicModelMultipleChoiceField(
+        queryset=RouteTarget.objects.all(),
+        required=False,
+        label="Export Targets",
+    )
+
+    class Meta:
+        model = models.L2VPN
+        fields = [
+            "name",
+            "slug",
+            "type",
+            "status",
+            "identifier",
+            "description",
+            "import_targets",
+            "export_targets",
+            "tenant",
+            "tags",
+        ]
+
+
+class L2VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """L2VPN bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=models.L2VPN.objects.all(),
+        widget=forms.MultipleHiddenInput
+    )
+    type = forms.ChoiceField(
+        choices=add_blank_choice(choices.L2VPNTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    identifier = forms.IntegerField(required=False)
+    description = forms.CharField(required=False)
+
+    class Meta:
+        model = models.L2VPN
+        nullable_fields = ["identifier", "description", "tenant"]
+
+
+class L2VPNFilterForm(NautobotFilterForm, TenancyFilterForm):
+    """Filter form for L2VPN list view."""
+
+    model = models.L2VPN
+    q = forms.CharField(required=False, label="Search")
+    type = forms.MultipleChoiceField(
+        choices=choices.L2VPNTypeChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    tags = TagFilterField(model)
+
+
+class L2VPNTerminationForm(forms.ModelForm):
+    """Form for creating and updating L2VPNTermination.
+
+    Note: Uses plain Django ModelForm to avoid complexity with GenericForeignKey handling.
+    """
+    # The model has ONE generic field (assigned_object)
+    # But the form has THREE separate fields for UI
+    # VLAN,Interface,VM Interface
+    # self.instance.assigned_object = selected_one
+    # L2VPNTermination Model
+    # assigned_object_type = ContentType (auto)
+    # assigned_object_id = UUID (auto)
+    #assigned_object = GenericFK (the actual object)
+    l2vpn = DynamicModelChoiceField(
+        queryset=models.L2VPN.objects.all(),
+        required=True,
+        label="L2VPN",
+    )
+    vlan = DynamicModelChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        label="VLAN",
+    )
+    interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Interface",
+    )
+    vminterface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="VM Interface",
+    )
+
+    class Meta:
+        model = models.L2VPNTermination
+        fields = ["l2vpn"]
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+        # If editing existing termination, pre-populate the right field
+        if instance and instance.pk:
+            if isinstance(instance.assigned_object, Interface):
+                initial["interface"] = instance.assigned_object
+            elif isinstance(instance.assigned_object, VLAN):
+                initial["vlan"] = instance.assigned_object
+            elif isinstance(instance.assigned_object, VMInterface):
+                initial["vminterface"] = instance.assigned_object
+            kwargs["initial"] = initial
+
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        # Rule 1: At least one must be selected
+        # Rule 2: Only ONE can be selected
+        interface = self.cleaned_data.get("interface")
+        vminterface = self.cleaned_data.get("vminterface")
+        vlan = self.cleaned_data.get("vlan")
+
+        if not (interface or vminterface or vlan):
+            raise forms.ValidationError(
+                "Must specify an interface or VLAN."
+            )
+
+        selected = [x for x in (interface, vminterface, vlan) if x]
+        if len(selected) > 1:
+            raise forms.ValidationError(
+                "Can only have one terminating object."
+            )
+        # Set the model's assigned_object to whichever was selected
+        self.instance.assigned_object = interface or vminterface or vlan
+
+
+class L2VPNTerminationFilterForm(NautobotFilterForm):
+    """Filter form for L2VPNTermination list view."""
+
+    model = models.L2VPNTermination
+    q = forms.CharField(required=False, label="Search")
+    l2vpn = DynamicModelChoiceField(
+        queryset=models.L2VPN.objects.all(),
+        required=False,
+        label="L2VPN",
+    )

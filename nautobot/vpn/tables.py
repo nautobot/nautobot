@@ -381,3 +381,105 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "tenant",
             "actions",
         )
+
+
+#
+# L2VPN Tables
+#
+
+#  for Route Targets, clikable link to RouteTarget
+L2VPN_TARGETS = """
+{% for rt in value.all %}
+  <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
+{% endfor %}
+"""
+
+
+class L2VPNTable(StatusTableMixin, BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for L2VPN list view."""
+    # ToggleColumn Checkbox for bulk operations (select all, delete selected)
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    # import_targets = tables.TemplateColumn(
+    #     template_code=L2VPN_TARGETS,
+    #     orderable=False,
+    #     verbose_name="Import Targets",
+    # )
+    import_targets = tables.TemplateColumn(
+        template_code="""
+        {% for obj in value.all %}
+            <a href="{{ obj.get_absolute_url }}">{{ obj }}</a>{% if not forloop.last %}<br>{% endif %}
+        {% endfor %}
+        """,
+        orderable=False,
+        verbose_name="Import Targets",
+    )
+    export_targets = tables.TemplateColumn(
+        template_code=L2VPN_TARGETS,
+        orderable=False,
+        verbose_name="Export Targets",
+    )
+    # column that links to tenant
+    tenant = TenantColumn()
+    actions = ButtonsColumn(models.L2VPN)
+    # Displays tags with links to filter by tag
+    tags = TagColumn(url_name="vpn:l2vpn_list")
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.L2VPN
+        fields = (
+            "pk",
+            "name",
+            "slug",
+            "status",
+            "identifier",
+            "type",
+            "import_targets",
+            "export_targets",
+            "tenant",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "status",
+            "identifier",
+            "type",
+            "description",
+            "actions",
+        )
+
+
+class L2VPNTerminationTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for L2VPNTermination list view."""
+
+    pk = ToggleColumn()
+    l2vpn = tables.Column(linkify=True)
+    assigned_object_type = tables.Column(verbose_name="Object Type")
+    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Object")
+    assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Parent")
+    actions = ButtonsColumn(models.L2VPNTermination)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.L2VPNTermination
+        fields = (
+            "pk",
+            "l2vpn",
+            "assigned_object_type",
+            "assigned_object",
+            "assigned_object_parent",
+        )
+        default_columns = (
+            "pk",
+            "l2vpn",
+            "assigned_object_type",
+            "assigned_object_parent",
+            "assigned_object",
+            "actions",
+        )

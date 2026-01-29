@@ -493,3 +493,82 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
     )
     def protected_dynamic_groups(self, request, *args, **kwargs):
         return Response({})
+
+
+#
+# L2VPN Views
+#
+
+
+class L2VPNUIViewSet(NautobotUIViewSet):
+    """ViewSet for L2VPN."""
+
+    bulk_update_form_class = forms.L2VPNBulkEditForm
+    filterset_class = filters.L2VPNFilterSet
+    filterset_form_class = forms.L2VPNFilterForm
+    # for creating, editing single object
+    form_class = forms.L2VPNForm
+    lookup_field = "pk"
+    queryset = models.L2VPN.objects.all()
+    serializer_class = serializers.L2VPNSerializer
+    table_class = tables.L2VPNTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "name",
+                    "slug",
+                    "status",
+                    "type",
+                    "identifier",
+                    "description",
+                    "tenant",
+                ],
+            ),
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                fields=[
+                    "import_targets",
+                    "export_targets",
+                ],
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.L2VPNTerminationTable,
+                table_filter="l2vpn",
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Terminations",
+            ),
+        ],
+    )
+
+
+class L2VPNTerminationUIViewSet(NautobotUIViewSet):
+    """ViewSet for L2VPNTermination."""
+
+    filterset_class = filters.L2VPNTerminationFilterSet
+    filterset_form_class = forms.L2VPNTerminationFilterForm
+    form_class = forms.L2VPNTerminationForm
+    lookup_field = "pk"
+    queryset = models.L2VPNTermination.objects.all()
+    serializer_class = serializers.L2VPNTerminationSerializer
+    table_class = tables.L2VPNTerminationTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "l2vpn",
+                    "assigned_object_type",
+                    "assigned_object",
+                ],
+            ),
+        ],
+    )
+

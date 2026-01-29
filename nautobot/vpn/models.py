@@ -5,6 +5,7 @@ from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.apps.models import BaseModel, extras_features, JSONArrayField, PrimaryModel, StatusField
 from nautobot.extras.models import RoleField
 from nautobot.vpn import choices
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 @extras_features(
@@ -533,3 +534,169 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             self.device = self.source_interface.parent
         self.name = self._name()
         super().save(*args, **kwargs)
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class L2VPN(PrimaryModel):
+    """
+    L2VPN (Layer 2 Virtual Private Network) model.
+    Represents layer 2 overlay technologies like VXLAN, VPLS, EVPN.
+    """
+
+    name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        unique=True,
+        help_text="Unique name for this L2VPN"
+    )
+    slug = models.SlugField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        unique=True,
+        help_text="URL-friendly unique identifier"
+    )
+    type = models.CharField(
+        max_length=50,
+        choices=choices.L2VPNTypeChoices,
+        help_text="L2VPN technology type"
+    )
+    status = StatusField(blank=False, null=False)
+    identifier = models.BigIntegerField(
+        null=True,
+        blank=True,
+        help_text="Numeric identifier (e.g., VNI for VXLAN)"
+    )
+    description = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="l2vpns",
+        blank=True,
+        null=True,
+    )
+    import_targets = models.ManyToManyField(
+        to="ipam.RouteTarget",
+        related_name="importing_l2vpns",
+        blank=True,
+        help_text="Route targets to import"
+    )
+    export_targets = models.ManyToManyField(
+        to="ipam.RouteTarget",
+        related_name="exporting_l2vpns",
+        blank=True,
+        help_text="Route targets to export"
+    )
+
+    clone_fields = ["type", "status", "description", "tenant"]
+    natural_key_field_names = ["slug"]
+
+    class Meta:
+        ordering = ("name", "identifier")
+        verbose_name = "L2VPN"
+        verbose_name_plural = "L2VPNs"
+
+    def __str__(self):
+        if self.identifier:
+            return f"{self.name} ({self.identifier})"
+        return self.name
+
+    @property
+    def can_add_termination(self):
+        """Check if more terminations can be added (P2P limited to 2)."""
+        if self.type in choices.L2VPNTypeChoices.P2P:
+            return self.terminations.count() < 2
+        return True
+
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from name if not set."""
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class L2VPNTermination(PrimaryModel):
+    """
+    Links an L2VPN to an Interface, VMInterface, or VLAN.
+    """
+
+    l2vpn = models.ForeignKey(
+        to="vpn.L2VPN",
+        on_delete=models.CASCADE,
+        related_name="terminations",
+    )
+    assigned_object_type = models.ForeignKey(
+        to="contenttypes.ContentType",
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    assigned_object_id = models.UUIDField(db_index=True)
+    assigned_object = GenericForeignKey(
+        ct_field="assigned_object_type",
+        fk_field="assigned_object_id"
+    )
+
+    clone_fields = ["l2vpn"]
+    natural_key_field_names = ["pk"]
+
+    class Meta:
+        ordering = ("l2vpn",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assigned_object_type", "assigned_object_id"],
+                name="vpn_l2vpntermination_unique_assignment"
+            )
+        ]
+        verbose_name = "L2VPN Termination"
+        verbose_name_plural = "L2VPN Terminations"
+
+    def __str__(self):
+        if self.pk and self.assigned_object:
+            return f"{self.assigned_object} <> {self.l2vpn}"
+        return super().__str__()
+
+    def clean(self):
+        from django.contrib.contenttypes.models import ContentType
+
+        super().clean()
+
+        # Validate: object can only be terminated once
+        if self.assigned_object:
+            obj_type = ContentType.objects.get_for_model(self.assigned_object)
+            existing = L2VPNTermination.objects.filter(
+                assigned_object_type=obj_type,
+                assigned_object_id=self.assigned_object.pk
+            ).exclude(pk=self.pk)
+
+            if existing.exists():
+                raise ValidationError(
+                    f"L2VPN Termination already assigned to {self.assigned_object}"
+                )
+
+        # Validate: P2P types limited to 2 terminations
+        if hasattr(self, "l2vpn") and self.l2vpn.type in choices.L2VPNTypeChoices.P2P:
+            count = L2VPNTermination.objects.filter(
+                l2vpn=self.l2vpn
+            ).exclude(pk=self.pk).count()
+
+            if count >= 2:
+                raise ValidationError(
+                    f"{self.l2vpn.get_type_display()} L2VPNs cannot have more than 2 terminations."
+                )
+

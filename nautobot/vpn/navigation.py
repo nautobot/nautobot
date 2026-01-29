@@ -93,6 +93,36 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                name="L2VPN",
+                weight=200,
+                items=(
+                    NavMenuItem(
+                        link="vpn:l2vpn_list",
+                        name="L2VPNs",
+                        weight=100,
+                        permissions=["vpn.view_l2vpn"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:l2vpn_add",
+                                permissions=["vpn.add_l2vpn"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="vpn:l2vpntermination_list",
+                        name="L2VPN Terminations",
+                        weight=200,
+                        permissions=["vpn.view_l2vpntermination"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:l2vpntermination_add",
+                                permissions=["vpn.add_l2vpntermination"],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ),
     ),
 )
