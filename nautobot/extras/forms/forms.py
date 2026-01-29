@@ -52,6 +52,7 @@ from nautobot.extras.choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
     WebhookHttpMethodChoices,
 )
@@ -2181,6 +2182,9 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(
             api_url="/api/extras/content-types/",
         ),
+    )
+    change_context = forms.MultipleChoiceField(
+        required=False, label="Change Context", choices=ObjectChangeEventContextChoices
     )
 
 

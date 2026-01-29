@@ -1755,6 +1755,20 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
         )
 
+    def test_changed_object_change_context(self):
+        params = {"change_context": ["job", "web"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(change_context__in=["job", "web"]),
+        )
+
+    def test_changed_object_change_context_detail(self):
+        params = {"change_context_detail__nic": ["Lorem ipsum dolor sit amet"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.exclude(change_context_detail__icontains="Lorem ipsum dolor sit amet"),
+        )
+
 
 class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectMetadata.objects.all()
