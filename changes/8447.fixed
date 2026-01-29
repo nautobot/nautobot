@@ -1,0 +1,1 @@
+Fixed an issue where the VLAN toggle was not working on the interface edit form.
