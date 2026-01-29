@@ -1071,7 +1071,7 @@ properties:
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
   KUBERNETES_DEFAULT_SERVICE_ADDRESS:
-    default: ""
+    default: "https://kubernetes.default.svc"
     description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
     environment_variable: "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS"
     type: "string"
@@ -1083,13 +1083,13 @@ properties:
     type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
-    default: ""
+    default: "nautobot-job"
     description: "Name of the Kubernetes pod."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAME"
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAMESPACE:
-    default: ""
+    default: "default"
     description: "Name of the namespace that the Kubernetes pod is created in."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
     type: "string"
