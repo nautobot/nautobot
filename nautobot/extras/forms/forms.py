@@ -2184,7 +2184,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
         ),
     )
     change_context = forms.MultipleChoiceField(
-        required=False, label="Change Context", choices=ObjectChangeEventContextChoices
+        required=False, label="Change Context", choices=ObjectChangeEventContextChoices, widget=StaticSelect2Multiple()
     )
 
 
