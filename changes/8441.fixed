@@ -1,0 +1,1 @@
+Fixed an issue where Custom Fields were not being updated via web on dcim.Module.
