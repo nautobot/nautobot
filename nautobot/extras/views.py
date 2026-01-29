@@ -2744,6 +2744,91 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def render_jobresult_files(files_manager):
+    """
+    Render job result files as an HTML <ul> list with download links.
+
+    Args:
+        files_manager (RelatedManager): JobResult.files manager.
+
+    Returns:
+        str: Safe HTML string containing <ul> with file links,
+             or an empty string if no files exist.
+    """
+    if not files_manager or not files_manager.exists():
+        return ""
+
+    links = []
+    for file_proxy in files_manager.all():
+        if not file_proxy.file:
+            continue
+
+        # Pick URL depending on storage backend
+        if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage":
+            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+        else:
+            href = file_proxy.file.url
+
+        links.append(
+            format_html(
+                '<li><a href="{}" download="{}">{}</a></li>',
+                href,
+                file_proxy.name,
+                file_proxy.name,
+            )
+        )
+
+    return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
+
+
+def render_jobresult_status(status):
+    """
+    Render a Bootstrap-style label for a JobResult status.
+
+    Args:
+        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "FAILURE": ("danger", "Failed"),
+        "PENDING": ("default", "Pending"),
+        "STARTED": ("warning", "Running"),
+        "SUCCESS": ("success", "Completed"),
+    }
+
+    css_class, text = mapping.get(status, ("default", "N/A"))
+    return format_html(
+        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
+        css_class,
+        text,
+    )
+
+
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)
+
+        obj = context.get("object")
+        if obj:
+            try:
+                return reverse(self.link_name, kwargs={"pk": obj.pk})
+            except Exception:
+                return None
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
 class JobResultUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -2786,6 +2871,114 @@ class JobResultUIViewSet(
             ]
         },
         detail_item_label=context_object_attr("date_created"),
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Summary of Results",
+                weight=100,
+                fields=[
+                    "job_description",
+                    "status",
+                    "date_created",
+                    "date_started",
+                    "user",
+                    "duration",
+                    "result",
+                    "files",
+                ],
+                value_transforms={
+                    "status": [render_jobresult_status],
+                    "files": [render_jobresult_files],
+                },
+            ),
+            object_detail.Panel(
+                weight=200,
+                section=object_detail.SectionChoices.FULL_WIDTH,
+                body_content_template_path="extras/inc/log_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        ],
+        extra_buttons=(
+            JobResultButton(
+                weight=100,
+                label="Re-Run",
+                color=ButtonActionColorChoices.RERUN,
+                icon="mdi-repeat",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    + f"?kwargs_from_job_result={ctx['object'].pk}"
+                )
+                if ctx["object"].job_model and ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=110,
+                label="Run",
+                color=ButtonActionColorChoices.RUN,
+                icon="mdi-play",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                if ctx["object"].job_model and not ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=120,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                link_name=lambda ctx: (
+                    reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+        ),
+    )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(tab for tab in object_detail_content.tabs if tab.label == "Advanced")
+    advanced_tab.panels = (
+        *advanced_tab.panels,
+        object_detail.ObjectTextPanel(
+            label="Job Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=300,
+            object_field="task_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Positional Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=400,
+            object_field="task_args",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Celery Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=500,
+            object_field="celery_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectFieldsPanel(
+            label="Worker",
+            section=SectionChoices.RIGHT_HALF,
+            weight=110,
+            fields=[
+                "worker",
+                "queue",
+                "task_name",
+                "meta",
+            ],
+        ),
+        object_detail.ObjectTextPanel(
+            label="Traceback",
+            section=SectionChoices.RIGHT_HALF,
+            weight=200,
+            object_field="traceback",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+        ),
     )
 
     def get_extra_context(self, request, instance):
