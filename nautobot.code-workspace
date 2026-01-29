@@ -7,8 +7,7 @@
 	"extensions": {
 		"recommendations": [
 			"ms-python.python",
-			"charliermarsh.ruff",
-			"rioj7.command-variable"
+			"charliermarsh.ruff"
 		]
 	},
 	"settings": {
@@ -20,49 +19,8 @@
 			"editor.formatOnSave": true
 		}
 	},
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "Inject debugpy docker settings on startup",
-				"command": "poetry run inv vscode",
-				"type": "shell",
-				"presentation": {
-					"reveal": "silent",
-					"close": true,
-					"echo": false,
-					"clear": true,
-				},
-				"runOptions": {
-					"runOn": "folderOpen"
-				}
-			}
-		]
-	},
 	"launch": {
 		"version": "0.2.0",
-		"inputs": [
-			{
-				"id": "celeryport",
-				"type": "command",
-				"command": "extension.commandvariable.file.content",
-				"args": {
-					"fileName": "${workspaceFolder}/.service_ports.json",
-					"json": "content.celery_worker['6898']",
-					"default": "6898",
-				}
-			},
-			{
-				"id": "nautobotport",
-				"type": "command",
-				"command": "extension.commandvariable.file.content",
-				"args": {
-					"fileName": "${workspaceFolder}/.service_ports.json",
-					"json": "content.nautobot['6899']",
-					"default": "6899",
-				}
-			}
-		],
 		"configurations": [
 			{
 				"name": "Python: Nautobot (Local)",
@@ -87,15 +45,13 @@
 				"request": "attach",
 				"connect": {
 					"host": "127.0.0.1",
-					"port": "${input:nautobotport}"
+					"port": 6899
 				},
-				"django": true,
-				"pathMappings": [
-					{
-						"localRoot": "${workspaceFolder}",
-						"remoteRoot": "/source"
-					}
-				],
+				"pathMappings": [{
+					"localRoot": "${workspaceFolder}",
+					"remoteRoot": "/source"
+				}],
+				"django": true
 			},
 			{
 				"name": "Python: Nautobot-Celery (Remote)",
@@ -103,14 +59,12 @@
 				"request": "attach",
 				"connect": {
 					"host": "127.0.0.1",
-					"port": "${input:celeryport}"
+					"port": 6898
 				},
-				"pathMappings": [
-					{
-						"localRoot": "${workspaceFolder}",
-						"remoteRoot": "/source"
-					}
-				],
+				"pathMappings": [{
+					"localRoot": "${workspaceFolder}",
+					"remoteRoot": "/source"
+				}],
 				"django": true
 			}
 		]
