@@ -1080,7 +1080,11 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class ConsolePortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
+class ConsolePortTemplateTest(
+    Mixins.ModularDeviceComponentTemplateMixin,
+    Mixins.BasePortTemplateTestMixin,
+    APIViewTestCases.BulkRenameObjectsViewTestCase,
+):
     model = ConsolePortTemplate
     modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 

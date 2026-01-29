@@ -677,6 +677,13 @@ class BulkOperationIntegerIDSerializer(serializers.Serializer):
     id = serializers.IntegerField()
 
 
+class BulkRenameSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.UUIDField(), required=True)
+    find = serializers.CharField(required=True)
+    replace = serializers.CharField(required=True)
+    use_regex = serializers.BooleanField(required=False, default=False)
+
+
 #
 # GraphQL, used by the openapi doc, not by the view
 #

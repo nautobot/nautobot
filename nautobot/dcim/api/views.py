@@ -23,7 +23,7 @@ from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.serializers import StatsSerializer
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.api.views import ModelViewSet
+from nautobot.core.api.views import BulkRenameModelMixin, ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewname, validated_viewname
 from nautobot.dcim import filters
@@ -345,7 +345,7 @@ class DeviceTypeViewSet(NautobotModelViewSet):
 #
 
 
-class ConsolePortTemplateViewSet(CustomFieldModelViewSet):
+class ConsolePortTemplateViewSet(BulkRenameModelMixin, CustomFieldModelViewSet):
     queryset = ConsolePortTemplate.objects.select_related("device_type__manufacturer", "module_type__manufacturer")
     serializer_class = serializers.ConsolePortTemplateSerializer
     filterset_class = filters.ConsolePortTemplateFilterSet
