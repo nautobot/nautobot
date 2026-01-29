@@ -1,1 +1,1 @@
-Fixed an issue where Custom Fields were not being updated via web on dcim.Module.
+Fixed issues where Custom Fields and Relationships were not being updated when editing a Module or Rack via the UI.

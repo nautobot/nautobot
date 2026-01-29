@@ -576,6 +576,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        super().clean()
         cleaned_data = self.cleaned_data
         location = cleaned_data.get("location")
 
@@ -597,7 +598,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                         "would conflict with same-named devices in this rack."
                     }
                 )
-        return super().clean()
 
 
 class RackBulkEditForm(
