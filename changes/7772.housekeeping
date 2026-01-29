@@ -1,0 +1,1 @@
+Refactored DynamicGroup model related UI views to use `UI component framework`.

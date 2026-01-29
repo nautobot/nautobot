@@ -1391,6 +1391,68 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
 
+    class FilterBaseTextPanel(object_detail.BaseTextPanel):
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                return obj.filter
+            return super().get_value(context)
+
+        def render_body_content(self, context):
+            """Return placeholder directly to avoid JSON encoding of safe HTML for non-dynamic groups."""
+            obj = get_obj_from_context(context)
+            if obj and obj.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                return helpers.HTML_NONE
+            return super().render_body_content(context)
+
+    class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+                    self.body_wrapper_template_path = "extras/inc/filter_query_body_wrapper.html"
+                return pretty_print_query(obj.generate_query())
+            return helpers.HTML_NONE
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "description", "content_type", "group_type", "tenant"],
+            ),
+            FilterBaseTextPanel(
+                label="Filter",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            FilterQueryLogicBaseTextPanel(
+                label="Filter Query Logic",
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="ancestors_table",
+                related_field_name="ancestors",
+                table_title="Ancestors",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="descendants_table",
+                related_field_name="descendants",
+                table_title="Descendants",
+                add_button_route=None,
+                related_list_url_name="extras:dynamicgroup_list",
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action in ("create", "update"):
@@ -1444,10 +1506,8 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 )
                 ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
                 else:
-                    context["raw_query"] = None
                     try:
                         context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
                     except NoReverseMatch:

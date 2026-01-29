@@ -1023,9 +1023,11 @@ class ObjectsTablePanel(Panel):
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
             body_content_table_model = body_content_table.Meta.model
+            list_url = getattr(body_content_table, "list_url", None)
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
+            list_url = getattr(self.table_class, "list_url", None)
             instance = get_obj_from_context(context)
 
             if self.table_attribute:
