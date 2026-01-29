@@ -895,11 +895,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
-        # console log run job
-        run_console_log_job = False
-        if run_console_log_job and not synchronous:
-            return run_console_log_job_and_return_job_result(job_result, job_kwargs)
-
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
         # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
@@ -984,16 +979,30 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             if not job_result.date_done:
                 job_result.date_done = timezone.now()
             job_result.save()
+
         else:
-            # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-            transaction.on_commit(
-                lambda: run_job.apply_async(
-                    args=[job_model.class_path, *job_args],
-                    kwargs=job_kwargs,
-                    task_id=str(job_result.id),
-                    **job_celery_kwargs,
+            console_log = True
+            if console_log and not synchronous:
+                job_result.task_kwargs = job_kwargs
+                job_result.save()
+                transaction.on_commit(
+                    lambda: run_console_log_job_and_return_job_result.apply_async(
+                        args=[str(job_result.pk)],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
                 )
-            )
+            else:
+                # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+                transaction.on_commit(
+                    lambda: run_job.apply_async(
+                        args=[job_model.class_path, *job_args],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
+                )
 
         return job_result
 

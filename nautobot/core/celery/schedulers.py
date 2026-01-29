@@ -13,7 +13,7 @@ from kombu.utils.json import loads
 
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
-from nautobot.extras.utils import run_console_log_job_and_return_job_result, run_kubernetes_job_and_return_job_result
+from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
 logger = logging.getLogger(__name__)
 
@@ -129,21 +129,8 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
 
-                run_console_log_job = False
-                if run_console_log_job:
-                    job_result = JobResult.objects.create(
-                        name=scheduled_job.job_model.name,
-                        job_model=scheduled_job.job_model,
-                        scheduled_job=scheduled_job,
-                        user=scheduled_job.user,
-                        task_name=scheduled_job.job_model.class_path,
-                        celery_kwargs=entry.options,
-                    )
-                    job_result = run_console_log_job_and_return_job_result(job_result, entry_kwargs)
-                    resp = AsyncResult(job_result.id)
-
                 # Distinguish between Celery and Kubernetes job queues
-                elif job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                     job_result = JobResult.objects.create(
                         name=scheduled_job.job_model.name,
                         job_model=scheduled_job.job_model,

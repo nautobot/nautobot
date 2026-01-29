@@ -19,11 +19,11 @@ from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
 from django.template.loader import get_template, TemplateDoesNotExist
-from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
 
+from nautobot.core.celery import nautobot_task
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -38,7 +38,6 @@ from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
-    JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
 from nautobot.extras.constants import (
@@ -712,12 +711,10 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     return job_result
 
 
-def run_console_log_job_and_return_job_result(job_result, job_kwargs):
+@nautobot_task(bind=False)
+def run_console_log_job_and_return_job_result(job_result_pk, *args, **kwargs):
     """Pass the job to Subprocess."""
-
-    job_result.task_kwargs = job_kwargs
-    job_result.save()
-    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result.pk}"]
+    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result_pk}", "--console_log"]
 
     queue_stdout = Queue()
     queue_stderr = Queue()
@@ -729,66 +726,58 @@ def run_console_log_job_and_return_job_result(job_result, job_kwargs):
                 queue.put(line)
         stream.close()
 
-    def execute_subprocess_job():
-        with subprocess.Popen(  # noqa: S603 cmd built from trusted internal values
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=1
-        ) as process:
-            read_stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, queue_stdout))
-            read_stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, queue_stderr))
-            read_stdout_thread.start()
-            read_stderr_thread.start()
+    with subprocess.Popen(  # noqa: S603 cmd built from trusted internal values
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        bufsize=1,
+    ) as process:
+        read_stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, queue_stdout))
+        read_stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, queue_stderr))
+        read_stdout_thread.start()
+        read_stderr_thread.start()
 
-            print(" === STDOUT ===")
-            while process.poll() is None:
-                try:
-                    line = queue_stdout.get_nowait()
-                    if line is not None:
-                        print(line, end="")
-                except Empty:
-                    pass
-            print(" === END STDOUT ===")
+        print(" === STDOUT ===")
+        while process.poll() is None:
+            try:
+                line = queue_stdout.get_nowait()
+                if line is not None:
+                    print(line, end="")
+            except Empty:
+                pass
+        print(" === END STDOUT ===")
 
-            print(" === STDERR ===")
-            while process.poll() is None:
-                try:
-                    line = queue_stderr.get_nowait()
-                    if line is not None:
-                        print(line, end="")
-                except Empty:
-                    pass
-            print(" === END STDERR ===")
+        print(" === STDERR ===")
+        while process.poll() is None:
+            try:
+                line = queue_stderr.get_nowait()
+                if line is not None:
+                    print(line, end="")
+            except Empty:
+                pass
+        print(" === END STDERR ===")
 
-            return_code = process.wait()
-            read_stdout_thread.join()
-            read_stderr_thread.join()
+        return_code = process.wait()
+        read_stdout_thread.join()
+        read_stderr_thread.join()
 
-            if return_code != 0:
-                trace_stderr_lines = []
-                # Read traceback
-                if process.poll() is not None:
-                    while True:
-                        try:
-                            line = queue_stderr.get_nowait()
-                            if line is None:
-                                break
-                            trace_stderr_lines.append(line.rstrip())
-                            print(line, end="")
-                        except Empty:
+        if return_code != 0:
+            trace_stderr_lines = []
+            # Read traceback
+            if process.poll() is not None:
+                while True:
+                    try:
+                        line = queue_stderr.get_nowait()
+                        if line is None:
                             break
-                exc_type = "SubprocessError"
-                exc_message = f"Subprocess exited with return code {return_code}"
-                job_result.result = {
-                    "exc_type": exc_type,
-                    "exc_message": exc_message,
-                }
-                job_result.status = JobResultStatusChoices.STATUS_FAILURE
-                if trace_stderr_lines:
-                    job_result.traceback = sanitize("\n".join(trace_stderr_lines))
-                job_result.date_done = timezone.now()
-                job_result.save()
-
-    transaction.on_commit(execute_subprocess_job)
-    return job_result
+                        trace_stderr_lines.append(line.rstrip())
+                        print(line, end="")
+                    except Empty:
+                        break
+            if trace_stderr_lines:
+                print(sanitize("\n".join(trace_stderr_lines)))
+                raise Exception(f"Command failed with code {process.returncode}")  # pylint: disable=broad-exception-raised
 
 
 def remove_prefix_from_cf_key(field_name):

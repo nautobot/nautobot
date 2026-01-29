@@ -18,6 +18,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Run cProfile on the job execution and write the result to the disk under /tmp.",
         )
+        parser.add_argument(
+            "--console_log",
+            action="store_true",
+            help="Enable logging output to the console.",
+        )
 
     def handle(self, *args, **options):
         job_result = None
@@ -26,7 +31,7 @@ class Command(BaseCommand):
             job_result = JobResult.objects.get(pk=job_result_id)
         except JobResult.DoesNotExist:
             raise CommandError(f"Job result with pk {job_result_id} not found.")
-        if job_result.status != JobResultStatusChoices.STATUS_PENDING:
+        if job_result.status != JobResultStatusChoices.STATUS_PENDING and not options["console_log"]:
             raise CommandError(
                 f"Job result has an invalid status {job_result.status} for this command."
                 f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
