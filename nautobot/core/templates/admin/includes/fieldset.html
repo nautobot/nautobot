@@ -1,4 +1,14 @@
 {% load bootstrapped_goodies_tags %}
+{% load static %}
+<style>
+    form label {
+        font-size: 1.3rem !important;
+    }
+    .controls.col-md-9,
+    .controls.col-md-9 * {
+        font-size: 1.3rem !important;
+    }
+</style>
 <fieldset class="panel panel-default" id="fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }}" style="background:transparent">
     {% if fieldset.name %}
         <div class="panel-heading">
