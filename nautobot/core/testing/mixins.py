@@ -123,8 +123,7 @@ class NautobotTestCaseMixin:
                         **{f"{RelationshipSideChoices.OPPOSITE[peer_side]}_id": instance.pk},
                     ).first()
                     if model_dict[attr] is not None:
-                        getattr(assoc, f"{peer_side}_id")
-
+                        model_dict[attr] = getattr(model_dict[attr], f"{peer_side}_id")
 
         for key, value in list(model_dict.items()):
             try:
@@ -274,7 +273,7 @@ class NautobotTestCaseMixin:
         # Omit any dictionary keys which are not instance attributes or have been excluded
         relevant_data = {}
         for k, v in data.items():
-            if (hasattr(instance, k) or k.startswith("cf_") or k.startswith("cr_")) and k not in exclude:
+            if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
