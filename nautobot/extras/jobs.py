@@ -130,6 +130,7 @@ class BaseJob:
         Metaclass attributes - subclasses can define any or all of the following attributes:
 
         - name (str)
+        - console_log (bool)
         - description (str)
         - dryrun_default (bool)
         - field_order (list)
@@ -364,6 +365,11 @@ class BaseJob:
     @classproperty
     def hidden(cls) -> bool:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("hidden", False, expected_type=bool)
+
+    @final
+    @classproperty
+    def console_log(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("console_log", False, expected_type=bool)
 
     @final
     @classproperty

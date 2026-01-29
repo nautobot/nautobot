@@ -981,7 +981,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_result.save()
 
         else:
-            console_log = True
+            console_log = job_kwargs.get("console_log", False)
             if console_log and not synchronous:
                 job_result.task_kwargs = job_kwargs
                 job_result.save()
