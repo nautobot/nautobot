@@ -326,12 +326,13 @@ class TableConfigForm(BootstrapMixin, forms.Form):
             from nautobot.extras.models import SavedView
 
             saved_view = SavedView.objects.restrict(request.user, "view").filter(pk=saved_view_id).first()
-            if not saved_view:
+            if not saved_view or not saved_view.config:
                 return columns_order
 
-            view_table_order = (
-                (saved_view.config or {}).get("table_config", {}).get(self.table_name, {}).get("columns_order")
-            )
+            try:
+                view_table_order = (saved_view.config or {})["table_config"][self.table_name]["columns_order"]
+            except (AttributeError, KeyError, TypeError):
+                return columns_order
 
             if isinstance(view_table_order, list):
                 return view_table_order
