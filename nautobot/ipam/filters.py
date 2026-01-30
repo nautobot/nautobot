@@ -281,6 +281,11 @@ class PrefixFilterSet(
         label="Has RIR",
     )
     type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Prefixes",
+    )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
@@ -381,6 +386,17 @@ class PrefixFilterSet(
         prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
         ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
         return queryset.filter(pk__in=ancestor_ids)
+
+    def generate_query_filter_max_depth(self, value):
+        param = f"{'parent__' * (1 + int(value))}isnull"
+        query = Q(**{param: False})
+        return query
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
 
     def generate_query_filter_present_in_vrf(self, value):
         if isinstance(value, (str, uuid.UUID)):

@@ -45,6 +45,37 @@ Note that in Nautobot, all IP addresses *must* have a parent prefix; "orphaned" 
 
 In most cases, you will not need to ever explicitly specify the `parent` value yourself, as specifying the `namespace` is generally more user-friendly and will result in the `parent` being automatically determined and updated as needed by Nautobot.
 
+### Prefix List View and Hierarchy Display
+
+The default (unfiltered) Prefix list view (`/ipam/prefixes/`) includes indentation or nesting of child Prefixes under their parent Prefixes, similar to the example above, as this is useful information to be aware of. However, in most cases, applying sorting, filtering, or search to this list view will **remove** the indentation from display, as it would be misleading or outright confusing when not showing the full list of prefixes in their default network order.
+
++++ 3.1.0 "Added exemptions for specific filters"
+
+There are a small set of filters which, when applied individually or in combination, *do not* remove the indentation, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
+
+!!! tip
+    The indentation-preserving filters only preserve indentation if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still remove the indentation as normal. In other words:
+
+    * `/ipam/prefixes/?ip_version=4&namespace=Global` -- indentation preserved
+    * `/ipam/prefixes/?ip_version=4&sort=status` -- indentation removed due to sorting
+    * `/ipam/prefixes/?ip_version=4&status=Active` -- indentation removed due to additional filtering
+
+### Prefix List View Configuration
+
++++ 3.1.0 "Added configuration parameters"
+
+To improve performance of the initial rendering of the Prefix list view when a large number of records and/or a deep hierarchy of records are present, an administrator can configure the settings [`PREFIX_LIST_DEFAULT_CONTAINER_ONLY`](../../administration/configuration/settings.md#prefix_list_default_container_only) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../../administration/configuration/settings.md#prefix_list_default_max_depth). When enabled, these settings effectively apply a default filter (similar to a default [saved view](../../platform-functionality/user-interface/savedview.md)) for all users when initially accessing the Prefix list view, such as from the navigation menu.
+
+In both cases, these default filters will only apply when viewing the otherwise-unfiltered Prefix list view; applying any other filter to the view will bypass these default filters and display the full set of records as selected by the user-specified filter.
+
+#### `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`
+
+When this setting is enabled, the default Prefix list view will only display Prefixes of [type](#prefix-types) Container, omitting the more narrowly-scoped Network and Pool Prefixes. Users can then either apply an appropriate filter of their choice to narrow the scope of the list view further, or simply select the relevant Container Prefix and navigate to its "detail" view to see and interact with the Networks and Pools it contains.
+
+#### `PREFIX_LIST_DEFAULT_MAX_DEPTH`
+
+When this setting is configured to a non-negative number, the default Prefix list view will only display Prefixes down to a certain nesting depth. For example, a value of `0` (zero) will only display root Prefixes (those with no higher-level parent), a value of `1` (one) will display root Prefixes and their immediate children, but not their grandchildren, and so forth. As with `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`, the intent here would be for users to use the Prefix list view to quickly find the general prefix of interest and then use filters, search, and/or the relevant "detail" view to "drill down" to a specific network or pool.
+
 ### Hierarchy Updates when Editing Prefixes
 
 +++ 2.4.17 "Added support and validation for changing `prefix` and `namespace` values"

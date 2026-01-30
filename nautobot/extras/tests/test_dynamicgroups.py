@@ -1117,6 +1117,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
+    def test_filter_exclude_type(self):
+        """Test that 'exclude' filters work properly in dynamic groups."""
+        dg = DynamicGroup(
+            name="shallow prefixes only",
+            filter={"max_depth": 1},
+            content_type=ContentType.objects.get_for_model(Prefix),
+        )
+        dg.validated_save()
+
+        for prefix in Prefix.objects.exclude(parent__parent__isnull=False):
+            self.assertIn(prefix, dg.members)
+        for prefix in Prefix.objects.filter(parent__parent__isnull=False):
+            self.assertNotIn(prefix, dg.members)
+
     @tag("example_app")
     def test_group_overloaded_filter_form_field(self):
         """FilterForm fields can overload how they pass in the values."""
