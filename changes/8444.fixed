@@ -1,0 +1,1 @@
+Fixed an exception in `get_item()` when rendering the response to a CSRF failure.

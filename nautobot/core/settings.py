@@ -1195,16 +1195,18 @@ DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 #
 
 # Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv(
+    "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "https://kubernetes.default.svc"
+)
 
 # A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
 KUBERNETES_JOB_MANIFEST = json.loads(os.getenv("NAUTOBOT_KUBERNETES_JOB_MANIFEST", "{}"))
 
 # Name of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "nautobot-job")
 
 # Namespace of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "default")
 
 # File path to the SSL CA CERT used for authentication to create the job and job pod
 KUBERNETES_SSL_CA_CERT_PATH = os.getenv(

@@ -35,11 +35,11 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
 # Background task processing
-celery = "~5.6.1"
+celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.3"
+cryptography = "~46.0.4"
 # Fundamental web framework for Nautobot
 Django = "~4.2.27"
 # Adds AJAX capabilities to django-tables2
@@ -214,15 +214,15 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.34"
+pymarkdownlnt = "~0.9.35"
 # Combination linter and code formatter
-ruff = "~0.14.10"
+ruff = "~0.14.14"
 # YAML linting
 yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.1"
+coverage = "~7.13.2"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid

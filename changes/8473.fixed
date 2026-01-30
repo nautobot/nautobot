@@ -1,0 +1,1 @@
+Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.

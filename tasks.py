@@ -1095,7 +1095,7 @@ def tests(
         command = f"nautobot-server test {label}"
     command += f" --config={config_file}"
     # booleans
-    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+    if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
