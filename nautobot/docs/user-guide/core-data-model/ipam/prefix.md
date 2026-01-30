@@ -53,6 +53,13 @@ The default (unfiltered) Prefix list view (`/ipam/prefixes/`) includes indentati
 
 There are a small set of filters which, when applied individually or in combination, *do not* remove the indentation, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
 
+!!! tip
+    The indentation-preserving filters only preserve indentation if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still remove the indentation as normal. In other words:
+
+    * `/ipam/prefixes/?ip_version=4&namespace=Global` -- indentation preserved
+    * `/ipam/prefixes/?ip_version=4&sort=status` -- indentation removed due to sorting
+    * `/ipam/prefixes/?ip_version=4&status=Active` -- indentation removed due to additional filtering
+
 ### Prefix List View Configuration
 
 +++ 3.1.0 "Added configuration parameters"
