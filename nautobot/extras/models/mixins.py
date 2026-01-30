@@ -104,6 +104,10 @@ class ApprovableModelMixin(models.Model):
         """Called when an approval workflow is denied."""
         raise NotImplementedError("Subclasses must implement `on_workflow_denied`.")
 
+    def on_workflow_canceled(self, approval_workflow):
+        """Called when an approval workflow is canceled."""
+        raise NotImplementedError("Subclasses must implement `on_workflow_canceled`.")
+
     def has_approval_workflow_definition(self) -> bool:
         from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
 

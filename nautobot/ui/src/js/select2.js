@@ -191,6 +191,9 @@ const initializeDynamicChoiceSelection = (context, dropdownParent = null) => {
                 : null;
 
               const param_value = has_ref_field ? ref_field_value : value;
+              if (Array.isArray(param_value)) {
+                return param_value.map((pv) => [param_name, pv]);
+              }
               return param_value !== null && param_value !== undefined ? [[param_name, ref_field_value || value]] : [];
             });
           });

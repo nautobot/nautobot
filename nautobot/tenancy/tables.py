@@ -35,7 +35,7 @@ class TenantColumn(tables.TemplateColumn):
     {% elif record.vrf.tenant %}
         <a href="{{ record.vrf.tenant.get_absolute_url }}" title="{{ record.vrf.tenant.description }}">{{ record.vrf.tenant }}</a>*
     {% else %}
-        &mdash;
+        <span class="text-secondary">&mdash;</span>
     {% endif %}
     """
 

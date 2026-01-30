@@ -117,9 +117,17 @@ def nav_menu(request):
 
     nav_menu_version_control = None
     if "nautobot_version_control" in django_settings.PLUGINS:
-        from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+        from nautobot_version_control.constants import (  # pylint: disable=import-error
+            DOLT_BRANCH_KEYWORD,
+            DOLT_DEFAULT_BRANCH,
+            DOLT_TIME_TRAVEL_KEYWORD,
+        )
 
-        nav_menu_version_control = {"active_branch": active_branch()}
+        nav_menu_version_control = {
+            "active_branch": getattr(request, DOLT_BRANCH_KEYWORD, DOLT_DEFAULT_BRANCH),
+            "active_time_travel_date": getattr(request, DOLT_TIME_TRAVEL_KEYWORD, None),
+            "default_branch": DOLT_DEFAULT_BRANCH,
+        }
 
     return {"nav_menu": nav_menu_object, "nav_menu_version_control": nav_menu_version_control}
 

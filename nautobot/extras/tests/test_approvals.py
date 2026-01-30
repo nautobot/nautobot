@@ -701,12 +701,6 @@ class ApprovalWorkflowStageResponseAPITest(ApprovalWorkflowTestMixin, APIViewTes
                 "comments": "Denied by user 1",
                 "state": choices.ApprovalWorkflowStateChoices.DENIED,
             },
-            {
-                "approval_workflow_stage": cls.approval_workflow_2_stage_instance_1.pk,
-                "user": users[4].pk,
-                "comments": "Denied by user 1",
-                "state": choices.ApprovalWorkflowStateChoices.CANCELED,
-            },
         ]
 
         cls.update_data = {

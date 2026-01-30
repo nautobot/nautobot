@@ -2,6 +2,7 @@
 Model test cases
 """
 
+from decimal import Decimal
 import re
 
 from django.contrib.contenttypes.models import ContentType
@@ -185,38 +186,46 @@ class MinMaxValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.Custo
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="latitude",
-            min=5,
-            max=10,
+            min=5.123456,
+            max=5.123457,
         )
 
         location = Location(
             name="Location with latitude less than min",
             location_type=self.location_type,
             status=self.status,
-            latitude=4,  # less than min of 5
+            latitude=Decimal("5.123455"),  # less than min of 5.123456
         )
 
-        with self.assertRaisesRegex(ValidationError, "Value is less than minimum value: 5.0"):
+        with self.assertRaisesRegex(ValidationError, "Value is less than minimum value: 5.123456"):
             location.clean()
+
+        # A value "exactly" at the minimum (modulo float/decimal conversion) should NOT raise an error
+        location.latitude = Decimal("5.123456")
+        location.clean()
 
     def test_max_violation_raise_validation_error(self):
         MinMaxValidationRule.objects.create(
             name="Min max rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="latitude",
-            min=5,
-            max=10,
+            min=5.123456,
+            max=5.123457,
         )
 
         location = Location(
             name="Location with a latitude more than max",
             location_type=self.location_type,
             status=self.status,
-            latitude=11,  # more than max of 10
+            latitude=Decimal("5.123458"),
         )
 
-        with self.assertRaisesRegex(ValidationError, "Value is more than maximum value: 10.0"):
+        with self.assertRaisesRegex(ValidationError, "Value is more than maximum value: 5.123457"):
             location.clean()
+
+        # A value "exactly" at the maximum (modulo float/decimal conversion) should NOT raise an error
+        location.latitude = Decimal("5.123457")
+        location.clean()
 
     def test_unbounded_min_does_not_raise_validation_error(self):
         MinMaxValidationRule.objects.create(

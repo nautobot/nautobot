@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
@@ -107,7 +108,8 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
         max_depth = cache.get(cache_key)
         if max_depth is None:
             max_depth = self.max_tree_depth()
-            cache.set(cache_key, max_depth)
+            # cache is explicitly invalidated by nautobot.core.signals.invalidate_max_depth_cache as needed
+            cache.set(cache_key, max_depth, timeout=None)
         return max_depth
 
 
@@ -120,6 +122,27 @@ class TreeModel(TreeNode):
 
     class Meta:
         abstract = True
+
+    def cacheable_descendants_pks(self, restrict_to_user=None, include_self=False):
+        """Cacheable version of descendants() method, with optional permissions restriction."""
+        user_id = restrict_to_user.id if restrict_to_user is not None else None
+        cache_key = construct_cache_key(
+            self,
+            method_name="cacheable_descendants_pks",
+            branch_aware=True,
+            restrict_to_user=user_id,
+            include_self=include_self,
+        )
+        pk_list = cache.get(cache_key)
+        if pk_list is None:
+            queryset = self.descendants(include_self=include_self)
+            if restrict_to_user:
+                queryset = queryset.restrict(restrict_to_user, "view")
+            pk_list = list(queryset.values_list("pk", flat=True))
+            # cache is explicitly invalidated by TreeModel.save() and TreeModel.delete() methods
+            # However since this is a *per-instance* cache we don't want it to grow indefinitely over time.
+            cache.set(cache_key, pk_list, timeout=settings.CACHES["default"]["TIMEOUT"])
+        return pk_list
 
     @property
     def display(self):
@@ -144,7 +167,7 @@ class TreeModel(TreeNode):
             # Expected to occur at times during bulk-delete operations
             pass
         display_str += self.name  # pylint: disable=no-member  # we checked with hasattr() above
-        cache.set(cache_key, display_str, 5)
+        cache.set(cache_key, display_str, timeout=5)
         return display_str
 
     @classmethod
@@ -152,3 +175,33 @@ class TreeModel(TreeNode):
         super().__init_subclass__(**kwargs)
         post_save.connect(invalidate_max_depth_cache, sender=cls)
         post_delete.connect(invalidate_max_depth_cache, sender=cls)
+
+    def save(self, *args, **kwargs):
+        """
+        On any change to the `parent` value, invalidate the `cached_descendants_pks` of our old and new ancestors.
+        """
+        if getattr(self, "present_in_database", False):
+            old_instance = self.__class__.objects.without_tree_fields().select_related("parent").get(pk=self.pk)
+            parent_changed = old_instance.parent != self.parent
+        else:
+            old_instance = None
+            parent_changed = True
+
+        if parent_changed and old_instance is not None:
+            for ancestor in old_instance.ancestors(include_self=False):
+                cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
+                cache.delete_pattern(f"{cache_key}(*)")
+
+        super().save(*args, **kwargs)
+
+        if parent_changed:
+            for ancestor in self.ancestors(include_self=False):
+                cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
+                cache.delete_pattern(f"{cache_key}(*)")
+
+    def delete(self, *args, **kwargs):
+        for ancestor in self.ancestors(include_self=False):
+            cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
+            cache.delete_pattern(f"{cache_key}(*)")
+
+        return super().delete(*args, **kwargs)

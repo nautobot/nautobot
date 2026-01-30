@@ -927,9 +927,9 @@ class JobFileOutputTest(TransactionTestCase):
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
-    # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
-    # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
-    # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+    # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
+    # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
+    # so override_settings(STORAGES["nautobotjobfiles"]["BACKEND"]) doesn't work the way you'd hope it would.
 
     def test_output_file_too_large(self):
         module = "file_output"

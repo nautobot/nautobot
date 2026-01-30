@@ -5,8 +5,8 @@ VPNs can be used to group multiple VPN Tunnels that share similar characteristic
 !!! warning
     VPN Profiles assigned to VPNs are not automatically inherited by associated VPN Tunnels. At the moment, it remains the user's responsibility to decide how to use and consume this feature in their configuration templates. We consider introducing an inheritance mechanism in a later version that will make VPN Profiles even easier to use.
 
-![VPN Detail View](../../../media/models/vpn_models_vpn_detail_light.png#only-light)
-![VPN Detail View](../../../media/models/vpn_models_vpn_detail_dark.png#only-dark)
+![VPN Detail View](../../../media/models/vpn_models_vpn_detail_light.png#only-light){ .on-glb }
+![VPN Detail View](../../../media/models/vpn_models_vpn_detail_dark.png#only-dark){ .on-glb }
 
 !!! note
     At present, the main use case for VPNs is to group multiple VPN Tunnels that share similar traits. However, we plan to introduce additional functionalities for VPNs in future versions such as modeling overlay networks (MPLS, VXLAN, etc.) and possibly implementing advanced routing policies.

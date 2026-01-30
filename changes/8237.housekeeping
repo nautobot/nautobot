@@ -1,6 +1,0 @@
-Updated development npm dependency `@eslint/js` to `^9.39.1`.
-Updated development npm dependency `eslint` to `^9.39.1`.
-Updated development npm dependency `globals` to `^16.5.0`.
-Updated development npm dependency `postcss-loader` to `^8.2.0`.
-Updated development npm dependency `prettier` to `^3.6.2`.
-Updated development npm dependency `sass` to `^1.94.2`.

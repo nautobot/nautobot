@@ -354,6 +354,14 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(
             context["view_titles"].titles, lookup.get_view_titles_for_model(dcim_models.Device, view_type="").titles
         )
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            (),  # default should be an empty list
+        )
+        self.assertEqual(
+            context["extra_detail_view_action_buttons"],
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+        )
 
     def test_get_filterset_for_model(self):
         """
@@ -381,6 +389,16 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(
             lookup.get_object_detail_content_for_model(dcim_models.Device),
             dcim_views.DeviceUIViewSet.object_detail_content,
+        )
+
+    def test_get_extra_detail_view_action_buttons(self):
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            (),  # default should be an empty list
+        )
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            dcim_views.DeviceUIViewSet.extra_detail_view_action_buttons,
         )
 
     def test_get_related_field_for_models(self):
