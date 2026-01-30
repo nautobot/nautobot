@@ -61,7 +61,6 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
     get_job_queue_worker_count,
-    run_console_log_job_and_return_job_result,
     run_kubernetes_job_and_return_job_result,
 )
 
@@ -859,7 +858,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        from nautobot.extras.jobs import run_job  # TODO circular import
+        from nautobot.extras.jobs import run_console_log_job_and_return_job_result, run_job  # TODO circular import
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
@@ -923,7 +922,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
-        console_log = job_kwargs.get("console_log", False)
+        console_log = job_kwargs.get("console_log", True)
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by

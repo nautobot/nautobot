@@ -98,3 +98,62 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 +++ 2.4.5 "`logger.failure()` added"
     You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
+
+## Console Logging
+
++++ 3.1.0
+
+The console_log flag controls how job stdout/stderr is handled and where the job is executed.
+
+*If not explicitly provided, `console_log` defaults to True.*
+
+### Asynchronous execution (synchronous=False)
+
+```mermaid
+flowchart LR
+    %% Nodes
+    start[JobResult.enqueue_job]
+    
+    subgraph CeleryWorker [Celery Worker Execution]
+        direction TB
+        direct_call[run_job task
+        calls my_app.jobs.my_job directly]
+        subprocess_call[run_console_log_job_and_return_job_result task
+        calls subprocess.Popen
+        'nautobot-server runjob_with_job_result']
+    end
+
+    subgraph K8sCluster [Kubernetes Cluster]
+        k8s_pod[K8s Job/Pod
+        Runs 'nautobot-server runjob_with_job_result']
+    end
+
+    %% Edges
+    start -- "Default Behavior
+    (Enqueue Celery Task)" --> direct_call
+    start -- "Jobs w/ Full Logging
+    (Enqueue Celery Task)" --> subprocess_call
+    start -- "K8s Job Configured
+    (Triggers K8s API directly)" --> k8s_pod
+```
+
+When `console_log=True` and the job is executed asynchronously:
+
+1. The job is not executed directly by Celery.
+2. The JobResult.task_kwargs field is populated with the job’s keyword arguments.
+3. A dedicated Celery task `run_console_log_job_and_return_job_result` is queued instead of the standard run_job task.
+4. That task:
+
+    - Starts a subprocess using:
+
+    ```no-highlight
+    nautobot-server runjob_with_job_result <job_result_id> --console_log
+    ```
+
+    - Reads stdout and stderr line by line from the subprocess.
+    - Streams output into the JobResult console log in real time.
+    - This allows the UI and API to display live job output as the job runs.
+
+### Use cases
+
+1. For debugging

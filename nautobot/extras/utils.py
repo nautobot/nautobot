@@ -4,11 +4,8 @@ import copy
 import hashlib
 import hmac
 import logging
-from queue import Empty, Queue
 import re
-import subprocess
 import sys
-import threading
 from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
@@ -23,7 +20,6 @@ from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
 
-from nautobot.core.celery import nautobot_task
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -31,7 +27,6 @@ from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import is_uuid
-from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import (
@@ -709,75 +704,6 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
 
     transaction.on_commit(create_kubernetes_job)
     return job_result
-
-
-@nautobot_task(bind=False)
-def run_console_log_job_and_return_job_result(job_result_pk, *args, **kwargs):
-    """Pass the job to Subprocess."""
-    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result_pk}", "--console_log"]
-
-    queue_stdout = Queue()
-    queue_stderr = Queue()
-
-    def read_stream(stream, queue):
-        """Read from stream line by line and push to queue."""
-        for line in iter(stream.readline, ""):
-            if line:
-                queue.put(line)
-        stream.close()
-
-    with subprocess.Popen(  # noqa: S603 cmd built from trusted internal values
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        bufsize=1,
-    ) as process:
-        read_stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, queue_stdout))
-        read_stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, queue_stderr))
-        read_stdout_thread.start()
-        read_stderr_thread.start()
-
-        print(" === STDOUT ===")
-        while process.poll() is None:
-            try:
-                line = queue_stdout.get_nowait()
-                if line is not None:
-                    print(line, end="")
-            except Empty:
-                pass
-        print(" === END STDOUT ===")
-
-        print(" === STDERR ===")
-        while process.poll() is None:
-            try:
-                line = queue_stderr.get_nowait()
-                if line is not None:
-                    print(line, end="")
-            except Empty:
-                pass
-        print(" === END STDERR ===")
-
-        return_code = process.wait()
-        read_stdout_thread.join()
-        read_stderr_thread.join()
-
-        if return_code != 0:
-            trace_stderr_lines = []
-            # Read traceback
-            if process.poll() is not None:
-                while True:
-                    try:
-                        line = queue_stderr.get_nowait()
-                        if line is None:
-                            break
-                        trace_stderr_lines.append(line.rstrip())
-                        print(line, end="")
-                    except Empty:
-                        break
-            if trace_stderr_lines:
-                print(sanitize("\n".join(trace_stderr_lines)))
-                raise Exception(f"Command failed with code {process.returncode}")  # pylint: disable=broad-exception-raised
 
 
 def remove_prefix_from_cf_key(field_name):
