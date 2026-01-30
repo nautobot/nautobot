@@ -130,7 +130,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Navigate to ConfigContextSchema Validation tab
         validation_url = f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/validation/"
         self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/validation/")
-        xpath_query = "//div[@id[contains(., 'validation')]]//tbody/tr"
+        xpath_query = "//div[contains(@id, 'validation')]//tbody/tr"
 
         # Assert Validation states
         self.assertEqual(
