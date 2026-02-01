@@ -5,6 +5,7 @@ import re
 import tempfile
 from unittest import mock
 import urllib.parse
+import uuid
 
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
@@ -16,7 +17,9 @@ from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.circuits.tables import ProviderTable
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -27,7 +30,7 @@ from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, Status
+from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -526,6 +529,107 @@ class ForceScriptNameTestcase(TestCase):
         for route in routes:
             url = reverse(route)
             self.assertTrue(url.startswith(prefix))
+
+
+class TableConfigDrawerTestCase(TestCase):
+    """Test TableConfigForm logic for column order."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("circuits.view_provider")
+        self.add_permissions("extras.view_savedview")
+        table = ProviderTable(Provider.objects.all())
+        table.request = type("Request", (), {"user": self.user, "GET": {}})()
+        self.form = TableConfigForm(table)
+        self.default_order = [col[0] for col in self.form.fields["columns"].choices]
+
+        custom_order = self.default_order.copy()
+        custom_order[0], custom_order[-1] = custom_order[-1], custom_order[0]
+        self.saved_order = custom_order.copy()
+
+        saved_view_config = {
+            "filter_params": {},
+            "pagination_count": 50,
+            "sort_order": [],
+            "table_config": {
+                "ProviderTable": {
+                    "columns": self.default_order,
+                    "columns_order": self.saved_order,
+                }
+            },
+        }
+
+        self.saved_view = SavedView.objects.create(
+            name="Saved View 1",
+            owner=self.user,
+            view="circuits:provider_list",
+            is_global_default=False,
+            config=saved_view_config,
+        )
+        self.request = RequestFactory().get("/circuits/providers/")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+    def test_intitial_order_matches_table_columns(self):
+        """Assert that the initial columns in the table match the default form."""
+        fields_columns = list(ProviderTable.Meta.fields)
+        # Note:, this adjusts for the pk that is not considered in filter form and the
+        # dyanamic_group_count column that is added. If more columns change in future you
+        # would not need to update this logic to account for these differences.
+        fields_columns.remove("pk")
+        fields_columns.append("dynamic_group_count")
+        self.assertEqual(fields_columns, self.default_order)
+
+    def test_filter_column_default(self):
+        """Assert that the default order is used when no user preference is set."""
+        table = ProviderTable(Provider.objects.all())
+        table.request = self.request
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertEqual(new_order, self.default_order)
+
+    def test_filter_column_change_order(self):
+        """Assert that a custom user order is used when set."""
+        custom_order = list(reversed(self.default_order))
+        self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
+        table = ProviderTable(Provider.objects.all())
+        table.request = self.request
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, custom_order)
+
+    def test_filter_column_saved_view(self):
+        """Assert that a custom user order is used when a saved view is set."""
+        table = ProviderTable(Provider.objects.all())
+        request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
+        request.id = uuid.uuid4()
+        request.user = self.user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, self.saved_order)
+
+    def test_filter_column_saved_view_but_revert(self):
+        """Assert that when a saved view is set but overwritten, the local custom order is used."""
+        custom_order = list(reversed(self.default_order))
+        self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
+
+        table = ProviderTable(Provider.objects.all())
+        request = RequestFactory().get(
+            "/circuits/providers/", data={"saved_view": self.saved_view.pk, "table_changes_pending": "true"}
+        )
+        request.id = uuid.uuid4()
+        request.user = self.user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertNotEqual(new_order, self.saved_order)
+        self.assertEqual(new_order, custom_order)
 
 
 class NavAppsUITestCase(TestCase):
