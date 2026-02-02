@@ -166,6 +166,17 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.26 (2026-02-02)
+
+### Security in v2.4.26
+
+- [#8428](https://github.com/nautobot/nautobot/issues/8428) - Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Fixed in v2.4.26
+
+- [#7076](https://github.com/nautobot/nautobot/issues/7076) - Fixed various font sizes that are used by the admin interface.
+- [#8404](https://github.com/nautobot/nautobot/issues/8404) - Fixed the ability to re-run a Kubernetes Job.
+
 ## v2.4.25 (2026-01-09)
 
 ### Security in v2.4.25
