@@ -47,5 +47,6 @@ class Command(BaseCommand):
         job_result = JobResult.execute_job(
             job_model, job_user, profile=options["profile"], job_result=job_result, **data
         )
-        # Report on success/failure
-        report_job_status(self, job_result)
+        if not options["console_log"]:
+            # Report on success/failure
+            report_job_status(self, job_result)

@@ -989,7 +989,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_result.save()
 
         else:
-            if console_log and not synchronous:
+            if console_log:
                 job_result.task_kwargs = job_kwargs
                 job_result.save()
                 transaction.on_commit(
