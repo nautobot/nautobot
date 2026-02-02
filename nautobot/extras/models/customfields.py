@@ -995,7 +995,7 @@ class CustomField(
         if not self.scope_filter:
             return True
 
-        model_class = self.content_types.all()[0].model_class()
+        model_class = instance.__class__
         filterset_class = get_filterset_for_model(model_class)
         if filterset_class:
             logger.warning(
