@@ -542,7 +542,7 @@
             $(document).on('change', (event) => {
                 const isLookupField = event.target.getAttribute('name')?.endsWith('lookup_field');
                 const isLookupType = event.target.getAttribute('name')?.endsWith('lookup_type');
-                console.log(isLookupField, isLookupType)
+                console.log(isLookupField, isLookupType, event.target)
                 if (isLookupField) {
                     console.log(event)
                     const type = event.target.querySelector('[name$="lookup_type"]');
@@ -554,6 +554,8 @@
                     const value = [...event.target.querySelectorAll('.mb-10')]
                         .pop()
                     ?.querySelector('input, select, textarea');
+                    console.log(event.target.querySelectorAll('.mb-10'))
+                    console.log(value)
 
                     if (value.tagName === 'SELECT') {
                         $(value).val(null).trigger('change');
