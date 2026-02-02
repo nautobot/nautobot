@@ -252,6 +252,9 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.get_item(data, "first"), "1st")
         self.assertEqual(helpers.get_item(data, "second"), "2nd")
 
+        self.assertEqual(helpers.get_item({}, "first"), None)
+        self.assertEqual(helpers.get_item("", "first"), None)
+
     def test_render_boolean(self):
         for value in [True, "arbitrary string", 1]:
             self.assertEqual(
