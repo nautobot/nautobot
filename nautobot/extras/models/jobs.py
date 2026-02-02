@@ -922,7 +922,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
-        console_log = job_kwargs.get("console_log", False)
+        console_log = job_model.job_class.console_log
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by

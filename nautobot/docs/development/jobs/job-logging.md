@@ -105,7 +105,7 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 The console_log flag controls how job stdout/stderr is handled and where the job is executed.
 
-*If not explicitly provided, `console_log` defaults to True.*
+*If not explicitly provided, `console_log` defaults to False.*
 
 ### Asynchronous execution (synchronous=False)
 
