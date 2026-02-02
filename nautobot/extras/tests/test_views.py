@@ -453,7 +453,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
         with self.subTest("with existing comments"):
@@ -486,7 +486,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is not empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments">new comment</textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments">new comment</textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
     def test_cancel_workflow_post(self):
@@ -1021,7 +1021,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
         self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
 
         request = {
@@ -1968,10 +1968,10 @@ class CustomFieldTestCase(
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="value", errors=["This field is required."]
         )
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
 
@@ -2314,9 +2314,9 @@ class DynamicGroupTestCase(
         new_group = DynamicGroup.objects.get(name="Root Locations")
         self.assertEqual(new_group.content_type, location_ct)
         self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerySetEqualAndNotEmpty(
             Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
         )
 
@@ -2610,7 +2610,7 @@ class NoteTestCase(
             "assigned_object_type": content_type.pk,
             "assigned_object_id": cls.location.pk,
         }
-        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" aria-describedby="id_object_note_helptext" id="id_object_note"></textarea>'
 
     def test_note_on_bulk_update_perms(self):
         self.add_permissions("dcim.add_location", "extras.add_note")
@@ -3003,16 +3003,21 @@ class SavedViewTest(ModelViewTestCase):
             hidden_job.description = "I should not show in the UI!"
             hidden_job.save()
             self.assertEqual(instance.config["filter_params"]["hidden"], "True")
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             # Assert that Job List View rendered with the boolean filter parameter without error
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
+            # This is the description
+            self.assertBodyContains(response, "I should not show in the UI!", html=True)
+
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(
                 response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
             )
-            # This is the description
-            self.assertBodyContains(response, "I should not show in the UI!", html=True)
 
         with self.subTest("Create device Saved View with boolean filter parameters"):
             view_name = "dcim:device_list"
@@ -3035,11 +3040,15 @@ class SavedViewTest(ModelViewTestCase):
             self.assertEqual(instance.config["pagination_count"], 12)
             self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "True")
             self.assertEqual(instance.config["sort_order"], ["name"])
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(
                 response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
             )
@@ -3064,11 +3073,14 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 302)
             instance.refresh_from_db()
             self.assertEqual(instance.config["filter_params"]["hidden"], "False")
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             self.assertBodyContains(
                 response,
                 f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
@@ -3268,7 +3280,7 @@ class SecretsGroupTestCase(
         self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
 
         # Checks that formset errors are raised in the context
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
         )
 
@@ -3297,7 +3309,7 @@ class SecretsGroupTestCase(
         response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
         self.assertEqual(response.status_code, 200)
 
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"],
             form_index=0,
             field="secret",
@@ -3431,7 +3443,7 @@ class ScheduledJobTestCase(
             crontab="*/15 9,17 3 * 1-5",
         )
 
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
@@ -3905,7 +3917,7 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            '<input type="checkbox" name="_ignore_singleton_lock" class="form-check-input" aria-describedby="id__ignore_singleton_lock_helptext" id="id__ignore_singleton_lock" checked>',
             content,
         )
 
@@ -4615,7 +4627,7 @@ class ObjectMetadataTestCase(
         instance2 = self._get_queryset().filter(team__isnull=False).first()
 
         # Try GET to permitted objects
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         # Check if the contact or team absolute url is rendered in the ObjectListView table
@@ -4640,7 +4652,7 @@ class ObjectMetadataTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
         # Try GET with object-level permission
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
@@ -4813,7 +4825,7 @@ class RelationshipAssociationTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(instance1.source.name, content, msg=content)
@@ -4880,7 +4892,7 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
@@ -4895,7 +4907,9 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga1)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
+        response = self.client.get(
+            f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}", headers={"HX-Request": "true"}
+        )
         self.assertBodyContains(response, sga1.get_absolute_url())
 
 

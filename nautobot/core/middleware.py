@@ -6,7 +6,7 @@ from django.db import ProgrammingError
 from django.http import Http404
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
@@ -164,4 +164,19 @@ class UserDefinedTimeZoneMiddleware:
                 timezone.activate(ZoneInfo(tzname))
             else:
                 timezone.deactivate()
+        return self.get_response(request)
+
+
+class UserDefinedLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated and not request.COOKIES.get(settings.LANGUAGE_COOKIE_NAME):
+            if language := request.user.get_config("language"):
+                translation.activate(language)
+                request.LANGUAGE_CODE = translation.get_language()
+                response = self.get_response(request)
+                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, request.LANGUAGE_CODE)
+                return response
         return self.get_response(request)

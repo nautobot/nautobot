@@ -30,7 +30,7 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 The size of files Jobs can create via this method are constrained by the [`JOB_CREATE_FILE_MAX_SIZE`](../user-guide/administration/configuration/settings.md#job_create_file_max_size) settings variable.
 
 !!! info
-    The specific storage backend used to retain such files is controlled by the [`JOB_FILE_IO_STORAGE`](../user-guide/administration/configuration/settings.md#job_file_io_storage) settings variable. The default value of this setting uses the Nautobot database to store output files, which should work in all deployments but is generally not optimal and better alternatives may exist in your specific deployment. Refer to the documentation link above for more details.
+    The specific storage backend used to retain such files is controlled by the `JOB_FILE_IO_STORAGE` settings variable. The default value of this setting uses the Nautobot database to store output files, which should work in all deployments but is generally not optimal and better alternatives may exist in your specific deployment. Refer to the documentation link above for more details.
 
 !!! tip
     Users must have permission to `view` the `extras > file proxy` object type in order to list and download files from the REST API.

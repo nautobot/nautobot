@@ -7,5 +7,8 @@ The `users.User` model holds individual preferences for each user in the form of
 | Name | Description |
 | ---- | ----------- |
 | `extras.configcontext.format` | Preferred format when rendering config context data (JSON or YAML) |
+| `language` | Preferred language to use (currently only affects date/time/number formatting) |
+| `navbar_favorites` | Navbar items marked as "favorites" (starred) |
 | `pagination.per_page` | The number of items to display per page of a paginated table |
 | `tables.TABLE_NAME.columns` | The ordered list of columns to display when viewing the table |
+| `timezone` | Time zone to use when rendering datetime information |

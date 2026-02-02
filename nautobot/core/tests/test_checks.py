@@ -29,14 +29,6 @@ class CheckCoreSettingsTest(TestCase):
         self.assertEqual(checks.check_release_check_url(None), [checks.E004])
 
     @override_settings(
-        STORAGE_BACKEND=None,
-        STORAGE_CONFIG={"test_key": "test_value"},
-    )
-    def test_check_storage_config_and_backend(self):
-        """Warn if STORAGE_CONFIG and STORAGE_BACKEND aren't mutually set."""
-        self.assertEqual(checks.check_storage_config_and_backend(None), [checks.W005])
-
-    @override_settings(
         MAINTENANCE_MODE=True,
         SESSION_ENGINE="django.contrib.sessions.backends.db",
     )
@@ -81,8 +73,8 @@ class CheckCoreSettingsTest(TestCase):
         """No warning if DEVICE_UNIQUENESS is set to a valid value."""
         self.assertEqual(checks.check_valid_value_for_device_uniqueness(None), [])
 
-    def test_check_for_deprecated_storage_settings(self):
-        """Warn if any deprecated storage settings are set."""
+    def test_check_for_removed_storage_settings(self):
+        """Error if any removed storage settings are set."""
 
         for setting_name, value in [
             ("DEFAULT_FILE_STORAGE", "django.core.files.storage.FileSystemStorage"),
@@ -92,7 +84,7 @@ class CheckCoreSettingsTest(TestCase):
             ("STORAGE_CONFIG", "{}"),
         ]:
             with override_settings(**{setting_name: value}):
-                self.assertNotEqual(checks.check_for_deprecated_storage_settings(None), [])
+                self.assertNotEqual(checks.check_for_removed_storage_settings(None), [])
 
         # No warnings with default nautobot_config
-        self.assertEqual(checks.check_for_deprecated_storage_settings(None), [])
+        self.assertEqual(checks.check_for_removed_storage_settings(None), [])

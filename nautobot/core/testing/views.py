@@ -966,7 +966,7 @@ class ViewTestCases:
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
-                response = self.client.get(f"{self._get_url('list')}")
+                response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
                 self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
             with self.subTest("Assert indentation is removed on filter"):
@@ -974,12 +974,14 @@ class ViewTestCases:
                     self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
                 )
                 filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
-                response = self.client.get(f"{self._get_url('list')}?{filter_values}")
+                response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
             with self.subTest("Assert indentation is removed on sort"):
-                response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
+                response = self.client.get(
+                    f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+                )
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
@@ -1020,9 +1022,14 @@ class ViewTestCases:
         def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
             # Make the request as an unauthenticated user
             self.client.logout()
-            # Test if AnonymousUser can properly render the whole list view
+
             with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
+                # Test if AnonymousUser can properly render the whole list view
                 response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 200)
+
+                # Test if AnonymousUser can properly render the table contents via HTMX
+                response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
                 self.assertHttpStatus(response, 200)
                 # There should be some rows
                 self.assertBodyContains(response, 'class="even')
@@ -1035,11 +1042,16 @@ class ViewTestCases:
                 instance2.name += "X"
                 instance2.save()
 
+            # Non-HTMX request should succeed
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
+
+            # HTMX request should succeed and retrieve the filtered table
+            response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}", headers={"HX-Request": "true"})
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
             # There should be only one row in the table
-            self.assertEqual(content.split("<main")[1].count("<tr "), 1)
+            self.assertEqual(content.count("<tr "), 1)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1064,6 +1076,7 @@ class ViewTestCases:
                 instance2.name += "X"
                 instance2.save()
 
+            # Non-HTMX request should contain appropriate page structure
             with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             filterset = self.get_filterset()
@@ -1083,8 +1096,22 @@ class ViewTestCases:
             content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
+
+            # HTMX request should contain the table contents
+            with self.assertLogs("nautobot.core.filters") as cm:
+                response = self.client.get(
+                    f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
+                )
+            self.assertEqual(
+                cm.output,
+                [
+                    f'WARNING:nautobot.core.filters:{filterset.__name__}: Unknown filter field "ice_cream_flavor"',
+                ],
+            )
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
             # There should be at least two rows in the table
-            self.assertGreaterEqual(content.split("<main")[1].count("<tr "), 2)
+            self.assertGreaterEqual(content.count("<tr "), 2)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1153,9 +1180,10 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET with object-level permission
-            response = self.client.get(self._get_url("list"))
+            # HTMX request for the table content should succeed and contain relevant contents
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
+            content = response.content.decode(response.charset)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1163,6 +1191,10 @@ class ViewTestCases:
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
+            # Non-HTMX request for the page structure should also succeed and contain relevant contents
+            response = self.client.get(self._get_url("list"))
+            self.assertHttpStatus(response, 200)
+            content = utils.extract_page_body(response.content.decode(response.charset))
             view = self.get_list_view()
             if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
                 # Check if import button is present due to user permissions

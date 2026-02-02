@@ -1,0 +1,1 @@
+Fixed incompatibilities with `django_celery_beat` v2.8.1.

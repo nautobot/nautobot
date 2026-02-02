@@ -190,3 +190,24 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+    def test_language_change(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        form_data = {
+            "language": "zh-hant",  # traditional Chinese
+            "_update_preference_form": [""],
+        }
+        url = reverse("user:preferences")
+        request = {
+            "path": url,
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request, follow=True)
+
+        # The date in the footer should now be formatted for the new locale
+        self.assertIn("年", response.content.decode(response.charset))  # year
+        self.assertIn("月", response.content.decode(response.charset))  # month
+        self.assertIn("日", response.content.decode(response.charset))  # day

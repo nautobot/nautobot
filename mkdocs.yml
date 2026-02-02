@@ -707,6 +707,7 @@ nav:
           - Docs Media Standards: "development/core/docs-media-standards.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
+          - HTMX: "development/core/htmx.md"
           - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"

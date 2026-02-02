@@ -18,6 +18,7 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import resolve, reverse
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -348,6 +349,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
+        htmx_request = self.request.headers.get("HX-Request", False)
         if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
@@ -356,7 +358,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
             table = self.table(  # pylint: disable=not-callable  # we confirmed that self.table is not None
-                self.queryset,
+                self.queryset if htmx_request else self.queryset.none(),
                 table_changes_pending=table_changes_pending,
                 saved_view=current_saved_view,
                 user=request.user,
@@ -418,7 +420,12 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model).render(context)
 
-        return render(request, self.template_name, context)
+        if htmx_request:
+            response = render(request, "components/htmx/list_view_table.html", context)
+        else:
+            response = render(request, self.template_name, context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries

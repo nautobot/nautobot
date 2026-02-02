@@ -204,7 +204,7 @@ class NoteFormBase(forms.Form):
         if value:
             note = Note.objects.create(
                 note=value,
-                assigned_object_type=self.obj_type,
+                assigned_object_type=self.obj_type,  # pylint: disable=no-member
                 assigned_object_id=instance.pk,
                 user=user,
             )
