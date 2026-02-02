@@ -997,10 +997,19 @@ class CustomField(
 
         model_class = self.content_types.all()[0].model_class()
         filterset_class = get_filterset_for_model(model_class)
+        if filterset_class:
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class}"
+            )
+            return True
+
         filterset = filterset_class(
             data=self.scope_filter,
             queryset=model_class.objects.filter(pk=instance.pk),
         )
+
+        if not filterset.form.is_valid():
+            raise ValidationError(filterset.form.errors)
 
         return filterset.qs.exists()
 

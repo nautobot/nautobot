@@ -90,6 +90,9 @@ The list of content types to add this custom field to. Only models that inherit 
 
 The list of filters that will be applied to models from selected content types to show custom field only for subset of records.
 
+!!! note
+    Having more than 10 custom fields with scope filters enabled may impact performance when loading detail views for associated content types.
+
 ### Validation Rules
 
 Validation rules are used for constraining custom fields to specific values.
