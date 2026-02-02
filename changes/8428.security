@@ -1,0 +1,1 @@
+Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
