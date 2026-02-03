@@ -227,7 +227,7 @@ class UtilsTestCase(TestCase):
         mock_api_instance.create_namespaced_job.assert_called_once()
         create_call = mock_api_instance.create_namespaced_job.call_args
         body = create_call[1]["body"]
-        self.assertEqual(body["metadata"]["name"], f"nautobot-job-{job_result.pk}")
+        self.assertEqual(body["metadata"]["name"], f"test-pod-{job_result.pk}")
         self.assertEqual(
             body["spec"]["template"]["spec"]["containers"][0]["command"],
             ["nautobot-server", "runjob_with_job_result", str(job_result.pk)],
@@ -240,3 +240,4 @@ class UtilsTestCase(TestCase):
         # Verify job_result.log was called (checking for log messages)
         self.assertEqual(job_result.log.call_count, 1)
         self.assertIn("Creating job pod", str(job_result.log.call_args_list[0]))
+        self.assertIn("test-pod", str(job_result.log.call_args_list[0]))

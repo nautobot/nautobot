@@ -672,7 +672,6 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
     """
-    pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
     pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
@@ -680,7 +679,9 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
 
     job_result.task_kwargs = job_kwargs
     job_result.save()
-    pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
+
+    pod_name = settings.KUBERNETES_JOB_POD_NAME + "-" + str(job_result.pk)
+    pod_manifest["metadata"]["name"] = pod_name
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob_with_job_result",
