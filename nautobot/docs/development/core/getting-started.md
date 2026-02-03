@@ -520,7 +520,7 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-You can connect to the development server in your local web browser at `http://localhost:8080`. If you are using the ephemeral ports feature (disabled by default), you can make use of the command, `invoke open-nautobot-web`. This will open up the default web-browser on your system pointing to the correct Nautobot admin port. Note that this command can be used regardless of ephemeral port mode.
+You can connect to the development server at `localhost:8080`.
 
 ### Starting the Worker Server
 
