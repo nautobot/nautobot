@@ -294,7 +294,8 @@ class CustomFieldModel(models.Model):
 
     def get_custom_field_groupings(self, advanced_ui=None):
         """
-        Return a dictonary of custom fields grouped by the same grouping in the form
+        Return a dictonary of custom fields grouped by the same grouping in the form except fields
+        that shouldn't be rendered due to `scope_filter` set on given field.
         {
             <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
@@ -989,6 +990,8 @@ class CustomField(
         - there is no `scope_filter` set
         - `scope_filter` fields match all values from `instance` field,
         checked by running queryset with PK and filterset based on `scope_filter`
+        - there is no filterset class for this model
+        - stored `scope_filter` data is invalid and will cause form errors
 
         Hide field if queryset with applied PK and `scope_filter` field won't be found.
         """
@@ -999,7 +1002,7 @@ class CustomField(
         filterset_class = get_filterset_for_model(model_class)
         if not filterset_class:
             logger.warning(
-                f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class}"
+                f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class._meta.label}"
             )
             return True
 
@@ -1007,9 +1010,13 @@ class CustomField(
             data=self.scope_filter,
             queryset=model_class.objects.filter(pk=instance.pk),
         )
+        filterset_form = filterset.form
 
-        if not filterset.form.is_valid():
-            raise ValidationError(filterset.form.errors)
+        if not filterset_form.is_valid():
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but stored data is not valid: {filterset_form.errors.as_text()}"
+            )
+            return True
 
         return filterset.qs.exists()
 

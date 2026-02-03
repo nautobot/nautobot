@@ -1,5 +1,6 @@
 import json
 import logging
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -439,6 +440,47 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             '<span title="">Location-Custom-Field',
             response_raw_content,
         )
+
+    def test_scope_filter_with_invalid_data_stored(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Invalid-Scope-Filter has `scope_filter` set, but stored data is not valid: * asn\n  * Enter a whole number."
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Invalid-Scope-Filter",
+            required=False,
+            scope_filter={"asn": ["invalid value"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
+
+    @mock.patch("nautobot.extras.models.customfields.get_filterset_for_model", return_value=None)
+    def test_scope_filter_for_model_without_filterset(self, _):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Without-Filterset has `scope_filter` set, but there is no `filterset_class` for dcim.Location"
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Without-Filterset",
+            required=False,
+            scope_filter={"name": ["Location A"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
 
     def test_all_custom_field_types_are_tested(self):
         """Ensure every CustomFieldTypeChoices value is covered by field test data."""
