@@ -37,8 +37,8 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import BaseJob, get_job, get_jobs
-from nautobot.extras.models import Job, JobQueue
+from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JobLogEntry
 
 
@@ -1351,3 +1351,152 @@ class ScheduledJobIntervalTestCase(TestCase):
         schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)
+
+
+class JobResultConsoleLogTestCase(TransactionTestCase):
+    """Test JobResult.enqueue_job console_log behavior"""
+
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_true_uses_console_log_task(
+        self,
+        mock_run_job,
+        mock_console_log_task,
+        mock_get_meta,
+    ):
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = True
+        job_result = JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=False,
+            **job_kwargs,
+        )
+
+        mock_console_log_task.apply_async.assert_called_once()
+        mock_run_job.apply_async.assert_not_called()
+
+        job_result.refresh_from_db()
+        # when console log is true job_result is updated before run task
+        self.assertEqual(job_result.task_kwargs, job_kwargs)
+
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_get_meta):
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
+
+        job_result = JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=False,
+            **job_kwargs,
+        )
+
+        mock_console_log_task.apply_async.assert_not_called()
+        mock_run_job.apply_async.assert_called_once()
+
+        job_result.refresh_from_db()
+        # when console log is false job_result is not updated before run task
+        self.assertEqual(job_result.task_kwargs, {})
+
+    @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
+    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
+    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
+    def test_synchronous_console_log_true_does_not_redirect_output(
+        self,
+        mock_redirect_stderr,
+        mock_redirect_stdout,
+        mock_get_meta,
+        mock_run_job,
+    ):
+        mock_run_job.apply.return_value = mock.MagicMock(
+            status="COMPLETED",
+            result=None,
+            traceback=None,
+        )
+        mock_get_meta.return_value = True
+
+        job_kwargs = {"foo": "bar"}
+        JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=True,
+            **job_kwargs,
+        )
+
+        # redirect should NOT be used
+        mock_redirect_stdout.assert_not_called()
+        mock_redirect_stderr.assert_not_called()
+
+        # job executed synchronously
+        mock_run_job.apply.assert_called_once()
+
+    @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
+    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
+    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
+    def test_synchronous_console_log_false_does_redirect_output(
+        self,
+        mock_redirect_stderr,
+        mock_redirect_stdout,
+        mock_get_meta,
+        mock_run_job,
+    ):
+        mock_run_job.apply.return_value = mock.MagicMock(
+            status="COMPLETED",
+            result=None,
+            traceback=None,
+        )
+
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
+        JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=True,
+            **job_kwargs,
+        )
+
+        # redirect should be used
+        mock_redirect_stdout.assert_called_once()
+        mock_redirect_stderr.assert_called_once()
+
+        # job executed synchronously
+        mock_run_job.apply.assert_called_once()
+
+
+class RunConsoleLogJobTestCase(TestCase):
+    """Test run_console_log_job_and_return_job_result"""
+
+    @mock.patch("nautobot.extras.jobs.subprocess.Popen")
+    def test_task_runs_subprocess_with_console_log_flag(self, mock_popen):
+        process = mock.MagicMock()
+        process.stdout.readline.return_value = ""
+        process.stderr.readline.return_value = ""
+
+        mock_popen.return_value.__enter__.return_value = process
+
+        job_result_pk = "123"
+
+        run_console_log_job_and_return_job_result.run(job_result_pk)
+
+        mock_popen.assert_called_once_with(
+            [
+                "nautobot-server",
+                "runjob_with_job_result",
+                f"{job_result_pk}",
+                "--console_log",
+            ],
+            stdout=mock_popen.call_args.kwargs["stdout"],
+            stderr=mock_popen.call_args.kwargs["stderr"],
+            universal_newlines=True,
+            bufsize=1,
+        )

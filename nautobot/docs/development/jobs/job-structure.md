@@ -108,6 +108,14 @@ Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
+### `console_log`
+
++++ 3.1.0
+
+Default: `False`
+
+A boolean controls how job stdout/stderr is handled and where the job is executed. Set to `True` enables live, line-by-line job output by executing the job in a subprocess.
+
 ### `dryrun_default`
 
 +/- 2.0.0 "Replacement for `commit_default`"

@@ -859,7 +859,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        from nautobot.extras.jobs import run_job  # TODO circular import
+        from nautobot.extras.jobs import run_console_log_job_and_return_job_result, run_job  # TODO circular import
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
@@ -923,6 +923,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
+        console_log = job_model.job_class.console_log
+
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
@@ -933,28 +935,35 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # setup synchronous task logging
             setup_nautobot_job_logging(None, None, app.conf)
 
-            # redirect stdout/stderr to logger and run task
-            redirect_logger = get_logger("celery.redirected")
-            proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-            with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+            def alarm_handler(*args, **kwargs):
+                raise SoftTimeLimitExceeded()
 
-                def alarm_handler(*args, **kwargs):
-                    raise SoftTimeLimitExceeded()
+            # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+            signal.signal(signal.SIGALRM, alarm_handler)
+            signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
 
-                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
-                signal.signal(signal.SIGALRM, alarm_handler)
-                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
-
-                try:
+            try:
+                # Only redirect stdout/stderr if console_log is False
+                if console_log:
                     eager_result = run_job.apply(
                         args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
                     )
-                finally:
-                    # Cancel the scheduled SIGALRM if it hasn't fired already
-                    signal.alarm(0)
+                else:
+                    redirect_logger = get_logger("celery.redirected")
+                    proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+                    with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+                        eager_result = run_job.apply(
+                            args=[job_model.class_path, *job_args],
+                            kwargs=job_kwargs,
+                            task_id=str(job_result.id),
+                            **job_celery_kwargs,
+                        )
+            finally:
+                # Cancel the scheduled SIGALRM if it hasn't fired already
+                signal.alarm(0)
 
             job_result.refresh_from_db()
             # copy from eager result to job result if and only if the job result isn't already in a proper state.
@@ -979,16 +988,29 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             if not job_result.date_done:
                 job_result.date_done = timezone.now()
             job_result.save()
+
         else:
-            # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-            transaction.on_commit(
-                lambda: run_job.apply_async(
-                    args=[job_model.class_path, *job_args],
-                    kwargs=job_kwargs,
-                    task_id=str(job_result.id),
-                    **job_celery_kwargs,
+            if console_log:
+                job_result.task_kwargs = job_kwargs
+                job_result.save()
+                transaction.on_commit(
+                    lambda: run_console_log_job_and_return_job_result.apply_async(
+                        args=[str(job_result.pk)],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
                 )
-            )
+            else:
+                # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+                transaction.on_commit(
+                    lambda: run_job.apply_async(
+                        args=[job_model.class_path, *job_args],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
+                )
 
         return job_result
 
