@@ -131,6 +131,6 @@ runs:
         cache-to: "type=gha,mode=max,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}"
         context: "."
         build-args: |
-          INVOKE_NAUTOBOT_PYTHON_VER: ${{ matrix.python-version }}
-          PYTHON_VER=${{ matrix.python-version }}
+          INVOKE_NAUTOBOT_PYTHON_VER: ${{ inputs.python-version }}
+          PYTHON_VER=${{ inputs.python-version }}
           POETRY_INSTALLER_PARALLEL=${{ inputs.poetry-parallel }}
