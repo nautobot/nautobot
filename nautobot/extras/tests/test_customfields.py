@@ -90,6 +90,20 @@ SIMPLE_FIELDS_DATA = (
     },
 )
 
+ALL_FIELDS_DATA = (
+    *SIMPLE_FIELDS_DATA,
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_SELECT,
+        "field_value": "Select one",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_MULTISELECT,
+        "field_value": ["Select one", "Select two"],
+        "empty_value": "",
+    },
+)
+
 
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
 #       (due to the test_multi_select_field_value_after_bulk_update() test).
@@ -403,7 +417,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         location_in_scope = Location.objects.get(name="Location A")
         location_out_of_scope = Location.objects.get(name="Location B")
 
-        for data in SIMPLE_FIELDS_DATA:
+        for data in ALL_FIELDS_DATA:
             cf = CustomField(
                 type=data["field_type"],
                 label=f"Location-Custom-Field-{data['field_type']!s}",
@@ -416,7 +430,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.add_permissions("dcim.view_location")
         url = reverse("dcim:location", kwargs={"pk": location_in_scope.pk})
         response = self.client.get(url)
-        self.assertBodyContains(response, '<span title="">Location-Custom-Field', count=len(SIMPLE_FIELDS_DATA))
+        self.assertBodyContains(response, '<span title="">Location-Custom-Field', count=len(ALL_FIELDS_DATA))
 
         url = reverse("dcim:location", kwargs={"pk": location_out_of_scope.pk})
         response = self.client.get(url)
@@ -424,6 +438,20 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertNotIn(
             '<span title="">Location-Custom-Field',
             response_raw_content,
+        )
+
+    def test_all_custom_field_types_are_tested(self):
+        """Ensure every CustomFieldTypeChoices value is covered by field test data."""
+
+        tested_fields = {entry["field_type"] for entry in ALL_FIELDS_DATA}
+        defined_field_types = {choice for choice, _ in CustomFieldTypeChoices.CHOICES}
+
+        missing = defined_field_types - tested_fields
+
+        self.assertEqual(
+            missing,
+            set(),
+            f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
         )
 
 

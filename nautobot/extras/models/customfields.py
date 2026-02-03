@@ -997,7 +997,7 @@ class CustomField(
 
         model_class = instance.__class__
         filterset_class = get_filterset_for_model(model_class)
-        if filterset_class:
+        if not filterset_class:
             logger.warning(
                 f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class}"
             )
