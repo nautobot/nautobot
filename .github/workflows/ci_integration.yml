@@ -304,15 +304,6 @@ jobs:
             echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: "Determine if we should build multi-arch dev image if python-version is default, return platforms string"
-        id: "devplatforms"
-        run: |
-          if [[ "${{ matrix.python-version }}" == "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}" ]]; then
-            echo "platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
-          else
-            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
-          fi
-
       - name: "Build Only Test (prod - final target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
@@ -326,6 +317,15 @@ jobs:
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+
+      - name: "Determine if we should build multi-arch dev image if python-version is default, return platforms string"
+        id: "devplatforms"
+        run: |
+          if [[ "${{ matrix.python-version }}" == "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}" ]]; then
+            echo "platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
+          else
+            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+          fi
 
       - name: "Build and Push (dev - final-dev target)"
         uses: "./.github/actions/build-nautobot-image"
