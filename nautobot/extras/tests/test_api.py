@@ -1446,6 +1446,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             "key": "custom_field_4",
             "type": "date",
             "weight": 100,
+            "scope_filter": {"name": "test"},
         },
         {
             "content_types": ["dcim.location", "dcim.device"],
@@ -1479,7 +1480,7 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         location_ct = ContentType.objects.get_for_model(Location)
 
         custom_fields = (
-            CustomField(key="cf1", label="Custom Field 1", type="text"),
+            CustomField(key="cf1", label="Custom Field 1", type="text", scope_filter={"name": "79431"}),
             CustomField(key="cf2", label="Custom Field 2", type="integer"),
             CustomField(key="cf3", label="Custom Field 3", type="boolean"),
         )
@@ -1505,6 +1506,25 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
             # error messages from the label field.
             {"label": ["This field is required."]},
         )
+
+    def test_custom_field_is_always_visible(self):
+        """
+        By design custom field scope filter should be applied only on UI.
+        This test is checking this behavior: if custom field will be still visible on API response,
+        even if not match the custom field scope filter.
+        """
+        self.add_permissions("dcim.view_location")
+        # scope filter is set to some number so it shouldn't match any of test Location
+        # but just in case, we're excluding anything that contains that number
+        location = Location.objects.exclude(name__icontains="79431").first()
+        url = self._get_detail_url(location)
+
+        response = self.client.get(url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        # cf1 should be always visible in API response
+        self.assertIn("cf1", response.data["custom_fields"])
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):

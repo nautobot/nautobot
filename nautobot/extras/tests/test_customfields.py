@@ -1,5 +1,6 @@
 import json
 import logging
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -26,6 +27,83 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
+
+SIMPLE_FIELDS_DATA = (
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_TEXT,
+        "field_value": "Foobar!",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+        "field_value": 0,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+        "field_value": 42,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+        "field_value": True,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+        "field_value": False,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_DATE,
+        "field_value": "2016-06-23",
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_URL,
+        "field_value": "http://example.com/",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_MARKDOWN,
+        "field_value": "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": {"dict_key": "key value"},
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": ["a", "list"],
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": "A string",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": None,
+        "empty_value": "",
+    },
+)
+
+ALL_FIELDS_DATA = (
+    *SIMPLE_FIELDS_DATA,
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_SELECT,
+        "field_value": "Select one",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_MULTISELECT,
+        "field_value": ["Select one", "Select two"],
+        "empty_value": "",
+    },
+)
 
 
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
@@ -63,72 +141,9 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             instance.validated_save()
 
     def test_simple_fields(self):
-        DATA = (
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_TEXT,
-                "field_value": "Foobar!",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
-                "field_value": 0,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
-                "field_value": 42,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-                "field_value": True,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-                "field_value": False,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_DATE,
-                "field_value": "2016-06-23",
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_URL,
-                "field_value": "http://example.com/",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_MARKDOWN,
-                "field_value": "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": {"dict_key": "key value"},
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": ["a", "list"],
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": "A string",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": None,
-                "empty_value": "",
-            },
-        )
-
         obj_type = ContentType.objects.get_for_model(Location)
 
-        for data in DATA:
+        for data in SIMPLE_FIELDS_DATA:
             cf = CustomField(type=data["field_type"], label="My Field", required=False)
             cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
@@ -396,6 +411,90 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             filter_field = custom_field_integer.to_filter_form_field()
             self.assertIsInstance(filter_field, IntegerField)
             self.assertIsInstance(filter_field.widget, NumberInput)
+
+    def test_scope_filter(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location_in_scope = Location.objects.get(name="Location A")
+        location_out_of_scope = Location.objects.get(name="Location B")
+
+        for data in ALL_FIELDS_DATA:
+            cf = CustomField(
+                type=data["field_type"],
+                label=f"Location-Custom-Field-{data['field_type']!s}",
+                required=False,
+                scope_filter={"name": ["Location A"]},
+            )
+            cf.validated_save()
+            cf.content_types.set([obj_type])
+
+        self.add_permissions("dcim.view_location")
+        url = reverse("dcim:location", kwargs={"pk": location_in_scope.pk})
+        response = self.client.get(url)
+        self.assertBodyContains(response, '<span title="">Location-Custom-Field', count=len(ALL_FIELDS_DATA))
+
+        url = reverse("dcim:location", kwargs={"pk": location_out_of_scope.pk})
+        response = self.client.get(url)
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn(
+            '<span title="">Location-Custom-Field',
+            response_raw_content,
+        )
+
+    def test_scope_filter_with_invalid_data_stored(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Invalid-Scope-Filter has `scope_filter` set, but stored data is not valid: * asn\n  * Enter a whole number."
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Invalid-Scope-Filter",
+            required=False,
+            scope_filter={"asn": ["invalid value"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
+
+    @mock.patch("nautobot.extras.models.customfields.get_filterset_for_model", return_value=None)
+    def test_scope_filter_for_model_without_filterset(self, _):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Without-Filterset has `scope_filter` set, but there is no `filterset_class` for dcim.Location"
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Without-Filterset",
+            required=False,
+            scope_filter={"name": ["Location A"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
+
+    def test_all_custom_field_types_are_tested(self):
+        """Ensure every CustomFieldTypeChoices value is covered by field test data."""
+
+        tested_fields = {entry["field_type"] for entry in ALL_FIELDS_DATA}
+        defined_field_types = {choice for choice, _ in CustomFieldTypeChoices.CHOICES}
+
+        missing = defined_field_types - tested_fields
+
+        self.assertEqual(
+            missing,
+            set(),
+            f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
+        )
 
 
 @tag("example_app")

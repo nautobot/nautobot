@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
+from django.db.models import Model
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
@@ -38,6 +39,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
+from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -292,7 +294,8 @@ class CustomFieldModel(models.Model):
 
     def get_custom_field_groupings(self, advanced_ui=None):
         """
-        Return a dictonary of custom fields grouped by the same grouping in the form
+        Return a dictonary of custom fields grouped by the same grouping in the form except fields
+        that shouldn't be rendered due to `scope_filter` set on given field.
         {
             <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
@@ -306,6 +309,8 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
+            if not field.should_render(instance=self):
+                continue
             data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
         record = dict(sorted(record.items()))
@@ -975,6 +980,45 @@ class CustomField(
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
+
+    def should_render(self, instance: Model) -> bool:
+        """
+        This method is responsible for checking if custom field should be visible on instance DetailView,
+        according to the filters set in `self.scope_filter`.
+
+        Show field if:
+        - there is no `scope_filter` set
+        - `scope_filter` fields match all values from `instance` field,
+        checked by running queryset with PK and filterset based on `scope_filter`
+        - there is no filterset class for this model
+        - stored `scope_filter` data is invalid and will cause form errors
+
+        Hide field if queryset with applied PK and `scope_filter` field won't be found.
+        """
+        if not self.scope_filter:
+            return True
+
+        model_class = instance.__class__
+        filterset_class = get_filterset_for_model(model_class)
+        if not filterset_class:
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class._meta.label}"
+            )
+            return True
+
+        filterset = filterset_class(
+            data=self.scope_filter,
+            queryset=model_class.objects.filter(pk=instance.pk),
+        )
+        filterset_form = filterset.form
+
+        if not filterset_form.is_valid():
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but stored data is not valid: {filterset_form.errors.as_text()}"
+            )
+            return True
+
+        return filterset.qs.exists()
 
 
 @extras_features(

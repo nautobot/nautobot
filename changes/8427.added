@@ -1,0 +1,1 @@
+Added checks for `CustomField.scope_filter` to show/hide custom fields on object detail view based on scope filters.

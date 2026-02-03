@@ -386,6 +386,9 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = CustomField
         fields = "__all__"
+        extra_kwargs = {
+            "scope_filter": {"read_only": False, "required": False},
+        }
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
