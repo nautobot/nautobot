@@ -410,7 +410,6 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
             "tenant",
             "description",
             "asn",
-            "description",
             "time_zone",
         ]
 
@@ -576,6 +575,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        super().clean()
         cleaned_data = self.cleaned_data
         location = cleaned_data.get("location")
 
@@ -597,7 +597,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                         "would conflict with same-named devices in this rack."
                     }
                 )
-        return super().clean()
 
 
 class RackBulkEditForm(
@@ -1911,18 +1910,21 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         choices = self.Meta.model._meta.get_field("type").choices
 
         try:
-            if data not in choices.values():
+            # As of Django 5.0 and later, choices is normalized to a list of tuples rather than a dict,
+            # for example: [('Serial', [('de-9', 'DE-9'), ('db-25', 'DB-25')]), ('USB', [('usb-a', 'USB Type A')])]
+            if data not in [inner[0] for outer in choices for inner in outer[1]]:
                 logger.debug(
                     'For %s "%s", the "type" value "%s" is unrecognized and will be replaced by "%s"',
                     self.Meta.model.__name__,
                     self.cleaned_data["name"],
                     data,
-                    choices.TYPE_OTHER,
+                    # Assume ('Other', [('other', 'Other')]) is the last entry in choices
+                    choices[-1][1][-1][0],
                 )
-                data = choices.TYPE_OTHER
+                data = choices[-1][1][-1][0]
         except AttributeError:
-            logger.warning(
-                "Either %s.type.choices is not a ChoiceSet, or %s.type.choices.TYPE_OTHER is not defined",
+            logger.exception(
+                "Either %s.type.choices is incorrectly defined, or %s.type.choices.TYPE_OTHER is incorrectly defined",
                 self.Meta.model.__name__,
                 self.Meta.model.__name__,
             )
@@ -2642,6 +2644,8 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 pass
 
     def clean(self):
+        super().clean()
+
         cleaned_data = self.cleaned_data
         if cleaned_data["parent_module_bay_device"] and cleaned_data["parent_module_bay_module"]:
             raise forms.ValidationError("Multiple parent module bays selected.")
@@ -2780,6 +2784,7 @@ class ModularComponentCreateForm(ModularComponentForm):
     module = DynamicModelChoiceField(
         queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
     )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2858,7 +2863,7 @@ class ConsolePortForm(ModularComponentEditForm):
         ]
 
 
-class ConsolePortCreateForm(ModularComponentCreateForm):
+class ConsolePortCreateForm(form_from_model(ConsolePort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -2921,7 +2926,7 @@ class ConsoleServerPortForm(ModularComponentEditForm):
         ]
 
 
-class ConsoleServerPortCreateForm(ModularComponentCreateForm):
+class ConsoleServerPortCreateForm(form_from_model(ConsoleServerPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -2989,7 +2994,7 @@ class PowerPortForm(ModularComponentEditForm):
         ]
 
 
-class PowerPortCreateForm(ModularComponentCreateForm):
+class PowerPortCreateForm(form_from_model(PowerPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerPortTypeChoices),
         required=False,
@@ -3098,7 +3103,7 @@ class PowerOutletForm(ModularComponentEditForm):
         ]
 
 
-class PowerOutletCreateForm(ModularComponentCreateForm):
+class PowerOutletCreateForm(form_from_model(PowerOutlet, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletTypeChoices),
         required=False,
@@ -3313,7 +3318,12 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         return instance
 
 
-class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+class InterfaceCreateForm(
+    form_from_model(Interface, ["tags"]),
+    ModularComponentCreateForm,
+    InterfaceCommonForm,
+    RoleNotRequiredModelFormMixin,
+):
     model = Interface
     type = forms.ChoiceField(
         choices=add_blank_choice(InterfaceTypeChoices),
@@ -3382,7 +3392,6 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         label="Management only",
         help_text="This interface is used only for out-of-band management",
     )
-    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Description")
     ip_addresses = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
@@ -3696,8 +3705,7 @@ class FrontPortForm(ModularComponentEditForm):
         }
 
 
-# TODO: Merge with FrontPortTemplateCreateForm to remove duplicate logic
-class FrontPortCreateForm(ModularComponentCreateForm):
+class FrontPortCreateForm(form_from_model(FrontPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
@@ -3825,7 +3833,7 @@ class RearPortForm(ModularComponentEditForm):
         }
 
 
-class RearPortCreateForm(ModularComponentCreateForm):
+class RearPortCreateForm(form_from_model(RearPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
@@ -3906,7 +3914,7 @@ class DeviceBayForm(ComponentEditForm):
         ]
 
 
-class DeviceBayCreateForm(ComponentCreateForm):
+class DeviceBayCreateForm(form_from_model(DeviceBay, ["tags"]), ComponentCreateForm):
     field_order = ("device", "name_pattern", "label_pattern", "description", "tags")
 
 
@@ -4133,7 +4141,7 @@ class InventoryItemForm(ComponentEditForm):
         ]
 
 
-class InventoryItemCreateForm(ComponentCreateForm):
+class InventoryItemCreateForm(form_from_model(InventoryItem, ["tags"]), ComponentCreateForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),

@@ -3270,7 +3270,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertContains(
             response,
-            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for delete on DCIM | device type to job TestJobHookReceiverLog",
             status_code=400,
         )
 
@@ -3287,7 +3287,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
         self.assertContains(
             response,
-            "A job hook already exists for delete on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for delete on DCIM | device type to job TestJobHookReceiverLog",
             status_code=400,
         )
 
@@ -5228,8 +5228,8 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         Create a new webhook with diffrent content_types, same url and same action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | device type, create, http://localhost
-            Webhook 2: dcim | console port, create, http://localhost
+            Webhook 1: DCIM | device type, create, http://localhost
+            Webhook 2: DCIM | console port, create, http://localhost
         """
         self.add_permissions("extras.add_webhook")
 
@@ -5253,8 +5253,8 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         Create a new webhook with same content_types, same url and diff action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | device type, create, http://localhost
-            Webhook 2: dcim | device type, delete, http://localhost
+            Webhook 1: DCIM | device type, create, http://localhost
+            Webhook 2: DCIM | device type, delete, http://localhost
         """
         self.add_permissions("extras.add_webhook")
 
@@ -5278,8 +5278,8 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         Create a new webhook with same content_types, same url and common action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | device type, create, http://localhost
-            Webhook 2: dcim | device type, create, update, http://localhost
+            Webhook 1: DCIM | device type, create, http://localhost
+            Webhook 2: DCIM | device type, create, update, http://localhost
         """
         self.add_permissions("extras.add_webhook")
 
@@ -5300,7 +5300,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data[0]["type_create"][0],
-            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+            "A webhook already exists for create on DCIM | device type to URL http://example.com/test1",
         )
 
     def test_patch_webhooks_with_same_content_type_same_url_common_action(self):
@@ -5315,7 +5315,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["type_update"][0],
-            f"A webhook already exists for update on dcim | device type to URL {self.webhooks[1].payload_url}",
+            f"A webhook already exists for update on DCIM | device type to URL {self.webhooks[1].payload_url}",
         )
 
     def test_patch_webhooks(self):
@@ -5361,7 +5361,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
         self.assertEqual(
             response.data["type_update"][0],
-            "A webhook already exists for update on dcim | device type to URL http://example.com/test2",
+            "A webhook already exists for update on DCIM | device type to URL http://example.com/test2",
         )
 
         # Test patch content_types with conflicts
@@ -5379,7 +5379,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
         self.assertEqual(
             response.data["type_create"][0],
-            "A webhook already exists for create on dcim | device type to URL http://example.com/test1",
+            "A webhook already exists for create on DCIM | device type to URL http://example.com/test1",
         )
 
 

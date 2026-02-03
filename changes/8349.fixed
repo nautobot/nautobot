@@ -1,0 +1,1 @@
+Fixed unit tests failing after upgrading to django 5.2.

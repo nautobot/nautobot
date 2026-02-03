@@ -618,8 +618,8 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Rack)],
-            "cf_rack-colors": ["red", "green", "blue"],
-            "cr_backup-location__destination": [cls.locations[0].pk],
+            "cf_rack_colors": ["red", "green", "blue"],
+            "cr_backup_locations__destination": [cls.locations[0].pk],
         }
 
         cls.bulk_edit_data = {
@@ -1218,7 +1218,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist" id="id_u_height_error"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 
@@ -2366,7 +2366,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
             "local_config_context_data": None,
             "cf_crash_counter": -1,
-            "cr_router-id": None,
+            "cr_router_id__destination": None,
             "software_version": software_versions[1].pk,
             "software_image_files": [f.pk for f in valid_software_image_files],
         }
@@ -2891,7 +2891,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[1].pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(Module)],
             "cf_crash_counter": -1,
-            "cr_router-id": None,
+            "cr_router_id__destination": None,
         }
 
         cls.bulk_edit_data = {
@@ -4313,7 +4313,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
         # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
         instance1, instance2 = self.interfaces[1], self.interfaces[2]
-        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}", headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         if hasattr(self.model, "name"):
@@ -4430,7 +4430,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
         self.assertBodyContains(
             response,
-            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            '<th class="orderable"><a href="?sort=device">Device</a></th>',
             html=True,
         )
 
@@ -4446,13 +4446,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
         self.assertNotIn(
-            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            '<th class="orderable"><a href="?sort=device">Device</a></th>',
             strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
         )
         # Sanity check:
-        self.assertBodyContains(
-            response, '<th class="orderable"><a data-column-name="name" href="?sort=name">Name</a></th>', html=True
-        )
+        self.assertBodyContains(response, '<th class="orderable"><a href="?sort=name">Name</a></th>', html=True)
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""

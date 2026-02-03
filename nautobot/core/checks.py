@@ -52,11 +52,9 @@ E009 = Error(
     obj=settings,
 )
 
-W005 = Warning(
-    "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="nautobot.core.W005",
-    obj=settings,
-)
+# E010 is dynamically constructed inline below
+
+# W005 was removed in v3.1.
 
 W006 = Warning(
     "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
@@ -71,9 +69,9 @@ W007 = Warning(
     id="nautobot.core.W007",
 )
 
-# W008 is dynamically constructed inline below
+# W008 was removed in v3.1.
 
-MIN_POSTGRESQL_MAJOR_VERSION = 12
+MIN_POSTGRESQL_MAJOR_VERSION = 14
 MIN_POSTGRESQL_MINOR_VERSION = 0
 
 MIN_POSTGRESQL_VERSION = MIN_POSTGRESQL_MAJOR_VERSION * 10000 + MIN_POSTGRESQL_MINOR_VERSION
@@ -101,13 +99,6 @@ def check_release_check_url(app_configs, **kwargs):
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:
             return [E004]
-    return []
-
-
-@register(Tags.compatibility)
-def check_storage_config_and_backend(app_configs, **kwargs):
-    if getattr(settings, "STORAGE_CONFIG", None) and not getattr(settings, "STORAGE_BACKEND", None):
-        return [W005]
     return []
 
 
@@ -224,9 +215,9 @@ def check_valid_value_for_device_uniqueness(app_configs, **kwargs):
 
 
 @register(Tags.compatibility)
-def check_for_deprecated_storage_settings(app_configs, **kwargs):
-    """Warn if any deprecated storage settings are set."""
-    warnings = []
+def check_for_removed_storage_settings(app_configs, **kwargs):
+    """Warn if any removed storage settings are set."""
+    errors = []
     for setting_name, replacement in [
         ("DEFAULT_FILE_STORAGE", 'STORAGES["default"]["BACKEND"]'),
         ("JOB_FILE_IO_STORAGE", 'STORAGES["nautobotjobfiles"]["BACKEND"]'),
@@ -235,15 +226,14 @@ def check_for_deprecated_storage_settings(app_configs, **kwargs):
         ("STORAGE_BACKEND", 'STORAGES["default"]["BACKEND"]'),
     ]:
         if settings.is_overridden(setting_name):
-            warnings.append(
-                Warning(
-                    msg=f"The setting {setting_name} is deprecated since Nautobot v3.0.3, "
-                    "and support will be removed in Nautobot 3.1.",
-                    hint=f"You should migrate to setting {replacement} instead. Refer to "
+            errors.append(
+                Error(
+                    msg=f"The setting {setting_name} is no longer supported in Nautobot 3.1 and later.",
+                    hint=f"You must migrate to setting {replacement} instead. Refer to "
                     "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
                     obj=settings,
-                    id="nautobot.core.W008",
+                    id="nautobot.core.E010",
                 )
             )
 
-    return warnings
+    return errors

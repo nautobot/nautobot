@@ -27,7 +27,7 @@
                 {% endif %}
             </div>
             <div class="col fs-5 lh-sm py-10 text-center">
-                {% now 'Y-m-d H:i:s T' %}
+                {% now "SHORT_DATETIME_FORMAT" %}
             </div>
             <div class="col align-items-center d-flex flex-wrap gap-8 justify-content-center py-6 text-center flex-lg-nowrap justify-content-lg-end text-lg-end">
                 {% if request.user.is_authenticated %}

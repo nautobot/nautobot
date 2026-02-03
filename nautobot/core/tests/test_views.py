@@ -477,7 +477,7 @@ class FilterFormsTestCase(TestCase):
             f"&cf_{select_cf.key}={choices[0]}&cf_{select_cf.key}={choices[1]}"
         )
         url = reverse("dcim:location_list") + query_param
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertBodyContains(response, locations[0].name, html=True)
         self.assertBodyContains(response, locations[1].name, html=True)
 
