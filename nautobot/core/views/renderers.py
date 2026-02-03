@@ -104,6 +104,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
                 )
+                if htmx_request and "parent" in request.GET:
+                    table.hide_hierarchy_ui = False
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":

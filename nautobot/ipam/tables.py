@@ -70,6 +70,12 @@ PREFIX_COPY_LINK = """
     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
     <span class="visually-hidden">Copy</span>
   </button>
+  {% if record.children.exists and not table.hide_hierarchy_ui %}
+    <span hx-get="{% url 'ipam:prefix_list' %}?parent={{ record.pk }}" hx-target="closest tr" hx-swap="afterend" hx-select="tbody tr"
+      hx-on:htmx:after-request="this.removeAttribute('hx-get'); this.classList.remove('mdi-chevron-right'); this.classList.add('mdi-chevron-down')"
+      aria-hidden="true" class="mdi mdi-chevron-right">
+    </span>
+  {% endif %}
 </span>
 """
 

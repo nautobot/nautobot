@@ -7,7 +7,7 @@
          hx-indicator="#{{ table_id }}-htmx-indicator"
          hx-push-url="true"
          hx-swap="none show:#{{ paginator_id|default:'paginator' }}:bottom"
-         hx-swap-oob="true"
+         _hx-swap-oob="true"
      {% endif %}
 >
     {% if page %}
