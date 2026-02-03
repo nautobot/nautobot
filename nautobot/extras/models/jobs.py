@@ -1082,6 +1082,35 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
 
 #
+# Job Console Log
+#
+
+
+class JobConsoleLog(BaseModel):
+    """
+    Stores console logs of a particular job execution.
+
+    New log is inserted dynamically when a new chunk / line is received which means you can
+    simulate tail behavior by periodically reading from this collection.
+
+    """
+
+    job_result = models.ForeignKey(JobResult, on_delete=models.CASCADE, related_name="job_console_logs")
+    timestamp = models.DateTimeField(
+        auto_now_add=True, help_text="Timestamp when this output has been produced / received"
+    )
+    output_type = models.CharField(
+        max_length=10, help_text="Type of the output (e.g. stdout, stderr, output)", default="output"
+    )
+    data = models.TextField(help_text="Actual line of output data")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobconsolelog.html"
+
+    class Meta:
+        ordering = ["timestamp"]
+
+
+#
 # Job Button
 #
 
