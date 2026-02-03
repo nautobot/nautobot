@@ -280,7 +280,7 @@ jobs:
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
     env:
       BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.13"
-      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
+      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "false" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -313,14 +313,14 @@ jobs:
             echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
           fi
 
-      - name: "Build and Push (prod - final target)"
+      - name: "Build Only Test (prod - final target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
           images: "ghcr.io/nautobot/nautobot"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           platforms: "linux/amd64"
-          push: true
+          push: false
           target: "final"
           poetry-parallel: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"

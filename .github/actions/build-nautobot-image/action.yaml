@@ -1,10 +1,10 @@
 ---
-name: "Build Nautobot Container"
+name: "Build Nautobot Image"
 description: "Build (and optionally push) a Docker image for Nautobot"
 
 inputs:
   images:
-    description: "Full image name(s) (e.g. ghcr.io/org/repo)"
+    description: "Full image name(s), comma-separated (e.g. networktocode/nautobot,ghcr.io/nautobot/nautobot)"
     required: true
   python-version:
     description: "Python version for the build matrix"
@@ -19,7 +19,7 @@ inputs:
   push:
     description: "Whether to push the image"
     required: false
-    default: "false"
+    default: false
   platforms:
     description: "Target platforms"
     required: false
