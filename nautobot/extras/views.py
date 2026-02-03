@@ -1819,16 +1819,25 @@ class DatasourceContentsPanel(object_detail.Panel):
         for entry in datasource_contents:
             name_cell = format_html(
                 """
-                <span style="display: inline-block" class="label label-info">
-                    <i class="mdi {}"></i>
-                </span> {}
+                <span class="d-inline-flex align-items-center gap-2 text-nowrap">
+                    <span class="badge bg-info">
+                        <i class="mdi {}"></i>
+                    </span>
+                    <span>{}</span>
+                </span>
                 """,
                 entry.icon,
                 entry.name.title(),
             )
             provided = entry.content_identifier in getattr(obj, "provided_contents", [])
             provided_cell = helpers.render_boolean(provided)
-            rows.append(format_html("<tr><td>{}</td><td>{}</td></tr>", name_cell, provided_cell))
+            rows.append(
+                format_html(
+                    '<tr><td class="align-middle">{}</td><td class="text-center align-middle">{}</td></tr>',
+                    name_cell,
+                    provided_cell,
+                )
+            )
         return format_html("".join(rows))
 
 
