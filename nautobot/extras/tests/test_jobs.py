@@ -1361,15 +1361,17 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
     def test_console_log_true_uses_console_log_task(
         self,
         mock_run_job,
         mock_console_log_task,
+        mock_get_meta,
     ):
-        job_kwargs = {"console_log": True}
-
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = True
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
@@ -1384,14 +1386,12 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         # when console log is true job_result is updated before run task
         self.assertEqual(job_result.task_kwargs, job_kwargs)
 
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
-    def test_console_log_false_uses_run_job_task(
-        self,
-        mock_run_job,
-        mock_console_log_task,
-    ):
-        job_kwargs = {"console_log": False}
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_get_meta):
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
 
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
@@ -1408,12 +1408,14 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         self.assertEqual(job_result.task_kwargs, {})
 
     @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
     def test_synchronous_console_log_true_does_not_redirect_output(
         self,
         mock_redirect_stderr,
         mock_redirect_stdout,
+        mock_get_meta,
         mock_run_job,
     ):
         mock_run_job.apply.return_value = mock.MagicMock(
@@ -1421,8 +1423,9 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             result=None,
             traceback=None,
         )
+        mock_get_meta.return_value = True
 
-        job_kwargs = {"console_log": True}
+        job_kwargs = {"foo": "bar"}
         JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
@@ -1438,12 +1441,14 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         mock_run_job.apply.assert_called_once()
 
     @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
     def test_synchronous_console_log_false_does_redirect_output(
         self,
         mock_redirect_stderr,
         mock_redirect_stdout,
+        mock_get_meta,
         mock_run_job,
     ):
         mock_run_job.apply.return_value = mock.MagicMock(
@@ -1452,7 +1457,8 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             traceback=None,
         )
 
-        job_kwargs = {"console_log": False}
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
         JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
