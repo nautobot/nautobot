@@ -2263,9 +2263,26 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         )
 
 
-class JobView(generic.ObjectView):
+class JobUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+    ObjectDataComplianceViewMixin,
+):
+    bulk_update_form_class = forms.JobBulkEditForm
     queryset = JobModel.objects.all()
-    template_name = "generic/object_retrieve.html"
+    serializer_class = serializers.JobSerializer
+    table_class = tables.JobTable
+    form_class = forms.JobEditForm
+    filterset_class = filters.JobFilterSet
+    filterset_form_class = forms.JobFilterForm
+    action_buttons = ()
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -2328,34 +2345,11 @@ class JobView(generic.ObjectView):
         ],
     )
 
-
-class JobEditView(generic.ObjectEditView):
-    queryset = JobModel.objects.all()
-    model_form = forms.JobEditForm
-    template_name = "extras/job_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
+    def get_object(self):
         # Reload the job class to ensure we have the latest version
+        obj = super().get_object()
         get_job(obj.class_path, reload=True)
         return obj
-
-
-class JobBulkEditView(generic.BulkEditView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
-    form = forms.JobBulkEditForm
-    template_name = "extras/job_bulk_edit.html"
-
-
-class JobDeleteView(generic.ObjectDeleteView):
-    queryset = JobModel.objects.all()
-
-
-class JobBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
 
 
 class JobQueueUIViewSet(NautobotUIViewSet):
