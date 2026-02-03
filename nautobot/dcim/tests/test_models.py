@@ -2136,24 +2136,24 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_cluster_queries(self):
         with self.subTest("Assert filtering and excluding `cluster`"):
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Device.objects.filter(cluster=self.cluster),
                 Device.objects.filter(clusters__in=[self.cluster]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Device.objects.exclude(cluster=self.cluster),
                 Device.objects.exclude(clusters__in=[self.cluster]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Device.objects.filter(cluster__in=[self.cluster]),
                 Device.objects.filter(clusters__in=[self.cluster]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Device.objects.exclude(cluster__in=[self.cluster]),
                 Device.objects.exclude(clusters__in=[self.cluster]),
             )
 
-        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
         # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
         # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "cluster_type", "location"]
@@ -2161,11 +2161,11 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         for field_name in query_params:
             with self.subTest(f"Assert cluster__{field_name} query."):
                 value = getattr(self.cluster, field_name)
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Device.objects.filter(**{f"cluster__{field_name}": value}),
                     Device.objects.filter(**{f"clusters__{field_name}": value}),
                 )
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Device.objects.exclude(**{f"cluster__{field_name}": value}),
                     Device.objects.exclude(**{f"clusters__{field_name}": value}),
                 )
@@ -3434,8 +3434,8 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         device_types[1].software_image_files.set(software_image_files[2:4])
 
         # This should only return the device types with a direct m2m relationship to the software image files
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[0]), software_image_files[0:2])
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[1]), software_image_files[2:4])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(device_types[0]), software_image_files[0:2])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(device_types[1]), software_image_files[2:4])
 
         devices = (
             Device.objects.create(
@@ -3457,15 +3457,15 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Only return the software image files associated with the device's software version and device type
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), software_image_files[0:2])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(devices[0]), software_image_files[0:2])
 
         # When the device's software image files are overridden with the direct m2m relationship, return those
         devices[1].software_image_files.set(software_image_files[1:3])
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[1]), software_image_files[1:3])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(devices[1]), software_image_files[1:3])
 
         # If no device types are associated with the software image files, return the default software image file
         device_types[0].software_image_files.clear()
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), [software_image_files[1]])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(devices[0]), [software_image_files[1]])
 
         inventory_items = (
             InventoryItem.objects.create(
@@ -3481,11 +3481,11 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Only return the software image files associated with the inventory item's software version
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[0]), software_image_files[0:2])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(inventory_items[0]), software_image_files[0:2])
 
         # When the inventory item's software image files are overridden with the direct m2m relationship, return those
         inventory_items[1].software_image_files.set(software_image_files[1:3])
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[1]), software_image_files[1:3])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(inventory_items[1]), software_image_files[1:3])
 
         cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
         cluster = Cluster.objects.create(name="Test SoftwareImageFileQs Cluster 1", cluster_type=cluster_type)
@@ -3505,11 +3505,11 @@ class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Only return the software image files associated with the virtual machine's software version
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[0]), software_image_files[0:2])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(virtual_machines[0]), software_image_files[0:2])
 
         # When the virtual machine's software image files are overridden with the direct m2m relationship, return those
         virtual_machines[1].software_image_files.set(software_image_files[1:3])
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[1]), software_image_files[1:3])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(virtual_machines[1]), software_image_files[1:3])
 
         with self.assertRaises(TypeError):
             qs.get_for_object(Circuit)
@@ -3527,14 +3527,14 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
         # Only return the device types with a direct m2m relationship to the version's software image files
         device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
         self.assertIsNotNone(device_type)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             qs.get_for_object(device_type), qs.filter(software_image_files__device_types=device_type)
         )
 
         # Only return the software version set on the device's software_version foreign key
         device = Device.objects.filter(software_version__isnull=False).first()
         self.assertIsNotNone(device)
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
 
         # Only return the software version set on the inventory item's software_version foreign key
         software_version = SoftwareVersion.objects.first()
@@ -3543,7 +3543,7 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
             name="Test SoftwareVersionQs Inventory Item 1",
             software_version=software_version,
         )
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_item), [inventory_item.software_version])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(inventory_item), [inventory_item.software_version])
 
         # Only return the software version set on the virtual machine's software_version foreign key
         cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
@@ -3554,7 +3554,7 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
             status=Status.objects.get_for_model(VirtualMachine).first(),
             software_version=software_version,
         )
-        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machine), [virtual_machine.software_version])
+        self.assertQuerySetEqualAndNotEmpty(qs.get_for_object(virtual_machine), [virtual_machine.software_version])
 
         with self.assertRaises(TypeError):
             qs.get_for_object(Circuit)

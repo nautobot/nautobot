@@ -210,6 +210,51 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.6 (2026-02-02)
+
+### Security in v3.0.6
+
+- [#8428](https://github.com/nautobot/nautobot/issues/8428) - Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.0.6
+
+- [#8416](https://github.com/nautobot/nautobot/issues/8416) - Enhanced the `q` filter for the `VirtualServer` model to include searching by port, device name, and load balancer pool name.
+- [#8443](https://github.com/nautobot/nautobot/issues/8443) - Added `change_context` and `change_context_detail` to ObjectChange FilterSet.
+
+### Fixed in v3.0.6
+
+- [#6935](https://github.com/nautobot/nautobot/issues/6935) - Fixed ModularComponentCreateForm forms not showing description field.
+- [#6935](https://github.com/nautobot/nautobot/issues/6935) - Fixed ComponentCreateView views not applying the specified Tags.
+- [#7214](https://github.com/nautobot/nautobot/issues/7214) - Fixed logic in the 'tests' invoke task to respect 'cache_test_fixtures: False' in 'invoke.yml'.
+- [#7762](https://github.com/nautobot/nautobot/issues/7762) - Added a reentrant lock to the `import_modules_privately()` method to address a race condition in multithreaded code.
+- [#8404](https://github.com/nautobot/nautobot/issues/8404) - Fixed the ability to re-run a Kubernetes Job.
+- [#8407](https://github.com/nautobot/nautobot/issues/8407) - Fixed issue adding new devices due to Attribute Error 'NoneType' object has no attribute 'location'.
+- [#8441](https://github.com/nautobot/nautobot/issues/8441) - Fixed issues where Custom Fields and Relationships were not being updated when editing a Module or Rack via the UI.
+- [#8444](https://github.com/nautobot/nautobot/issues/8444) - Fixed an exception in `get_item()` when rendering the response to a CSRF failure.
+- [#8447](https://github.com/nautobot/nautobot/issues/8447) - Fixed an issue where the VLAN toggle was not working on the interface edit form.
+- [#8463](https://github.com/nautobot/nautobot/issues/8463) - Fixed default values of Kubernetes related settings.
+- [#8473](https://github.com/nautobot/nautobot/issues/8473) - Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.
+
+### Dependencies in v3.0.6
+
+- [#8400](https://github.com/nautobot/nautobot/issues/8400) - Updated dependency `cryptography` to `~46.0.4`.
+- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency Celery to ~5.6.2.
+
+### Documentation in v3.0.6
+
+- [#8421](https://github.com/nautobot/nautobot/issues/8421) - Fixed some headings and whitespace in the Google OAuth2 documentation.
+- [#8448](https://github.com/nautobot/nautobot/issues/8448) - Provide clarification regarding our dependency, CVE, and backport maintenance policies.
+
+### Housekeeping in v3.0.6
+
+- [#8192](https://github.com/nautobot/nautobot/issues/8192) - Updated Nautobot documentation screenshots to reflect the latest UI.
+- [#8399](https://github.com/nautobot/nautobot/issues/8399) - Updated NPM development dependency `css-loader` to `^7.1.3`.
+- [#8399](https://github.com/nautobot/nautobot/issues/8399) - Updated NPM development dependency `sass` to `^1.97.3`.
+- [#8400](https://github.com/nautobot/nautobot/issues/8400) - Updated development dependency `pymarkdownlnt` to `~0.9.35`.
+- [#8400](https://github.com/nautobot/nautobot/issues/8400) - Updated development dependency `ruff` to `~0.14.14`.
+- [#8400](https://github.com/nautobot/nautobot/issues/8400) - Updated development dependency `coverage` to `~7.13.2`.
+- [#8441](https://github.com/nautobot/nautobot/issues/8441) - Enhanced `NautobotTestCaseMixin.model_to_dict()` and `NautobotTestCaseMixin.assertInstanceEqual()` to correctly account for and validate custom-field and relationship data.
+
 ## v3.0.5 (2026-01-16)
 
 ### Added in v3.0.5

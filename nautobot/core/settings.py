@@ -130,10 +130,6 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
-# (Deprecated) the storage backend to use for Job input files and Job output files
-if "NAUTOBOT_JOB_FILE_IO_STORAGE" in os.environ and os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"] != "":
-    JOB_FILE_IO_STORAGE = os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"]
-
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
@@ -194,6 +190,18 @@ PLUGINS_CONFIG = {}
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Default filters for Prefix list view
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+):
+    PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
 
 # Publish a simple "no-index" robots.txt for Nautobot?
 PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
@@ -488,8 +496,6 @@ if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_T
     CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
-DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
-DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
@@ -545,9 +551,6 @@ MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
-SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
-SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
-TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
 TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
 
 # Disable importing the WSGI module before starting the server application. This is required for
@@ -608,6 +611,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -619,6 +623,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
+    "nautobot.core.middleware.UserDefinedLanguageMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
@@ -827,6 +832,22 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="per_page_defaults_field",
     ),
+    "PREFIX_LIST_DEFAULT_CONTAINER_ONLY": ConstanceConfigItem(
+        default=False,
+        help_text=mark_safe(
+            "Enable a default <code>type=container</code> filter on Prefix list views.\n"
+            "Enabling this may improve performance when the number of records is large."
+        ),
+        field_type=bool,
+    ),
+    "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=-1,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Prefix list views (-1 for no filter).\n"
+            "Setting this to a small non-negative value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
         help_text=mark_safe(
@@ -898,7 +919,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": [
+        "JOB_CREATE_FILE_MAX_SIZE",
+        "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
+        "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+    ],
     "Rack Elevation Rendering": [
         "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
@@ -1195,16 +1220,18 @@ DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 #
 
 # Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv(
+    "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "https://kubernetes.default.svc"
+)
 
 # A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
 KUBERNETES_JOB_MANIFEST = json.loads(os.getenv("NAUTOBOT_KUBERNETES_JOB_MANIFEST", "{}"))
 
 # Name of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "nautobot-job")
 
 # Namespace of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "default")
 
 # File path to the SSL CA CERT used for authentication to create the job and job pod
 KUBERNETES_SSL_CA_CERT_PATH = os.getenv(

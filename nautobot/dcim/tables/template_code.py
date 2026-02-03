@@ -240,7 +240,7 @@ INTERFACE_BUTTONS = """
     </li>
 {% endif %}
 {% if record.cable %}
-    <li><a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span><Trace/a></li>
+    <li><a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
     {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
 {% elif record.is_connectable and perms.dcim.add_cable %}
     <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>

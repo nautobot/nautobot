@@ -1,0 +1,2 @@
+Changed object list views to render in two passes with HTMX, improving initial load times.
+Changed rendering of table sorting indicator arrows from client-side to server-side rendering.

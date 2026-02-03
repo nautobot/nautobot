@@ -102,8 +102,8 @@ The following minimum versions are required for Nautobot to operate:
 | Dependency | Role         | Minimum Version |
 | ---------- | ------------ | --------------- |
 | Python     | Application  | 3.10            |
-| PostgreSQL | Database     | 12.0            |
-| MySQL      | Database     | 8.0             |
+| PostgreSQL | Database     | 14.0            |
+| MySQL      | Database     | 8.0.11          |
 | Redis      | Cache, Queue | 4.0             |
 | Git        | Additional   | 2.0             |
 
@@ -131,6 +131,10 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 
 --- 2.1.0 "PostgreSQL minimum version became 12.0"
     Support for versions of PostgreSQL older than 12.0 was removed.
+
+--- 3.1.0 "PostgreSQL minimum version became 14.0, MySQL minimum version became 8.0.11"
+    - Support for versions of PostgreSQL older than 14.0 was removed.
+    - Support for versions of MySQL older than 8.0.11 was removed.
 
 !!! note "Only one database"
     Either PostgreSQL or MySQL must be selected, but not both.

@@ -21,6 +21,8 @@
 <script type="text/javascript">
     hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
     hljs.highlightAll();
+    htmx.config.refreshOnHistoryMiss = true;
+    htmx.config.historyRestoreAsHxRequest = false;
 </script>
 {% if settings.BRANDING_FILEPATHS.javascript %}
     <script src="{% custom_branding_or_static 'javascript' None %}"></script>

@@ -44,7 +44,7 @@ spec:
                 configMapKeyRef:
                   key: POSTGRES_USER
                   name: dev-env
-          image: postgres:13
+          image: postgres:14
           name: db
           ports:
             - containerPort: 5432

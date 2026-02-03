@@ -112,7 +112,7 @@ A boolean that will mark this Job as requiring approval from another user to be 
 
 +++ 3.1.0
 
-Default: `True`
+Default: `False`
 
 A boolean controls how job stdout/stderr is handled and where the job is executed. Set to `True` enables live, line-by-line job output by executing the job in a subprocess.
 

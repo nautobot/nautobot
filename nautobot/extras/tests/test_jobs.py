@@ -61,14 +61,13 @@ class JobTest(TestCase):
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
-<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
-<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>""",
+<input type="number" name="var_int" value="0" max="3600" class="form-control" required placeholder="None" aria-describedby="id_var_int_helptext" id="id_var_int">
+<br><span class="helptext" id="id_var_int_helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th> <td>
+<input type="number" name="var_int_no_default" max="3600" class="form-control" placeholder="None" aria-describedby="id_var_int_no_default_helptext" id="id_var_int_no_default">
+<br><span class="helptext" id="id_var_int_no_default_helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
 
@@ -1264,7 +1263,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1290,7 +1289,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1361,15 +1360,17 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
     def test_console_log_true_uses_console_log_task(
         self,
         mock_run_job,
         mock_console_log_task,
+        mock_get_meta,
     ):
-        job_kwargs = {"console_log": True}
-
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = True
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
@@ -1384,14 +1385,12 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         # when console log is true job_result is updated before run task
         self.assertEqual(job_result.task_kwargs, job_kwargs)
 
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
-    def test_console_log_false_uses_run_job_task(
-        self,
-        mock_run_job,
-        mock_console_log_task,
-    ):
-        job_kwargs = {"console_log": False}
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_get_meta):
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
 
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
@@ -1408,12 +1407,14 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         self.assertEqual(job_result.task_kwargs, {})
 
     @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
     def test_synchronous_console_log_true_does_not_redirect_output(
         self,
         mock_redirect_stderr,
         mock_redirect_stdout,
+        mock_get_meta,
         mock_run_job,
     ):
         mock_run_job.apply.return_value = mock.MagicMock(
@@ -1421,8 +1422,9 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             result=None,
             traceback=None,
         )
+        mock_get_meta.return_value = True
 
-        job_kwargs = {"console_log": True}
+        job_kwargs = {"foo": "bar"}
         JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
@@ -1438,12 +1440,14 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         mock_run_job.apply.assert_called_once()
 
     @mock.patch("nautobot.extras.jobs.run_job")
+    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
     @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
     def test_synchronous_console_log_false_does_redirect_output(
         self,
         mock_redirect_stderr,
         mock_redirect_stdout,
+        mock_get_meta,
         mock_run_job,
     ):
         mock_run_job.apply.return_value = mock.MagicMock(
@@ -1452,7 +1456,8 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             traceback=None,
         )
 
-        job_kwargs = {"console_log": False}
+        job_kwargs = {"foo": "bar"}
+        mock_get_meta.return_value = False
         JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,

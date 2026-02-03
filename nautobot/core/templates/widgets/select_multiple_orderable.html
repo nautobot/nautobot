@@ -2,14 +2,21 @@
     <ol{% if id %} id="{{ id }}"{% endif %}{% if widget.attrs.class %} class="{{ widget.attrs.class }}"{% endif %}>
         {% for group, options, index in widget.optgroups %}
             {% for option in options %}
-                <li class="form-check list-group-item-action nb-draggable my-0 ps-20">
+                <li
+                    class="form-check list-group-item-action nb-draggable my-0"
+                    id="{{ id }}_option_{{ option.value }}_container"
+                    tabindex="0"
+                >
+                    <span class="nb-draggable-handle pt-4 px-10">
+                        <span class="mdi mdi-drag-vertical text-secondary"></span>
+                    </span>
                     <input
                         class="form-check-input my-6"
                         id="{{ id }}_option_{{ option.value }}"
                         name="{{ widget.name }}"
                         type="checkbox"
                         value="{{ option.value }}"
-                        {% if option.attrs.selected %} checked{% endif %}
+                        {% if option.attrs.selected %}checked{% endif %}
                     >
                     <label class="form-check-label py-6 pe-20 w-100" for="{{ id }}_option_{{ option.value }}">
                         {{ option.label }}
