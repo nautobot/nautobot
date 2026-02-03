@@ -124,6 +124,7 @@ runs:
         push: "${{ inputs.push }}"
         target: "${{ inputs.target }}"
         platforms: "${{ inputs.platforms }}"
+        file: "docker/Dockerfile"
         tags: "${{ steps.dockermeta.outputs.tags }}"
         labels: "${{ steps.dockermeta.outputs.labels }}"
         cache-from: "type=gha,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}"
