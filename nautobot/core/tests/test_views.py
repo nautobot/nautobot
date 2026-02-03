@@ -573,7 +573,7 @@ class TableConfigDrawerTestCase(TestCase):
     def test_intitial_order_matches_table_columns(self):
         """Assert that the initial columns in the table match the default form."""
         fields_columns = list(ProviderTable.base_columns.keys())
-        # Note:, this adjusts for the pk that is not considered in filter form. If more columns 
+        # Note:, this adjusts for the pk that is not considered in filter form. If more columns
         # change in future you may need to update this logic to account for these differences.
         fields_columns.remove("pk")
         self.assertEqual(fields_columns, self.default_order)
