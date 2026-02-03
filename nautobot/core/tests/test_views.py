@@ -536,10 +536,13 @@ class TableConfigDrawerTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.add_permissions("circuits.view_provider")
-        self.add_permissions("extras.view_savedview")
+        self.add_permissions("circuits.view_provider", "extras.view_savedview")
+        self.request = RequestFactory().get("/circuits/providers/")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
         table = ProviderTable(Provider.objects.all())
-        table.request = type("Request", (), {"user": self.user, "GET": {}})()
+        table.request = self.request
         self.form = TableConfigForm(table)
         self.default_order = [col[0] for col in self.form.fields["columns"].choices]
 
@@ -566,18 +569,13 @@ class TableConfigDrawerTestCase(TestCase):
             is_global_default=False,
             config=saved_view_config,
         )
-        self.request = RequestFactory().get("/circuits/providers/")
-        self.request.id = uuid.uuid4()
-        self.request.user = self.user
 
     def test_intitial_order_matches_table_columns(self):
         """Assert that the initial columns in the table match the default form."""
-        fields_columns = list(ProviderTable.Meta.fields)
-        # Note:, this adjusts for the pk that is not considered in filter form and the
-        # dyanamic_group_count column that is added. If more columns change in future you
-        # would not need to update this logic to account for these differences.
+        fields_columns = list(ProviderTable.base_columns.keys())
+        # Note:, this adjusts for the pk that is not considered in filter form. If more columns 
+        # change in future you may need to update this logic to account for these differences.
         fields_columns.remove("pk")
-        fields_columns.append("dynamic_group_count")
         self.assertEqual(fields_columns, self.default_order)
 
     def test_filter_column_default(self):
