@@ -6,14 +6,14 @@ This document describes all new features and changes in Nautobot 3.1.
 
 ### Administrators
 
-#### Migrate from legacy PostgreSQL versions as needed
+#### Migrate From Legacy PostgreSQL Versions As Needed
 
 Nautobot 3.1, as a consequence of the [Django 5.2 dependency upgrade](#django-52), drops support for PostgreSQL versions 12.x and 13.x and now requires a minimum of PostgreSQL 14.0. If you have an existing Nautobot deployment on these no-longer-supported versions of PostgreSQL, you will need to [upgrade and migrate your database](../user-guide/administration/upgrading/postgresql.md).
 
 !!! tip
     In general we recommend that you upgrade PostgreSQL as a _separate_ step and change window from upgrading Nautobot in order to reduce the complexity of the upgrade and allow easier troubleshooting and recovery should anything go wrong in the process.
 
-#### Migrate Configuration to `STORAGES` as needed
+#### Migrate Configuration To `STORAGES` As Needed
 
 As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting.
 
@@ -21,11 +21,17 @@ If your deployment of Nautobot had overridden any of the above settings (for exa
 
 ### App Authors/Maintainers
 
+#### Changes For Django 5.2 Compatibility
+
 Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django major version updates, included a small number of breaking changes to Django's Python APIs. For a comprehensive guide, refer to the "Backwards incompatible changes" and "Features removed" sections of Django's release-notes for versions [5.0](https://docs.djangoproject.com/en/5.2/releases/5.0/#backwards-incompatible-changes-in-5-0), [5.1](https://docs.djangoproject.com/en/5.2/releases/5.1/#backwards-incompatible-changes-in-5-1), and [5.2](https://docs.djangoproject.com/en/5.2/releases/5.2/#backwards-incompatible-changes-in-5-2). The most likely impacts we have identified to Nautobot Apps are the following:
 
 - Support for `Model.Meta.index_together` (previously deprecated in Django 4.2) is removed; App models with custom indexes using `index_together` will need to migrate to use `Model.Meta.indexes` instead and create a database migration accordingly.
 - Models using a `ManyToManyField` with an explicit `through` table (as is recommended by Nautobot) may need to run `nautobot-server makemigrations <app>` to generate a schema migration explicitly specifying the `through_fields` for each such `ManyToManyField`.
 - The test method `assertQuerysetEqual()` (previously deprecated in Django 4.2) is removed; App tests using this method will need to migrate to use `assertQuerySetEqual()` (note capitalization) instead.
+
+#### Changes for HTMX
+
+In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
 
 ## Release Overview
 
