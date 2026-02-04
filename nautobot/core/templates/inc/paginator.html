@@ -1,4 +1,5 @@
 {% load helpers %}
+{% load querystring from django_tables2 %}
 
 <div id="{{ paginator_id|default:'paginator' }}"
      class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary"
@@ -6,8 +7,8 @@
          hx-history="false"
          hx-indicator="#{{ table_id }}-htmx-indicator"
          hx-push-url="true"
-         hx-swap="none show:#{{ paginator_id|default:'paginator' }}:bottom"
-         _hx-swap-oob="true"
+         hx-swap="show:#{{ paginator_id|default:'paginator' }}:bottom"
+         hx-select-oob="#{{ table_id }},#paginator,#select_all_box"
      {% endif %}
 >
     {% if page %}
@@ -26,13 +27,19 @@
         {% endfor %}
         <select name="per_page" id="per_page" class="form-select">
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ page.paginator.per_page }}" selected="selected">{{ page.paginator.per_page }}</option>
+                <option value="{{ page.paginator.per_page }}" selected="selected"
+                        {% if htmx_enabled|default:False %}
+                            hx-get="{% querystring 'per_page'=page.paginator.per_page without 'page' %}"
+                        {% endif %}
+                >
+                    {{ page.paginator.per_page }}
+                </option>
             {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ n }}"
                         {% if page.paginator.per_page == n %} selected="selected"{% endif %}
                         {% if htmx_enabled|default:False %}
-                            hx-get="{% legacy_querystring request per_page=n %}"
+                            hx-get="{% querystring 'per_page'=n without 'page' %}"
                         {% endif %}
                 >
                     {{ n }}
@@ -47,9 +54,9 @@
             <ul class="pagination mb-0">
                 {% if page.has_previous %}
                     <li class="page-item">
-                        <a aria-label="Previous" class="page-link" href="{% legacy_querystring request page=page.previous_page_number %}"
+                        <a aria-label="Previous" class="page-link" href="{% querystring 'page'=page.previous_page_number %}"
                            {% if htmx_enabled|default:False %}
-                               hx-get="{% legacy_querystring request page=page.previous_page_number %}"
+                               hx-get="{% querystring 'page'=page.previous_page_number %}"
                            {% endif %}
                         >
                             <span aria-hidden="true">&laquo;</span>
@@ -59,9 +66,9 @@
                 {% for p in page.smart_pages %}
                     {% if p %}
                         <li class="page-item {% if page.number == p %} active{% endif %}">
-                            <a class="page-link" href="{% legacy_querystring request page=p %}"
+                            <a class="page-link" href="{% querystring 'page'=p %}"
                                {% if htmx_enabled|default:False %}
-                                   hx-get="{% legacy_querystring request page=p %}"
+                                   hx-get="{% querystring 'page'=p %}"
                                {% endif %}
                             >
                                 {{ p }}
@@ -73,9 +80,9 @@
                 {% endfor %}
                 {% if page.has_next %}
                     <li class="page-item">
-                        <a aria-label="Next" class="page-link" href="{% legacy_querystring request page=page.next_page_number %}"
+                        <a aria-label="Next" class="page-link" href="{% querystring 'page'=page.next_page_number %}"
                            {% if htmx_enabled|default:False %}
-                               hx-get="{% legacy_querystring request page=page.next_page_number %}"
+                               hx-get="{% querystring 'page'=page.next_page_number %}"
                            {% endif %}
                         >
                             <span aria-hidden="true">&raquo;</span>
