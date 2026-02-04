@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from django.utils import timezone
 
-from nautobot.extras.models import JobConsoleLog, JobResult
+from nautobot.extras.models import JobConsoleEntry, JobResult
 
 
 def store_job_output_line(job_result: JobResult, data: str, output_type: str = "output", timestamp=None):
@@ -25,9 +25,8 @@ def store_job_output_line(job_result: JobResult, data: str, output_type: str = "
     if timestamp is None:
         timestamp = timezone.now()
 
-    JobConsoleLog.objects.create(
-        job_result=job_result, timestamp=timestamp, output_type=output_type, data=data if data else ""
-    )  # TBD: should we do data.rstip() or no?
+    if data:
+        JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, data=data)
 
 
 #

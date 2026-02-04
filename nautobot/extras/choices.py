@@ -356,6 +356,23 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
+# JobConsoleEntry
+#
+
+
+class JobConsoleEntryOutputTypeChoices(ChoiceSet):
+    TYPE_OUTPUT = "output"
+    TYPE_STDOUT = "stdout"
+    TYPE_STDERR = "stderr"
+
+    CHOICES = (
+        (TYPE_OUTPUT, "Output"),
+        (TYPE_STDOUT, "Stdout"),
+        (TYPE_STDERR, "Stderr"),
+    )
+
+
+#
 # Metadata
 #
 

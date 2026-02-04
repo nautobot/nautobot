@@ -40,6 +40,19 @@ Records of this type store the following data:
 * The log message.
 * If provided, the string format of the logged object and it's absolute url.
 
+## Job Console Entry
+
+Console output produced during the execution of a Job is stored as `JobConsoleEntry` objects. These entries are created incrementally as output is generated, allowing consumers to retrieve and display console output in near real time (for example, simulating tail -f behavior while a job is still running).
+
+Records of this type store the following data:
+
+* A reference to the `JobResult` object associated with the job execution.
+* A timestamp indicating when the output was produced or received.
+* The type of console output (such as stdout, stderr, or general output).
+* The raw text content of the console output.
+
+Each console entry represents a single chunk or line of output, and entries are ordered chronologically by their timestamp to reflect the order in which output was generated.
+
 ## Job Results
 
 Nautobot provides a generic data model for storing and reporting the results of background tasks, such as the execution of custom jobs or the synchronization of data from a Git repository.

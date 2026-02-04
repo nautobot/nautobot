@@ -36,6 +36,7 @@ from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    JobConsoleEntryOutputTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -1083,11 +1084,11 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
 
 #
-# Job Console Log
+# Job Console Entry
 #
 
 
-class JobConsoleLog(BaseModel):
+class JobConsoleEntry(BaseModel):
     """
     Stores console logs of a particular job execution.
 
@@ -1096,16 +1097,19 @@ class JobConsoleLog(BaseModel):
 
     """
 
-    job_result = models.ForeignKey(JobResult, on_delete=models.CASCADE, related_name="job_console_logs")
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_console_entries")
     timestamp = models.DateTimeField(
         auto_now_add=True, help_text="Timestamp when this output has been produced / received"
     )
     output_type = models.CharField(
-        max_length=10, help_text="Type of the output (e.g. stdout, stderr, output)", default="output"
+        max_length=10,
+        help_text="Type of the output (e.g. stdout, stderr, output)",
+        choices=JobConsoleEntryOutputTypeChoices,
+        default=JobConsoleEntryOutputTypeChoices.TYPE_OUTPUT,
     )
-    data = models.TextField(help_text="Actual line of output data")
+    text = models.TextField(help_text="Actual line of output data")
 
-    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobconsolelog.html"
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     class Meta:
         ordering = ["timestamp"]

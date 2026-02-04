@@ -165,7 +165,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "jobqueue",
     "jobqueueassignment",
     "jobresult",
-    "jobconsolelog",
+    "jobconsoleentry",
     "locationtype",
     "manufacturer",
     "metadatachoice",

@@ -1,1 +1,1 @@
-Added saving output (stdout/stderr) line by line to `JobConsoleLog` table.
+Added saving output (stdout/stderr) line by line to `JobConsoleEntry` table.

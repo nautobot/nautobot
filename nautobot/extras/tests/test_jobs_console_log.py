@@ -6,7 +6,7 @@ from django.utils import timezone
 from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs_console_log import JobConsoleLogExecutor, store_job_output_line, StreamReader
-from nautobot.extras.models.jobs import Job, JobConsoleLog, JobResult
+from nautobot.extras.models.jobs import Job, JobConsoleEntry, JobResult
 
 
 class StoreJobOutputLineTestCase(TestCase):
@@ -20,15 +20,15 @@ class StoreJobOutputLineTestCase(TestCase):
 
     def test_stores_stdout_line(self):
         """Test storing stdout line to database."""
-        self.assertFalse(JobConsoleLog.objects.filter(job_result=self.job_result).exists())
+        self.assertFalse(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
         store_job_output_line(
             job_result=self.job_result,
             data="Test output line\n",
             output_type="stdout",
         )
 
-        self.assertTrue(JobConsoleLog.objects.filter(job_result=self.job_result).exists())
-        job_console_log = JobConsoleLog.objects.get(job_result=self.job_result)
+        self.assertTrue(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
+        job_console_log = JobConsoleEntry.objects.get(job_result=self.job_result)
         self.assertEqual(job_console_log.job_result_id, self.job_result.id)
         self.assertEqual(job_console_log.output_type, "stdout")
         self.assertEqual(job_console_log.data, "Test output line\n")
@@ -36,7 +36,7 @@ class StoreJobOutputLineTestCase(TestCase):
     def test_stores_stderr_line(self):
         """Test storing stderr line to database."""
 
-        self.assertFalse(JobConsoleLog.objects.filter(job_result=self.job_result).exists())
+        self.assertFalse(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
 
         store_job_output_line(
             job_result=self.job_result,
@@ -44,8 +44,8 @@ class StoreJobOutputLineTestCase(TestCase):
             output_type="stderr",
         )
 
-        self.assertTrue(JobConsoleLog.objects.filter(job_result=self.job_result).exists())
-        job_console_log = JobConsoleLog.objects.get(job_result=self.job_result)
+        self.assertTrue(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
+        job_console_log = JobConsoleEntry.objects.get(job_result=self.job_result)
         self.assertEqual(job_console_log.job_result_id, self.job_result.id)
         self.assertEqual(job_console_log.output_type, "stderr")
         self.assertEqual(job_console_log.data, "Error message\n")
@@ -177,11 +177,11 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
         executor = JobConsoleLogExecutor(self.job_result.pk)
         executor.execute()
 
-        stdout_lines = JobConsoleLog.objects.filter(job_result_id=self.job_result.pk, output_type="stdout").order_by(
+        stdout_lines = JobConsoleEntry.objects.filter(job_result_id=self.job_result.pk, output_type="stdout").order_by(
             "timestamp"
         )
 
-        stderr_lines = JobConsoleLog.objects.filter(job_result_id=self.job_result.pk, output_type="stderr").order_by(
+        stderr_lines = JobConsoleEntry.objects.filter(job_result_id=self.job_result.pk, output_type="stderr").order_by(
             "timestamp"
         )
 
