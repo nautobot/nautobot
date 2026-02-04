@@ -1,0 +1,24 @@
+{% load helpers %}
+{% for row in table.page.object_list|default:table.rows %}
+    <tr {{ row.attrs.as_html }}>
+        {% for column, cell in row.items %}
+            <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+        {% endfor %}
+        {% if table.configurable and last_column_name != "actions" %}
+            <td class="nb-w-0" />
+        {% endif %}
+    </tr>
+{% endfor %}
+{% if table.page.paginator.num_pages > 1 %}
+    <tr class="table-warning">
+        {% if "pk" in table.columns %}
+            <td></td>
+            <td colspan="{{ table.columns|length|add:-1 }}" class="nb-prefix" data-ancestors-count="{{ tree_depth }}">
+        {% else %}
+            <td colspan="{{ table.columns|length }}" class="nb-prefix" data-ancestors-count="{{ tree_depth }}">
+        {% endif %}
+            {% tree_hierarchy_ui_representation tree_depth|as_range False 0 %}
+            ... and {{ additional_count }} more children not shown due to pagination ...
+        </td>
+    </tr>
+{% endif %}

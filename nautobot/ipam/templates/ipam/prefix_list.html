@@ -26,3 +26,57 @@
         </ul>
     </div>
 {% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    const collapseSubtree = (event) => {
+        const ancestorsCount = event.target.closest("td").getAttribute("data-ancestors-count");
+        const tr = event.target.closest("tr");
+        while (tr.nextElementSibling && tr.nextElementSibling.getElementsByClassName("nb-prefix").length > 0 && tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getAttribute("data-ancestors-count") > ancestorsCount) {
+            tr.nextElementSibling.remove();
+        }
+        event.target.setAttribute("class", "mdi mdi-chevron-right");
+        event.target.setAttribute("hx-get", `{% url 'ipam:prefix_list' %}${event.target.closest("td").getAttribute("data-pk")}/children/`);
+        htmx.process(event.target);
+    };
+
+    const afterExpansion = (span) => {
+        span.setAttribute("class", "mdi mdi-chevron-down");
+        span.removeAttribute("hx-get");
+        htmx.process(span);
+        span.addEventListener("click", collapseSubtree)
+    }
+
+    const maybeAddExpansionCaret = (td) => {
+        const ancestorsCount = td.getAttribute("data-ancestors-count");
+        const descendantsCount = td.getAttribute("data-descendants-count");
+        if (descendantsCount > 0) {
+            const caret = document.createElement("span");
+            caret.setAttribute("hx-select", "tr");
+            caret.setAttribute("hx-swap", "afterend");
+            caret.setAttribute("hx-select-oob", "none");
+            caret.setAttribute("hx-target", "closest tr");
+            caret.setAttribute("hx-on:htmx:after-on-load", "afterExpansion(this)");
+            if (td.closest("tr").nextElementSibling === null || td.closest("tr").nextElementSibling.getElementsByClassName("nb-prefix").length == 0 || td.closest("tr").nextElementSibling.getElementsByClassName("nb-prefix")[0].getAttribute("data-ancestors-count") <= ancestorsCount) {
+                caret.setAttribute("class", "mdi mdi-chevron-right");
+                caret.setAttribute("hx-get", `{% url 'ipam:prefix_list' %}${td.getAttribute("data-pk")}/children/`);
+            } else {
+                caret.setAttribute("class", "mdi mdi-chevron-down");
+                caret.addEventListener("click", collapseSubtree);
+            }
+            td.append(caret);
+        }
+    };
+
+    htmx.onLoad((content) => {
+        const prefix_tds = Array.from(content.getElementsByClassName("nb-prefix"));
+        if (prefix_tds.length > 0) {
+            prefix_tds.forEach((td) => {
+                maybeAddExpansionCaret(td);
+            });
+            htmx.process(content);
+        }
+    });
+</script>
+{% endblock javascript %}

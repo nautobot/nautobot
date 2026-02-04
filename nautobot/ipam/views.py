@@ -593,6 +593,37 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        child_prefixes = instance.children.restrict(request.user, "view")
+        prefix_table = tables.PrefixDetailTable(
+            child_prefixes,
+            configurable=True,
+            exclude=["namespace"],
+            user=request.user,
+        )
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        return Response(
+            {
+                "template": "ipam/prefix_children.html",
+                "table": prefix_table,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, child_prefixes.count() - paginate["per_page"]),
+            }
+        )
+
+    @action(
+        detail=True,
         url_path="prefixes",
         custom_view_base_action="view",
     )

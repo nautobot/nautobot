@@ -70,12 +70,6 @@ PREFIX_COPY_LINK = """
     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
     <span class="visually-hidden">Copy</span>
   </button>
-  {% if record.children.exists and not table.hide_hierarchy_ui %}
-    <span hx-get="{% url 'ipam:prefix_list' %}?parent={{ record.pk }}" hx-target="closest tr" hx-swap="afterend" hx-select="tbody tr"
-      hx-on:htmx:after-request="this.removeAttribute('hx-get'); this.classList.remove('mdi-chevron-right'); this.classList.add('mdi-chevron-down')"
-      aria-hidden="true" class="mdi mdi-chevron-right">
-    </span>
-  {% endif %}
 </span>
 """
 
@@ -369,7 +363,16 @@ class RIRTable(BaseTable):
 class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     prefix = tables.TemplateColumn(
-        template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
+        template_code=PREFIX_COPY_LINK,
+        attrs={
+            "td": {
+                "class": "nb-prefix text-nowrap",
+                "data-ancestors-count": lambda record: record.ancestors().count(), # TODO
+                "data-descendants-count": lambda record: record.descendants_count,
+                "data-pk": lambda record: str(record.pk),
+            }
+        },
+        order_by=("network", "prefix_length"),
     )
     vrf_count = LinkedCountColumn(
         viewname="ipam:vrf_list",
@@ -382,7 +385,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True, verbose_name="RIR")
-    children = tables.Column(accessor="descendants_count", orderable=False)
+    descendants = tables.Column(accessor="descendants_count", orderable=False, attrs={"td": {"class": "nb-descendants-count"}})
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"
@@ -404,7 +407,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "prefix",
             "type",
             "status",
-            "children",
+            "descendants",
             "vrf_count",
             "namespace",
             "tenant",
