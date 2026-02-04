@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.core.cache import cache
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -266,3 +268,24 @@ class TreeModelCachedDescendantsPKsTests(TestCase):
         with self.assertNumQueries(1):
             pks = grandparent.cacheable_descendants_pks()
             self.assertNotIn(new_child.pk, pks)
+
+    def test_cacheable_descendants_pks_without_timeout_setting(self):
+        """Test that cacheable_descendants_pks works when CACHES TIMEOUT is not explicitly set."""
+        loc = Location.objects.without_tree_fields().exclude(children__isnull=True).first()
+        self.assertIsNotNone(loc)
+
+        # Mock CACHES setting without TIMEOUT key (as in Redis Sentinel documentation example)
+        caches_without_timeout = {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://localhost:6379/0",
+            }
+        }
+
+        with patch("nautobot.core.models.tree_queries.settings") as mock_settings:
+            mock_settings.CACHES = caches_without_timeout
+            # This should not raise KeyError, should use default timeout of 300
+            try:
+                loc.cacheable_descendants_pks()
+            except KeyError as e:
+                self.fail(f"cacheable_descendants_pks raised KeyError when TIMEOUT not in CACHES: {e}")
