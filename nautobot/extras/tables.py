@@ -5,7 +5,7 @@ import django_tables2 as tables
 from django_tables2.data import TableData
 from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
-from jsonschema import Draft7Validator, SchemaError
+from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.models.querysets import count_related
@@ -282,21 +282,12 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field, None)
 
-        try:
-            if hasattr(record, "local_config_context_schema") and record.local_config_context_schema is not None:
-                validator = Draft7Validator(record.local_config_context_schema.data_schema)
-            elif hasattr(record, "config_context_schema") and record.config_context_schema is not None:
-                validator = Draft7Validator(record.config_context_schema.data_schema)
-            else:
-                validator = {}
-        except SchemaError:
-            validator = {}
         # only call validate if this is a real validator
-        if not isinstance(validator, Draft7Validator):
+        if not isinstance(self.validator, Draft7Validator):
             return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
 
         try:
-            validator.validate(data)
+            self.validator.validate(data)
 
         except JSONSchemaValidationError as e:
             return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
