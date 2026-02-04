@@ -31,7 +31,7 @@ class StoreJobOutputLineTestCase(TestCase):
         job_console_log = JobConsoleEntry.objects.get(job_result=self.job_result)
         self.assertEqual(job_console_log.job_result_id, self.job_result.id)
         self.assertEqual(job_console_log.output_type, "stdout")
-        self.assertEqual(job_console_log.data, "Test output line\n")
+        self.assertEqual(job_console_log.text, "Test output line\n")
 
     def test_stores_stderr_line(self):
         """Test storing stderr line to database."""
@@ -48,7 +48,17 @@ class StoreJobOutputLineTestCase(TestCase):
         job_console_log = JobConsoleEntry.objects.get(job_result=self.job_result)
         self.assertEqual(job_console_log.job_result_id, self.job_result.id)
         self.assertEqual(job_console_log.output_type, "stderr")
-        self.assertEqual(job_console_log.data, "Error message\n")
+        self.assertEqual(job_console_log.text, "Error message\n")
+
+    def test_empty_data_is_not_store_in_database(self):
+        """Test not storing empty data in database."""
+        self.assertFalse(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
+        store_job_output_line(
+            job_result=self.job_result,
+            data="",
+            output_type="output",
+        )
+        self.assertFalse(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
 
 
 class StreamReaderTestCase(TestCase):
@@ -187,6 +197,6 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
 
         self.assertEqual(stdout_lines.count(), 2)
         self.assertEqual(stderr_lines.count(), 1)
-        self.assertEqual(stdout_lines[0].data, "stdout line 1\n")
-        self.assertEqual(stdout_lines[1].data, "stdout line 2\n")
-        self.assertEqual(stderr_lines[0].data, "stderr line 1\n")
+        self.assertEqual(stdout_lines[0].text, "stdout line 1\n")
+        self.assertEqual(stdout_lines[1].text, "stdout line 2\n")
+        self.assertEqual(stderr_lines[0].text, "stderr line 1\n")

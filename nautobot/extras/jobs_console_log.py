@@ -1,6 +1,8 @@
 import functools
+import logging
 from queue import Empty, Queue
 import subprocess
+import sys
 import threading
 from typing import Any, Dict
 
@@ -8,25 +10,27 @@ from django.utils import timezone
 
 from nautobot.extras.models import JobConsoleEntry, JobResult
 
+logger = logging.getLogger(__name__)
+
 
 def store_job_output_line(job_result: JobResult, data: str, output_type: str = "output", timestamp=None):
     """
     Store output from a job console log execution as a new line in the database.
 
-    :param job_result: JobResult instance
-    :type job_result: JobResult
-    :param data: Line of output data
-    :type data: str
-    :param output_type: Type of output ('stdout' or 'stderr')
-    :type output_type: str
-    :param timestamp: Optional timestamp (defaults to now)
+    Args:
+        job_result (JobResult): JobResult instance to associate the line to
+        data (str): Line of output data
+        output_type (str): Type of output ('stdout' or 'stderr')
+        timestamp (datetime): Optional timestamp (defaults to now)
     """
 
     if timestamp is None:
         timestamp = timezone.now()
 
-    if data:
-        JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, data=data)
+    if not data:
+        return
+
+    JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, text=data)
 
 
 #
@@ -43,10 +47,9 @@ class StreamReader:
         """
         Initialize stream reader.
 
-        :param output_type: 'stdout' or 'stderr'
-        :type output_type: str
-        :param store_func: Function to call to store each line
-
+        Args:
+            output_type (str): 'stdout' or 'stderr'
+            store_func: Function to call to store each line
         """
         self.output_type = output_type
         self.store_func = store_func
@@ -57,14 +60,11 @@ class StreamReader:
         """Read from stream, store in DB, and queue."""
         try:
             for line in iter(stream.readline, ""):
-                if not line:
-                    break
-
                 self.store_func(data=line)
                 self.queue.put(line)
 
         except Exception as e:
-            print(f"Error reading {self.output_type}: {e}")
+            logger.error(f"Error reading {self.output_type}: {e}")
         finally:
             stream.close()
             self.queue.put(None)  # Signal end of stream
@@ -106,10 +106,9 @@ class JobConsoleLogExecutor:
         """
         Initialize job executor.
 
-        :param job_result_pk: Primary key of JobResult
-        :type job_result_pk: str
-        :param print_output: Whether to enable real-time console output
-        :type print_output: bool
+        Args:
+            job_result_pk (str): Primary key of JobResult
+            print_output (bool): Whether to enable real-time console output
         """
 
         self.job_result_pk = job_result_pk
@@ -127,7 +126,7 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        return ["nautobot-server", "runjob_with_job_result", f"{self.job_result_pk}", "--console_log"]
+        return [f"{sys.argv[0]}", "runjob_with_job_result", f"{self.job_result_pk}", "--console_log"]
 
     def _print_output(self):
         """Print output in real-time while process runs."""
