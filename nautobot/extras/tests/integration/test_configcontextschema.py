@@ -2,26 +2,20 @@ from urllib.parse import quote
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import ObjectDetailsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class ConfigContextSchemaTestCase(SeleniumTestCase):
+class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsListMixin):
     """
     Integration tests for the ConfigContextSchema model
     """
 
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def test_create_valid_config_context_schema(self):
         """
