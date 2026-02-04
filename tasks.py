@@ -502,7 +502,7 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
     iterable=["service"],
 )
 def debug(context, service=None):
-    """Start specified or all services and its dependencies in debug mode."""
+    """Start all services, or specified service(s) and their dependencies, in debug mode."""
     service = " ".join(service) if service else ""
     print(f"Starting {service or 'all services'} in debug mode...")
 
@@ -518,7 +518,7 @@ def debug(context, service=None):
     iterable=["service"],
 )
 def start(context, service=None):
-    """Start specified service(s) or all services and its dependencies in detached mode."""
+    """Start all services, or specified service(s) and their dependencies, in detached mode."""
     service = " ".join(service) if service else ""
     print(f"Starting {service or 'all services'} in detached mode...")
     docker_compose(context, "up --detach", service=service)
@@ -616,7 +616,7 @@ def vscode(context, workspace_launch=True):
     iterable=["service"],
 )
 def logs(context, service=None, follow=False, tail=0):
-    """View the logs of a docker compose service."""
+    """View the logs of all docker compose services or a specified subset."""
     command = "logs"
 
     if follow:
