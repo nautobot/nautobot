@@ -522,11 +522,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         if not self.filter_params:
-            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
+            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
             default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
-            if default_container_only and default_max_depth >= 0:
+            if default_container_only and default_max_depth > 0:
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+                param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
                 if not self.request.headers.get("HX-Request"):
                     messages.info(
@@ -539,7 +539,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         ),
                     )
             elif default_max_depth >= 0:
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+                param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
                 if not self.request.headers.get("HX-Request"):
                     messages.info(

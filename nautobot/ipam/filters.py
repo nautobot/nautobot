@@ -388,12 +388,15 @@ class PrefixFilterSet(
         return queryset.filter(pk__in=ancestor_ids)
 
     def generate_query_filter_max_depth(self, value):
-        param = f"{'parent__' * (1 + int(value))}isnull"
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
         query = Q(**{param: False})
         return query
 
     def filter_max_depth(self, queryset, name, value):
-        if value is None:
+        if value is None or value < 1:
             return queryset
         params = self.generate_query_filter_max_depth(value)
         return queryset.exclude(params)

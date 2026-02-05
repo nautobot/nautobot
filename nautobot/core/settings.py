@@ -841,10 +841,10 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
-        default=-1,
+        default=0,
         help_text=mark_safe(
-            "Default <code>max_depth</code> filter value to use for Prefix list views (-1 for no filter).\n"
-            "Setting this to a small non-negative value may improve performance when the number of records is large.",
+            "Default <code>max_depth</code> filter value to use for Prefix list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
         ),
         field_type=int,
     ),
