@@ -31,6 +31,7 @@ from nautobot.core.ui.breadcrumbs import (
     InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
 )
+from nautobot.core.ui.bulk_buttons import BulkDeleteButton, BulkEditButton
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -466,26 +467,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         form_id="prefix_form",
                         enable_bulk_actions=True,
                         footer_buttons=[
-                            object_detail.FormButton(
-                                link_name="ipam:prefix_bulk_edit",
-                                link_includes_pk=False,
-                                label="Edit Selected",
-                                color=ButtonActionColorChoices.EDIT,
-                                icon="mdi-pencil",
-                                size="xs",
-                                form_id="prefix_form",
-                                weight=200,
-                            ),
-                            object_detail.FormButton(
-                                link_name="ipam:prefix_bulk_delete",
-                                link_includes_pk=False,
-                                label="Delete Selected",
-                                color=ButtonActionColorChoices.DELETE,
-                                icon="mdi-trash-can-outline",
-                                size="xs",
-                                form_id="prefix_form",
-                                weight=100,
-                            ),
+                            BulkEditButton(form_id="prefix_form", model=Prefix),
+                            BulkDeleteButton(form_id="prefix_form", model=Prefix),
                         ],
                     ),
                 ),
@@ -507,26 +490,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         form_id="ipaddress_form",
                         enable_bulk_actions=True,
                         footer_buttons=[
-                            object_detail.FormButton(
-                                link_name="ipam:ipaddress_bulk_edit",
-                                link_includes_pk=False,
-                                label="Edit Selected",
-                                color=ButtonActionColorChoices.EDIT,
-                                icon="mdi-pencil",
-                                size="xs",
-                                form_id="ipaddress_form",
-                                weight=200,
-                            ),
-                            object_detail.FormButton(
-                                link_name="ipam:ipaddress_bulk_delete",
-                                link_includes_pk=False,
-                                label="Delete Selected",
-                                color=ButtonActionColorChoices.DELETE,
-                                icon="mdi-trash-can-outline",
-                                size="xs",
-                                form_id="ipaddress_form",
-                                weight=100,
-                            ),
+                            BulkEditButton(form_id="ipaddress_form", model=IPAddress),
+                            BulkDeleteButton(form_id="ipaddress_form", model=IPAddress),
                         ],
                     ),
                 ],
@@ -1249,26 +1214,8 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_edit",
-                        link_includes_pk=False,
-                        label="Edit Selected",
-                        color=ButtonActionColorChoices.EDIT,
-                        icon="mdi-pencil",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=200,
-                    ),
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_delete",
-                        link_includes_pk=False,
-                        label="Delete Selected",
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=100,
-                    ),
+                    BulkEditButton(form_id="vlan_form", model=VLAN),
+                    BulkDeleteButton(form_id="vlan_form", model=VLAN),
                 ],
             ),
         )
