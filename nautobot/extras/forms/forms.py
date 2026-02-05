@@ -1085,10 +1085,11 @@ class SavedViewForm(BootstrapMixin, forms.ModelForm):
         required=False,
         help_text="If checked, all users will be able to see this saved view",
     )
+    config = JSONField(widget=forms.Textarea, required=False, help_text="Read-only config data", disabled=True)
 
     class Meta:
         model = SavedView
-        fields = ["name", "is_global_default", "is_shared"]
+        fields = ["name", "is_global_default", "is_shared", "config"]
 
 
 class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
