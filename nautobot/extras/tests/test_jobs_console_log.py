@@ -224,3 +224,35 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
             executor.execute()
 
         self.assertEqual(str(exc.exception), "stderr line 2")
+        self.assertEqual(
+            str(exc.exception),
+            JobConsoleEntry.objects.filter(job_result=self.job_result, output_type="stderr").last().text.rstrip(),
+        )
+
+    @mock.patch("nautobot.extras.jobs_console_log.JobConsoleEntry.objects.filter")
+    @mock.patch("nautobot.extras.jobs_console_log.subprocess.Popen")
+    def test_executor_handle_failure_raises_exception_with_none(self, mock_popen, mock_filter):
+        """Test that executor raises exception with None when no stderr DB entry exists."""
+        # Mock streams
+        stdout_stream = MockStream("")
+        stderr_stream = MockStream("stderr line 1\nstderr line 2\n")
+
+        # Mock process
+        process = mock.MagicMock()
+        process.stdout = stdout_stream
+        process.stderr = stderr_stream
+        process.wait.return_value = 1
+        process.poll.return_value = 1
+
+        mock_popen.return_value.__enter__.return_value = process
+
+        mock_queryset = mock.MagicMock()
+        mock_queryset.last.return_value = None
+        mock_filter.return_value = mock_queryset
+
+        executor = JobConsoleLogExecutor(self.job_result.pk)
+
+        with self.assertRaises(Exception) as exc:
+            executor.execute()
+
+        self.assertIsNone(exc.exception.args[0])

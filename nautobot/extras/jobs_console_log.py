@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 from django.utils import timezone
 
+from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices
 from nautobot.extras.models import JobConsoleEntry, JobResult
 
 logger = logging.getLogger(__name__)
@@ -143,12 +144,10 @@ class JobConsoleLogExecutor:
     def _handle_failure(self):
         """Handle job failure by raising exception with stderr."""
         if self.return_code != 0:
-            last_line_error_msg = None
-
-            for line in self.stderr_reader.drain_queue():
-                last_line_error_msg = line.rstrip()
-
-            raise Exception(last_line_error_msg)  # pylint: disable=broad-exception-raised
+            last_entry = JobConsoleEntry.objects.filter(
+                job_result=self.job_result, output_type=JobConsoleEntryOutputTypeChoices.TYPE_STDERR
+            ).last()
+            raise Exception(last_entry.text.rstrip() if last_entry else last_entry)  # pylint: disable=broad-exception-raised
 
     def execute(self) -> Dict[str, Any]:
         """
