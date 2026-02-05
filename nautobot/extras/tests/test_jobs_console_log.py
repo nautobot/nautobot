@@ -1,4 +1,5 @@
 from io import StringIO
+import sys
 from unittest import mock
 
 from django.utils import timezone
@@ -153,10 +154,9 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
 
         executor = JobConsoleLogExecutor(self.job_result.pk)
         executor.execute()
-
         mock_popen.assert_called_once_with(
             [
-                "nautobot-server",
+                sys.argv[0],
                 "runjob_with_job_result",
                 f"{self.job_result.pk}",
                 "--console_log",
@@ -200,3 +200,27 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
         self.assertEqual(stdout_lines[0].text, "stdout line 1\n")
         self.assertEqual(stdout_lines[1].text, "stdout line 2\n")
         self.assertEqual(stderr_lines[0].text, "stderr line 1\n")
+
+    @mock.patch("nautobot.extras.jobs_console_log.subprocess.Popen")
+    def test_executor_handle_failure_raises_exception(self, mock_popen):
+        """Test that executor raises exception with last stderr line on failure."""
+        # Create mock streams
+        stdout_stream = MockStream("")
+        stderr_stream = MockStream("stderr line 1\nstderr line 2\n")
+
+        # Mock process
+        process = mock.MagicMock()
+        process.stdout = stdout_stream
+        process.stderr = stderr_stream
+        process.wait.return_value = 1
+        process.poll.return_value = 1
+
+        # Mock context manager
+        mock_popen.return_value.__enter__.return_value = process
+
+        executor = JobConsoleLogExecutor(self.job_result.pk)
+
+        with self.assertRaises(Exception) as exc:
+            executor.execute()
+
+        self.assertEqual(str(exc.exception), "stderr line 2")

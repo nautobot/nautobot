@@ -143,9 +143,12 @@ class JobConsoleLogExecutor:
     def _handle_failure(self):
         """Handle job failure by raising exception with stderr."""
         if self.return_code != 0:
-            # how we want to handle this error? Should has an impact of job_result?
-            pass
-            # raise Exception(f"Job {self.job_result_pk} failed with code {self.return_code}\n")
+            last_line_error_msg = None
+
+            for line in self.stderr_reader.drain_queue():
+                last_line_error_msg = line.rstrip()
+
+            raise Exception(last_line_error_msg)
 
     def execute(self) -> Dict[str, Any]:
         """
