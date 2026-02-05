@@ -541,14 +541,18 @@ class TableConfigDrawerTestCase(TestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
-        table = ProviderTable(Provider.objects.all())
+        table = ProviderTable(Provider.objects.all(), user=self.user)
         table.request = self.request
         self.form = TableConfigForm(table)
         self.default_order = [col[0] for col in self.form.fields["columns"].choices]
+        self.default_visible_columns = table.visible_columns.copy()
 
         custom_order = self.default_order.copy()
         custom_order[0], custom_order[-1] = custom_order[-1], custom_order[0]
         self.saved_order = custom_order.copy()
+
+        self.custom_visible_columns = table.visible_columns.copy()
+        self.custom_visible_columns.remove("asn")
 
         saved_view_config = {
             "filter_params": {},
@@ -556,7 +560,7 @@ class TableConfigDrawerTestCase(TestCase):
             "sort_order": [],
             "table_config": {
                 "ProviderTable": {
-                    "columns": self.default_order,
+                    "columns": self.custom_visible_columns,
                     "columns_order": self.saved_order,
                 }
             },
@@ -580,26 +584,30 @@ class TableConfigDrawerTestCase(TestCase):
 
     def test_filter_column_default(self):
         """Assert that the default order is used when no user preference is set."""
-        table = ProviderTable(Provider.objects.all())
+        table = ProviderTable(Provider.objects.all(), user=self.user)
         table.request = self.request
         form = TableConfigForm(table)
         new_order = [col[0] for col in form.fields["columns"].choices]
         self.assertEqual(new_order, self.default_order)
+        self.assertEqual(table.visible_columns, self.default_visible_columns)
 
     def test_filter_column_change_order(self):
         """Assert that a custom user order is used when set."""
         custom_order = list(reversed(self.default_order))
         self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
-        table = ProviderTable(Provider.objects.all())
+        selected_columns = custom_order[0:2]
+        self.user.set_config(f"tables.{self.form.table_name}.columns", selected_columns, commit=True)
+        table = ProviderTable(Provider.objects.all(), user=self.user)
         table.request = self.request
         form = TableConfigForm(table)
         new_order = [col[0] for col in form.fields["columns"].choices]
         self.assertNotEqual(new_order, self.default_order)
         self.assertEqual(new_order, custom_order)
+        self.assertEqual(selected_columns, table.visible_columns)
 
     def test_filter_column_saved_view(self):
         """Assert that a custom user order is used when a saved view is set."""
-        table = ProviderTable(Provider.objects.all())
+        table = ProviderTable(Provider.objects.all(), user=self.user, saved_view=self.saved_view)
         request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
         request.id = uuid.uuid4()
         request.user = self.user
@@ -609,13 +617,18 @@ class TableConfigDrawerTestCase(TestCase):
         new_order = [col[0] for col in form.fields["columns"].choices]
         self.assertNotEqual(new_order, self.default_order)
         self.assertEqual(new_order, self.saved_order)
+        self.assertEqual(self.custom_visible_columns, table.visible_columns)
 
     def test_filter_column_saved_view_but_revert(self):
         """Assert that when a saved view is set but overwritten, the local custom order is used."""
         custom_order = list(reversed(self.default_order))
         self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
+        selected_columns = custom_order[0:2]
+        self.user.set_config(f"tables.{self.form.table_name}.columns", selected_columns, commit=True)
 
-        table = ProviderTable(Provider.objects.all())
+        table = ProviderTable(
+            Provider.objects.all(), user=self.user, saved_view=self.saved_view, table_changes_pending=True
+        )
         request = RequestFactory().get(
             "/circuits/providers/", data={"saved_view": self.saved_view.pk, "table_changes_pending": "true"}
         )
@@ -628,6 +641,7 @@ class TableConfigDrawerTestCase(TestCase):
         self.assertNotEqual(new_order, self.default_order)
         self.assertNotEqual(new_order, self.saved_order)
         self.assertEqual(new_order, custom_order)
+        self.assertEqual(selected_columns, table.visible_columns)
 
 
 class NavAppsUITestCase(TestCase):
