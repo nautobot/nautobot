@@ -26,6 +26,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices
 from nautobot.dcim.models import (
     ConsolePort,
     Device,
@@ -2244,6 +2245,35 @@ class DynamicGroupTestCase(
         self.assertHttpStatus(self.client.post(**request), 302)
         instance.refresh_from_db()
         self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
+
+    def test_edit_object_with_content_type_dcim_interface(self):
+        """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
+        content_type = ContentType.objects.get_for_model(Interface)
+        instance = DynamicGroup.objects.create(name="DG DCIM|Interface", content_type=content_type)
+        data = self.form_data.copy()
+        data.update(
+            {
+                "name": "DG DCIM|Interface",
+                "content_type": content_type.pk,
+                "filter-mode": [InterfaceModeChoices.MODE_TAGGED],
+                "filter-duplex": [InterfaceDuplexChoices.DUPLEX_FULL],
+                "filter-tagged_vlans": [VLAN.objects.first().pk],
+                "filter-untagged_vlan": [VLAN.objects.last().pk],
+                "tenant": None,
+                "tags": [],
+            }
+        )
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["mode"], [InterfaceModeChoices.MODE_TAGGED])
+        self.assertEqual(instance.filter["duplex"], [InterfaceDuplexChoices.DUPLEX_FULL])
+        self.assertEqual(instance.filter["tagged_vlans"], [str(VLAN.objects.first().pk)])
+        self.assertEqual(instance.filter["untagged_vlan"], [str(VLAN.objects.last().pk)])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
