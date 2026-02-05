@@ -148,7 +148,7 @@ class JobConsoleLogExecutor:
             for line in self.stderr_reader.drain_queue():
                 last_line_error_msg = line.rstrip()
 
-            raise Exception(last_line_error_msg)
+            raise Exception(last_line_error_msg) # pylint: disable=broad-exception-raised
 
     def execute(self) -> Dict[str, Any]:
         """
