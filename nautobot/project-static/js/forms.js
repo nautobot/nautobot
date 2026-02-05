@@ -176,8 +176,15 @@ function initializeVLANModeSelection(context) {
 
         if (!$untagged.length || !$tagged.length) return;
 
-        const $rowUntagged = $untagged.parent().parent();
-        const $rowTagged = $tagged.parent().parent();
+        // Find the container div for the field row
+        // In filter drawer: .nb-form-group contains the field directly
+        // In regular forms: .mb-10.d-md-flex contains the field (via .col-md-9 wrapper)
+        const $rowUntagged = $untagged.closest(".nb-form-group").length 
+            ? $untagged.closest(".nb-form-group")
+            : $untagged.closest(".mb-10");
+        const $rowTagged = $tagged.closest(".nb-form-group").length 
+            ? $tagged.closest(".nb-form-group")
+            : $tagged.closest(".mb-10");
 
         function setRowVisible($row, visible) {
             const el = $row && $row.length ? $row[0] : null;
