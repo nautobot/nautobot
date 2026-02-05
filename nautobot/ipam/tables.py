@@ -52,9 +52,38 @@ UTILIZATION_GRAPH = """
 # object: the base ancestor Prefix, in the case of PrefixDetailTable, else None
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% if not table.hide_hierarchy_ui %}
-{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
-{% endif %}
+{% spaceless %}
+    {% if not table.hide_hierarchy_ui %}
+        {% with record.ancestors as ancestors %}
+            {% for i in ancestors.count|as_range %}
+                {% if not forloop.last %}
+                    {% with i|add:1 as ancestor_depth %}
+                        {% if ancestors|index:ancestor_depth|filter_getattr:"next_sibling" is None %}
+                            <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
+                        {% else %}
+                            <span class="nb-subtree nb-subtree-ancestor-next-sibling">│</span>
+                        {% endif %}
+                    {% endwith %}
+                {% elif record.next_sibling is not None %}
+                    <span class="nb-subtree nb-subtree-next-sibling">├</span>
+                {% else %}
+                    <span class="nb-subtree nb-subtree-no-next-sibling">└</span>
+                {% endif %}
+            {% endfor %}
+            {% if record.children.exists %}
+                <span class="nb-subtree nb-subtree-expandable mdi mdi-chevron-right"
+                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}"
+                      hx-select=".table-responsive tr"
+                      hx-swap="afterend"
+                      hx-select-oob="none"
+                      hx-target="closest tr"
+                ></span>
+            {% else %}
+                <span class="nb-subtree"></span>
+            {% endif %}
+        {% endwith %}
+    {% endif %}
+{% endspaceless %}
 <span>
   <a href="\
 {% if record.present_in_database %}\
@@ -367,8 +396,6 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={
             "td": {
                 "class": "nb-prefix text-nowrap",
-                "data-ancestors-count": lambda record: record.ancestors().count(), # TODO
-                "data-descendants-count": lambda record: record.descendants_count,
                 "data-pk": lambda record: str(record.pk),
             }
         },

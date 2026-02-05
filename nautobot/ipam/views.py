@@ -598,11 +598,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
     def children(self, request, *args, **kwargs):
         instance = self.get_object()
         child_prefixes = instance.children.restrict(request.user, "view")
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
-            configurable=True,
-            exclude=["namespace"],
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
             user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
         )
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
             prefix_table.columns.show("pk")
@@ -613,9 +617,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
         }
         RequestConfig(request, paginate).configure(prefix_table)
 
+        from django.contrib.contenttypes.models import ContentType
+
         return Response(
             {
-                "template": "ipam/prefix_children.html",
+                "table_inc_template": "ipam/prefix_children.html",
+                "template": "panel_table.html",
                 "table": prefix_table,
                 "tree_depth": instance.ancestors().count() + 1,
                 "additional_count": max(0, child_prefixes.count() - paginate["per_page"]),

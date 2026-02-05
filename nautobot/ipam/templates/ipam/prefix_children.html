@@ -1,24 +1,34 @@
 {% load helpers %}
-{% for row in table.page.object_list|default:table.rows %}
-    <tr {{ row.attrs.as_html }}>
-        {% for column, cell in row.items %}
-            <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
-        {% endfor %}
-        {% if table.configurable and last_column_name != "actions" %}
-            <td class="nb-w-0" />
+{% with last_column_name=table.columns.names|last %}
+    <table>
+        <tbody>
+            {% for row in table.page.object_list|default:table.rows %}
+                <tr {{ row.attrs.as_html }}>
+                    {% for column, cell in row.items %}
+                        <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                    {% endfor %}
+                    {% if table.configurable and last_column_name != "actions" %}
+                        <td class="nb-w-0" />
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+        {% if table.page.paginator.num_pages > 1 %}
+            <tfoot>
+                <tr>
+                    {% if "pk" in table.columns %}
+                        <td></td>
+                        <td colspan="{{ table.columns|length|add:-1 }}" class="nb-prefix table-warning">
+                    {% else %}
+                        <td colspan="{{ table.columns|length }}" class="nb-prefix table-warning">
+                    {% endif %}
+                        {% for i in table.context.tree_depth|add:1|as_range %}
+                            <span class="nb-subtree"></span>
+                        {% endfor %}
+                        ... and {{ table.context.additional_count }} more children not shown due to pagination ...
+                    </td>
+                </tr>
+            </tfoot>
         {% endif %}
-    </tr>
-{% endfor %}
-{% if table.page.paginator.num_pages > 1 %}
-    <tr class="table-warning">
-        {% if "pk" in table.columns %}
-            <td></td>
-            <td colspan="{{ table.columns|length|add:-1 }}" class="nb-prefix" data-ancestors-count="{{ tree_depth }}">
-        {% else %}
-            <td colspan="{{ table.columns|length }}" class="nb-prefix" data-ancestors-count="{{ tree_depth }}">
-        {% endif %}
-            {% tree_hierarchy_ui_representation tree_depth|as_range False 0 %}
-            ... and {{ additional_count }} more children not shown due to pagination ...
-        </td>
-    </tr>
-{% endif %}
+    </table>
+{% endwith %}
