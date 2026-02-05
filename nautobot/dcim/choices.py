@@ -1265,6 +1265,9 @@ class PortTypeChoices(ChoiceSet):
     TYPE_LX5_APC = "lx5-apc"
     TYPE_SPLICE = "splice"
     TYPE_CS = "cs"
+    TYPE_CS_PC = "cs-pc"
+    TYPE_CS_UPC = "cs-upc"
+    TYPE_CS_APC = "cs-apc"
     TYPE_SN = "sn"
     TYPE_SMA_905 = "sma-905"
     TYPE_SMA_906 = "sma-906"
@@ -1321,6 +1324,9 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_SC_APC, "SC/APC"),
                 (TYPE_ST, "ST"),
                 (TYPE_CS, "CS"),
+                (TYPE_CS_PC, "CS/PC"),
+                (TYPE_CS_UPC, "CS/UPC"),
+                (TYPE_CS_APC, "CS/APC"),
                 (TYPE_SN, "SN"),
                 (TYPE_SMA_905, "SMA 905"),
                 (TYPE_SMA_906, "SMA 906"),
